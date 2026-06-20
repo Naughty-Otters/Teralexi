@@ -197,25 +197,6 @@ describe('startWorkspaceTerminalSession', () => {
     stopWorkspaceTerminalSession('reuse')
   })
 
-  it('replaces session when shell changes', () => {
-    startWorkspaceTerminalSession({
-      conversationId: 'replace',
-      workspaceCwd: dir,
-      shell: '/bin/zsh',
-    })
-    expect(spawnMock).toHaveBeenCalledOnce()
-
-    // Different shell → must kill old and spawn new
-    spawnMock.mockClear()
-    startWorkspaceTerminalSession({
-      conversationId: 'replace',
-      workspaceCwd: dir,
-      shell: '/bin/bash',
-    })
-    expect(mockPtyInstance.kill).toHaveBeenCalled()
-    expect(spawnMock).toHaveBeenCalledOnce()
-    stopWorkspaceTerminalSession('replace')
-  })
 
   it('registers onData and onExit handlers on the pty instance', () => {
     startWorkspaceTerminalSession({

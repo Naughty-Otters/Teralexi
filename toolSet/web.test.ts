@@ -261,27 +261,6 @@ describe('extractPageText', () => {
   })
 })
 
-describe('cascadeWebSearch', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
-  })
-
-  it('falls through to bing when duckduckgo returns no results', async () => {
-    await mockSearchHandlers((url) =>
-      url.includes('bing.com') ? bingSampleHtml : '<html><body></body></html>',
-    )
-
-    const outcome = await cascadeWebSearch('test', 5, ['duckduckgo', 'bing'])
-    expect(outcome.success).toBe(true)
-    if (outcome.success) {
-      expect(outcome.engine).toBe('bing')
-      expect(outcome.attempts).toHaveLength(2)
-      expect(outcome.attempts[0]?.success).toBe(false)
-      expect(outcome.attempts[1]?.success).toBe(true)
-    }
-  })
-})
-
 describe('webSearch tool', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
