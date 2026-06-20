@@ -175,7 +175,6 @@ Path resolution is centralized in [`src/main/agent/sandbox/paths.ts`](src/main/a
 | Skill | Path | Use |
 |-------|------|-----|
 | Coding | `skills/coding/` | Edit → `run_workspace_command` verify → `git_diff` |
-| Code review | `skills/code-review/` | Read-only review by default; writes only when user asks |
 | Default | `skills/default/` | Sandbox scripts; no repo edits unless workspace + user asks |
 | Documents | `skills/documents/` | Deliverables under `output/results/` |
 
