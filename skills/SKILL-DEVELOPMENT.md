@@ -106,7 +106,7 @@ Planner `reference_url` values must still be **paths under the skill folder**, e
 
 | Skill type | `allowed_tools` | `skill.md` tone |
 |------------|-----------------|-----------------|
-| **Coding / code-review** | File tools, `lsp`, `run_workspace_command`, git — **no** `run_script` | “Where files live”: project paths only; sandbox `output/` rare |
+| **Coding | File tools, `lsp`, `run_workspace_command`, git — **no** `run_script` | “Where files live”: project paths only; sandbox `output/` rare |
 | **Default** | `run_script`, web | Sandbox-first; file tools only if user picked workspace and asked for code |
 | **Documents** | Doc tools + `run_script`; `read_file` for user data | Deliverables → `output/results/`; do not edit user repo |
 
@@ -392,10 +392,7 @@ User message + selected skill
         │                 forms from form/ when form_doc_name set
         │                 scripts copied from scripts/
         ▼
-  summary.md ──► run digest
-        │
-        ▼
-  report.md ──► final user message
+  final user message
 ```
 
 ---
