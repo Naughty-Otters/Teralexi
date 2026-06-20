@@ -13,9 +13,9 @@ openfde uses [Semantic Versioning](https://semver.org/) and publishes desktop bu
 Release publishing and auto-update feeds use:
 
 | Field | Value |
-|-------|-------|
+| ----- | ----- |
 | Owner | `Naughty-Otters` |
-| Repo  | `OpenFDE` |
+| Repo | `OpenFDE` |
 
 These values are defined in `build.json` and `src/shared/app-update.ts`.
 
@@ -54,6 +54,10 @@ Pushing a tag matching `v*` triggers [`.github/workflows/release.yml`](../.githu
 - Builds **macOS** (dmg + zip) and **Windows** (NSIS installer)
 - Uploads artifacts to GitHub Releases
 - Publishes `latest-mac.yml` / `latest.yml` for auto-update
+- Verifies the pushed tag matches `package.json` version before publishing
+
+The workflow can also be started manually with `workflow_dispatch`, but it still
+requires the checked-out ref tag to match `package.json` exactly.
 
 Requires `GITHUB_TOKEN` (provided automatically in GitHub Actions).
 
@@ -70,7 +74,7 @@ npm run release:win   # on Windows
 ## Auto-update behavior
 
 | When | Action |
-|------|--------|
+| ---- | ------ |
 | 30s after app launch | Silent check (packaged builds only) |
 | Every 6 hours | Background re-check |
 | Settings → About | Manual “Check for updates” |
@@ -82,7 +86,7 @@ Dev / unpackaged runs skip auto-update checks.
 ## Code signing (before public launch)
 
 | Platform | Requirement |
-|----------|-------------|
+| -------- | ----------- |
 | **macOS** | Apple Developer ID + notarization for smooth updates |
 | **Windows** | Authenticode certificate to reduce SmartScreen warnings |
 
