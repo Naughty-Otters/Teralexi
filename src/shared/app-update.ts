@@ -23,6 +23,6 @@ export interface AppVersionInfo {
   isPackaged: boolean
 }
 
-/** Placeholder GitHub repo for electron-builder publish until official repo exists. */
-export const RELEASE_GITHUB_OWNER = 'openfde-app'
-export const RELEASE_GITHUB_REPO = 'openfde'
+/** GitHub repo used for electron-builder publish and auto-update feeds. */
+export const RELEASE_GITHUB_OWNER = 'Naughty-Otters'
+export const RELEASE_GITHUB_REPO = 'OpenFDE'

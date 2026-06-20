@@ -45,8 +45,6 @@ Optional subfolders (defaults shown; override via `refs_dir`, `scripts_dir`, `fo
 my-skill/
 ├── properties.md      # required metadata (+ optional attachment dir overrides)
 ├── skill.md           # required — main instructions
-├── summary.md         # recommended — run digest for report step
-├── report.md          # recommended — final user-facing message rules
 ├── refs/              # default reference docs (or your `refs_dir`)
 ├── form/              # default HITL forms (or your `form_dir`)
 ├── scripts/           # default scripts (or your `scripts_dir`)
@@ -171,20 +169,6 @@ Brief description of what the agent should do first.
 See `skills/default/skill.md` for a small example and `~/.openfde/skills/one-step-hitl-test/skill.md` for a single-todo table.
 
 ---
-
-## Step 4 — Add `summary.md` and `report.md`
-
-After tool execution, openfde runs two pipeline steps that use **separate files** (not the main `## Instructions` block):
-
-| File | Pipeline step | Role |
-|------|---------------|------|
-| `summary.md` | Summary | Factual run digest from thinking / planning / execution |
-| `report.md` | Report | Brief **user-facing** final message |
-
-Copy and adapt from:
-
-- `skills/default/summary.md`
-- `skills/default/report.md`
 
 Keep summary **facts-only** (paths, task order, errors). Keep report **short and addressed to the user**.
 

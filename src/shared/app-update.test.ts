@@ -6,9 +6,9 @@ import {
 } from './app-update'
 
 describe('app-update', () => {
-  it('exports placeholder GitHub release coordinates', () => {
-    expect(RELEASE_GITHUB_OWNER).toBe('openfde-app')
-    expect(RELEASE_GITHUB_REPO).toBe('openfde')
+  it('exports GitHub release coordinates', () => {
+    expect(RELEASE_GITHUB_OWNER).toBe('Naughty-Otters')
+    expect(RELEASE_GITHUB_REPO).toBe('OpenFDE')
   })
 
   it('allows typed update messages', () => {

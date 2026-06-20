@@ -8,16 +8,16 @@ openfde uses [Semantic Versioning](https://semver.org/) and publishes desktop bu
 - Git tags must match: `v0.0.1`, `v0.0.2`, …
 - **`CHANGELOG.md`** — user-facing release notes
 
-## Placeholder GitHub repo
+## GitHub repo
 
-Until the official repo exists, `build.json` points at:
+Release publishing and auto-update feeds use:
 
-| Field | Placeholder |
-|-------|-------------|
-| Owner | `openfde-app` |
-| Repo  | `openfde` |
+| Field | Value |
+|-------|-------|
+| Owner | `Naughty-Otters` |
+| Repo  | `OpenFDE` |
 
-Update these in `build.json` (and `src/shared/app-update.ts` constants) before the first real publish.
+These values are defined in `build.json` and `src/shared/app-update.ts`.
 
 ## Day-to-day version bumps
 
@@ -94,7 +94,7 @@ Unsigned builds can still be published for internal testing; users may see OS se
 
 ## First release checklist
 
-- [ ] Replace placeholder GitHub owner/repo in `build.json`
+- [ ] Confirm GitHub owner/repo in `build.json` and `src/shared/app-update.ts`
 - [ ] Set up code signing (macOS + Windows)
 - [ ] Tag and push `v0.0.1`
 - [ ] Verify GitHub Release contains installers + `latest*.yml`

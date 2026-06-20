@@ -17,8 +17,8 @@
   "publish": [
     {
       "provider": "github",
-      "owner": "OpenFDE",
-      "repo": "openfde",
+      "owner": "Naughty-Otters",
+      "repo": "OpenFDE",
       "releaseType": "release"
     }
   ],
