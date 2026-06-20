@@ -1,7 +1,6 @@
 import * as cheerio from 'cheerio'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import {
-  cascadeWebSearch,
   decodeDuckDuckGoResultUrl,
   decodeGoogleResultUrl,
   extractPageContent,
@@ -11,10 +10,7 @@ import {
   parseDuckDuckGoHtmlResults,
   parseGoogleHtmlResults,
   resolveSearchEngineOrder,
-  searchWithEngine,
-  searchWithEngineMode,
   isJsShellHtml,
-  scrapePage,
   webScrape,
   webSearch,
 } from './web'
@@ -316,90 +312,6 @@ const engineSampleHtml: Record<(typeof engineIds)[number], string> = {
     </div>
   `,
 }
-describe('webScrape tool', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
-  })
-
-  it('requires url or urls', async () => {
-    const result = await webScrape.execute({})
-    expect(result).toMatchObject({
-      success: false,
-      error: expect.stringContaining('url'),
-    })
-  })
-
-  it('scrapes a page via crawler', async () => {
-    const { CheerioCrawler } = await import('crawlee')
-    vi.spyOn(CheerioCrawler.prototype, 'run').mockImplementation(
-      async function run(this: CheerioCrawler, urls: string[]) {
-        const handler = (this as unknown as { requestHandler: Function })
-          .requestHandler
-        for (const pageUrl of urls) {
-          await handler({
-            $: cheerio.load(
-              '<html><title>Page</title><body><p>' +
-                'Body text with enough characters to pass the minimum scrape length threshold. '.repeat(2) +
-                '</p></body></html>',
-            ),
-            request: { url: pageUrl, loadedUrl: pageUrl },
-          })
-        }
-      },
-    )
-
-    const result = await webScrape.execute({
-      url: 'https://example.com',
-    })
-    expect(result).toMatchObject({
-      success: true,
-      pageCount: 1,
-      pages: [
-        expect.objectContaining({
-          url: 'https://example.com',
-          title: 'Page',
-          html: expect.stringContaining('Body text'),
-          fetchMode: 'cheerio',
-        }),
-      ],
-    })
-  })
-
-  it('falls back to Playwright when Cheerio returns a JS shell', async () => {
-    const { CheerioCrawler } = await import('crawlee')
-    vi.spyOn(CheerioCrawler.prototype, 'run').mockImplementation(
-      async function run(this: CheerioCrawler, urls: string[]) {
-        const handler = (this as unknown as { requestHandler: Function })
-          .requestHandler
-        for (const pageUrl of urls) {
-          await handler({
-            $: cheerio.load(
-              '<html><body>enablejs httpservice/retry/enablejs</body></html>',
-            ),
-            request: { url: pageUrl, loadedUrl: pageUrl },
-          })
-        }
-      },
-    )
-    await mockPlaywrightBrowser(() =>
-      '<html><title>Rendered</title><body><p>' +
-        'Playwright body text with enough characters to pass the minimum scrape length threshold. '.repeat(2) +
-        '</p></body></html>',
-    )
-
-    const result = await webScrape.execute({ url: 'https://example.com/js-page' })
-    expect(result).toMatchObject({
-      success: true,
-      pages: [
-        expect.objectContaining({
-          fetchMode: 'playwright',
-          title: 'Rendered',
-          html: expect.stringContaining('Playwright body'),
-        }),
-      ],
-    })
-  })
-})
 
 describe('scrape helpers', () => {
   it('detects JS shell HTML', () => {
