@@ -3,9 +3,17 @@
   "version": "0.0.1",
   "productName": "OpenFDE",
   "main": "./dist/electron/main/main.js",
-  "author": "sky <https://github.com/umbrella22>",
+  "author": "Naughty-Otters",
   "description": "OpenFDE project",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Naughty-Otters/OpenFDE.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Naughty-Otters/OpenFDE/issues"
+  },
+  "homepage": "https://github.com/Naughty-Otters/OpenFDE#readme",
   "scripts": {
     "dev": "tsx .electron-vite/dev-runner.ts",
     "build": "npm run icons:generate && tsx .electron-vite/build.ts -m prod && electron-builder -c build.json --publish never",
