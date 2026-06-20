@@ -1,0 +1,200 @@
+/* Shared typography for rendered markdown in chat bubbles (global CSS — no :deep). */
+.md-preview,
+.msg-html,
+.structured-debug-body,
+.structured-debug-fallback,
+.step-progress__stream {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ui-text);
+  word-break: break-word;
+}
+
+.md-preview p,
+.msg-html p,
+.structured-debug-body p,
+.structured-debug-fallback p,
+.step-progress__stream p {
+  margin: 0;
+}
+
+.md-preview p + p,
+.msg-html p + p,
+.structured-debug-body p + p,
+.structured-debug-fallback p + p,
+.step-progress__stream p + p {
+  margin-top: 0.75em;
+}
+
+.md-preview ul,
+.md-preview ol,
+.msg-html ul,
+.msg-html ol,
+.structured-debug-body ul,
+.structured-debug-body ol,
+.structured-debug-fallback ul,
+.structured-debug-fallback ol,
+.step-progress__stream ul,
+.step-progress__stream ol {
+  margin: 0.6em 0 0;
+  padding-left: 1.25em;
+}
+
+.md-preview code:not(pre code),
+.msg-html code:not(pre code),
+.structured-debug-body code:not(pre code),
+.structured-debug-fallback code:not(pre code),
+.step-progress__stream code:not(pre code) {
+  font-family: var(--app-font-family);
+  font-size: 0.88em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ui-text) 8%, transparent);
+}
+
+.md-preview pre,
+.msg-html pre,
+.structured-debug-body pre,
+.structured-debug-fallback pre,
+.step-progress__stream pre {
+  margin: 8px 0 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ui-text) 6%, transparent);
+  border: 1px solid var(--ui-border);
+  overflow-x: auto;
+}
+
+.md-preview pre code,
+.msg-html pre code,
+.structured-debug-body pre code,
+.structured-debug-fallback pre code,
+.step-progress__stream pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Auto-linked URLs (linkify) and markdown [text](url) links */
+.md-preview a,
+.msg-html a,
+.structured-debug-body a,
+.structured-debug-fallback a,
+.step-progress__stream a {
+  color: var(--color-primary-500, #6366f1);
+  text-decoration: underline;
+  text-decoration-color: color-mix(
+    in srgb,
+    var(--color-primary-500, #6366f1) 50%,
+    transparent
+  );
+  text-underline-offset: 2px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.md-preview a:hover,
+.msg-html a:hover,
+.structured-debug-body a:hover,
+.structured-debug-fallback a:hover,
+.step-progress__stream a:hover {
+  color: var(--color-primary-600, #4f46e5);
+  text-decoration-color: var(--color-primary-500, #6366f1);
+}
+
+.md-preview a:visited,
+.msg-html a:visited,
+.structured-debug-body a:visited,
+.structured-debug-fallback a:visited,
+.step-progress__stream a:visited {
+  color: color-mix(in srgb, var(--color-primary-500, #6366f1) 82%, var(--ui-text-muted));
+}
+
+.md-preview blockquote,
+.msg-html blockquote,
+.structured-debug-body blockquote,
+.structured-debug-fallback blockquote,
+.step-progress__stream blockquote {
+  margin: 0.5em 0 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--ui-border);
+  color: var(--ui-text-muted);
+}
+
+.md-preview h1,
+.md-preview h2,
+.md-preview h3,
+.md-preview h4,
+.msg-html h1,
+.msg-html h2,
+.msg-html h3,
+.msg-html h4,
+.structured-debug-body h1,
+.structured-debug-body h2,
+.structured-debug-body h3,
+.structured-debug-body h4,
+.structured-debug-fallback h1,
+.structured-debug-fallback h2,
+.structured-debug-fallback h3,
+.structured-debug-fallback h4,
+.step-progress__stream h1,
+.step-progress__stream h2,
+.step-progress__stream h3,
+.step-progress__stream h4 {
+  margin: 0.75em 0 0.35em;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.md-preview h1:first-child,
+.md-preview h2:first-child,
+.md-preview h3:first-child,
+.msg-html h1:first-child,
+.msg-html h2:first-child,
+.msg-html h3:first-child,
+.structured-debug-body h1:first-child,
+.structured-debug-body h2:first-child,
+.structured-debug-body h3:first-child,
+.structured-debug-fallback h1:first-child,
+.structured-debug-fallback h2:first-child,
+.structured-debug-fallback h3:first-child,
+.step-progress__stream h1:first-child,
+.step-progress__stream h2:first-child,
+.step-progress__stream h3:first-child {
+  margin-top: 0;
+}
+
+.md-preview table,
+.msg-html table,
+.structured-debug-body table,
+.structured-debug-fallback table,
+.step-progress__stream table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6em 0;
+  font-size: 13px;
+}
+
+.md-preview th,
+.md-preview td,
+.msg-html th,
+.msg-html td,
+.structured-debug-body th,
+.structured-debug-body td,
+.structured-debug-fallback th,
+.structured-debug-fallback td,
+.step-progress__stream th,
+.step-progress__stream td {
+  border: 1px solid var(--ui-border);
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.md-preview th,
+.msg-html th,
+.structured-debug-body th,
+.structured-debug-fallback th,
+.step-progress__stream th {
+  background: color-mix(in srgb, var(--ui-text) 6%, transparent);
+  font-weight: 600;
+}

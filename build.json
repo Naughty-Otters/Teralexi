@@ -1,0 +1,68 @@
+{
+  "asar": true,
+  "asarUnpack": [
+    "**/*.node",
+    "**/node_modules/better-sqlite3/**",
+    "**/node_modules/node-pty/**"
+  ],
+  "extraFiles": [
+    {
+      "from": "build/icons",
+      "to": "build/icons",
+      "filter": [
+        "**/*"
+      ]
+    }
+  ],
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "OpenFDE",
+      "repo": "openfde",
+      "releaseType": "release"
+    }
+  ],
+  "productName": "OpenFDE",
+  "appId": "app.openfde.desktop",
+  "directories": {
+    "output": "build"
+  },
+  "files": [
+    "dist/electron/**/*"
+  ],
+  "dmg": {
+    "contents": [
+      {
+        "x": 410,
+        "y": 150,
+        "type": "link",
+        "path": "/Applications"
+      },
+      {
+        "x": 130,
+        "y": 150,
+        "type": "file"
+      }
+    ]
+  },
+  "mac": {
+    "icon": "build/icons/icon.icns",
+    "extendInfo": {
+      "CFBundleDisplayName": "OpenFDE",
+      "CFBundleName": "OpenFDE"
+    },
+    "target": [
+      "dmg",
+      "zip"
+    ]
+  },
+  "win": {
+    "icon": "build/icons/icon.ico",
+    "target": [
+      "nsis"
+    ]
+  },
+  "linux": {
+    "icon": "build/icons"
+  }
+}

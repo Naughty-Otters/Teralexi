@@ -1,0 +1,27 @@
+{
+  "$id": "deck",
+  "description": "PowerPoint presentation data",
+  "required": ["title", "slides"],
+  "properties": {
+    "title": { "type": "string" },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "author": { "type": "string" },
+        "presenter": { "type": "string" },
+        "date": { "type": "string" }
+      }
+    },
+    "slides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "bullets": { "type": "array" },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,140 @@
+.attachment-file-type-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.file-type-presentation--code {
+  color: var(--file-type-code, #2563eb);
+}
+
+.file-type-presentation--web {
+  color: var(--file-type-web, #ea580c);
+}
+
+.file-type-presentation--markup {
+  color: var(--file-type-markup, #0891b2);
+}
+
+.file-type-presentation--data {
+  color: var(--file-type-data, #ca8a04);
+}
+
+.file-type-presentation--config {
+  color: var(--file-type-config, #9333ea);
+}
+
+.file-type-presentation--image {
+  color: var(--file-type-image, #16a34a);
+}
+
+.file-type-presentation--pdf {
+  color: var(--file-type-pdf, #dc2626);
+}
+
+.file-type-presentation--document {
+  color: var(--file-type-document, #64748b);
+}
+
+.file-type-presentation--spreadsheet {
+  color: var(--file-type-spreadsheet, #059669);
+}
+
+.file-type-presentation--archive {
+  color: var(--file-type-archive, #d97706);
+}
+
+.file-type-presentation--shell {
+  color: var(--file-type-shell, #475569);
+}
+
+.file-type-presentation--video {
+  color: var(--file-type-video, #db2777);
+}
+
+.file-type-presentation--audio {
+  color: var(--file-type-audio, #7c3aed);
+}
+
+.file-type-presentation--default {
+  color: var(--ui-text-muted);
+}
+
+.attachment-file-item--code {
+  border-left: 3px solid var(--file-type-code, #2563eb);
+}
+
+.attachment-file-item--web {
+  border-left: 3px solid var(--file-type-web, #ea580c);
+}
+
+.attachment-file-item--markup {
+  border-left: 3px solid var(--file-type-markup, #0891b2);
+}
+
+.attachment-file-item--data {
+  border-left: 3px solid var(--file-type-data, #ca8a04);
+}
+
+.attachment-file-item--config {
+  border-left: 3px solid var(--file-type-config, #9333ea);
+}
+
+.attachment-file-item--image {
+  border-left: 3px solid var(--file-type-image, #16a34a);
+}
+
+.attachment-file-item--pdf {
+  border-left: 3px solid var(--file-type-pdf, #dc2626);
+}
+
+.attachment-file-item--document {
+  border-left: 3px solid var(--file-type-document, #64748b);
+}
+
+.attachment-file-item--spreadsheet {
+  border-left: 3px solid var(--file-type-spreadsheet, #059669);
+}
+
+.attachment-file-item--archive {
+  border-left: 3px solid var(--file-type-archive, #d97706);
+}
+
+.attachment-file-item--shell {
+  border-left: 3px solid var(--file-type-shell, #475569);
+}
+
+.attachment-file-item--video {
+  border-left: 3px solid var(--file-type-video, #db2777);
+}
+
+.attachment-file-item--audio {
+  border-left: 3px solid var(--file-type-audio, #7c3aed);
+}
+
+.attachment-file-item--default {
+  border-left: 3px solid var(--ui-border);
+}
+
+.attachment-file-item--deleted {
+  opacity: 0.72;
+}
+
+.attachment-file-item--deleted .attachment-file-type-icon {
+  color: var(--color-error-500, #ef4444);
+}
+
+.attachment-file-path {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.attachment-file-path--deleted,
+.attachment-file-item--deleted .attachment-file-path {
+  color: var(--color-error-600, #dc2626) !important;
+  text-decoration: line-through;
+}

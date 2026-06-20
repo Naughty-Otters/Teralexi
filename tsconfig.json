@@ -1,0 +1,38 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "outDir": "./dist/electron/main",
+    "sourceMap": true,
+    "inlineSources": true,
+    "declaration": false,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "isolatedModules": true,
+    "target": "es2017",
+    "paths": {
+      "@config/*": ["config/*"],
+      "@renderer/*": ["src/renderer/*"],
+      "@main/*": ["src/main/*"],
+      "@store/*": ["src/renderer/store/modules/*"],
+      "@ipcManager/*": ["src/ipc/*"],
+      "@shared/*": ["src/shared/*"],
+      "@logging": ["src/logging"],
+      "@logging/*": ["src/logging/*"],
+      "@openfde-ai/vue": ["src/openfde-ai/vue.ts"],
+      "@openfde-ai/mcp": ["src/openfde-ai/mcp.ts"],
+      "@openfde-ai/llm-adapter": ["src/openfde-ai/llm-adapter.ts"],
+      "@openfde-ai": ["src/openfde-ai/index.ts"],
+      "@toolSet/*": ["toolSet/*"],
+    },
+    "typeRoots": ["node_modules/@types"],
+    "lib": ["es2018", "dom"]
+  },
+  "include": ["src/**/*", "customTypes/*", "skills/**/*", "toolSet/**/*"],
+  "exclude": ["node_modules"]
+}

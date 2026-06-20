@@ -1,0 +1,139 @@
+/**
+ * Shared terminal chrome for command previews, approval cards, and result bubbles.
+ * Tuned for readability (not near-black panels).
+ */
+
+html {
+  --term-panel-bg: #f0f3f7;
+  --term-header-bg: #e4e9ef;
+  --term-code-bg: #fafbfc;
+  --term-border: #c5ced8;
+  --term-title: #1f2328;
+  --term-muted: #5c6570;
+  --term-output-fg: #0d6832;
+  --term-prompt: #0550ae;
+  --term-success: #1a7f37;
+  --term-error: #cf222e;
+  --term-warn: #9a6700;
+}
+
+html.dark {
+  --term-panel-bg: #252830;
+  --term-header-bg: #2f343e;
+  --term-code-bg: #1e2229;
+  --term-border: #454c59;
+  --term-title: #f1f5f9;
+  --term-muted: #cbd5e1;
+  /* Prose/log output: neutral light gray (not green/red terminal tint). */
+  --term-output-fg: #e2e8f0;
+  --term-prompt: #91caff;
+  --term-success: #3fb950;
+  --term-error: #f85149;
+  --term-warn: #d29922;
+}
+
+.terminal-panel {
+  border: 1px solid var(--term-border);
+  border-radius: 8px;
+  background: var(--term-panel-bg);
+  overflow: hidden;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--term-border) 40%, transparent);
+}
+
+.terminal-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--term-border);
+  background: var(--term-header-bg);
+}
+
+.terminal-panel__head-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--term-muted);
+}
+
+.terminal-panel__head-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--term-title);
+}
+
+.terminal-panel__tool {
+  font-family: var(--app-font-family);
+  font-weight: 600;
+  color: var(--term-prompt);
+}
+
+.terminal-panel__muted {
+  color: var(--term-muted);
+}
+
+.terminal-panel__status--success {
+  color: var(--term-success);
+}
+.terminal-panel__status--error {
+  color: var(--term-error);
+}
+.terminal-panel__status--warn {
+  color: var(--term-warn);
+}
+.terminal-panel__status--info {
+  color: var(--term-prompt);
+}
+.terminal-panel__status--muted {
+  color: var(--term-muted);
+}
+
+.terminal-panel__exit {
+  font-family: var(--app-font-family);
+  font-size: 11px;
+  color: var(--term-success);
+}
+.terminal-panel__exit--bad {
+  color: var(--term-error);
+}
+
+.terminal-panel__slot {
+  border-top: 1px solid var(--term-border);
+}
+
+.terminal-panel__slot:first-of-type {
+  border-top: none;
+}
+
+.terminal-panel__slot summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--term-muted);
+  background: color-mix(in srgb, var(--term-header-bg) 50%, var(--term-panel-bg));
+}
+
+.terminal-panel__slot summary::-webkit-details-marker {
+  display: none;
+}
+
+.terminal-panel__slot summary:hover {
+  color: var(--term-title);
+}
+
+.terminal-panel__body {
+  padding: 0;
+}
+
+.terminal-panel__err {
+  border-top: 1px solid var(--term-border);
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--term-error) 12%, var(--term-panel-bg));
+}
+

@@ -1,0 +1,108 @@
+@import './terminal-theme.css';
+
+.shiki-surface {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--ui-border) 80%, transparent);
+  overflow: auto;
+  font-size: 11px;
+  line-height: 1.5;
+  max-height: 320px;
+  tab-size: 2;
+}
+
+.shiki-surface--compact {
+  max-height: 220px;
+}
+
+.shiki-surface--fill {
+  max-height: none;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+}
+
+/* Command / script body (approval + terminal bubble command slot) */
+.shiki-surface--terminal,
+.shiki-surface--terminal-command {
+  max-height: 240px;
+  background: var(--term-code-bg);
+  border-color: var(--term-border);
+  color: var(--term-title);
+}
+
+/* stdout / stderr / resultContent */
+.shiki-surface--terminal-output {
+  max-height: 280px;
+  background: var(--term-code-bg);
+  border-color: var(--term-border);
+  color: var(--ui-text);
+}
+
+.shiki-surface--terminal-output code {
+  color: inherit;
+}
+
+.shiki-surface code {
+  display: block;
+  font-family: var(--app-font-family);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.shiki-surface .shiki {
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+}
+
+.shiki-surface pre {
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+}
+
+.shiki-diff__line {
+  display: flex;
+  gap: 0;
+  min-height: 1.5em;
+}
+
+.shiki-diff__gutter {
+  flex: 0 0 1.25em;
+  user-select: none;
+  opacity: 0.55;
+}
+
+.shiki-diff__code {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.shiki-diff__line--add {
+  background: color-mix(in srgb, var(--color-success-500, #22c55e) 10%, transparent);
+}
+
+.shiki-diff__line--remove {
+  background: color-mix(in srgb, var(--color-error-500, #ef4444) 10%, transparent);
+}
+
+.shiki-diff__line--hunk,
+.shiki-diff__line--meta {
+  color: var(--ui-text-muted);
+}
+
+.shiki-diff__line--context {
+  color: var(--ui-text);
+}
+
+.shiki-diff__line--other {
+  color: var(--ui-text-muted);
+}

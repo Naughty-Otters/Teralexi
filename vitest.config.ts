@@ -1,0 +1,195 @@
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import vue from '@vitejs/plugin-vue'
+import vueJsx from '@vitejs/plugin-vue-jsx'
+import { defineConfig } from 'vitest/config'
+
+const rootDir = dirname(fileURLToPath(import.meta.url))
+
+export default defineConfig({
+  plugins: [vue(), vueJsx()],
+  resolve: {
+    alias: {
+      '@config': resolve(rootDir, 'config'),
+      '@renderer': resolve(rootDir, 'src/renderer'),
+      '@main': resolve(rootDir, 'src/main'),
+      '@store': resolve(rootDir, 'src/renderer/store/modules'),
+      '@ipcManager': resolve(rootDir, 'src/ipc'),
+      '@shared': resolve(rootDir, 'src/shared'),
+      '@logging': resolve(rootDir, 'src/logging'),
+      '@openfde-ai/vue': resolve(rootDir, 'src/openfde-ai/vue.ts'),
+      '@openfde-ai/mcp': resolve(rootDir, 'src/openfde-ai/mcp.ts'),
+      '@openfde-ai/llm-adapter': resolve(
+        rootDir,
+        'src/openfde-ai/llm-adapter.ts',
+      ),
+      '@openfde-ai': resolve(rootDir, 'src/openfde-ai/index.ts'),
+      '@toolSet': resolve(rootDir, 'toolSet'),
+    },
+  },
+  test: {
+    environment: 'node',
+    globals: true,
+    passWithNoTests: true,
+    clearMocks: true,
+    restoreMocks: true,
+    setupFiles: ['./vitest.setup.ts'],
+    include: [
+      'src/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts}',
+      'skills/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts}',
+      'toolSet/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts}',
+      'config/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts}',
+      '.electron-vite/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts}',
+    ],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary', 'lcov', 'html'],
+      include: [
+        'src/**/*.{ts,tsx}',
+        'skills/**/*.ts',
+        'toolSet/**/*.ts',
+        'config/**/*.ts',
+      ],
+      exclude: [
+        '**/*.{test,spec}.{ts,tsx}',
+        '**/*.d.ts',
+        '**/index.ts',
+        'src/renderer/**',
+        'src/preload/**',
+        'src/main/index.ts',
+        'src/openfde-ai/**',
+        'src/ipc/**',
+        'src/logging/**',
+        '**/types.ts',
+        // Subprocess-heavy tool; covered by integration tests
+        'toolSet/shell-command.ts',
+        // Electron / DB / channel integration (covered manually or in E2E)
+        'src/main/services/conversation-store.ts',
+        'src/main/services/ipc-main-handle.ts',
+        'src/main/services/google-oauth.ts',
+        'src/main/services/scheduler-manager.ts',
+        'src/main/services/mcp-server-manager.ts',
+        'src/main/services/hot-updater.ts',
+        'src/main/services/download-file.ts',
+        'src/main/services/check-update.ts',
+        'src/main/services/tray-manager.ts',
+        'src/main/channels/**',
+        'src/main/hooks/exception-hook.ts',
+        'src/main/logger.ts',
+        // Agent orchestration wired to live LLM / full flow
+        'src/main/agent/flow/agent-flow.ts',
+        'src/main/agent/context.ts',
+        'src/main/agent/steps/skills-tool-execution-step.ts',
+        'src/main/agent/expr/tool-loop-expr.ts',
+        'src/main/agent/steps/agent-step.ts',
+        'src/main/agent/expr/custom-prompt-expr.ts',
+        'src/main/agent/expr/thinking-expr.ts',
+        'src/main/agent/form/collect-data-step.ts',
+        'src/main/agent/form/infer-from-user.ts',
+        'src/main/agent/agent-stream-bridge.ts',
+        'src/main/agent/utils/agent-run-context.ts',
+        'src/main/agent/sandbox/sandbox-impl.ts',
+        'src/main/agent/sandbox/output-view.ts',
+        'src/main/services/window-manager.ts',
+        // Non-unit surfaces with strong filesystem/network/runtime coupling.
+        'src/main/services/support-bundle-builder.ts',
+        'src/main/services/github-oauth.ts',
+        'src/main/skills/skill-compiler.ts',
+        'src/main/skills/install-skill-from-github.ts',
+        // Document generation actions validated in integration/manual flows.
+        'skills/documents/actions/create-presentation.ts',
+        'skills/documents/actions/create-spreadsheet.ts',
+        'skills/documents/actions/create-word-doc.ts',
+        'skills/documents/actions/read-spreadsheet.ts',
+        'skills/research/actions/export-research-pdf.ts',
+        // Shared agent manifest parser exercised in runtime integration paths.
+        'src/shared/agent/explore-manifest.ts',
+        // SQLite repositories — integration with better-sqlite3 / Electron
+        'src/main/services/conversation-store/*-repository.ts',
+        'src/main/services/conversation-store/store.ts',
+        'src/main/services/conversation-store/token-usage-helpers.ts',
+        'src/main/services/conversation-store-notify.ts',
+        // Flow / expression orchestration is integration-heavy and validated by
+        // dedicated integration suites; exclude from unit statement baseline.
+        'src/main/agent/flow/**',
+        'src/main/agent/expr/**',
+        'src/main/agent/agent-memory.ts',
+        // Runtime adapters with environment/network coupling.
+        'src/main/agent/llm/runtime.ts',
+        'src/main/agent/llm/ai-sdk-adapter.ts',
+        'src/main/agent/llm/llm-response.ts',
+        'src/main/agent/llm/events.ts',
+        'src/main/agent/llm/validate-llm-payload.ts',
+        'src/main/agent/llm/log-llm-error.ts',
+        'src/main/agent/llm/handlers/**',
+        // Large persistence/preview surfaces mostly exercised by integration.
+        'src/main/agent/memory/agent-memory-store.ts',
+        'src/main/agent/memory/record-agent-memory-exchange.ts',
+        'src/main/agent/memory/memory-insight.ts',
+        'src/main/agent/sandbox/step-output-preview.ts',
+        'src/main/agent/sandbox/step-output-links.ts',
+        'src/main/agent/sandbox/context.ts',
+        'src/main/agent/sandbox/document-html.ts',
+        'src/main/agent/providers/context.ts',
+        'src/main/agent/run/resolve-child-agent.ts',
+        'src/main/agent/steps/create-paper-step.ts',
+        'src/main/agent/steps/web-scrape-step.ts',
+        'src/main/agent/steps/step-io.ts',
+        'src/main/agent/steps/sub-flow-config.ts',
+        'src/main/agent/steps/paper-config.ts',
+        'src/main/agent/steps/create-paper/create-paper-llm.ts',
+        'src/main/agent/steps/research/handoff.ts',
+        'src/main/agent/steps/step-helpers.ts',
+        'src/main/agent/steps/step-reference-link-expand.ts',
+        'src/main/agent/steps/search-step.ts',
+        'src/main/agent/resources/reference-ops.ts',
+        // Subprocess / LLM orchestration wired at runtime
+        'src/main/agent/memory/conversation-runners.ts',
+        'src/main/agent/memory/session-settings.ts',
+        'src/main/agent/sandbox/sandbox-materialize.ts',
+        // Foreach orchestration and compaction rely on broad integration flows.
+        'src/main/agent/steps/foreach-item/strategies/planned-todo-strategy.ts',
+        'src/main/agent/steps/foreach-skill-step.ts',
+        'src/main/agent/compaction/manual-conversation-compact.ts',
+        'src/main/agent/compaction/auto-stored-conversation-compact.ts',
+        'src/main/agent/coding/plan-mode-storage-impl.ts',
+        // Runtime sub-agent orchestration validated by integration tests.
+        'toolSet/sub-agents/list-agent-profiles.ts',
+        'toolSet/sub-agents/wait-for-sub-agent-runs.ts',
+        // Workflow compiler skill actions — FS/IPC coupled; covered by integration tests.
+        'skills/workflow-compiler/actions/**',
+        'skills/workflow-runtime/**',
+      ],
+      thresholds: {
+        lines: 80,
+        statements: 80,
+        functions: 80,
+        branches: 20,
+        'src/shared/**': {
+          lines: 90,
+          functions: 90,
+          branches: 80,
+          statements: 90,
+        },
+        'toolSet/**': {
+          lines: 84,
+          functions: 80,
+          branches: 55,
+          statements: 82,
+        },
+        'config/**': {
+          lines: 80,
+          functions: 75,
+          branches: 60,
+          statements: 79,
+        },
+        'src/main/utils/**': {
+          lines: 88,
+          functions: 90,
+          branches: 65,
+          statements: 88,
+        },
+      },
+    },
+  },
+})
