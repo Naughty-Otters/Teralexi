@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { existsSync } from 'fs'
 import { mkdtemp, rm, writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -22,6 +23,14 @@ import {
 import { buildBlankWorkflowDefinition } from './workflow-store'
 
 const CONTEXT_STACK_KEY = Symbol.for('openfde.workflowCompileContextStack')
+const workflowCompilerSkillFolder = join(
+  resolveBundledSkillsDirectory(),
+  'workflow-compiler',
+)
+const hasBundledWorkflowCompilerSkill = existsSync(
+  join(workflowCompilerSkillFolder, 'skill.md'),
+)
+const workflowCompilerIt = hasBundledWorkflowCompilerSkill ? it : it.skip
 
 let testWorkflowsRoot = ''
 
@@ -116,12 +125,19 @@ describe('workflow compiler skill actions', () => {
     delete g[CONTEXT_STACK_KEY]
   })
 
-  it('loads split workflow tools from skills/workflow-compiler/actions', async () => {
+  if (!hasBundledWorkflowCompilerSkill) {
+    it('returns no tools when workflow compiler bundled skill is absent', async () => {
+      const tools = await loadWorkflowCompilerTools()
+      expect(tools).toEqual([])
+    })
+  }
+
+  workflowCompilerIt('loads split workflow tools from skills/workflow-compiler/actions', async () => {
     const tools = await loadWorkflowCompilerTools()
     expect(tools.map((t) => t.name).sort()).toEqual([...WORKFLOW_COMPILER_TOOL_NAMES].sort())
   })
 
-  it('reads and writes workflow_definition.json', async () => {
+  workflowCompilerIt('reads and writes workflow_definition.json', async () => {
     await mkdir(sourceDir, { recursive: true })
     const json = validWorkflowDefinitionJson(workflowId)
     await writeFile(join(sourceDir, WORKFLOW_DEFINITION_JSON_FILENAME), json, 'utf-8')
@@ -155,7 +171,7 @@ describe('workflow compiler skill actions', () => {
     )
   })
 
-  it('returns validation errors after invalid workflow write', async () => {
+  workflowCompilerIt('returns validation errors after invalid workflow write', async () => {
     const result = await runWorkflowTool<Record<string, unknown>>(toolCtx, 'write_workflow_definition', {
       content: JSON.stringify({ version: 1, id: workflowId, name: 'Broken' }),
     })
@@ -175,7 +191,7 @@ describe('workflow compiler skill actions', () => {
     )
   })
 
-  it('returns valid=true for a well-formed workflow definition', async () => {
+  workflowCompilerIt('returns valid=true for a well-formed workflow definition', async () => {
     const result = await runWorkflowTool<Record<string, unknown>>(toolCtx, 'write_workflow_definition', {
       content: validWorkflowDefinitionJson(workflowId),
     })
@@ -189,7 +205,7 @@ describe('workflow compiler skill actions', () => {
     )
   })
 
-  it('add_entity_field returns entities array and canonical JSON', async () => {
+  workflowCompilerIt('add_entity_field returns entities array and canonical JSON', async () => {
     await runWorkflowTool(toolCtx, 'write_workflow_definition', {
       content: validWorkflowDefinitionJson(workflowId),
     })
@@ -216,7 +232,7 @@ describe('workflow compiler skill actions', () => {
     expect(JSON.parse(result.content)).toEqual(result.entities)
   })
 
-  it('requires workflow compile context outside a compiler run', async () => {
+  workflowCompilerIt('requires workflow compile context outside a compiler run', async () => {
     const tools = await loadWorkflowCompilerTools()
     const readWorkflowDefinition = tools.find((t) => t.name === 'read_workflow_definition')!
     await expect(readWorkflowDefinition.execute({})).rejects.toThrow(/compile context/i)
