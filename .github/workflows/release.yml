@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -27,6 +31,12 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Verify tag matches package version
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node .github/scripts/verify-release-version.mjs
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
