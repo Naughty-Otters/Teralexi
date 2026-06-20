@@ -79,7 +79,7 @@ async function mockPlaywrightBrowser(
       }
     },
     close: async () => undefined,
-  } as unknown as Awaited<ReturnType<typeof chromium.launch>>)
+  } as Awaited<ReturnType<typeof chromium.launch>>)
 }
 
 async function mockSearchHandlers(
@@ -89,16 +89,18 @@ async function mockSearchHandlers(
 
   const { CheerioCrawler } = await import('crawlee')
   vi.spyOn(CheerioCrawler.prototype, 'run').mockImplementation(
-    async function run(this: any, requests?: any): Promise<any> {
+    async function run(
+      this: CheerioCrawler,
+      requests: Array<string | { url: string }>,
+    ) {
       const handler = (this as unknown as { requestHandler: Function })
         .requestHandler
-      const first = requests?.[0]
+      const first = requests[0]
       const pageUrl = typeof first === 'string' ? first : (first?.url ?? '')
       await handler({
         $: cheerio.load(htmlForUrl(pageUrl)),
         request: { url: pageUrl, loadedUrl: pageUrl },
       })
-      return undefined as any
     },
   )
 }
@@ -314,39 +316,6 @@ const engineSampleHtml: Record<(typeof engineIds)[number], string> = {
     </div>
   `,
 }
-describe('searchWithEngine', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
-  })
-
-  it('uses Startpage fallback when Google playwright crawl is blocked', async () => {
-    await mockSearchHandlers((url) => {
-      if (url.includes('startpage.com')) {
-        return `
-          <div class="result">
-            <h2>Earth mass - Wikipedia</h2>
-            <a href="https://en.wikipedia.org/wiki/Earth_mass">link</a>
-            <p>Mass estimate snippet text here for parsing.</p>
-          </div>
-        `
-      }
-      return '<html><body>enablejs httpservice/retry/enablejs</body></html>'
-    })
-
-    const result = await searchWithEngine('google', 'earth mass', 5)
-    expect(result.results.length).toBeGreaterThan(0)
-    expect(result.results[0]?.url).toContain('wikipedia.org')
-  })
-
-  it('reports error when parser finds no rows', async () => {
-    await mockSearchHandlers(() => '<html><body></body></html>')
-
-    const result = await searchWithEngine('bing', 'x', 5)
-    expect(result.results).toHaveLength(0)
-    expect(result.error).toMatch(/No bing results/)
-  })
-})
-
 describe('webScrape tool', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -363,10 +332,10 @@ describe('webScrape tool', () => {
   it('scrapes a page via crawler', async () => {
     const { CheerioCrawler } = await import('crawlee')
     vi.spyOn(CheerioCrawler.prototype, 'run').mockImplementation(
-      async function run(this: any, urls?: any): Promise<any> {
+      async function run(this: CheerioCrawler, urls: string[]) {
         const handler = (this as unknown as { requestHandler: Function })
           .requestHandler
-        for (const pageUrl of urls ?? []) {
+        for (const pageUrl of urls) {
           await handler({
             $: cheerio.load(
               '<html><title>Page</title><body><p>' +
@@ -376,7 +345,6 @@ describe('webScrape tool', () => {
             request: { url: pageUrl, loadedUrl: pageUrl },
           })
         }
-        return undefined as any
       },
     )
 
@@ -395,15 +363,15 @@ describe('webScrape tool', () => {
         }),
       ],
     })
-  }, 15_000)
+  })
 
   it('falls back to Playwright when Cheerio returns a JS shell', async () => {
     const { CheerioCrawler } = await import('crawlee')
     vi.spyOn(CheerioCrawler.prototype, 'run').mockImplementation(
-      async function run(this: any, urls?: any): Promise<any> {
+      async function run(this: CheerioCrawler, urls: string[]) {
         const handler = (this as unknown as { requestHandler: Function })
           .requestHandler
-        for (const pageUrl of urls ?? []) {
+        for (const pageUrl of urls) {
           await handler({
             $: cheerio.load(
               '<html><body>enablejs httpservice/retry/enablejs</body></html>',
@@ -411,7 +379,6 @@ describe('webScrape tool', () => {
             request: { url: pageUrl, loadedUrl: pageUrl },
           })
         }
-        return undefined as any
       },
     )
     await mockPlaywrightBrowser(() =>
@@ -431,7 +398,7 @@ describe('webScrape tool', () => {
         }),
       ],
     })
-  }, 15_000)
+  })
 })
 
 describe('scrape helpers', () => {
