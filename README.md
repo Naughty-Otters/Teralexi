@@ -82,7 +82,7 @@ Unit tests use [Vitest](https://vitest.dev/) with co-located `*.test.ts` files n
 - Config: `vitest.config.ts`, setup: `vitest.setup.ts`
 - Patterns: `src/**/*.test.ts`, `skills/**/*.test.ts`, `config/**/*.test.ts`, `.electron-vite/**/*.test.ts`
 
-CI enforces **80% line** coverage (78%+ statements) on unit-testable code. Integration boundaries (Electron IPC, SQLite store, WhatsApp, full agent flow orchestration, shell subprocess tools) are excluded from that gate; see `coverage.exclude` in `vitest.config.ts`. Per-area floors still apply (for example `src/shared/**` at 90%, `toolSet/**` at 85%).
+CI enforces **70%** line, statement, and function coverage on unit-testable code. Integration boundaries (Electron IPC, SQLite store, WhatsApp, full agent flow orchestration, shell subprocess tools) are excluded from that gate; see `coverage.exclude` in `vitest.config.ts`. Per-area floors in `coverage.thresholds` also use **70%** for lines, statements, and functions.
 
 ## GitHub Actions
 CI runs in `.github/workflows/ci.yml` on pushes and pull requests to `main`, `master`, and `mini-main`:
