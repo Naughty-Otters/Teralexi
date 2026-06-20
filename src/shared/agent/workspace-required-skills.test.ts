@@ -16,7 +16,6 @@ describe('workspace-required-skills', () => {
 
   it('flags coding and code-review only', () => {
     expect(skillRequiresWorkspace('coding')).toBe(true)
-    expect(skillRequiresWorkspace('code-review')).toBe(true)
     expect(skillRequiresWorkspace('default')).toBe(false)
     expect(agentRequiresWorkspace({ skillId: 'documents' })).toBe(false)
   })

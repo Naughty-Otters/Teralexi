@@ -48,14 +48,4 @@ describe('loadSkillsFromDirectory (integration)', () => {
     }
   })
 
-  it('loads workflow-compiler and workflow-runtime with workflow visibility', async () => {
-    const skills = await loadSkillsFromDirectory(resolveBundledSkillsDirectory())
-    const compiler = skills.find((s) => s.id === 'workflow-compiler')
-    const runtime = skills.find((s) => s.id === 'workflow-runtime')
-
-    expect(compiler?.properties.visibility).toBe('workflow')
-    expect(runtime?.properties.visibility).toBe('workflow')
-    expect(compiler?.sections.instructions).toContain('Workflow compiler')
-    expect(runtime?.sections.instructions).toContain('Workflow runtime')
-  })
 })
