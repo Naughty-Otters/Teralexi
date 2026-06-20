@@ -1,0 +1,334 @@
+<template>
+  <aside class="report-panel">
+    <div
+      v-if="sandboxRuns.length > 0"
+      class="report-panel-tabs"
+      role="tablist"
+      aria-label="Sandbox output runs"
+    >
+      <button
+        v-for="run in sandboxRuns"
+        :key="run.id"
+        type="button"
+        role="tab"
+        class="cp-tab"
+        :aria-selected="run.id === activeRun?.id"
+        :class="{ 'cp-tab--active': run.id === activeRun?.id }"
+        @click="emit('update:selectedRunId', run.id)"
+      >
+        {{ run.label }}
+      </button>
+    </div>
+
+    <div class="report-panel-url-section">
+      <div class="report-panel-url-row">
+        <input
+          v-model="urlDraft"
+          type="text"
+          class="report-panel-url-input"
+          spellcheck="false"
+          autocomplete="off"
+          placeholder="file://…"
+          aria-label="Preview URL"
+          @keydown.enter.prevent="applyPreviewUrl"
+          @blur="applyPreviewUrl"
+        />
+        <button
+          type="button"
+          class="cp-icon-btn cp-icon-btn--compact"
+          :disabled="!previewUrl"
+          title="Copy URL"
+          aria-label="Copy URL"
+          @click="copyResultsUrl"
+        >
+          <UIcon name="i-lucide-copy" class="cp-icon-btn__glyph" />
+        </button>
+      </div>
+    </div>
+
+    <div
+      ref="sandboxHostEl"
+      class="report-panel-viewport"
+    >
+      <div
+        v-if="!previewUrl"
+        class="report-panel-placeholder"
+      >
+        <UIcon name="i-lucide-folder-open" class="report-panel-placeholder-icon" />
+        <p>No sandbox preview yet</p>
+        <span>Run the agent to attach <code>output/results</code>. The folder opens here.</span>
+      </div>
+    </div>
+  </aside>
+</template>
+
+<script setup lang="ts">
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+  withDefaults,
+} from 'vue'
+import type { ConversationSandboxRun } from '@store/agent/types'
+
+const props = withDefaults(
+  defineProps<{
+    sandboxRuns?: ConversationSandboxRun[]
+    selectedRunId?: string | null
+    previewUrlOverride?: string | null
+  }>(),
+  {
+    sandboxRuns: () => [],
+    selectedRunId: null,
+    previewUrlOverride: null,
+  },
+)
+
+const emit = defineEmits<{
+  'update:selectedRunId': [id: string]
+}>()
+
+const sandboxHostEl = ref<HTMLElement | null>(null)
+/** Editable URL field; synced from the active tab unless the user is typing. */
+const urlDraft = ref('')
+
+const activeRun = computed((): ConversationSandboxRun | null => {
+  const runs = props.sandboxRuns ?? []
+  if (!runs.length) return null
+  const sel = props.selectedRunId
+  if (sel) {
+    const hit = runs.find((r) => r.id === sel)
+    if (hit) return hit
+  }
+  return runs[runs.length - 1]
+})
+
+const activeResultsFileUrl = computed(() => {
+  const u = activeRun.value?.resultsFileUrl?.trim()
+  return u || null
+})
+
+const previewUrl = computed(() => {
+  const override = props.previewUrlOverride?.trim()
+  if (override) return override
+  const typed = urlDraft.value.trim()
+  if (typed) return typed
+  return activeResultsFileUrl.value
+})
+
+watch(
+  () => props.previewUrlOverride,
+  (override) => {
+    if (override?.trim()) {
+      urlDraft.value = override.trim()
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => [activeRun.value?.id, activeResultsFileUrl.value] as const,
+  ([, url]) => {
+    if (props.previewUrlOverride?.trim()) return
+    urlDraft.value = url ?? ''
+  },
+  { immediate: true },
+)
+
+function screenBoundsForEl(el: HTMLElement) {
+  const r = el.getBoundingClientRect()
+  return {
+    x: Math.round(window.screenX + r.left),
+    y: Math.round(window.screenY + r.top),
+    width: Math.round(r.width),
+    height: Math.round(r.height),
+  }
+}
+
+async function syncSandboxOutputBounds() {
+  const ipc = window.ipcRendererChannel?.SyncSandboxOutputView
+  if (!ipc?.invoke) return
+  const host = sandboxHostEl.value
+  if (!host) {
+    await ipc.invoke({
+      screenBounds: { x: 0, y: 0, width: 0, height: 0 },
+      fileUrl: null,
+    })
+    return
+  }
+  await ipc.invoke({
+    screenBounds: screenBoundsForEl(host),
+    fileUrl: previewUrl.value,
+  })
+}
+
+async function clearSandboxOutputView() {
+  const ipc = window.ipcRendererChannel?.SyncSandboxOutputView
+  await ipc?.invoke?.({
+    screenBounds: { x: 0, y: 0, width: 0, height: 0 },
+    fileUrl: null,
+  })
+}
+
+function copyResultsUrl() {
+  const url = previewUrl.value
+  if (!url || !navigator.clipboard?.writeText) return
+  void navigator.clipboard.writeText(url)
+}
+
+async function applyPreviewUrl() {
+  await nextTick()
+  attachSandboxResizeObserver()
+  await syncSandboxOutputBounds()
+}
+
+let sandboxResizeObserver: ResizeObserver | null = null
+
+function attachSandboxResizeObserver() {
+  sandboxResizeObserver?.disconnect()
+  sandboxResizeObserver = new ResizeObserver(() => {
+    void syncSandboxOutputBounds()
+  })
+  if (sandboxHostEl.value) {
+    sandboxResizeObserver.observe(sandboxHostEl.value)
+  }
+}
+
+function onWindowResize() {
+  void syncSandboxOutputBounds()
+}
+
+watch(
+  previewUrl,
+  async () => {
+    await nextTick()
+    attachSandboxResizeObserver()
+    await syncSandboxOutputBounds()
+  },
+  { flush: 'post' },
+)
+
+onMounted(() => {
+  window.addEventListener('resize', onWindowResize)
+  void nextTick(() => {
+    attachSandboxResizeObserver()
+    void syncSandboxOutputBounds()
+  })
+})
+
+onBeforeUnmount(() => {
+  sandboxResizeObserver?.disconnect()
+  window.removeEventListener('resize', onWindowResize)
+  void clearSandboxOutputView()
+})
+</script>
+
+<style scoped>
+.report-panel {
+  flex-shrink: 0;
+  min-width: 280px;
+  background: var(--ui-bg-elevated);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.report-panel-tabs {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 10px 10px 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  border-bottom: 1px solid var(--ui-border);
+  background: var(--ui-bg-elevated);
+}
+
+.report-panel-url-section {
+  flex-shrink: 0;
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--ui-border);
+  background: var(--ui-bg);
+}
+
+.report-panel-url-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-panel-url-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  font-family: var(--app-font-family);
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-bg-elevated);
+  color: var(--ui-text);
+}
+
+.report-panel-url-input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+}
+
+.report-panel-viewport {
+  flex: 1;
+  min-height: 200px;
+  position: relative;
+  background: var(--ui-bg);
+}
+
+.report-panel-placeholder {
+  height: 100%;
+  min-height: 180px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ui-text-muted);
+}
+
+.report-panel-placeholder p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ui-text);
+}
+
+.report-panel-placeholder code {
+  font-size: 11px;
+}
+
+.report-panel-placeholder-icon {
+  width: 24px;
+  height: 24px;
+  opacity: 0.75;
+}
+
+@media (max-width: 960px) {
+  .report-panel {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    max-height: min(480px, 60vh);
+    border-left: none;
+    border-top: 1px solid var(--ui-border);
+  }
+
+  .report-panel-viewport {
+    min-height: 220px;
+  }
+}
+</style>

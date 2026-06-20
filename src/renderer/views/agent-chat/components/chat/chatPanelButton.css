@@ -1,0 +1,184 @@
+/**
+ * Shared button chrome for the agent chat panel (scoped under .chat-panel).
+ */
+
+:is(.chat-panel, .window-title, .wf-studio) .cp-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  line-height: 0;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--ui-border) 88%, var(--ui-text) 6%);
+  background: color-mix(in srgb, var(--ui-bg-elevated) 96%, var(--ui-bg) 4%);
+  color: var(--ui-text);
+  cursor: pointer;
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease,
+    box-shadow 0.14s ease,
+    color 0.14s ease,
+    transform 0.1s ease,
+    opacity 0.14s ease;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--ui-text) 5%, transparent),
+    0 1px 3px color-mix(in srgb, var(--ui-text) 7%, transparent);
+}
+
+:is(.chat-panel, .window-title, .wf-studio) .cp-icon-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-primary-500) 38%, var(--ui-border));
+  background: color-mix(in srgb, var(--ui-bg-elevated) 85%, var(--ui-bg) 15%);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--ui-text) 6%, transparent),
+    0 2px 10px color-mix(in srgb, var(--color-primary-500) 14%, transparent);
+}
+
+:is(.chat-panel, .window-title, .wf-studio) .cp-icon-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ui-text) 8%, transparent);
+}
+
+:is(.chat-panel, .window-title, .wf-studio) .cp-icon-btn:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-primary-500) 55%, var(--ui-border));
+  box-shadow:
+    0 0 0 2px var(--ui-bg, #fff),
+    0 0 0 4px color-mix(in srgb, var(--color-primary-500) 32%, transparent);
+}
+
+:is(.chat-panel, .window-title, .wf-studio) .cp-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+:is(.chat-panel, .window-title, .wf-studio) .cp-icon-btn--on {
+  color: var(--color-primary-600, var(--color-primary-500));
+  border-color: color-mix(in srgb, var(--color-primary-500) 42%, var(--ui-border));
+  background: color-mix(in srgb, var(--color-primary-500) 11%, var(--ui-bg-elevated));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--color-primary-500) 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 12%, transparent);
+}
+
+:is(.chat-panel, .window-title, .wf-studio) .cp-icon-btn__glyph {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Report / URL bar: compact square icon beside input */
+:is(.chat-panel, .window-title, .wf-studio) .cp-icon-btn--compact {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 9px;
+}
+
+:is(.chat-panel, .window-title, .wf-studio) .cp-icon-btn--compact .cp-icon-btn__glyph {
+  width: 16px;
+  height: 16px;
+}
+
+/* Tab strip (sandbox runs) */
+.chat-panel .cp-tab {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 9px 9px 0 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  color: var(--ui-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    color 0.14s ease,
+    background 0.14s ease,
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.chat-panel .cp-tab:hover {
+  color: var(--ui-text);
+  background: color-mix(in srgb, var(--ui-text) 5%, transparent);
+}
+
+.chat-panel .cp-tab--active {
+  color: var(--ui-text);
+  background: var(--ui-bg);
+  border-color: var(--ui-border);
+  border-bottom-color: var(--ui-bg);
+  margin-bottom: -1px;
+  padding-bottom: 9px;
+  box-shadow: 0 -1px 0 color-mix(in srgb, var(--ui-text) 5%, transparent);
+}
+
+.chat-panel .cp-tab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary-500) 28%, transparent);
+}
+
+/* Primary / danger text buttons (Nuxt UI UButton — class on root) */
+.chat-panel .cp-btn-primary {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 10px !important;
+  min-height: 38px;
+  padding-left: 18px !important;
+  padding-right: 18px !important;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--color-primary-600, var(--color-primary-500)) 35%, transparent),
+    0 2px 8px color-mix(in srgb, var(--color-primary-500) 22%, transparent) !important;
+  transition:
+    box-shadow 0.14s ease,
+    transform 0.1s ease !important;
+}
+
+.chat-panel .cp-btn-primary:hover:not(:disabled) {
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--color-primary-600, var(--color-primary-500)) 45%, transparent),
+    0 4px 14px color-mix(in srgb, var(--color-primary-500) 28%, transparent) !important;
+}
+
+.chat-panel .cp-btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.chat-panel .cp-btn-secondary {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: 10px !important;
+  min-height: 36px;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  border-width: 1px !important;
+  border-color: color-mix(in srgb, var(--ui-border) 75%, var(--ui-text) 10%) !important;
+  background: color-mix(in srgb, var(--ui-bg-elevated) 88%, transparent) !important;
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease,
+    box-shadow 0.14s ease !important;
+}
+
+.chat-panel .cp-btn-secondary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--ui-text) 22%, var(--ui-border)) !important;
+  background: color-mix(in srgb, var(--ui-text) 6%, var(--ui-bg-elevated)) !important;
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--ui-text) 8%, transparent) !important;
+}
+
+.chat-panel .cp-btn-sm {
+  min-height: 34px !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+  font-size: 13px !important;
+}
+
+.chat-panel .cp-btn-wide {
+  min-width: 104px;
+}

@@ -1,0 +1,840 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { useAgentStore } from '@store/agent'
+
+export type GitStatusEntry = {
+  code: string
+  index: string
+  worktree: string
+  path: string
+  origPath?: string
+}
+
+export type GitLogEntry = {
+  hash: string
+  shortHash: string
+  subject: string
+  author: string
+  date: string
+  refs: string
+}
+
+export type GitFileEntry = {
+  path: string
+  name: string
+  isDir: boolean
+  gitStatus?: string
+}
+
+export type WorkspaceConsoleEntry = {
+  id: string
+  command: string
+  cwd: string
+  output: string
+  exitCode: number
+  at: string
+}
+
+export type WorkspaceEditorTab = {
+  path: string
+  content: string
+  original: string
+  loading: boolean
+  error: string | null
+  binary: boolean
+  fileUrl: string | null
+}
+
+export const useWorkspaceGitStore = defineStore('workspace-git', () => {
+  const workspacePath = ref<string | null>(null)
+  const conversationId = ref<string | null>(null)
+
+  const branch = ref('')
+  const upstream = ref<string | null>(null)
+  const ahead = ref(0)
+  const behind = ref(0)
+  const statusEntries = ref<GitStatusEntry[]>([])
+  const statusLoading = ref(false)
+  const statusError = ref<string | null>(null)
+
+  const diff = ref('')
+  const diffStaged = ref(false)
+  const diffFiles = ref<string[]>([])
+  const diffLoading = ref(false)
+  const diffError = ref<string | null>(null)
+
+  const commits = ref<GitLogEntry[]>([])
+  const logLoading = ref(false)
+  const logError = ref<string | null>(null)
+
+  const fileEntries = ref<GitFileEntry[]>([])
+  const filesDirectory = ref('.')
+  const filesLoading = ref(false)
+  const filesError = ref<string | null>(null)
+
+  const editorTabs = ref<WorkspaceEditorTab[]>([])
+  const activeEditorPath = ref<string | null>(null)
+  const editorSaving = ref(false)
+
+  const activeEditorTab = computed(() => {
+    const path = activeEditorPath.value
+    if (!path) return null
+    return editorTabs.value.find((tab) => tab.path === path) ?? null
+  })
+
+  const editorPath = computed(() => activeEditorPath.value)
+
+  const editorContent = computed({
+    get: () => activeEditorTab.value?.content ?? '',
+    set: (value: string) => {
+      const tab = activeEditorTab.value
+      if (tab) tab.content = value
+    },
+  })
+
+  const editorOriginal = computed(() => activeEditorTab.value?.original ?? '')
+
+  const editorDirty = computed(() => {
+    const tab = activeEditorTab.value
+    return tab != null && tab.content !== tab.original
+  })
+
+  const editorLoading = computed(() => activeEditorTab.value?.loading ?? false)
+  const editorError = computed(() => activeEditorTab.value?.error ?? null)
+  const editorBinary = computed(() => activeEditorTab.value?.binary ?? false)
+  const editorFileUrl = computed(() => activeEditorTab.value?.fileUrl ?? null)
+
+  const openEditorPaths = computed(
+    () => new Set(editorTabs.value.map((tab) => tab.path)),
+  )
+
+  function isEditorTabDirty(path: string): boolean {
+    const tab = editorTabs.value.find((entry) => entry.path === path)
+    return tab != null && tab.content !== tab.original
+  }
+  const consoleCommand = ref('')
+  const consoleRunning = ref(false)
+  const consoleError = ref<string | null>(null)
+  const consoleEntries = ref<WorkspaceConsoleEntry[]>([])
+  const consoleRunId = ref<string | null>(null)
+
+  const consoleOpen = ref(false)
+  const opLoading = ref(false)
+  const opError = ref<string | null>(null)
+  const opSuccess = ref<string | null>(null)
+  const lastPrUrl = ref<string | null>(null)
+
+  const commitMessage = ref('')
+  const prTitle = ref('')
+  const prBody = ref('')
+
+  const isClean = computed(() => statusEntries.value.length === 0)
+
+  const stagedEntries = computed(() =>
+    statusEntries.value.filter((e) => e.index !== ' ' && e.index !== '?'),
+  )
+
+  const unstagedEntries = computed(() =>
+    statusEntries.value.filter((e) => e.worktree !== ' ' && e.code !== '??'),
+  )
+
+  const untrackedEntries = computed(() =>
+    statusEntries.value.filter((e) => e.code === '??'),
+  )
+
+  const isMutationsDisabled = computed(() => {
+    const cid = conversationId.value?.trim()
+    if (!cid || !workspacePath.value) return true
+    return useAgentStore().isConversationStreamActive(cid)
+  })
+
+  const canPush = computed(() => {
+    if (!branch.value.trim()) return false
+    if (upstream.value != null) return ahead.value > 0
+    return true
+  })
+
+  function requireConversationId(): string | null {
+    const id = conversationId.value?.trim()
+    if (id) return id
+    return useAgentStore().currentConversationId?.trim() || null
+  }
+
+  function normalizeFilesDirectory(relativePath: string): string {
+    const normalized = relativePath
+      .replace(/\\/g, '/')
+      .replace(/^\/+/, '')
+      .replace(/\/+$/, '')
+      .trim()
+    if (!normalized || normalized === '.') return '.'
+    const parts = normalized.split('/').filter((p) => p && p !== '.')
+    return parts.join('/') || '.'
+  }
+
+  function parentFilesDirectory(relativePath: string): string {
+    const normalized = normalizeFilesDirectory(relativePath)
+    if (normalized === '.') return '.'
+    const parts = normalized.split('/')
+    parts.pop()
+    return parts.length ? parts.join('/') : '.'
+  }
+
+  function closeAllEditorTabs() {
+    editorTabs.value = []
+    activeEditorPath.value = null
+    editorSaving.value = false
+  }
+
+  function setWorkspace(path: string | null, convId: string | null) {
+    workspacePath.value = path
+    conversationId.value =
+      convId?.trim() || useAgentStore().currentConversationId?.trim() || null
+    filesDirectory.value = '.'
+    if (!path) {
+      branch.value = ''
+      upstream.value = null
+      ahead.value = 0
+      behind.value = 0
+      statusEntries.value = []
+      commits.value = []
+      fileEntries.value = []
+      diff.value = ''
+      lastPrUrl.value = null
+      closeAllEditorTabs()
+      consoleEntries.value = []
+      consoleError.value = null
+      consoleCommand.value = ''
+      consoleRunning.value = false
+      consoleRunId.value = null
+    }
+  }
+
+  function toggleConsole(open?: boolean) {
+    consoleOpen.value = typeof open === 'boolean' ? open : !consoleOpen.value
+  }
+
+  function clearConsole() {
+    consoleEntries.value = []
+    consoleError.value = null
+  }
+
+  async function runConsoleCommand(commandText?: string): Promise<boolean> {
+    if (isMutationsDisabled.value) return false
+    const cid = requireConversationId()
+    if (!cid) return false
+
+    const command = (commandText ?? consoleCommand.value).trim()
+    if (!command) {
+      consoleError.value = 'Command must not be empty.'
+      return false
+    }
+
+    const ch = window.ipcRendererChannel?.RunWorkspaceTerminalCommand
+    if (!ch?.invoke) return false
+
+    consoleRunning.value = true
+    const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    consoleRunId.value = runId
+    consoleError.value = null
+    try {
+      const result = await ch.invoke({
+        conversationId: cid,
+        command,
+        relativeCwd: filesDirectory.value,
+      })
+      if (consoleRunId.value !== runId) return false
+
+      const outputParts = [result.stdout ?? '', result.stderr ?? ''].filter(
+        (part) => part.trim().length > 0,
+      )
+      const output = outputParts.join('\n')
+      const entry: WorkspaceConsoleEntry = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        command,
+        cwd: result.cwd ?? workspacePath.value ?? '.',
+        output: output || '(no output)',
+        exitCode: result.exitCode ?? (result.ok ? 0 : 1),
+        at: new Date().toISOString(),
+      }
+      consoleEntries.value = [...consoleEntries.value, entry].slice(-120)
+
+      if (result.ok) {
+        consoleCommand.value = ''
+        await refreshFiles()
+        return true
+      }
+      consoleError.value = result.error ?? 'Command failed.'
+      return false
+    } catch (err) {
+      if (consoleRunId.value !== runId) return false
+      consoleError.value = String(err)
+      return false
+    } finally {
+      if (consoleRunId.value === runId) {
+        consoleRunning.value = false
+        consoleRunId.value = null
+      }
+    }
+  }
+
+  async function cancelConsoleCommand(): Promise<boolean> {
+    const cid = requireConversationId()
+    if (!cid || !consoleRunning.value) return false
+    const ch = window.ipcRendererChannel?.CancelWorkspaceTerminalCommand
+    if (!ch?.invoke) return false
+
+    try {
+      const result = await ch.invoke({ conversationId: cid })
+      if (!result.ok) {
+        consoleError.value = result.error ?? 'Failed to interrupt command.'
+        return false
+      }
+      return true
+    } catch (err) {
+      consoleError.value = String(err)
+      return false
+    }
+  }
+
+  async function listFiles(
+    relativePath: string,
+  ): Promise<GitFileEntry[] | null> {
+    const cid = requireConversationId()
+    if (!cid) return null
+    const ch = window.ipcRendererChannel?.ListWorkspaceFiles
+    if (!ch?.invoke) return null
+
+    try {
+      const result = await ch.invoke({
+        conversationId: cid,
+        relativePath: normalizeFilesDirectory(relativePath),
+      })
+      if (result.ok) return result.entries
+      return null
+    } catch {
+      return null
+    }
+  }
+
+  async function refreshStatus(): Promise<void> {
+    const cid = requireConversationId()
+    if (!cid) return
+    const ch = window.ipcRendererChannel?.GetWorkspaceGitStatus
+    if (!ch?.invoke) return
+
+    statusLoading.value = true
+    statusError.value = null
+    try {
+      const result = await ch.invoke({ conversationId: cid })
+      if (result.ok) {
+        branch.value = result.branch
+        upstream.value = result.upstream
+        ahead.value = result.ahead
+        behind.value = result.behind
+        statusEntries.value = result.entries
+      } else {
+        statusError.value = result.error ?? 'git status failed.'
+      }
+    } catch (err) {
+      statusError.value = String(err)
+    } finally {
+      statusLoading.value = false
+    }
+  }
+
+  async function refreshDiff(
+    staged = false,
+    files: string[] = [],
+  ): Promise<void> {
+    const cid = requireConversationId()
+    if (!cid) return
+    const ch = window.ipcRendererChannel?.GetWorkspaceGitDiff
+    if (!ch?.invoke) return
+
+    diffStaged.value = staged
+    diffFiles.value = files
+    diffLoading.value = true
+    diffError.value = null
+    try {
+      const result = await ch.invoke({ conversationId: cid, staged, files })
+      if (result.ok) {
+        diff.value = result.diff
+      } else {
+        diffError.value = result.error ?? 'git diff failed.'
+        diff.value = ''
+      }
+    } catch (err) {
+      diffError.value = String(err)
+    } finally {
+      diffLoading.value = false
+    }
+  }
+
+  async function refreshLog(): Promise<void> {
+    const cid = requireConversationId()
+    if (!cid) return
+    const ch = window.ipcRendererChannel?.GetWorkspaceGitLog
+    if (!ch?.invoke) return
+
+    logLoading.value = true
+    logError.value = null
+    try {
+      const result = await ch.invoke({ conversationId: cid, limit: 30 })
+      if (result.ok) {
+        commits.value = result.commits
+      } else {
+        logError.value = result.error ?? 'git log failed.'
+      }
+    } catch (err) {
+      logError.value = String(err)
+    } finally {
+      logLoading.value = false
+    }
+  }
+
+  async function refreshFiles(relativePath?: string): Promise<void> {
+    const cid = requireConversationId()
+    if (!cid) return
+    const ch = window.ipcRendererChannel?.ListWorkspaceFiles
+    if (!ch?.invoke) return
+
+    if (relativePath !== undefined) {
+      filesDirectory.value = normalizeFilesDirectory(relativePath)
+    }
+
+    filesLoading.value = true
+    filesError.value = null
+    try {
+      const result = await ch.invoke({
+        conversationId: cid,
+        relativePath: filesDirectory.value,
+      })
+      if (result.ok) {
+        fileEntries.value = result.entries
+      } else {
+        filesError.value = result.error ?? 'Failed to list files.'
+      }
+    } catch (err) {
+      filesError.value = String(err)
+    } finally {
+      filesLoading.value = false
+    }
+  }
+
+  async function navigateFilesToDirectory(relativePath: string): Promise<void> {
+    await refreshFiles(relativePath)
+  }
+
+  async function navigateFilesUp(): Promise<void> {
+    await refreshFiles(parentFilesDirectory(filesDirectory.value))
+  }
+
+  async function navigateFilesToHighlight(filePath: string): Promise<void> {
+    const normalized = filePath.replace(/\\/g, '/').trim()
+    if (!normalized) return
+    const slash = normalized.lastIndexOf('/')
+    const parent = slash >= 0 ? normalized.slice(0, slash) : '.'
+    await refreshFiles(parent)
+  }
+
+  async function stageAll(): Promise<boolean> {
+    if (isMutationsDisabled.value) return false
+    const cid = requireConversationId()
+    if (!cid) return false
+    const ch = window.ipcRendererChannel?.RunWorkspaceGitAdd
+    if (!ch?.invoke) return false
+
+    opLoading.value = true
+    opError.value = null
+    opSuccess.value = null
+    try {
+      const result = await ch.invoke({ conversationId: cid, files: [] })
+      if (result.ok) {
+        opSuccess.value = 'All changes staged.'
+        await refreshStatus()
+        return true
+      }
+      opError.value = result.error ?? 'git add failed.'
+      return false
+    } catch (err) {
+      opError.value = String(err)
+      return false
+    } finally {
+      opLoading.value = false
+    }
+  }
+
+  async function stageFiles(files: string[]): Promise<boolean> {
+    if (isMutationsDisabled.value) return false
+    const cid = requireConversationId()
+    if (!cid || !files.length) return false
+    const ch = window.ipcRendererChannel?.RunWorkspaceGitAdd
+    if (!ch?.invoke) return false
+
+    opLoading.value = true
+    opError.value = null
+    opSuccess.value = null
+    try {
+      const result = await ch.invoke({ conversationId: cid, files })
+      if (result.ok) {
+        opSuccess.value = `Staged ${files.length} file(s).`
+        await refreshStatus()
+        return true
+      }
+      opError.value = result.error ?? 'git add failed.'
+      return false
+    } catch (err) {
+      opError.value = String(err)
+      return false
+    } finally {
+      opLoading.value = false
+    }
+  }
+
+  async function commit(): Promise<boolean> {
+    if (isMutationsDisabled.value) return false
+    const cid = requireConversationId()
+    const msg = commitMessage.value.trim()
+    if (!cid || !msg) return false
+    const ch = window.ipcRendererChannel?.RunWorkspaceGitCommit
+    if (!ch?.invoke) return false
+
+    opLoading.value = true
+    opError.value = null
+    opSuccess.value = null
+    try {
+      const result = await ch.invoke({ conversationId: cid, message: msg })
+      if (result.ok) {
+        commitMessage.value = ''
+        opSuccess.value = result.hash
+          ? `Committed ${result.hash.slice(0, 7)}.`
+          : 'Committed.'
+        await Promise.all([refreshStatus(), refreshLog()])
+        return true
+      }
+      opError.value = result.error ?? 'git commit failed.'
+      return false
+    } catch (err) {
+      opError.value = String(err)
+      return false
+    } finally {
+      opLoading.value = false
+    }
+  }
+
+  async function push(
+    options: { remote?: string; branch?: string; setUpstream?: boolean } = {},
+  ): Promise<boolean> {
+    if (isMutationsDisabled.value) return false
+    const cid = requireConversationId()
+    if (!cid) return false
+    const ch = window.ipcRendererChannel?.RunWorkspaceGitPush
+    if (!ch?.invoke) return false
+
+    opLoading.value = true
+    opError.value = null
+    opSuccess.value = null
+    try {
+      const result = await ch.invoke({ conversationId: cid, ...options })
+      if (result.ok) {
+        opSuccess.value = 'Pushed successfully.'
+        await refreshStatus()
+        return true
+      }
+      opError.value = result.error ?? 'git push failed.'
+      return false
+    } catch (err) {
+      opError.value = String(err)
+      return false
+    } finally {
+      opLoading.value = false
+    }
+  }
+
+  async function createPR(options: {
+    title: string
+    body: string
+    base?: string
+    draft?: boolean
+  }): Promise<{ ok: boolean; url?: string }> {
+    if (isMutationsDisabled.value) return { ok: false }
+    const cid = requireConversationId()
+    if (!cid) return { ok: false }
+    const ch = window.ipcRendererChannel?.RunWorkspaceGitCreatePR
+    if (!ch?.invoke) return { ok: false }
+
+    opLoading.value = true
+    opError.value = null
+    opSuccess.value = null
+    lastPrUrl.value = null
+    try {
+      const result = await ch.invoke({ conversationId: cid, ...options })
+      if (result.ok) {
+        lastPrUrl.value = result.url ?? null
+        opSuccess.value = result.url
+          ? `PR created: ${result.url}`
+          : 'PR created!'
+        return { ok: true, url: result.url }
+      }
+      opError.value = result.error ?? 'gh pr create failed.'
+      return { ok: false }
+    } catch (err) {
+      opError.value = String(err)
+      return { ok: false }
+    } finally {
+      opLoading.value = false
+    }
+  }
+
+  async function openFile(relativePath: string): Promise<void> {
+    const cid = requireConversationId()
+    if (!cid) return
+    const ch = window.ipcRendererChannel?.OpenWorkspaceFile
+    if (!ch?.invoke) return
+    await ch.invoke({ conversationId: cid, relativePath })
+  }
+
+  function activateEditorTab(relativePath: string): void {
+    const normalized = relativePath.replace(/\\/g, '/').trim()
+    if (!normalized) return
+    if (!editorTabs.value.some((tab) => tab.path === normalized)) return
+    activeEditorPath.value = normalized
+  }
+
+  function closeEditorTab(relativePath?: string): void {
+    const normalized = (relativePath ?? activeEditorPath.value)
+      ?.replace(/\\/g, '/')
+      .trim()
+    if (!normalized) return
+
+    const index = editorTabs.value.findIndex((tab) => tab.path === normalized)
+    if (index < 0) return
+
+    const wasActive = activeEditorPath.value === normalized
+    editorTabs.value = editorTabs.value.filter((tab) => tab.path !== normalized)
+
+    if (!wasActive) return
+
+    if (editorTabs.value.length === 0) {
+      activeEditorPath.value = null
+      return
+    }
+
+    const nextIndex = Math.min(index, editorTabs.value.length - 1)
+    activeEditorPath.value = editorTabs.value[nextIndex]?.path ?? null
+  }
+
+  function closeEditorFile() {
+    closeEditorTab(activeEditorPath.value ?? undefined)
+  }
+
+  async function loadEditorTabContent(normalized: string): Promise<void> {
+    const tab = editorTabs.value.find((entry) => entry.path === normalized)
+    if (!tab) return
+
+    const cid = requireConversationId()
+    tab.loading = true
+    tab.error = null
+    tab.binary = false
+    tab.fileUrl = null
+
+    if (!cid) {
+      tab.loading = false
+      tab.error = 'No conversation selected.'
+      return
+    }
+
+    const ch = window.ipcRendererChannel?.ReadWorkspaceFile
+    if (!ch?.invoke) {
+      tab.loading = false
+      tab.error = 'File read is unavailable.'
+      return
+    }
+
+    try {
+      const result = await ch.invoke({
+        conversationId: cid,
+        relativePath: normalized,
+      })
+      if (result.ok) {
+        tab.content = result.content
+        tab.original = result.content
+        tab.fileUrl = result.fileUrl ?? null
+      } else if (result.binary) {
+        tab.binary = true
+        tab.error = null
+        tab.fileUrl = result.fileUrl ?? null
+        tab.content = ''
+        tab.original = ''
+      } else {
+        tab.error = result.error ?? 'Failed to read file.'
+        tab.binary = false
+        tab.fileUrl = result.fileUrl ?? null
+        tab.content = ''
+        tab.original = ''
+      }
+    } catch (err) {
+      tab.error = String(err)
+      tab.fileUrl = null
+      tab.content = ''
+      tab.original = ''
+    } finally {
+      tab.loading = false
+    }
+  }
+
+  async function openFileInEditor(relativePath: string): Promise<void> {
+    const cid = requireConversationId()
+    if (!cid) return
+
+    const normalized = relativePath.replace(/\\/g, '/').trim()
+    if (!normalized) return
+
+    const existing = editorTabs.value.find((tab) => tab.path === normalized)
+    if (existing) {
+      activeEditorPath.value = normalized
+      return
+    }
+
+    const tab: WorkspaceEditorTab = {
+      path: normalized,
+      content: '',
+      original: '',
+      loading: true,
+      error: null,
+      binary: false,
+      fileUrl: null,
+    }
+    editorTabs.value = [...editorTabs.value, tab]
+    activeEditorPath.value = normalized
+    await loadEditorTabContent(normalized)
+  }
+
+  async function reloadEditorFile(): Promise<void> {
+    if (!activeEditorPath.value) return
+    await loadEditorTabContent(activeEditorPath.value)
+  }
+
+  async function saveEditorFile(): Promise<boolean> {
+    if (isMutationsDisabled.value) return false
+    const cid = requireConversationId()
+    const path = activeEditorPath.value?.trim()
+    const tab = activeEditorTab.value
+    if (!cid || !path || !tab || tab.content === tab.original) return false
+
+    const ch = window.ipcRendererChannel?.WriteWorkspaceFile
+    if (!ch?.invoke) return false
+
+    editorSaving.value = true
+    tab.error = null
+    try {
+      const result = await ch.invoke({
+        conversationId: cid,
+        relativePath: path,
+        content: tab.content,
+      })
+      if (result.ok) {
+        tab.original = tab.content
+        await Promise.all([refreshStatus(), refreshFiles()])
+        return true
+      }
+      tab.error = result.error ?? 'Failed to save file.'
+      return false
+    } catch (err) {
+      tab.error = String(err)
+      return false
+    } finally {
+      editorSaving.value = false
+    }
+  }
+
+  async function refreshAll(): Promise<void> {
+    await Promise.all([refreshStatus(), refreshFiles()])
+    if (diff.value !== '' || diffStaged.value) {
+      await refreshDiff(diffStaged.value, diffFiles.value)
+    }
+  }
+
+  return {
+    workspacePath,
+    conversationId,
+    branch,
+    upstream,
+    ahead,
+    behind,
+    statusEntries,
+    statusLoading,
+    statusError,
+    diff,
+    diffStaged,
+    diffFiles,
+    diffLoading,
+    diffError,
+    commits,
+    logLoading,
+    logError,
+    fileEntries,
+    filesDirectory,
+    filesLoading,
+    filesError,
+    editorTabs,
+    activeEditorPath,
+    openEditorPaths,
+    editorPath,
+    editorContent,
+    editorOriginal,
+    editorDirty,
+    editorLoading,
+    editorSaving,
+    editorError,
+    editorBinary,
+    editorFileUrl,
+    consoleOpen,
+    consoleCommand,
+    consoleRunning,
+    consoleError,
+    consoleEntries,
+    consoleRunId,
+    opLoading,
+    opError,
+    opSuccess,
+    lastPrUrl,
+    commitMessage,
+    prTitle,
+    prBody,
+    isClean,
+    stagedEntries,
+    unstagedEntries,
+    untrackedEntries,
+    isMutationsDisabled,
+    canPush,
+    setWorkspace,
+    refreshStatus,
+    refreshDiff,
+    refreshLog,
+    refreshFiles,
+    listFiles,
+    navigateFilesToDirectory,
+    navigateFilesUp,
+    navigateFilesToHighlight,
+    stageAll,
+    stageFiles,
+    commit,
+    push,
+    createPR,
+    openFile,
+    openFileInEditor,
+    activateEditorTab,
+    closeEditorTab,
+    closeEditorFile,
+    closeAllEditorTabs,
+    isEditorTabDirty,
+    reloadEditorFile,
+    saveEditorFile,
+    toggleConsole,
+    clearConsole,
+    runConsoleCommand,
+    cancelConsoleCommand,
+    refreshAll,
+  }
+})

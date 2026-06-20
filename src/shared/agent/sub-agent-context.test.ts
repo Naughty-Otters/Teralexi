@@ -1,0 +1,51 @@
+import { describe, expect, it } from 'vitest'
+import {
+  formatSubAgentWorkspaceContext,
+  mergeContextEnvelopeMessages,
+  trimContextMessages,
+} from '@shared/agent/sub-agent-context'
+
+describe('sub-agent-context', () => {
+  it('merges pipeline, thread, and task without duplicate content', () => {
+    const merged = mergeContextEnvelopeMessages({
+      rootRunId: 'root',
+      parentRunId: 'root',
+      messages: [
+        { role: 'user', content: 'Hello' },
+        { role: 'assistant', content: 'Hi' },
+      ],
+      pipelineMessages: [{ role: 'user', content: 'Planning context' }],
+      delegationTask: 'Do the thing',
+    })
+    expect(merged.at(-1)?.content).toBe('Do the thing')
+    expect(merged.some((m) => m.content === 'Planning context')).toBe(true)
+    expect(merged.some((m) => m.content === 'Hello')).toBe(true)
+  })
+
+  it('includes workspace path context for sub-agents', () => {
+    const merged = mergeContextEnvelopeMessages({
+      rootRunId: 'root',
+      parentRunId: 'root',
+      messages: [],
+      pipelineMessages: [],
+      workspacePath: '/Users/dev/project',
+      delegationTask: 'Review search.ts',
+    })
+    expect(merged[0]?.content).toContain('/Users/dev/project')
+    expect(merged.at(-1)?.content).toBe('Review search.ts')
+    expect(formatSubAgentWorkspaceContext(undefined)).toBeNull()
+  })
+
+  it('trimContextMessages keeps the task message at the tail', () => {
+    const messages = [
+      ...Array.from({ length: 10 }, (_, i) => ({
+        role: 'user' as const,
+        content: `msg-${i}`,
+      })),
+      { role: 'user', content: 'final task' },
+    ]
+    const trimmed = trimContextMessages(messages, 5)
+    expect(trimmed.at(-1)?.content).toBe('final task')
+    expect(trimmed.length).toBeLessThanOrEqual(5)
+  })
+})

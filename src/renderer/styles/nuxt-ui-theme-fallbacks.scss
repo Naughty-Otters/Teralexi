@@ -1,0 +1,52 @@
+/**
+ * Static Nuxt UI theme tokens for the Electron/Vite app (non-Nuxt).
+ * The colors plugin injects --ui-color-* via useHead; when that fails, light mode
+ * still works (--ui-bg: #fff) but dark mode depends on the neutral scale and breaks.
+ * html.dark rules use higher specificity than .dark and literal hex fallbacks.
+ */
+
+:root,
+:host {
+  --ui-color-neutral-50: #f8fafc;
+  --ui-color-neutral-100: #f1f5f9;
+  --ui-color-neutral-200: #e2e8f0;
+  --ui-color-neutral-300: #cbd5e1;
+  --ui-color-neutral-400: #94a3b8;
+  --ui-color-neutral-500: #64748b;
+  --ui-color-neutral-600: #475569;
+  --ui-color-neutral-700: #334155;
+  --ui-color-neutral-800: #1e293b;
+  --ui-color-neutral-900: #0f172a;
+  --ui-color-neutral-950: #020617;
+
+  --ui-color-primary-400: #4ade80;
+  --ui-color-primary-500: #22c55e;
+  --ui-color-primary-600: #16a34a;
+
+  --ui-primary: var(--ui-color-primary-500);
+  --ui-secondary: #3b82f6;
+  --ui-success: #22c55e;
+  --ui-info: #3b82f6;
+  --ui-warning: #eab308;
+  --ui-error: #ef4444;
+}
+
+html.dark {
+  --ui-text-dimmed: #94a3b8;
+  --ui-text-muted: #cbd5e1;
+  --ui-text-toned: #e2e8f0;
+  --ui-text: #f1f5f9;
+  --ui-text-highlighted: #ffffff;
+  --ui-text-inverted: #0f172a;
+  --ui-bg: #0f172a;
+  --ui-bg-muted: #1e293b;
+  --ui-bg-elevated: #1e293b;
+  --ui-bg-accented: #334155;
+  --ui-bg-inverted: #ffffff;
+  --ui-border: #1e293b;
+  --ui-border-muted: #334155;
+  --ui-border-accented: #334155;
+  --ui-border-inverted: #ffffff;
+
+  --ui-primary: #4ade80;
+}

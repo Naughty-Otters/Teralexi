@@ -1,0 +1,13 @@
+diff --git a/node_modules/@vitejs/plugin-vue/dist/index.mjs b/node_modules/@vitejs/plugin-vue/dist/index.mjs
+index 0000000..1111111 100644
+--- a/node_modules/@vitejs/plugin-vue/dist/index.mjs
++++ b/node_modules/@vitejs/plugin-vue/dist/index.mjs
+@@ -1611,7 +1611,7 @@ function vuePlugin(rawOptions = {}) {
+ 				event: "file-changed",
+ 				data: { file: normalizePath(ctx.file) }
+ 			});
+-			if (options.value.compiler.invalidateTypeCache) options.value.compiler.invalidateTypeCache(ctx.file);
++			if (options.value.compiler?.invalidateTypeCache) options.value.compiler.invalidateTypeCache(ctx.file);
+ 			let typeDepModules;
+ 			const matchesFilter = filter.value(ctx.file);
+ 			if (typeDepToSFCMap.has(ctx.file)) {

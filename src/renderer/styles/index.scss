@@ -1,0 +1,125 @@
+@use '@nuxt/ui';
+@use './nuxt-ui-theme-fallbacks.scss';
+@import '../views/agent-chat/components/settings/sp-shared.css';
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+}
+
+html {
+  --app-font-family: Menlo, Monaco, 'Courier New', monospace;
+  --app-font-size: 13px;
+  color-scheme: light;
+  background-color: var(--ui-bg);
+  color: var(--ui-text);
+}
+
+html.dark {
+  color-scheme: dark;
+  color: var(--ui-text, #f1f5f9);
+}
+
+body {
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-family: var(--app-font-family);
+  font-size: var(--app-font-size);
+  margin: 0;
+  padding: 0;
+  background-color: inherit;
+  color: inherit;
+}
+
+html {
+  box-sizing: border-box;
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    background-color: none;
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: none;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    background-color: #555;
+  }
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+div:focus {
+  outline: none;
+}
+
+a:focus,
+a:active {
+  outline: none;
+}
+
+a,
+a:focus,
+a:hover {
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+}
+
+.clearfix {
+  &:after {
+    visibility: hidden;
+    display: block;
+    font-size: 0;
+    content: ' ';
+    clear: both;
+    height: 0;
+  }
+}
+
+//main-container全局样式
+.app-main {
+  min-height: 100%;
+}
+
+.app-container {
+  padding: 20px;
+}
+
+/* Code block copy button — injected by injectCodeCopyButtons() */
+pre .code-copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  line-height: 1.5;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  z-index: 1;
+}
+pre .code-copy-btn:hover {
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+}
+pre .code-copy-btn.code-copy-btn--ok {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.4);
+}

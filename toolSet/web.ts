@@ -1,0 +1,657 @@
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { LogLevel } from '@apify/log'
+import { CheerioCrawler, Configuration } from 'crawlee'
+import type { CheerioAPI } from 'cheerio'
+import { z } from 'zod'
+import type { SkillTool } from '@main/skills/actions'
+export { htmlToMarkdown, isParseableMarkdown } from './html-to-markdown'
+import {
+  defaultSearchCrawlerHandlers,
+  type SearchCrawlerHandlerRegistry,
+} from './search-crawlers'
+import { runSearchCrawlLoop, type SearchCrawlEngineAdapter } from './search-crawl-loop'
+import {
+  defaultSearchEngineRegistry,
+  SEARCH_CRAWLER_USER_AGENT,
+  searchEngineId,
+  type SearchCrawlMode,
+  type SearchCrawlRequest,
+  type SearchCrawlerRunOptions,
+  type SearchEngineAttempt,
+  type SearchEngineId,
+  type SearchParseContext,
+  type WebSearchResult,
+} from './web-search-engines'
+
+export {
+  CheerioCrawlerConfig,
+  CheerioSearchHandler,
+  PlaywrightCrawlerConfig,
+  PlaywrightSearchHandler,
+  SearchCrawlerHandler,
+  SearchCrawlerHandlerRegistry,
+  defaultSearchCrawlerHandlers,
+  type SearchPagePayload,
+} from './search-crawlers'
+
+export {
+  buildStartpageSearchUrl,
+  decodeDuckDuckGoResultUrl,
+  decodeGoogleResultUrl,
+  defaultSearchEngineRegistry,
+  parseBingHtmlResults,
+  parseDuckDuckGoHtmlResults,
+  parseGoogleHtmlResults,
+  parseStartpageHtmlResults,
+  parseYandexHtmlResults,
+  decodeYandexResultUrl,
+  isYandexAccessBlocked,
+  resolveSearchEngineOrder,
+  DEFAULT_SEARCH_ENGINE_ORDER,
+  SEARCH_ENGINE_DEFINITIONS,
+  SEARCH_CRAWLER_USER_AGENT,
+  BingSearchEngine,
+  DuckDuckGoSearchEngine,
+  GoogleSearchEngine,
+  StartpageSearchEngine,
+  YandexSearchEngine,
+  SearchEngine,
+  SearchEngineRegistry,
+  type SearchCrawlMode,
+  type SearchCrawlRequest,
+  type SearchCrawlerRunOptions,
+  type SearchEngineAttempt,
+  type SearchEngineConfig,
+  type SearchEngineId,
+  type SearchParseContext,
+  type WebSearchResult,
+} from './web-search-engines'
+
+const DEFAULT_MAX_SEARCH_RESULTS = 8
+const CRAWLER_TIMEOUT_SECS = 25
+
+const crawlerPreNavigationHooks = [
+  ({ request }: { request: { headers?: Record<string, string> } }) => {
+    request.headers = {
+      ...request.headers,
+      'User-Agent': SEARCH_CRAWLER_USER_AGENT,
+      Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+    }
+  },
+]
+
+const webSearchInput = z.object({
+  query: z
+    .string()
+    .min(1)
+    .describe('Search query, e.g. "mass of Earth" or "quotes to scrape API".'),
+  maxResults: z
+    .number()
+    .int()
+    .min(1)
+    .max(20)
+    .optional()
+    .default(DEFAULT_MAX_SEARCH_RESULTS)
+    .describe('Maximum organic results to return (1–20).'),
+  engines: z
+    .array(searchEngineId)
+    .optional()
+    .describe(
+      'Optional engine order. Defaults to duckduckgo → bing → google → yandex; tries each until results are found.',
+    ),
+})
+
+const webScrapeInput = z.object({
+  url: z.string().url().optional().describe('Single page URL to fetch.'),
+  urls: z
+    .array(z.string().url())
+    .optional()
+    .describe('Multiple page URLs to fetch in one call.'),
+  maxChars: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe(
+      'Optional per-page character cap for `html`. Omit to return the full page (no truncation).',
+    ),
+})
+
+function createEphemeralCrawleeConfig(storageDir: string): Configuration {
+  return new Configuration({
+    persistStorage: true,
+    purgeOnStart: true,
+    logLevel: LogLevel.WARNING,
+    storageClientOptions: { storageDir },
+  })
+}
+
+export type PageExtractResult = {
+  title: string
+  /** Full document HTML (entire `<html>` outer HTML after removing script/style/noscript). */
+  html: string
+  truncated: boolean
+}
+
+/** Full document for scrape (not `main` / `article` heuristics). */
+function prepareScrapeDocument($: CheerioAPI) {
+  $('script, style, noscript').remove()
+  const html = $('html')
+  return html.length > 0 ? html : $.root()
+}
+
+function applyMaxChars(value: string, maxChars?: number): {
+  value: string
+  truncated: boolean
+} {
+  if (maxChars == null || value.length <= maxChars) {
+    return { value, truncated: false }
+  }
+  return { value: value.slice(0, maxChars), truncated: true }
+}
+
+function serializeScrapeHtml($: CheerioAPI): string {
+  const htmlEl = $('html')
+  if (htmlEl.length > 0) {
+    return $.html(htmlEl) ?? ''
+  }
+  return $.root().html() ?? ''
+}
+
+/** Full-document HTML for scrape (no region selection or markdown conversion). */
+export function extractPageContent(
+  $: CheerioAPI,
+  options?: { maxChars?: number },
+): PageExtractResult {
+  const title = $('title').first().text().replace(/\s+/g, ' ').trim()
+  prepareScrapeDocument($)
+  const htmlResult = applyMaxChars(serializeScrapeHtml($), options?.maxChars)
+  return {
+    title,
+    html: htmlResult.value,
+    truncated: htmlResult.truncated,
+  }
+}
+
+/** @deprecated Prefer {@link extractPageContent} (returns HTML). */
+export function extractPageText(
+  $: CheerioAPI,
+  options?: { maxChars?: number },
+): { title: string; text: string; truncated: boolean } {
+  const title = $('title').first().text().replace(/\s+/g, ' ').trim()
+  const root = prepareScrapeDocument($)
+  const raw = root.text().replace(/\s+/g, ' ').trim()
+  const textResult = applyMaxChars(raw, options?.maxChars)
+  return { title, text: textResult.value, truncated: textResult.truncated }
+}
+
+type CrawlAttempt = {
+  spec: SearchCrawlRequest
+  playwrightOptions: SearchCrawlerRunOptions
+}
+
+function asSearchCrawlEngineAdapter(
+  engine: ReturnType<typeof defaultSearchEngineRegistry.get>,
+  query: string,
+  maxResults: number,
+): SearchCrawlEngineAdapter {
+  return {
+    getCrawlModes: () => engine.getCrawlModes(),
+    getPlaywrightRunOptions: () => engine.getPlaywrightRunOptions(),
+    getPlaywrightFallbackRunOptions: (fallback) =>
+      engine.getPlaywrightFallbackRunOptions(fallback),
+    buildFallbackCrawlRequest: () =>
+      engine.buildFallbackCrawlRequest(query, maxResults),
+    isAccessBlocked: (html, requestUrl) =>
+      engine.isAccessBlocked(html, requestUrl),
+    parseResults: ($, max, context) => engine.parseResults($, max, context),
+    emptyResultsMessage: (requestUrl) =>
+      engine.emptyResultsMessage(requestUrl),
+    shouldSkipPlaywrightAfterCheerioBlock: () =>
+      engine.shouldSkipPlaywrightAfterCheerioBlock(),
+  }
+}
+
+export async function searchWithEngine(
+  engineId: SearchEngineId,
+  query: string,
+  maxResults: number,
+  handlers: SearchCrawlerHandlerRegistry = defaultSearchCrawlerHandlers,
+): Promise<{
+  results: WebSearchResult[]
+  searchUrl: string
+  error?: string
+}> {
+  const engine = defaultSearchEngineRegistry.get(engineId)
+  const crawlSpec = engine.buildCrawlRequest(query, maxResults)
+  const searchUrl = crawlSpec.label ?? crawlSpec.url
+
+  const { results, error } = await runSearchCrawlLoop(
+    asSearchCrawlEngineAdapter(engine, query, maxResults),
+    crawlSpec,
+    maxResults,
+    handlers,
+  )
+
+  return {
+    results,
+    searchUrl,
+    error,
+  }
+}
+
+/** Search with a single crawl mode (for tests and diagnostics). */
+export async function searchWithEngineMode(
+  engineId: SearchEngineId,
+  query: string,
+  maxResults: number,
+  mode: SearchCrawlMode,
+  handlers: SearchCrawlerHandlerRegistry = defaultSearchCrawlerHandlers,
+): Promise<{
+  results: WebSearchResult[]
+  searchUrl: string
+  mode: SearchCrawlMode
+  error?: string
+}> {
+  const engine = defaultSearchEngineRegistry.get(engineId)
+  const crawlSpec = engine.buildCrawlRequest(query, maxResults)
+  const searchUrl = crawlSpec.label ?? crawlSpec.url
+  const results: WebSearchResult[] = []
+  let loadError: string | undefined
+
+  const ingestPage = async (
+    $: CheerioAPI,
+    requestUrl: string,
+    html?: string,
+  ) => {
+    if (html && engine.isAccessBlocked(html, requestUrl)) {
+      loadError = engine.emptyResultsMessage(requestUrl)
+      return
+    }
+    const parsed = engine.parseResults($, maxResults, { requestUrl })
+    if (parsed.length === 0) {
+      loadError = engine.emptyResultsMessage(requestUrl)
+      return
+    }
+    results.push(...parsed)
+    loadError = undefined
+  }
+
+  const crawlAttempts: CrawlAttempt[] = [
+    {
+      spec: crawlSpec,
+      playwrightOptions: engine.getPlaywrightRunOptions(),
+    },
+  ]
+  const fallback = engine.buildFallbackCrawlRequest(query, maxResults)
+  if (fallback) {
+    crawlAttempts.push({
+      spec: fallback,
+      playwrightOptions: engine.getPlaywrightFallbackRunOptions(fallback),
+    })
+  }
+
+  try {
+    for (const attempt of crawlAttempts) {
+      if (results.length > 0) break
+      try {
+        const handler = handlers.get(mode)
+        const runOptions =
+          mode === 'playwright' ? attempt.playwrightOptions : undefined
+        const page = await handler.fetch(attempt.spec, runOptions)
+        if (
+          mode === 'cheerio' &&
+          engine.isAccessBlocked(page.html, page.requestUrl)
+        ) {
+          loadError = engine.emptyResultsMessage(page.requestUrl)
+          continue
+        }
+        await ingestPage(page.$, page.requestUrl, page.html)
+      } catch (e) {
+        loadError = e instanceof Error ? e.message : String(e)
+      }
+    }
+  } catch (e) {
+    loadError = e instanceof Error ? e.message : String(e)
+  }
+
+  return {
+    results,
+    searchUrl,
+    mode,
+    error: results.length === 0 ? loadError : undefined,
+  }
+}
+
+export async function cascadeWebSearch(
+  query: string,
+  maxResults: number,
+  engines?: SearchEngineId[],
+): Promise<
+  | {
+      success: true
+      engine: SearchEngineId
+      searchUrl: string
+      resultCount: number
+      results: WebSearchResult[]
+      attempts: SearchEngineAttempt[]
+    }
+  | {
+      success: false
+      error: string
+      query: string
+      attempts: SearchEngineAttempt[]
+    }
+> {
+  const order = defaultSearchEngineRegistry.resolveOrder(engines)
+  const attempts: SearchEngineAttempt[] = []
+
+  for (const engineId of order) {
+    const attempt = await searchWithEngine(engineId, query, maxResults)
+    const succeeded = attempt.results.length > 0
+
+    attempts.push({
+      engine: engineId,
+      success: succeeded,
+      searchUrl: attempt.searchUrl,
+      resultCount: attempt.results.length,
+      error: succeeded ? undefined : attempt.error,
+    })
+
+    if (succeeded) {
+      return {
+        success: true,
+        engine: engineId,
+        searchUrl: attempt.searchUrl,
+        resultCount: attempt.results.length,
+        results: attempt.results,
+        attempts,
+      }
+    }
+  }
+
+  return {
+    success: false,
+    error: `All search engines failed for "${query}" (${order.join(' → ')}). Last error: ${attempts.at(-1)?.error ?? 'no results parsed'}`,
+    query,
+    attempts,
+  }
+}
+
+async function withEphemeralCrawler<T>(
+  run: (config: Configuration) => Promise<T>,
+): Promise<T> {
+  const storageDir = await mkdtemp(join(tmpdir(), 'openfde-crawlee-'))
+  const config = createEphemeralCrawleeConfig(storageDir)
+  try {
+    return await run(config)
+  } finally {
+    await rm(storageDir, { recursive: true, force: true }).catch(() => undefined)
+  }
+}
+
+export const webSearch: SkillTool = {
+  name: 'web_search',
+  tags: ['web'],
+  description:
+    'Search the public web (Cheerio and Playwright). Tries DuckDuckGo, Bing, Google, Yandex, then Startpage until results are found. Each engine is attempted with Cheerio first, then Playwright. Returns titles, URLs, snippets, which engine succeeded, and per-engine attempt notes. Optional `engines` overrides order. No API keys.',
+  inputSchema: webSearchInput,
+  needsApproval: false,
+  async execute(input) {
+    const parsed = webSearchInput.safeParse(input)
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.flatten() }
+    }
+
+    const { query, maxResults, engines } = parsed.data
+
+    try {
+      const outcome = await cascadeWebSearch(query, maxResults, engines)
+      if (!outcome.success) {
+        return outcome
+      }
+
+      return {
+        success: true,
+        query,
+        searchUrl: outcome.searchUrl,
+        engine: outcome.engine,
+        resultCount: outcome.resultCount,
+        results: outcome.results,
+        attempts: outcome.attempts,
+      }
+    } catch (e) {
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+        query,
+      }
+    }
+  },
+}
+
+export type ScrapedPage = {
+  url: string
+  loadedUrl?: string
+  title: string
+  /** Full document HTML. */
+  html: string
+  truncated: boolean
+  /** Which fetch path produced this page (`playwright` only when used as fallback). */
+  fetchMode: SearchCrawlMode
+}
+
+export type ScrapePageOptions = {
+  maxChars?: number
+}
+
+const MIN_SCRAPE_HTML_CHARS = 80
+
+/** True when HTML is a JS-required shell with little usable text. */
+export function isJsShellHtml(html: string): boolean {
+  return (
+    /enablejs|httpservice\/retry\/enablejs/i.test(html) ||
+    /please enable javascript|javascript is disabled/i.test(html)
+  )
+}
+
+export function isScrapeHtmlInsufficient(
+  html: string,
+  minChars = MIN_SCRAPE_HTML_CHARS,
+): boolean {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().length < minChars
+}
+
+/** @deprecated Use {@link isScrapeHtmlInsufficient}. */
+export function isScrapeMarkdownInsufficient(
+  html: string,
+  minChars = MIN_SCRAPE_HTML_CHARS,
+): boolean {
+  return isScrapeHtmlInsufficient(html, minChars)
+}
+
+/** @deprecated Use {@link isScrapeHtmlInsufficient}. */
+export function isScrapeTextInsufficient(
+  text: string,
+  minChars = MIN_SCRAPE_HTML_CHARS,
+): boolean {
+  return text.replace(/\s+/g, ' ').trim().length < minChars
+}
+
+/** @deprecated Use {@link isScrapeHtmlInsufficient}. */
+export function isScrapeContentInsufficient(
+  _text: string,
+  html: string | null | undefined,
+  minChars = MIN_SCRAPE_HTML_CHARS,
+): boolean {
+  return isScrapeHtmlInsufficient(html ?? '', minChars)
+}
+
+async function scrapeUrlWithCheerio(
+  url: string,
+  options?: ScrapePageOptions,
+): Promise<ScrapedPage | null> {
+  let scraped: ScrapedPage | null = null
+
+  await withEphemeralCrawler(async (config) => {
+    const crawler = new CheerioCrawler(
+      {
+        maxRequestsPerCrawl: 1,
+        maxConcurrency: 1,
+        requestHandlerTimeoutSecs: CRAWLER_TIMEOUT_SECS,
+        navigationTimeoutSecs: CRAWLER_TIMEOUT_SECS,
+        preNavigationHooks: crawlerPreNavigationHooks,
+        async requestHandler({ $, request }) {
+          const html = $.html()
+          if (isJsShellHtml(html)) return
+
+          const extracted = extractPageContent($, {
+            maxChars: options?.maxChars,
+          })
+          if (isScrapeHtmlInsufficient(extracted.html)) {
+            return
+          }
+
+          scraped = {
+            url: request.url,
+            loadedUrl: request.loadedUrl,
+            title: extracted.title,
+            html: extracted.html,
+            truncated: extracted.truncated,
+            fetchMode: 'cheerio',
+          }
+        },
+      },
+      config,
+    )
+    await crawler.run([url])
+  })
+
+  return scraped
+}
+
+async function scrapeUrlWithPlaywright(
+  url: string,
+  options?: ScrapePageOptions,
+  handlers: SearchCrawlerHandlerRegistry = defaultSearchCrawlerHandlers,
+): Promise<ScrapedPage | null> {
+  const spec: SearchCrawlRequest = { url, method: 'GET', label: url }
+  const payload = await handlers.playwright.fetch(spec, { waitSelector: 'html' })
+
+  if (isJsShellHtml(payload.html)) return null
+
+  const extracted = extractPageContent(payload.$, {
+    maxChars: options?.maxChars,
+  })
+  if (isScrapeHtmlInsufficient(extracted.html)) {
+    return null
+  }
+
+  return {
+    url,
+    loadedUrl: payload.requestUrl,
+    title: extracted.title,
+    html: extracted.html,
+    truncated: extracted.truncated,
+    fetchMode: 'playwright',
+  }
+}
+
+/** Scrape one URL: Cheerio first, then Playwright when content is missing or JS-only. */
+export async function scrapePage(
+  url: string,
+  options?: ScrapePageOptions,
+  handlers: SearchCrawlerHandlerRegistry = defaultSearchCrawlerHandlers,
+): Promise<ScrapedPage> {
+  let cheerioError: string | undefined
+
+  try {
+    const cheerioPage = await scrapeUrlWithCheerio(url, options)
+    if (cheerioPage) return cheerioPage
+  } catch (e) {
+    cheerioError = e instanceof Error ? e.message : String(e)
+  }
+
+  try {
+    const playwrightPage = await scrapeUrlWithPlaywright(url, options, handlers)
+    if (playwrightPage) return playwrightPage
+  } catch (e) {
+    const playwrightError = e instanceof Error ? e.message : String(e)
+    throw new Error(
+      playwrightError +
+        (cheerioError ? ` (Cheerio: ${cheerioError})` : ''),
+    )
+  }
+
+  throw new Error(
+    cheerioError ??
+      `Could not extract enough HTML from ${url} via Cheerio or Playwright.`,
+  )
+}
+
+export const webScrape: SkillTool = {
+  name: 'web_scrape',
+  tags: ['web'],
+  description:
+    'Fetch public pages and return each page as `title` plus full-document `html` (entire page; script/style/noscript removed; no auto-selection of main/article). Uses Cheerio first; falls back to Playwright when the page is empty or JS-only. Pass `url` or `urls`. Optional `maxChars` caps HTML length; omit it for no limit.',
+  inputSchema: webScrapeInput,
+  needsApproval: false,
+  async execute(input) {
+    const parsed = webScrapeInput.safeParse(input)
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.flatten() }
+    }
+
+    const { url, urls, maxChars } = parsed.data
+    const targetUrls = [...(urls ?? []), ...(url ? [url] : [])]
+    if (targetUrls.length === 0) {
+      return {
+        success: false,
+        error: 'Provide `url` or a non-empty `urls` array.',
+      }
+    }
+
+    try {
+      const pages: ScrapedPage[] = []
+      const errors: string[] = []
+
+      for (const targetUrl of targetUrls) {
+        try {
+          pages.push(
+            await scrapePage(targetUrl, { maxChars }),
+          )
+        } catch (e) {
+          errors.push(
+            `${targetUrl}: ${e instanceof Error ? e.message : String(e)}`,
+          )
+        }
+      }
+
+      if (pages.length === 0) {
+        return {
+          success: false,
+          error:
+            errors.join('; ') ||
+            'No pages were scraped. URLs may be unreachable or blocked.',
+          urls: targetUrls,
+        }
+      }
+
+      return {
+        success: true,
+        pageCount: pages.length,
+        pages,
+        ...(errors.length > 0 ? { partialErrors: errors } : {}),
+      }
+    } catch (e) {
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+        urls: targetUrls,
+      }
+    }
+  },
+}
