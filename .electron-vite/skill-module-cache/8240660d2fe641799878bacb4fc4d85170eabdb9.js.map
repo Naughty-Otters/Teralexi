@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../skills/github/actions/index.ts"],
+  "sourcesContent": ["import type { SkillTool } from '@main/skills/types'\n\nconst githubAuthStatus: SkillTool = {\n  name: 'github_auth_status',\n  description: 'Return a lightweight GitHub authentication status summary.',\n  execute: async () => ({ authenticated: false, message: 'GitHub auth status is unavailable in this environment.' }),\n}\n\nconst githubPrList: SkillTool = {\n  name: 'github_pr_list',\n  description: 'List pull requests for the current repository.',\n  execute: async () => ({ pullRequests: [], message: 'GitHub PR listing is unavailable in this environment.' }),\n}\n\nexport const tools: SkillTool[] = [githubAuthStatus, githubPrList]\n\nexport default { tools }\n"],
+  "mappings": ";;;;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAEA,IAAM,mBAA8B;AAAA,EAClC,MAAM;AAAA,EACN,aAAa;AAAA,EACb,SAAS,aAAa,EAAE,eAAe,OAAO,SAAS,yDAAyD;AAClH;AAEA,IAAM,eAA0B;AAAA,EAC9B,MAAM;AAAA,EACN,aAAa;AAAA,EACb,SAAS,aAAa,EAAE,cAAc,CAAC,GAAG,SAAS,wDAAwD;AAC7G;AAEO,IAAM,QAAqB,CAAC,kBAAkB,YAAY;AAEjE,IAAO,gBAAQ,EAAE,MAAM;",
+  "names": []
+}

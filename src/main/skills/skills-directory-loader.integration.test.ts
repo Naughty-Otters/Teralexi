@@ -19,16 +19,17 @@ describe('loadSkillsFromDirectory (integration)', () => {
     )
   })
 
-  it('scopes git_* and github_* tools to github skill only', async () => {
+  it('keeps git_* tools in default when github skill is absent', async () => {
     const skills = await loadSkillsFromDirectory(resolveBundledSkillsDirectory())
     const github = skills.find((s) => s.id === 'github')
     const defaultSkill = skills.find((s) => s.id === 'default')
 
-    expect(github?.actionToolNames).toContain('github_auth_status')
-    expect(github?.tools.some((t) => t.name === 'git_status')).toBe(true)
-    expect(github?.tools.some((t) => t.name === 'github_pr_list')).toBe(true)
+    expect(github).toBeUndefined()
     expect(defaultSkill?.tools.some((t) => t.name === 'git_status')).toBe(true)
     expect(defaultSkill?.tools.some((t) => t.name === 'read_file')).toBe(true)
+    expect(defaultSkill?.tools.some((t) => t.name === 'github_pr_list')).toBe(
+      false,
+    )
     expect(defaultSkill?.tools.some((t) => t.name === 'github_auth_status')).toBe(
       false,
     )
