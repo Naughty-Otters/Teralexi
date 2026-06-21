@@ -14,6 +14,7 @@ vi.mock('electron', () => ({
     commandLine: { appendSwitch: vi.fn() },
     on: vi.fn(),
     quit: vi.fn(),
+    exit: vi.fn(),
     dock: { setIcon: vi.fn() },
     removeAsDefaultProtocolClient: vi.fn(),
     setAsDefaultProtocolClient: vi.fn(),
@@ -38,6 +39,7 @@ vi.mock('@config/openfde-home', () => ({
 
 vi.mock('@main/skills/skill-module-loader', () => ({
   clearSkillModuleCache: vi.fn(),
+  loadToolSetTools: vi.fn(async () => []),
 }))
 
 vi.mock('./services/window-manager', () => ({

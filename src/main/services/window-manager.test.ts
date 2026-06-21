@@ -47,8 +47,8 @@ vi.mock('@main/hooks/exception-hook', () => ({
 }))
 
 vi.mock('../config/static-path', () => ({
-  winURL: 'http://localhost',
-  loadingURL: 'http://localhost/loader',
+  getWinURL: vi.fn(() => 'http://localhost'),
+  getLoadingURL: vi.fn(() => 'http://localhost/loader'),
   getPreloadFile: vi.fn(() => '/preload.js'),
   getIconPath: vi.fn((name: string) => `/icons/${name}`),
 }))

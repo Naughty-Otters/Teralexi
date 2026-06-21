@@ -17,7 +17,7 @@ vi.mock('electron-updater', () => ({
 
 vi.mock('../config/static-path', () => ({
   getPreloadFile: vi.fn(),
-  winURL: 'http://localhost',
+  getWinURL: vi.fn(() => 'http://localhost'),
 }))
 
 vi.mock('./check-update', () => ({
