@@ -276,7 +276,7 @@ describe('collectAgentText', () => {
       onUIMessageChunk,
     )
 
-    expect(result.text).toContain('thinking')
+    expect(result.text).not.toContain('thinking')
     expect(result.text).toContain('tool failed')
     expect(onUIMessageChunk).toHaveBeenCalled()
   })

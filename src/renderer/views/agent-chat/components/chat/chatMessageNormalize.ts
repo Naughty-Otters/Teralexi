@@ -4,10 +4,7 @@ export function flattenAssistantPartsToContent(msg: UIMessage): string {
   const chunks: string[] = []
   for (const part of msg.parts) {
     if (part.type === 'text') chunks.push(part.text ?? '')
-    else if (part.type === 'reasoning') {
-      const t = (part as { text?: string }).text
-      if (typeof t === 'string' && t.trim()) chunks.push(t)
-    } else if (part.type === 'data-agent-step-progress') {
+    else if (part.type === 'data-agent-step-progress') {
       continue
     } else if (part.type === 'data-sub-agent-run') {
       continue

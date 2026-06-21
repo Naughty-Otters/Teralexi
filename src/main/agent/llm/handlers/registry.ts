@@ -1,7 +1,12 @@
 import type { LlmEventType } from './types'
 import { LlmEventHandler } from './types'
+import { TextStartHandler } from './text-start-handler'
+import { TextEndHandler } from './text-end-handler'
 import { TextDeltaHandler } from './text-delta-handler'
+import { ReasoningStartHandler } from './reasoning-start-handler'
 import { ReasoningDeltaHandler } from './reasoning-delta-handler'
+import { ReasoningEndHandler } from './reasoning-end-handler'
+import { StepStartHandler } from './step-start-handler'
 import { ToolInputStartHandler } from './tool-input-start-handler'
 import { ToolCallHandler } from './tool-call-handler'
 import { ToolResultHandler } from './tool-result-handler'
@@ -15,8 +20,13 @@ import { ProviderErrorHandler } from './provider-error-handler'
 /** Default handler set — one class instance per actionable {@link LlmEvent} type. */
 export function createDefaultLlmEventHandlers(): LlmEventHandler[] {
   return [
+    new StepStartHandler(),
+    new TextStartHandler(),
     new TextDeltaHandler(),
+    new TextEndHandler(),
+    new ReasoningStartHandler(),
     new ReasoningDeltaHandler(),
+    new ReasoningEndHandler(),
     new ToolInputStartHandler(),
     new ToolCallHandler(),
     new ToolResultHandler(),

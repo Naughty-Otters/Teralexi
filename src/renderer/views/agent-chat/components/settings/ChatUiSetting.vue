@@ -63,6 +63,25 @@
         </div>
       </div>
 
+      <div class="chat-ui-row">
+        <div class="chat-ui-row-text">
+          <span class="chat-ui-row-title">{{ t.chatUi.reasoningMaxTitle }}</span>
+          <span class="chat-ui-row-desc">{{ t.chatUi.reasoningMaxDesc }}</span>
+        </div>
+        <div class="chat-ui-input-wrap">
+          <input
+            class="chat-ui-input aft-input"
+            type="number"
+            :min="MIN_CHAT_UI_REASONING_MAX_CHARS"
+            :max="MAX_CHAT_UI_REASONING_MAX_CHARS"
+            :value="draft.reasoningMaxChars"
+            :disabled="saving === 'reasoningMaxChars'"
+            @change="onReasoningMaxChange"
+          />
+          <span class="chat-ui-input-hint">{{ t.common.chars }}</span>
+        </div>
+      </div>
+
       <p class="chat-ui-footnote">{{ defaultsFootnote }}</p>
     </div>
   </section>
@@ -76,12 +95,15 @@ import {
   MAX_CHAT_UI_BUBBLE_COMPACT_LINES,
   MAX_CHAT_UI_BUBBLE_TEXT_KEEP_CHARS,
   MAX_CHAT_UI_CONTEXT_WINDOW_MESSAGES,
+  MAX_CHAT_UI_REASONING_MAX_CHARS,
   MIN_CHAT_UI_BUBBLE_COMPACT_LINES,
   MIN_CHAT_UI_BUBBLE_TEXT_KEEP_CHARS,
   MIN_CHAT_UI_CONTEXT_WINDOW_MESSAGES,
+  MIN_CHAT_UI_REASONING_MAX_CHARS,
   clampChatUiBubbleCompactLines,
   clampChatUiBubbleTextKeepChars,
   clampChatUiContextWindowMessages,
+  clampChatUiReasoningMaxChars,
   type ChatUiSettings,
 } from '@shared/agent/chat-ui-settings'
 import { loadChatUiSettings, saveChatUiSettings } from '../../chatUiSettings'
@@ -100,6 +122,10 @@ const defaultsFootnote = computed(() =>
     .replace(
       '{contextMessages}',
       String(DEFAULT_CHAT_UI_SETTINGS.contextWindowMessages),
+    )
+    .replace(
+      '{reasoningMax}',
+      String(DEFAULT_CHAT_UI_SETTINGS.reasoningMaxChars),
     ),
 )
 
@@ -110,6 +136,7 @@ async function loadSettings(): Promise<void> {
     draft.bubbleTextKeepChars = settings.bubbleTextKeepChars
     draft.bubbleCompactLines = settings.bubbleCompactLines
     draft.contextWindowMessages = settings.contextWindowMessages
+    draft.reasoningMaxChars = settings.reasoningMaxChars
   } finally {
     loading.value = false
   }
@@ -124,11 +151,13 @@ async function persist(partial: Partial<ChatUiSettings>): Promise<void> {
       bubbleTextKeepChars: draft.bubbleTextKeepChars,
       bubbleCompactLines: draft.bubbleCompactLines,
       contextWindowMessages: draft.contextWindowMessages,
+      reasoningMaxChars: draft.reasoningMaxChars,
       ...partial,
     })
     draft.bubbleTextKeepChars = next.bubbleTextKeepChars
     draft.bubbleCompactLines = next.bubbleCompactLines
     draft.contextWindowMessages = next.contextWindowMessages
+    draft.reasoningMaxChars = next.reasoningMaxChars
   } finally {
     saving.value = null
   }
@@ -162,6 +191,16 @@ function onContextWindowChange(event: Event): void {
   const next = clampChatUiContextWindowMessages(raw)
   draft.contextWindowMessages = next
   void persist({ contextWindowMessages: next })
+}
+
+function onReasoningMaxChange(event: Event): void {
+  const raw = Number.parseInt(
+    (event.target as HTMLInputElement).value,
+    10,
+  )
+  const next = clampChatUiReasoningMaxChars(raw)
+  draft.reasoningMaxChars = next
+  void persist({ reasoningMaxChars: next })
 }
 
 onMounted(() => {

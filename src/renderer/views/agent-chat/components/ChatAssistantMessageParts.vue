@@ -30,6 +30,14 @@
           class="msg-html"
           v-html="props.renderTextPartHtml(props.message, bubble.part)"
         />
+        <details
+          v-else-if="bubble.kind === 'reasoning'"
+          class="reasoning-bubble"
+          open
+        >
+          <summary class="reasoning-bubble__summary">Reasoning</summary>
+          <pre class="reasoning-bubble__body">{{ reasoningTextFromPart(bubble.part) }}</pre>
+        </details>
         <div
           v-else-if="bubble.kind === 'error'"
           class="msg-error"
@@ -493,6 +501,11 @@ function listDataFromBubble(
   return bubble.payload as AssistantListBubbleData
 }
 
+function reasoningTextFromPart(part: unknown): string {
+  if ((part as { type?: string }).type !== 'reasoning') return ''
+  return String((part as { text?: string }).text ?? '').trim()
+}
+
 function toolGroupItems(
   bubble: AssistantBubbleDescriptor,
 ): AssistantBubbleDescriptor[] {
@@ -711,6 +724,33 @@ function toolGroupIsActive(bubble: AssistantBubbleDescriptor): boolean {
   padding: 4px;
 }
 
+.reasoning-bubble {
+  margin: 8px 0;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  background: var(--ui-bg-elevated);
+}
+.reasoning-bubble__summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ui-text-muted);
+  list-style: none;
+}
+.reasoning-bubble__summary::-webkit-details-marker {
+  display: none;
+}
+.reasoning-bubble__body {
+  margin: 0;
+  padding: 0 12px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ui-text-muted);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
 .thinking-strip {
   display: inline-flex;
   align-items: center;

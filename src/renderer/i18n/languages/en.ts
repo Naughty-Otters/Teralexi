@@ -123,8 +123,11 @@ export const lang: AppLocaleBundle = {
     contextWindowTitle: 'Agent context window',
     contextWindowDesc:
       'How many recent user and assistant messages are sent to the agent on each turn. When history reaches this limit, older messages are automatically compacted into one summary before the next run.',
+    reasoningMaxTitle: 'Reasoning preview length',
+    reasoningMaxDesc:
+      'While the model is reasoning, keep at most this many recent characters visible per reasoning block. Older reasoning is omitted from the UI and is not saved.',
     defaultsFootnote:
-      'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages.',
+      'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars.',
   },
   monitor: {
     title: 'Token monitor',

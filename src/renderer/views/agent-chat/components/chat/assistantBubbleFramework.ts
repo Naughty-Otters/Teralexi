@@ -27,6 +27,7 @@ import {
 
 export type AssistantBubbleKind =
   | 'markdown'
+  | 'reasoning'
   | 'list-items'
   | 'step-progress'
   | 'form'
@@ -73,6 +74,20 @@ export function isTextUIPart(part: unknown): boolean {
     part !== null &&
     (part as { type?: string }).type === 'text'
   )
+}
+
+export function isReasoningUIPart(part: unknown): boolean {
+  return (
+    typeof part === 'object' &&
+    part !== null &&
+    (part as { type?: string }).type === 'reasoning'
+  )
+}
+
+export function isReasoningUIPartWithContent(part: unknown): boolean {
+  if (!isReasoningUIPart(part)) return false
+  const t = (part as { text?: string }).text ?? ''
+  return t.trim().length > 0
 }
 
 export function isTextUIPartWithContent(part: unknown): boolean {
@@ -373,6 +388,11 @@ export function resolveAssistantBubbles(
 
   for (const [index, part] of message.parts.entries()) {
     const key = `${message.id}-p-${index}`
+
+    if (isReasoningUIPartWithContent(part)) {
+      out.push({ key, kind: 'reasoning', part })
+      continue
+    }
 
     if (isTextUIPartWithContent(part) && !options.structuredLayoutEnabled) {
       const text = String((part as { text?: string }).text ?? '')

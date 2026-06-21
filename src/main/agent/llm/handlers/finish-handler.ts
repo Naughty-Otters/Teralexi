@@ -1,6 +1,7 @@
 import type { LlmEventForType } from './types'
 import { LlmEventHandler } from './types'
 import { createLogger } from '@main/logger'
+import { closeOpenTextPart } from './publishers'
 
 const log = createLogger('agent.llm.handlers')
 
@@ -21,5 +22,6 @@ export class FinishHandler extends LlmEventHandler<'finish'> {
       usage: event.usage,
       reason: event.reason,
     })
+    closeOpenTextPart(ctx)
   }
 }

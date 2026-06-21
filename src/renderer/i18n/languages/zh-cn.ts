@@ -119,8 +119,11 @@ export const lang: AppLocaleBundle = {
     contextWindowTitle: 'Agent 上下文窗口',
     contextWindowDesc:
       '每轮发送给 Agent 的最近用户与助手消息数量。达到上限后，较旧消息会在下一轮前自动压缩为摘要。',
+    reasoningMaxTitle: '推理预览长度',
+    reasoningMaxDesc:
+      '模型推理时，每个推理块最多保留最近这么多字符。更早的推理不会显示，也不会写入数据库。',
     defaultsFootnote:
-      '默认值：每端 {keepChars} 字符，{compactLines} 行紧凑高度，{contextMessages} 条上下文消息。',
+      '默认值：每端 {keepChars} 字符，{compactLines} 行紧凑高度，{contextMessages} 条上下文消息，推理 {reasoningMax} 字符。',
   },
   monitor: {
     title: 'Token 监控',
