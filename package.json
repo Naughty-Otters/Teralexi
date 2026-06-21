@@ -5,7 +5,7 @@
   "main": "./dist/electron/main/main.js",
   "author": "Naughty-Otters",
   "description": "OpenFDE project",
-  "license": "MIT",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Naughty-Otters/OpenFDE.git"

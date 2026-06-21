@@ -116,3 +116,11 @@ UI and implementation notes for contributors (file-change diff UI, HITL preview 
 ## Notes
 - CI uses Node.js 22.x to match local development requirements.
 - Download coverage HTML from the workflow artifact after a CI run if you need a local report without running tests.
+
+## License
+
+OpenFDE is licensed under the [PolyForm Noncommercial License 1.0.0](./LICENSE).
+
+You may use, modify, and distribute the software for **noncommercial purposes**, including personal use, learning, hobby projects, and noncommercial use by educational and nonprofit organizations.
+
+**Commercial use** (including commercial distribution, SaaS/hosted services, resale, or integration into commercial products) and **any other use beyond the noncommercial terms** require a separate written license from the copyright holder. Contact the project owner via [GitHub Issues](https://github.com/Naughty-Otters/OpenFDE/issues).
