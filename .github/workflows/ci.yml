@@ -49,15 +49,40 @@ jobs:
           if-no-files-found: ignore
 
   build:
-    name: Production build
+    name: Production build (${{ matrix.platform }})
     needs: unit-tests
-    runs-on: windows-latest
-    timeout-minutes: 45
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
 
     strategy:
       fail-fast: false
       matrix:
-        node-version: [22.x]
+        include:
+          - os: macos-latest
+            platform: mac
+            npm_script: build:mac
+            artifact_path: |
+              build/*.dmg
+              build/*.zip
+              build/*.blockmap
+              build/*.yml
+              build/latest*.yml
+          - os: windows-latest
+            platform: win
+            npm_script: build:win64
+            artifact_path: |
+              build/*.exe
+              build/*.blockmap
+              build/*.yml
+              build/latest*.yml
+          - os: ubuntu-latest
+            platform: linux
+            npm_script: build:linux
+            artifact_path: |
+              build/*.AppImage
+              build/*.blockmap
+              build/*.yml
+              build/latest*.yml
 
     steps:
       - name: Check out repository
@@ -66,7 +91,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.x
           cache: npm
 
       - name: Install dependencies
@@ -75,7 +100,16 @@ jobs:
       - name: Build desktop app
         env:
           NODE_OPTIONS: --max-old-space-size=6144
-        run: npm run build
+        run: npm run ${{ matrix.npm_script }}
+
+      - name: Upload desktop build (internal)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openfde-${{ matrix.platform }}-ci-${{ github.run_number }}-${{ github.sha }}
+          path: ${{ matrix.artifact_path }}
+          retention-days: 14
+          if-no-files-found: error
 
   update-readme:
     name: Update README

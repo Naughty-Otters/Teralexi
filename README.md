@@ -88,7 +88,7 @@ CI enforces **70%** line, statement, and function coverage on unit-testable code
 CI runs in `.github/workflows/ci.yml` on pushes and pull requests to `main`, `master`, and `mini-main`:
 
 1. **Unit tests** (Ubuntu) — `npm run test:unit:coverage`; uploads the `coverage/` artifact.
-2. **Production build** (Windows) — `npm run build` (runs only after unit tests pass).
+2. **Production build** (macOS, Windows, Linux in parallel) — platform-specific `build:*` scripts; uploads internal artifacts (`openfde-<platform>-ci-<run>-<sha>`, 14-day retention). Download from **Actions → workflow run → Artifacts**.
 3. **Update README** (Ubuntu, push only) — after a successful build, updates the CI status table at the top of this file (commit uses `[skip ci]` to avoid loops).
 
 ## Project Layout
