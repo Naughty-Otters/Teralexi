@@ -75,14 +75,6 @@ jobs:
               build/*.blockmap
               build/*.yml
               build/latest*.yml
-          - os: ubuntu-latest
-            platform: linux
-            npm_script: build:linux
-            artifact_path: |
-              build/*.AppImage
-              build/*.blockmap
-              build/*.yml
-              build/latest*.yml
 
     steps:
       - name: Check out repository
