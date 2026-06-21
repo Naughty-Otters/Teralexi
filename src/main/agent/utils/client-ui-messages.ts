@@ -294,7 +294,8 @@ export function flattenMultipartTextLikeModelMessages(
       for (const p of c) {
         if (!p || typeof p !== 'object') return m
         const typed = p as { type?: string; text?: unknown }
-        if (typed.type !== 'text' && typed.type !== 'reasoning') return m
+        if (typed.type === 'reasoning') continue
+        if (typed.type !== 'text') return m
         if (typeof typed.text !== 'string' || typed.text.length === 0) continue
         lines.push(typed.text)
       }

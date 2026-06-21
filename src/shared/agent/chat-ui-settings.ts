@@ -3,11 +3,13 @@ import { HEAD_TAIL_KEEP_CHARS } from '@shared/text/truncate-head-tail'
 export const CHAT_UI_BUBBLE_TEXT_KEEP_CHARS_KEY = 'chat.ui.bubbleTextKeepChars'
 export const CHAT_UI_BUBBLE_COMPACT_LINES_KEY = 'chat.ui.bubbleCompactLines'
 export const CHAT_UI_CONTEXT_WINDOW_MESSAGES_KEY = 'chat.ui.contextWindowMessages'
+export const CHAT_UI_REASONING_MAX_CHARS_KEY = 'chat.ui.reasoningMaxChars'
 
 export const CHAT_UI_SETTINGS_PROP_KEYS = [
   CHAT_UI_BUBBLE_TEXT_KEEP_CHARS_KEY,
   CHAT_UI_BUBBLE_COMPACT_LINES_KEY,
   CHAT_UI_CONTEXT_WINDOW_MESSAGES_KEY,
+  CHAT_UI_REASONING_MAX_CHARS_KEY,
 ] as const
 
 export const MIN_CHAT_UI_BUBBLE_TEXT_KEEP_CHARS = 50
@@ -16,6 +18,9 @@ export const MIN_CHAT_UI_BUBBLE_COMPACT_LINES = 2
 export const MAX_CHAT_UI_BUBBLE_COMPACT_LINES = 24
 export const MIN_CHAT_UI_CONTEXT_WINDOW_MESSAGES = 2
 export const MAX_CHAT_UI_CONTEXT_WINDOW_MESSAGES = 100
+export const DEFAULT_CHAT_UI_REASONING_MAX_CHARS = 2000
+export const MIN_CHAT_UI_REASONING_MAX_CHARS = 200
+export const MAX_CHAT_UI_REASONING_MAX_CHARS = 20_000
 
 export type ChatUiSettings = {
   /** Characters kept from the start and end of each bubble while streaming/compact. */
@@ -24,12 +29,15 @@ export type ChatUiSettings = {
   bubbleCompactLines: number
   /** User + assistant turns included in agent conversation context. */
   contextWindowMessages: number
+  /** Max visible characters kept per reasoning block (most recent tail). */
+  reasoningMaxChars: number
 }
 
 export const DEFAULT_CHAT_UI_SETTINGS: ChatUiSettings = {
   bubbleTextKeepChars: HEAD_TAIL_KEEP_CHARS,
   bubbleCompactLines: 10,
   contextWindowMessages: 200,
+  reasoningMaxChars: DEFAULT_CHAT_UI_REASONING_MAX_CHARS,
 }
 
 export function clampChatUiBubbleTextKeepChars(value: number): number {
@@ -55,6 +63,16 @@ export function clampChatUiContextWindowMessages(value: number): number {
   return Math.min(
     MAX_CHAT_UI_CONTEXT_WINDOW_MESSAGES,
     Math.max(MIN_CHAT_UI_CONTEXT_WINDOW_MESSAGES, Math.round(value)),
+  )
+}
+
+export function clampChatUiReasoningMaxChars(value: number): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_CHAT_UI_SETTINGS.reasoningMaxChars
+  }
+  return Math.min(
+    MAX_CHAT_UI_REASONING_MAX_CHARS,
+    Math.max(MIN_CHAT_UI_REASONING_MAX_CHARS, Math.round(value)),
   )
 }
 
@@ -87,6 +105,11 @@ export function parseChatUiSettings(
       values[CHAT_UI_CONTEXT_WINDOW_MESSAGES_KEY],
       DEFAULT_CHAT_UI_SETTINGS.contextWindowMessages,
       clampChatUiContextWindowMessages,
+    ),
+    reasoningMaxChars: parsePositiveInt(
+      values[CHAT_UI_REASONING_MAX_CHARS_KEY],
+      DEFAULT_CHAT_UI_SETTINGS.reasoningMaxChars,
+      clampChatUiReasoningMaxChars,
     ),
   }
 }

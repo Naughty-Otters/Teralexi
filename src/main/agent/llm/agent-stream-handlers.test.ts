@@ -67,7 +67,7 @@ describe('agent stream LlmProcessor handlers', () => {
     })
   })
 
-  it('ToolResultHandler appends transcript and emits tool-output-available', () => {
+  it('ToolResultHandler emits tool-output-available without text transcript', () => {
     const { processor, run, onChunk, onUIMessageChunk } = handlerCtx()
     new ToolResultHandler().handle(
       {
@@ -82,9 +82,8 @@ describe('agent stream LlmProcessor handlers', () => {
       },
       { state: processor.state, run },
     )
-    expect(processor.state.text).toContain('**Terminal**')
-    expect(processor.state.text).toContain('ok')
-    expect(onChunk).toHaveBeenCalled()
+    expect(processor.state.text).toBe('')
+    expect(onChunk).not.toHaveBeenCalled()
     expect(onUIMessageChunk).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'tool-output-available',
@@ -93,7 +92,7 @@ describe('agent stream LlmProcessor handlers', () => {
     )
   })
 
-  it('ToolErrorHandler appends error block and emits tool-output-error', () => {
+  it('ToolErrorHandler appends error to text and emits tool-output-error', () => {
     const { processor, run, onChunk, onUIMessageChunk } = handlerCtx()
     new ToolErrorHandler().handle(
       {

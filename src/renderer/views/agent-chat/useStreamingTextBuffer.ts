@@ -1,24 +1,26 @@
 import { ref, shallowRef } from 'vue'
 import type { UIMessage } from '@openfde-ai'
-import { isUiMessageTextStreaming } from './streamingBubbleTextLimit'
-import { limitBubbleTextForDisplay } from './chatUiSettings'
 
 export type StreamingTextTarget = {
   messageId: string
   partId: string
 }
 
-function extractPrimaryText(msg: UIMessage): { partId: string; text: string } | null {
+function extractActiveStreamingText(
+  msg: UIMessage,
+): { partId: string; text: string } | null {
   if (msg.role !== 'assistant') return null
+  let fallback: { partId: string; text: string } | null = null
   for (const part of msg.parts) {
-    if (part.type === 'text') {
-      return {
-        partId: (part as { id?: string }).id ?? 'text-0',
-        text: part.text ?? '',
-      }
+    if (part.type !== 'text') continue
+    const row = {
+      partId: (part as { id?: string }).id ?? 'text-0',
+      text: part.text ?? '',
     }
+    fallback = row
+    if (part.state === 'streaming') return row
   }
-  return null
+  return fallback
 }
 
 /**
@@ -51,7 +53,7 @@ export function useStreamingTextBuffer() {
       clear()
       return
     }
-    const extracted = extractPrimaryText(msg)
+    const extracted = extractActiveStreamingText(msg)
     if (!extracted) {
       clear()
       return
@@ -60,9 +62,7 @@ export function useStreamingTextBuffer() {
       messageId: msg.id,
       partId: extracted.partId,
     }
-    pendingText = isUiMessageTextStreaming(msg)
-      ? limitBubbleTextForDisplay(extracted.text)
-      : extracted.text
+    pendingText = extracted.text
     scheduleDisplayFlush()
   }
 
@@ -87,6 +87,10 @@ export function useStreamingTextBuffer() {
   function textForMessage(msg: UIMessage, fallbackText: string): string {
     const target = activeTarget.value
     if (!target || target.messageId !== msg.id) return fallbackText
+    const partId = (msg.parts.find(
+      (part) => part.type === 'text' && (part as { id?: string }).id === target.partId,
+    ) as { id?: string } | undefined)?.id
+    if (partId !== target.partId) return fallbackText
     return displayText.value || fallbackText
   }
 

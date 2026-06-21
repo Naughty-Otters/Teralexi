@@ -57,6 +57,6 @@ describe('LlmEventHandler classes', () => {
     expect(registry.get('tool-output-denied')).toBeInstanceOf(
       ToolOutputDeniedHandler,
     )
-    expect(registry.size).toBe(11)
+    expect(registry.size).toBe(16)
   })
 })

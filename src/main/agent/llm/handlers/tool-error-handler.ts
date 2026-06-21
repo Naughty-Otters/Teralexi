@@ -3,7 +3,7 @@ import { clearPendingApprovalForToolCallId } from '../approval-keys'
 import type { LlmEventForType } from './types'
 import { LlmEventHandler } from './types'
 import {
-  publishTextDelta,
+  publishStandaloneTextBubble,
   publishToolUpdated,
   publishUIMessageChunk,
   updateToolPart,
@@ -22,7 +22,7 @@ export class ToolErrorHandler extends LlmEventHandler<'tool-error'> {
       event.id,
     ).replace('{error}', event.message)
     ctx.state.text += block
-    publishTextDelta(ctx, block)
+    publishStandaloneTextBubble(ctx, `tool-error-${event.id}`, block)
 
     publishUIMessageChunk(ctx, {
       type: 'tool-output-error',

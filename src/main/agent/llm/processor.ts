@@ -22,6 +22,7 @@ import {
   type AgentCollectResult,
   type AgentStreamCollectSource,
 } from './ui-message-projector'
+import { loadChatUiReasoningMaxChars } from '../utils/chat-context-settings'
 
 export type {
   LlmProcessorMode,
@@ -92,11 +93,18 @@ export class LlmProcessor {
       typeof ctx.onUIMessageChunk === 'function' &&
       typeof result.toUIMessageStream === 'function'
 
+    const synthesizeUiChunk =
+      mode !== 'silent' && typeof ctx.onUIMessageChunk === 'function'
+        ? ctx.onUIMessageChunk
+        : undefined
+
     const processorCtx: LlmProcessorContext = {
       ...ctx,
       mode,
-      // Native toUIMessageStream owns Chat IPC; handlers synthesize only as fallback.
+      reasoningMaxChars: ctx.reasoningMaxChars ?? loadChatUiReasoningMaxChars(),
+      // Native toUIMessageStream owns tool Chat IPC; handlers synthesize text/reasoning.
       onUIMessageChunk: useNativeUiStream ? undefined : ctx.onUIMessageChunk,
+      synthesizeUiChunk,
     }
 
     const events: LlmEvent[] = []

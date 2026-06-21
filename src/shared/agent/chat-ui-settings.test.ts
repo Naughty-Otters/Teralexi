@@ -33,6 +33,7 @@ describe('chat-ui-settings', () => {
       bubbleTextKeepChars: 2_00000,
       bubbleCompactLines: 10,
       contextWindowMessages: 200,
+      reasoningMaxChars: 2000,
     })
   })
 
@@ -47,6 +48,7 @@ describe('chat-ui-settings', () => {
       bubbleTextKeepChars: 480,
       bubbleCompactLines: 8,
       contextWindowMessages: 32,
+      reasoningMaxChars: 2000,
     })
   })
 })

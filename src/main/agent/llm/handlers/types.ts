@@ -1,5 +1,6 @@
 import type { AgentEventBus } from '../../bus/agent-event-bus'
 import type { LlmEvent, LlmUsage } from '../events'
+import type { ReasoningCapState } from '@shared/text/limit-reasoning-text'
 
 export type LlmProcessorMode = 'progress' | 'silent'
 
@@ -9,6 +10,9 @@ export type LlmProcessorContext = {
   onChunk?: (text: string) => void
   emitStepProgress?: (chunk: string) => void
   onUIMessageChunk?: (chunk: Record<string, unknown>) => void
+  /** Text/reasoning/step UI chunks when native `toUIMessageStream` owns tool parts. */
+  synthesizeUiChunk?: (chunk: Record<string, unknown>) => void
+  reasoningMaxChars?: number
   bus?: AgentEventBus
 }
 
@@ -18,6 +22,10 @@ export type LlmProcessorState = {
   usage?: LlmUsage
   finishReason?: string
   pendingApprovals: Set<string>
+  activeTextPartId?: string
+  openTextPart: boolean
+  activeReasoningPartId?: string
+  reasoningCaps: Map<string, ReasoningCapState>
   toolParts: Map<
     string,
     {
@@ -56,6 +64,8 @@ export function createLlmProcessorState(): LlmProcessorState {
     text: '',
     reasoning: '',
     pendingApprovals: new Set(),
+    openTextPart: false,
+    reasoningCaps: new Map(),
     toolParts: new Map(),
   }
 }

@@ -115,6 +115,8 @@ export type AppLabels = {
     compactHeightDesc: string
     contextWindowTitle: string
     contextWindowDesc: string
+    reasoningMaxTitle: string
+    reasoningMaxDesc: string
     defaultsFootnote: string
   }
   monitor: {

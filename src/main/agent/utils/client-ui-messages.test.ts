@@ -275,7 +275,7 @@ describe('flattenMultipartTextLikeModelMessages', () => {
     expect(flattenMultipartTextLikeModelMessages(msgs)).toEqual(msgs)
   })
 
-  it('joins assistant reasoning and text parts', () => {
+  it('joins assistant text parts and skips reasoning', () => {
     const out = flattenMultipartTextLikeModelMessages([
       {
         role: 'assistant',
@@ -285,7 +285,7 @@ describe('flattenMultipartTextLikeModelMessages', () => {
         ],
       } as never,
     ])
-    expect(out[0]).toMatchObject({ role: 'assistant', content: 'thinking\nanswer' })
+    expect(out[0]).toMatchObject({ role: 'assistant', content: 'answer' })
   })
 })
 

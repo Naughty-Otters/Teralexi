@@ -3,11 +3,13 @@ import {
   CHAT_UI_BUBBLE_COMPACT_LINES_KEY,
   CHAT_UI_BUBBLE_TEXT_KEEP_CHARS_KEY,
   CHAT_UI_CONTEXT_WINDOW_MESSAGES_KEY,
+  CHAT_UI_REASONING_MAX_CHARS_KEY,
   CHAT_UI_SETTINGS_PROP_KEYS,
   DEFAULT_CHAT_UI_SETTINGS,
   clampChatUiBubbleCompactLines,
   clampChatUiBubbleTextKeepChars,
   clampChatUiContextWindowMessages,
+  clampChatUiReasoningMaxChars,
   parseChatUiSettings,
   type ChatUiSettings,
 } from '@shared/agent/chat-ui-settings'
@@ -26,7 +28,11 @@ export const chatUiBubbleCompactLines = ref(
 export const chatUiContextWindowMessages = ref(
   DEFAULT_CHAT_UI_SETTINGS.contextWindowMessages,
 )
+export const chatUiReasoningMaxChars = ref(
+  DEFAULT_CHAT_UI_SETTINGS.reasoningMaxChars,
+)
 
+/** Head/tail cap for sub-agent streaming bubbles only (main assistant text is full). */
 export function limitBubbleTextForDisplay(text: string): string {
   return limitTextForStreamingBubble(
     text,
@@ -50,6 +56,9 @@ export function applyChatUiSettings(settings: ChatUiSettings): void {
   chatUiContextWindowMessages.value = clampChatUiContextWindowMessages(
     settings.contextWindowMessages,
   )
+  chatUiReasoningMaxChars.value = clampChatUiReasoningMaxChars(
+    settings.reasoningMaxChars,
+  )
 }
 
 export async function loadChatUiSettings(): Promise<ChatUiSettings> {
@@ -72,6 +81,7 @@ export async function saveChatUiSettings(
     contextWindowMessages: clampChatUiContextWindowMessages(
       settings.contextWindowMessages,
     ),
+    reasoningMaxChars: clampChatUiReasoningMaxChars(settings.reasoningMaxChars),
   }
   await Promise.all([
     setSystemConfigValue(
@@ -85,6 +95,10 @@ export async function saveChatUiSettings(
     setSystemConfigValue(
       CHAT_UI_CONTEXT_WINDOW_MESSAGES_KEY,
       String(next.contextWindowMessages),
+    ),
+    setSystemConfigValue(
+      CHAT_UI_REASONING_MAX_CHARS_KEY,
+      String(next.reasoningMaxChars),
     ),
   ])
   applyChatUiSettings(next)

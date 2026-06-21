@@ -9,3 +9,9 @@ export function loadChatContextWindowMessages(): number {
   const values = getSystemPropValues([...CHAT_UI_SETTINGS_PROP_KEYS])
   return parseChatUiSettings(values).contextWindowMessages
 }
+
+/** Max visible characters per reasoning block (Settings → Chat). */
+export function loadChatUiReasoningMaxChars(): number {
+  const values = getSystemPropValues([...CHAT_UI_SETTINGS_PROP_KEYS])
+  return parseChatUiSettings(values).reasoningMaxChars
+}
