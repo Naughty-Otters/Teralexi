@@ -22,6 +22,10 @@ export class ReasoningDeltaHandler extends LlmEventHandler<'reasoning-delta'> {
   handle(event: LlmEventForType<'reasoning-delta'>, ctx) {
     ctx.state.reasoning += event.text
     const maxChars = resolveReasoningMaxChars(ctx.run)
+    if (!ctx.state.reasoningCaps.has(event.id)) {
+      ctx.state.reasoningCaps.set(event.id, createReasoningCapState())
+      publishReasoningUiChunk(ctx, { type: 'reasoning-start', id: event.id })
+    }
     let capState = ctx.state.reasoningCaps.get(event.id)
     if (!capState) {
       capState = createReasoningCapState()

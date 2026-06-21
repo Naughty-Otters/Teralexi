@@ -13,7 +13,11 @@ const catalog = [
   { name: 'run_workspace_command', tags: ['file-system', 'workspace'], needsApproval: true },
   { name: 'git_commit', tags: ['git'], needsApproval: true },
   { name: 'run_script', tags: ['shell-command'], needsApproval: false },
+  { name: 'run_script_file', tags: ['shell-command'], needsApproval: false },
   { name: 'web_search', tags: ['web'], needsApproval: false },
+  { name: 'web_scrape', tags: ['web'], needsApproval: false },
+  { name: 'deep_research', tags: ['web', 'research', 'scholar'], needsApproval: true },
+  { name: 'export_research_pdf', tags: ['research'], needsApproval: true },
   { name: 'github_pr_create', tags: ['github'], needsApproval: true },
   { name: 'lsp', tags: ['lsp'], needsApproval: false },
 ]
@@ -53,9 +57,47 @@ describe('skill-workspace-tool-defaults', () => {
     expect(expanded).toContain('write_file')
     expect(expanded).toContain('run_workspace_command')
     expect(expanded).toContain('git_commit')
-    expect(expanded).not.toContain('run_script')
-    expect(expanded).not.toContain('web_search')
+    expect(expanded).toContain('web_search')
+    expect(expanded).toContain('run_script')
     expect(expanded).toContain('lsp')
+  })
+
+  it('expands research skill web, scholar, shell-command, and research tools', () => {
+    const expanded = expandSkillAllowedToolsForCatalog('research', catalog, [
+      'export_research_pdf',
+    ])
+    expect(expanded).toContain('web_search')
+    expect(expanded).toContain('run_script')
+    expect(expanded).toContain('run_workspace_command')
+    expect(expanded).toContain('export_research_pdf')
+  })
+
+  it('builds no-approval overrides for research skill toolsets', () => {
+    const overrides = mergeSkillWorkspaceApprovalOverrides(
+      'research',
+      catalog,
+      [
+        'read_file',
+        'run_workspace_command',
+        'web_search',
+        'web_scrape',
+        'run_script',
+        'run_script_file',
+        'deep_research',
+        'export_research_pdf',
+      ],
+      {},
+    )
+    expect(overrides).toEqual({
+      read_file: false,
+      run_workspace_command: false,
+      web_search: false,
+      web_scrape: false,
+      run_script: false,
+      run_script_file: false,
+      deep_research: false,
+      export_research_pdf: false,
+    })
   })
 
   it('expands github skill with github-tagged action tools', () => {

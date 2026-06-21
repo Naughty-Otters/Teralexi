@@ -1920,9 +1920,10 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     args: {
       screenBounds: { x: number; y: number; width: number; height: number }
       fileUrl: string | null
+      markdownView?: 'html' | 'raw'
     },
   ) => void = async (event, args) => {
-    syncSandboxOutputView(event, args)
+    await syncSandboxOutputView(event, args)
   }
 
   RemoveSandboxDirectories: (

@@ -431,8 +431,10 @@ const assistantTextPartHtml = createAssistantTextPartHtmlRenderer({
   getStreamingText: UI_CHAT_CONVERSATION_MODE_ONLY
     ? undefined
     : (msg, part) => {
+        const partId = (part as { id?: string }).id ?? 'text-0'
         const override = streamingTextBuffer.textForMessage(
           msg,
+          partId,
           part.text ?? '',
         )
         if (override !== (part.text ?? '')) return override
@@ -794,6 +796,9 @@ watch(
             if (p.type === 'text') {
               return `t:${(p.text ?? '').length}:${p.state ?? ''}`
             }
+            if (p.type === 'reasoning') {
+              return `r:${(p.text ?? '').length}:${p.state ?? ''}`
+            }
             if (p.type === 'data-agent-step-progress') {
               const data = (
                 p as { data?: { content?: string; status?: string } }
@@ -837,6 +842,9 @@ watch(
           .map((p) => {
             if (p.type === 'text') {
               return `t:${(p.text ?? '').length}:${p.state ?? ''}`
+            }
+            if (p.type === 'reasoning') {
+              return `r:${(p.text ?? '').length}:${p.state ?? ''}`
             }
             if (p.type === 'data-agent-step-progress') {
               const data = (

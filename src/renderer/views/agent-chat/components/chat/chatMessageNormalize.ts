@@ -37,6 +37,7 @@ export function dedupeMessagesByIdLastWins(
 export function assistantRowLooksInFlight(m: UIMessage): boolean {
   if (m.role !== 'assistant') return false
   for (const p of m.parts) {
+    if (p.type === 'reasoning' && p.state === 'streaming') return true
     if (p.type === 'text' && p.state === 'streaming') return true
     if (
       isToolOrDynamicToolUIPart(p) &&

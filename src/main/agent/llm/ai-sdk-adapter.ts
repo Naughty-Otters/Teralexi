@@ -128,7 +128,7 @@ export function aiSdkEventToLlmEvents(
         {
           type: 'text-delta',
           id: currentTextID(state, event.id as string | undefined),
-          text: String(event.text ?? ''),
+          text: String(event.text ?? event.delta ?? ''),
         },
       ]
 
@@ -151,7 +151,7 @@ export function aiSdkEventToLlmEvents(
         {
           type: 'reasoning-delta',
           id: currentReasoningID(state, event.id as string | undefined),
-          text: String(event.text ?? ''),
+          text: String(event.text ?? event.delta ?? ''),
         },
       ]
 

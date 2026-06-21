@@ -119,6 +119,9 @@ export type AppLabels = {
     reasoningMaxDesc: string
     defaultsFootnote: string
   }
+  chat: {
+    thoughtBubbleTitle: string
+  }
   monitor: {
     title: string
     subtitle: string

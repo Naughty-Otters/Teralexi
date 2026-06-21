@@ -84,13 +84,15 @@ export function useStreamingTextBuffer() {
     displayText.value = pendingText
   }
 
-  function textForMessage(msg: UIMessage, fallbackText: string): string {
+  function textForMessage(
+    msg: UIMessage,
+    partId: string,
+    fallbackText: string,
+  ): string {
     const target = activeTarget.value
-    if (!target || target.messageId !== msg.id) return fallbackText
-    const partId = (msg.parts.find(
-      (part) => part.type === 'text' && (part as { id?: string }).id === target.partId,
-    ) as { id?: string } | undefined)?.id
-    if (partId !== target.partId) return fallbackText
+    if (!target || target.messageId !== msg.id || target.partId !== partId) {
+      return fallbackText
+    }
     return displayText.value || fallbackText
   }
 

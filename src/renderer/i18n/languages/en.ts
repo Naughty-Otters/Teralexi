@@ -129,6 +129,9 @@ export const lang: AppLocaleBundle = {
     defaultsFootnote:
       'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars.',
   },
+  chat: {
+    thoughtBubbleTitle: 'Thought briefly',
+  },
   monitor: {
     title: 'Token monitor',
     subtitle: 'Usage and cost across conversations',
