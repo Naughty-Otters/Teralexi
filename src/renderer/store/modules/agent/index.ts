@@ -69,6 +69,7 @@ import {
 } from '@renderer/views/agent-chat/chatBoxDisplayMode'
 import {
   mergeStreamingTextIntoStructuredContent,
+  serializeAssistantMessageForExternalReply,
   serializeAssistantMessageForHistory,
 } from './context'
 import type {
@@ -1279,6 +1280,8 @@ export const useAgentStore = defineStore('agent', () => {
     agentId: string,
     options?: {
       forceReloadConversation?: boolean
+      /** Channel/scheduler outbound: user-facing text only. */
+      externalReply?: boolean
       pendingUserMessage?: {
         id: string
         content: string
@@ -1452,9 +1455,10 @@ export const useAgentStore = defineStore('agent', () => {
           }
           markAssistantMessageFinished(conversationId, assistantConversation.id)
           if (!stripAssistantPlaceholder) {
-            const serialized = serializeAssistantMessageForHistory(
-              assistantConversation.content,
-            ).trim()
+            const serialize = options?.externalReply
+              ? serializeAssistantMessageForExternalReply
+              : serializeAssistantMessageForHistory
+            const serialized = serialize(assistantConversation.content).trim()
             log.info('Returning serialized assistant response to caller', {
               conversationId,
               agentId,
@@ -1556,7 +1560,7 @@ export const useAgentStore = defineStore('agent', () => {
     const replyText = await runAssistantForConversation(
       args.conversationId,
       resolvedAgentId,
-      { forceReloadConversation: true },
+      { forceReloadConversation: true, externalReply: true },
     )
     log.info('Incoming channel message produced agent reply', {
       conversationId: args.conversationId,

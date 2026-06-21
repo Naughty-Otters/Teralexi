@@ -10,6 +10,7 @@ import {
 } from './conversation-store'
 import { getChannelRegistry } from '@main/channels/framework/channel-registry'
 import { runAgentForConversation } from '@main/engine'
+import { serializeAssistantMessageForExternalReply } from '@main/agent/utils'
 import { notifyConversationStoreChanged } from '@main/services/conversation-store-notify'
 import { resolveSchedulerSessionId } from '@shared/conversation/session-id'
 import { randomShortUuid } from '@shared/utils/short-uuid'
@@ -181,6 +182,27 @@ class SchedulerManager {
         assistantMessageId: randomShortUuid(),
         userId: ConfigContext.DEFAULT_USER_ID,
       })
+
+      const channelId = schedule.channelId.trim()
+      const target = schedule.target.trim()
+      if (channelId && target) {
+        const messages = store.getMessages(conversationId)
+        const lastAssistant = [...messages]
+          .reverse()
+          .find((m) => m.role === 'assistant' && m.content.trim())
+        if (lastAssistant) {
+          const replyText = serializeAssistantMessageForExternalReply(
+            lastAssistant.content,
+          )
+          if (replyText.trim()) {
+            const sender = getChannelRegistry().get(channelId)
+            if (!sender) {
+              throw new Error(`Unknown channel: ${channelId}`)
+            }
+            await sender.sendToTarget(target, replyText)
+          }
+        }
+      }
 
       notifyConversationStoreChanged(conversationId, agentId)
     }

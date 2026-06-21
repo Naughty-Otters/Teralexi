@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   isAssistantStructuredContent,
   parseAssistantStructuredContent,
+  serializeAssistantMessageForExternalReply,
   serializeAssistantMessageForHistory,
 } from './structured-content'
 
@@ -122,5 +123,50 @@ describe('structured-content', () => {
 
   it('returns raw string when content is not structured', () => {
     expect(serializeAssistantMessageForHistory('plain text')).toBe('plain text')
+  })
+
+  it('serializeAssistantMessageForExternalReply sends report only', () => {
+    const payload = {
+      version: 2,
+      assistantContent: {
+        outer: {
+          finalResult: [
+            '**Thinking**\n\ninternal',
+            '**Skills & tool execution**\n\ntool output',
+            '**Answer**\n\nvisible',
+          ].join('\n\n---\n\n'),
+          report: 'Channel reply body',
+        },
+        subSteps: [],
+      },
+    }
+    expect(serializeAssistantMessageForExternalReply(JSON.stringify(payload))).toBe(
+      'Channel reply body',
+    )
+  })
+
+  it('serializeAssistantMessageForExternalReply filters finalResult when report empty', () => {
+    const payload = {
+      version: 2,
+      assistantContent: {
+        outer: {
+          finalResult: [
+            '**Thinking**\n\ninternal',
+            '**Summary**\n\nDone',
+          ].join('\n\n---\n\n'),
+          report: '',
+        },
+        subSteps: [],
+      },
+    }
+    expect(serializeAssistantMessageForExternalReply(JSON.stringify(payload))).toBe(
+      '**Summary**\n\nDone',
+    )
+  })
+
+  it('serializeAssistantMessageForExternalReply returns plain text unchanged', () => {
+    expect(serializeAssistantMessageForExternalReply('plain text')).toBe(
+      'plain text',
+    )
   })
 })

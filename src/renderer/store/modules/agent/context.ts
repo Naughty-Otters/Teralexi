@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { userFacingTextFromStructuredOuter } from '@shared/agent/assistant-external-reply'
 import type { AssistantStructuredContent } from './types'
 
 function validateStepCaptures(value: unknown): boolean {
@@ -119,4 +120,10 @@ export function serializeAssistantMessageForHistory(raw: string): string {
 
   const joined = lines.join('\n\n').trim()
   return (joined + artifactSummary).trim() || raw
+}
+
+export function serializeAssistantMessageForExternalReply(raw: string): string {
+  const structured = parseAssistantStructuredContent(raw)
+  if (!structured) return raw.trim()
+  return userFacingTextFromStructuredOuter(structured.assistantContent.outer)
 }
