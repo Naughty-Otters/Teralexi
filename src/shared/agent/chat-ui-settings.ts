@@ -11,7 +11,7 @@ export const CHAT_UI_SETTINGS_PROP_KEYS = [
 ] as const
 
 export const MIN_CHAT_UI_BUBBLE_TEXT_KEEP_CHARS = 50
-export const MAX_CHAT_UI_BUBBLE_TEXT_KEEP_CHARS = 4_000
+export const MAX_CHAT_UI_BUBBLE_TEXT_KEEP_CHARS = 4_00000
 export const MIN_CHAT_UI_BUBBLE_COMPACT_LINES = 2
 export const MAX_CHAT_UI_BUBBLE_COMPACT_LINES = 24
 export const MIN_CHAT_UI_CONTEXT_WINDOW_MESSAGES = 2
@@ -29,7 +29,7 @@ export type ChatUiSettings = {
 export const DEFAULT_CHAT_UI_SETTINGS: ChatUiSettings = {
   bubbleTextKeepChars: HEAD_TAIL_KEEP_CHARS,
   bubbleCompactLines: 10,
-  contextWindowMessages: 50,
+  contextWindowMessages: 200,
 }
 
 export function clampChatUiBubbleTextKeepChars(value: number): number {

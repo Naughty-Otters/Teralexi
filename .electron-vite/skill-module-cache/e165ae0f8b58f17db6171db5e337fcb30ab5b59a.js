@@ -2750,7 +2750,7 @@ function truncateHeadTail(text, keepChars = HEAD_TAIL_KEEP_CHARS, omission = HEA
 var HEAD_TAIL_KEEP_CHARS, HEAD_TAIL_OMISSION;
 var init_truncate_head_tail = __esm({
   "src/shared/text/truncate-head-tail.ts"() {
-    HEAD_TAIL_KEEP_CHARS = 2e3;
+    HEAD_TAIL_KEEP_CHARS = 2e5;
     HEAD_TAIL_OMISSION = "\n....\n";
   }
 });
@@ -2840,22 +2840,17 @@ var init_prepare_markdown_source = __esm({
 });
 
 // src/shared/persistence/limit-persisted-content.ts
-function limitTextForStorage(text) {
-  return prepareAndTruncateMarkdownSource(text, HEAD_TAIL_KEEP_CHARS);
+function limitTextForStorage(text, keepChars = HEAD_TAIL_KEEP_CHARS) {
+  return prepareAndTruncateMarkdownSource(text, keepChars);
 }
-function isStructuredPersistShape(value) {
-  if (!value || typeof value !== "object") return false;
-  const root = value;
-  return root.version === 2 && typeof root.assistantContent === "object";
-}
-function limitStructuredShape(parsed) {
+function limitStructuredShape(parsed, keepChars = HEAD_TAIL_KEEP_CHARS) {
   const outer = { ...parsed.assistantContent?.outer ?? {} };
   delete outer.streamingText;
   if (typeof outer.finalResult === "string") {
-    outer.finalResult = limitTextForStorage(outer.finalResult);
+    outer.finalResult = limitTextForStorage(outer.finalResult, keepChars);
   }
   if (typeof outer.report === "string") {
-    outer.report = limitTextForStorage(outer.report);
+    outer.report = limitTextForStorage(outer.report, keepChars);
   }
   const pipeline = outer.pipelineConversation;
   if (Array.isArray(pipeline)) {
@@ -2863,7 +2858,7 @@ function limitStructuredShape(parsed) {
       if (!turn || typeof turn !== "object") return turn;
       const row = { ...turn };
       if (typeof row.content === "string") {
-        row.content = limitTextForStorage(row.content);
+        row.content = limitTextForStorage(row.content, keepChars);
       }
       return row;
     });
@@ -2874,7 +2869,7 @@ function limitStructuredShape(parsed) {
       if (!capture || typeof capture !== "object") return capture;
       const row = { ...capture };
       if (typeof row.content === "string") {
-        row.content = limitTextForStorage(row.content);
+        row.content = limitTextForStorage(row.content, keepChars);
       }
       return row;
     });
@@ -2882,7 +2877,7 @@ function limitStructuredShape(parsed) {
   const subSteps = (parsed.assistantContent?.subSteps ?? []).map((step) => {
     const row = { ...step };
     if (typeof row.content === "string") {
-      row.content = limitTextForStorage(row.content);
+      row.content = limitTextForStorage(row.content, keepChars);
     }
     return row;
   });
@@ -2895,31 +2890,56 @@ function limitStructuredShape(parsed) {
     }
   };
 }
+function isStructuredPersistShape(value) {
+  if (!value || typeof value !== "object") return false;
+  const root = value;
+  return root.version === 2 && typeof root.assistantContent === "object";
+}
+function shrinkStructuredByReducingFields(parsed) {
+  let keep = HEAD_TAIL_KEEP_CHARS;
+  while (keep >= 1e3) {
+    const limited = limitStructuredShape(parsed, keep);
+    const json = JSON.stringify(limited);
+    if (json.length <= PERSISTED_MESSAGE_CONTENT_MAX_CHARS) return json;
+    keep = Math.floor(keep / 2);
+  }
+  const outer = parsed.assistantContent?.outer ?? {};
+  const minimal = {
+    version: 2,
+    assistantContent: {
+      outer: {
+        finalResult: typeof outer.finalResult === "string" ? limitTextForStorage(outer.finalResult, 1e3) : "",
+        report: "",
+        pipelineConversation: []
+      },
+      subSteps: []
+    }
+  };
+  return JSON.stringify(minimal);
+}
 function shrinkStructuredToFit(json, parsed) {
   if (json.length <= PERSISTED_MESSAGE_CONTENT_MAX_CHARS) return json;
   const outer = parsed.assistantContent?.outer;
   const pipeline = outer?.pipelineConversation;
-  if (!Array.isArray(pipeline) || pipeline.length === 0) {
-    return limitTextForStorage(json);
-  }
-  let working = { ...parsed, assistantContent: { ...parsed.assistantContent } };
-  const turns = [...pipeline];
-  while (turns.length > 0) {
-    turns.pop();
-    working = limitStructuredShape({
-      ...working,
-      assistantContent: {
-        ...working.assistantContent,
-        outer: {
-          ...working.assistantContent?.outer,
-          pipelineConversation: [...turns]
+  if (Array.isArray(pipeline) && pipeline.length > 0) {
+    let turns = [...pipeline];
+    while (turns.length > 0) {
+      turns.pop();
+      const working = limitStructuredShape({
+        ...parsed,
+        assistantContent: {
+          ...parsed.assistantContent,
+          outer: {
+            ...parsed.assistantContent?.outer,
+            pipelineConversation: [...turns]
+          }
         }
-      }
-    });
-    const next = JSON.stringify(working);
-    if (next.length <= PERSISTED_MESSAGE_CONTENT_MAX_CHARS) return next;
+      });
+      const next = JSON.stringify(working);
+      if (next.length <= PERSISTED_MESSAGE_CONTENT_MAX_CHARS) return next;
+    }
   }
-  return limitTextForStorage(json);
+  return shrinkStructuredByReducingFields(parsed);
 }
 function limitMessageContentForPersistence(content, role) {
   const trimmed = content.trim();
@@ -2944,7 +2964,7 @@ var init_limit_persisted_content = __esm({
   "src/shared/persistence/limit-persisted-content.ts"() {
     init_truncate_head_tail();
     init_prepare_markdown_source();
-    PERSISTED_MESSAGE_CONTENT_MAX_CHARS = 12e4;
+    PERSISTED_MESSAGE_CONTENT_MAX_CHARS = 12e5;
   }
 });
 

@@ -13,7 +13,7 @@ describe('chat-ui-settings', () => {
   it('clamps bubble text keep chars', () => {
     expect(clampChatUiBubbleTextKeepChars(10)).toBe(50)
     expect(clampChatUiBubbleTextKeepChars(500)).toBe(500)
-    expect(clampChatUiBubbleTextKeepChars(9_999)).toBe(4_000)
+    expect(clampChatUiBubbleTextKeepChars(9_999)).toBe(9999)
   })
 
   it('clamps compact line count', () => {
@@ -30,9 +30,9 @@ describe('chat-ui-settings', () => {
 
   it('parses stored values with defaults for missing keys', () => {
     expect(parseChatUiSettings({})).toEqual({
-      bubbleTextKeepChars: 2_000,
+      bubbleTextKeepChars: 2_00000,
       bubbleCompactLines: 10,
-      contextWindowMessages: 50,
+      contextWindowMessages: 200,
     })
   })
 

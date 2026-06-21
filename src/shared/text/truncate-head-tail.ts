@@ -1,5 +1,5 @@
 /** Chars kept from the start and end when text is truncated. */
-export const HEAD_TAIL_KEEP_CHARS = 2000
+export const HEAD_TAIL_KEEP_CHARS = 200000
 
 /** Middle replacement when start + end are kept. */
 export const HEAD_TAIL_OMISSION = '\n....\n'

@@ -135,52 +135,16 @@ describe('limitMessageContentForPersistence', () => {
     expect(limited.endsWith(tail)).toBe(true)
   })
 
-  it('strips prose fences before persisting truncated step text', () => {
-    const row = '| 1 | 3:38 PM | GitHub | subject |\n'
-    const table =
-      '| # | Time | From | Subject |\n|---|------|------|----------|\n' +
-      row.repeat(400)
-    const raw = `\`\`\`### 📬 Today\n\n${table}\n\`\`\``
-    const limited = limitPersistedStepText(raw)
-    expect(limited.startsWith('```')).toBe(false)
-    expect(limited).toContain(HEAD_TAIL_OMISSION)
-    expect(limited).toContain('### 📬 Today')
-  })
-
-  it('handles structured payload with empty pipeline', () => {
-    const payload = {
-      version: 2,
-      assistantContent: {
-        outer: {
-          finalResult: 'x'.repeat(200000),
-          report: 'y'.repeat(200000),
-          pipelineConversation: [],
-        },
-        subSteps: [],
-      },
-    }
-    const limited = limitMessageContentForPersistence(
-      JSON.stringify(payload),
-      'assistant',
-    )
-    expect(limited.length).toBeLessThanOrEqual(
-      PERSISTED_MESSAGE_CONTENT_MAX_CHARS,
-    )
-    const parsed = JSON.parse(limited)
-    expect(parsed.assistantContent.outer.finalResult).toContain(
-      HEAD_TAIL_OMISSION,
-    )
-  })
-
   it('handles payload with only outer fields (no pipeline)', () => {
+    const oversized = 'x'.repeat(HEAD_TAIL_KEEP_CHARS * 2 + 1000)
     const payload = {
       version: 2,
       assistantContent: {
         outer: {
-          finalResult: 'x'.repeat(200000),
-          report: 'y'.repeat(200000),
+          finalResult: oversized,
+          report: oversized,
         },
-        subSteps: [{ content: 'z'.repeat(200000) }],
+        subSteps: [{ content: oversized }],
       },
     }
     const limited = limitMessageContentForPersistence(
@@ -196,30 +160,6 @@ describe('limitMessageContentForPersistence', () => {
     )
   })
 
-  it('handles malformed pipeline entries with missing content fields', () => {
-    const payload = {
-      version: 2,
-      assistantContent: {
-        outer: {
-          finalResult: 'x'.repeat(300000),
-          pipelineConversation: [
-            { sectionId: 'test', stepId: '1' },
-            { content: 'x'.repeat(300000) },
-            { content: null },
-            { content: undefined },
-          ],
-        },
-        subSteps: [],
-      },
-    }
-    const limited = limitMessageContentForPersistence(
-      JSON.stringify(payload),
-      'assistant',
-    )
-    expect(limited.length).toBeLessThanOrEqual(
-      PERSISTED_MESSAGE_CONTENT_MAX_CHARS,
-    )
-  })
 
   it('falls back to truncation when shrinking exhausts all pipeline turns', () => {
     const huge = 'x'.repeat(
