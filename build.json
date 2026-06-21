@@ -3,7 +3,17 @@
   "asarUnpack": [
     "**/*.node",
     "**/node_modules/better-sqlite3/**",
-    "**/node_modules/node-pty/**"
+    "**/node_modules/node-pty/**",
+    "**/node_modules/esbuild/**",
+    "**/node_modules/@esbuild/**",
+    "dist/electron/skill-module-cache/**",
+    "skills/**",
+    "toolSet/**",
+    "config/**",
+    "src/main/**",
+    "src/shared/**",
+    "src/logging/**",
+    "src/openfde-ai/**"
   ],
   "extraFiles": [
     {
@@ -28,7 +38,14 @@
     "output": "build"
   },
   "files": [
-    "dist/electron/**/*"
+    "dist/electron/**/*",
+    "skills/**/*",
+    "toolSet/**/*",
+    "config/**/*",
+    "src/main/**/*",
+    "src/shared/**/*",
+    "src/logging/**/*",
+    "src/openfde-ai/**/*"
   ],
   "dmg": {
     "contents": [

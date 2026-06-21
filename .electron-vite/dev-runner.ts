@@ -139,11 +139,11 @@ function startPreload(): Promise<void> {
 }
 
 function startElectron() {
+  const appRoot = join(__dirname, '..')
   var args = [
     // '--inspect-brk=9229',
     '--inspect=9229',
-    '--sourcemap',
-    join(__dirname, '../dist/electron/main/main.js'),
+    appRoot,
   ]
 
   // detect yarn or npm and process commandline args accordingly
@@ -157,11 +157,15 @@ function startElectron() {
     .map(escapeShellToken)
     .join(' ')
 
+  const env = { ...process.env }
+  delete env.ELECTRON_RUN_AS_NODE
+
   electronProcess = exec(
     electronCommand,
     {
       windowsHide: true,
       maxBuffer: 1020 * 1024 * 1024,
+      env,
     },
     (error) => {
       if (error && !manualRestart) {

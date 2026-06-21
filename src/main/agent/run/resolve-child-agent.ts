@@ -26,6 +26,7 @@ import {
 } from '@shared/agent/stage-llm-settings'
 import { createSubAgentLlmDebugRunId } from '../llm/llm-debug-writer'
 import { resolveResponseLanguageForAgent } from '@main/i18n/resolve-response-language'
+import { StageModelRegistry } from '../providers/stage-model-registry'
 
 export type { SubAgentContextEnvelope }
 
@@ -227,7 +228,6 @@ export async function buildChildAgentResponseOpts(
     onSubAgentRunEvent: params.onSubAgentRunEvent ?? parentOpts.onSubAgentRunEvent,
   }
 
-  const { StageModelRegistry } = await import('../providers/stage-model-registry')
   const stageModels = StageModelRegistry.fromOpts(opts)
   const model = stageModels.getModel('default')
   return { opts, model, agent }

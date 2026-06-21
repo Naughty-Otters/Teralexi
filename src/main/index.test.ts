@@ -18,6 +18,7 @@ vi.mock('electron', () => ({
     removeAsDefaultProtocolClient: vi.fn(),
     setAsDefaultProtocolClient: vi.fn(),
     isPackaged: false,
+    getAppPath: vi.fn(() => '/app'),
   },
   session: { defaultSession: { loadExtension: vi.fn() } },
   nativeImage: {
@@ -68,6 +69,10 @@ vi.mock('./services/tray-manager', () => ({
 
 vi.mock('./config/static-path', () => ({
   getIconPath: vi.fn(() => '/icon.icns'),
+  initStaticPaths: vi.fn(),
+  getWinURL: vi.fn(() => 'http://localhost'),
+  getLoadingURL: vi.fn(() => 'http://localhost/loader'),
+  getPreloadFile: vi.fn((name: string) => `/app/${name}.js`),
 }))
 
 vi.mock('./channels/whatsapp/manager', () => ({

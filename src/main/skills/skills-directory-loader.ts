@@ -73,7 +73,8 @@ export async function loadSkillsFromDirectory(
 
   try {
     entries = readdirSync(skillsDir)
-  } catch {
+  } catch (err) {
+    log.warn('Failed to read skills directory', { skillsDir, err })
     return []
   }
 
@@ -98,7 +99,13 @@ export async function loadSkillsFromDirectory(
         propertiesRaw,
         skillRaw,
       )
-      if (!preliminary) continue
+      if (!preliminary) {
+        log.warn('Skipped skill folder: failed to parse skill markdown', {
+          skillId: entry,
+          skillFolder,
+        })
+        continue
+      }
 
       const skillActionTools = tagToolsForSkill(
         await loadSkillActions(skillFolder, []),

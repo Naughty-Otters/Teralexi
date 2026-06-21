@@ -110,4 +110,11 @@ describe('skill-module-loader', () => {
     const tools = await loadToolSetToolsFromDirectory(join(skillRoot, 'toolSet'))
     expect(tools[0].tags).toEqual(['misc'])
   })
+
+  it('loadToolSetTools throws when no tools load from any source', async () => {
+    vi.mocked(resolveToolSetSourceRoots).mockReturnValue([
+      join(skillRoot, 'missing-toolSet'),
+    ])
+    await expect(loadToolSetTools()).rejects.toThrow(/toolSet failed to load: 0 tools/)
+  })
 })

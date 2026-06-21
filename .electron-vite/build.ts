@@ -7,6 +7,8 @@ import chalk from 'chalk'
 import { rollup, OutputOptions } from 'rollup'
 import { Listr } from 'listr2'
 import rollupOptions from './rollup.config'
+import { verifyMainBundle } from './verify-main-bundle'
+import { prewarmSkillModuleCache } from './prewarm-skill-modules'
 import { errorLog, doneLog } from './log'
 import { getArgv } from './utils'
 
@@ -46,6 +48,8 @@ async function unionBuild() {
           try {
             const build = await rollup(mainOpt)
             await build.write(mainOpt.output as OutputOptions)
+            verifyMainBundle()
+            await prewarmSkillModuleCache()
           } catch (error) {
             errorLog(`failed to build main process\n`)
             return Promise.reject(error)

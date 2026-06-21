@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import { getopenfdeSkillsDir, getopenfdeToolSetDir } from '@config/openfde-home'
-import { app } from 'electron'
+import { joinAppResourcePath } from '@main/config/app-paths'
 import type { SkillToolOs } from './types'
 import { SKILL_FILES, SKILLS_RESERVED_DIR_NAMES } from './constants'
 import { buildDefaultPropertiesYaml } from './llm-constants'
@@ -57,10 +57,12 @@ function listLoadableSkillIds(skillsDir: string): string[] {
 
 /** Repo or packaged `skills/` tree (defaults). */
 export function resolveBundledSkillsDirectory(): string {
-  if (app?.isPackaged) {
-    return join(app.getAppPath(), 'skills')
-  }
-  return join(process.cwd(), 'skills')
+  return joinAppResourcePath('skills')
+}
+
+/** Shipped defaults: `<repo>/toolSet` or `<app>/toolSet` when packaged. */
+export function resolveBundledToolSetDirectory(): string {
+  return joinAppResourcePath(SKILL_FILES.TOOL_SET_DIR)
 }
 
 /** `~/.openfde/skills` — user-installed skills; wins on id conflicts. */
@@ -81,14 +83,6 @@ export function resolveSkillsSources(): SkillsSources {
 export function resolveSkillsSourceRoots(): string[] {
   const { bundled, user } = resolveSkillsSources()
   return [bundled, user]
-}
-
-/** Shipped defaults: `<repo>/toolSet` or `<app>/toolSet` when packaged. */
-export function resolveBundledToolSetDirectory(): string {
-  if (app?.isPackaged) {
-    return join(app.getAppPath(), SKILL_FILES.TOOL_SET_DIR)
-  }
-  return join(process.cwd(), SKILL_FILES.TOOL_SET_DIR)
 }
 
 /** User overrides: `~/.openfde/toolSet`. */

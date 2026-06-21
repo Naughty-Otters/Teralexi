@@ -2,15 +2,21 @@
 
 import { app, session } from 'electron'
 import { configureAppBranding, loadDockIcon } from './config/app-icons'
+import { initStaticPaths } from './config/static-path'
+import { resolveAppRoot } from './config/app-paths'
 
 configureAppBranding()
+initStaticPaths()
 
 import { initializeopenfdeHome } from '@config/openfde-home'
-import { clearSkillModuleCache } from '@main/skills/skill-module-loader'
+import { isPackagedApp } from './config/app-paths'
+import { clearSkillModuleCache, loadToolSetTools } from '@main/skills/skill-module-loader'
 
 initializeopenfdeHome(app)
-// Drop stale esbuild bundles (e.g. old getOttersDbPath copies) on startup.
-clearSkillModuleCache()
+// Dev-only: drop stale esbuild bundles when source changes frequently.
+if (!isPackagedApp()) {
+  clearSkillModuleCache()
+}
 import InitWindow from './services/window-manager'
 import { useDisableButton } from './hooks/disable-button-hook'
 import { useProcessException } from '@main/hooks/exception-hook'
@@ -30,8 +36,17 @@ import { createLogger } from './logger'
 let isQuiting = false
 const log = createLogger('app')
 
-function onAppReady() {
+async function onAppReady() {
   log.info('App ready; initializing desktop services')
+
+  try {
+    await loadToolSetTools()
+  } catch (err) {
+    log.error('toolSet failed to load during startup; exiting', { err })
+    app.exit(1)
+    return
+  }
+
   const { disableF12 } = useDisableButton()
   const { renderProcessGone } = useProcessException()
   const { defaultIpc } = useMainDefaultIpc()
@@ -52,7 +67,7 @@ function onAppReady() {
     } catch {
       /* getAppPath unavailable (e.g. tests) */
     }
-    const lspBin = initBundledLspBin([appPath, process.cwd()])
+    const lspBin = initBundledLspBin([resolveAppRoot(), appPath, process.cwd()])
     log.info('LSP bundled bin resolved', { lspBin })
   } catch (err) {
     log.warn('LSP bundled bin init failed', { err })
