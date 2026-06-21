@@ -20,6 +20,25 @@ describe('aiSdkEventToLlmEvents', () => {
       text: 'hello',
     })
     expect(delta).toEqual([{ type: 'text-delta', id: 't1', text: 'hello' }])
+
+    const sdkDelta = aiSdkEventToLlmEvents(state, {
+      type: 'text-delta',
+      id: 't1',
+      delta: 'world',
+    })
+    expect(sdkDelta).toEqual([{ type: 'text-delta', id: 't1', text: 'world' }])
+  })
+
+  it('maps reasoning-delta events from SDK delta field', () => {
+    const state = createAiSdkAdapterState()
+    aiSdkEventToLlmEvents(state, { type: 'reasoning-start', id: 'r1' })
+    expect(
+      aiSdkEventToLlmEvents(state, {
+        type: 'reasoning-delta',
+        id: 'r1',
+        delta: 'thinking',
+      }),
+    ).toEqual([{ type: 'reasoning-delta', id: 'r1', text: 'thinking' }])
   })
 
   it('maps tool-call and tool-result', () => {

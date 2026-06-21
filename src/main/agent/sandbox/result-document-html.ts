@@ -17,6 +17,15 @@ export function renderMarkdownToHtmlDocument(markdownBody: string): string {
   return buildHtmlDocument(markdown.render(markdownBody))
 }
 
+/** Full HTML document showing markdown source (raw preview mode). */
+export function renderMarkdownSourceHtmlDocument(markdownBody: string): string {
+  const escaped = markdownBody
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  return buildHtmlDocument(`<pre class="markdown-raw">${escaped}</pre>`)
+}
+
 function buildHtmlDocument(bodyHtml: string): string {
   return `<!doctype html>
 <html lang="en">
@@ -63,6 +72,15 @@ function buildHtmlDocument(bodyHtml: string): string {
       pre code {
         padding: 0;
         background: transparent;
+      }
+      pre.markdown-raw {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 13px;
+        line-height: 1.5;
       }
       blockquote {
         margin-left: 0;

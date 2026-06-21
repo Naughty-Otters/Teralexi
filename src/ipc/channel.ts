@@ -1458,6 +1458,7 @@ export class IpcChannelMainClass {
     {
       screenBounds: { x: number; y: number; width: number; height: number }
       fileUrl: string | null
+      markdownView?: 'html' | 'raw'
     },
     void
   > = null

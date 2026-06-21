@@ -125,6 +125,9 @@ export const lang: AppLocaleBundle = {
     defaultsFootnote:
       '默认值：每端 {keepChars} 字符，{compactLines} 行紧凑高度，{contextMessages} 条上下文消息，推理 {reasoningMax} 字符。',
   },
+  chat: {
+    thoughtBubbleTitle: '稍作思考',
+  },
   monitor: {
     title: 'Token 监控',
     subtitle: '各会话的用量与成本',

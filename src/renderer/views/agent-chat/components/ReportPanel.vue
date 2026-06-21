@@ -21,6 +21,29 @@
     </div>
 
     <div class="report-panel-url-section">
+      <div
+        v-if="showMarkdownViewToggle"
+        class="report-panel-view-toggle"
+        role="group"
+        aria-label="Markdown preview mode"
+      >
+        <button
+          type="button"
+          class="report-panel-view-btn"
+          :class="{ 'report-panel-view-btn--active': markdownPreviewView === 'html' }"
+          @click="markdownPreviewView = 'html'"
+        >
+          HTML
+        </button>
+        <button
+          type="button"
+          class="report-panel-view-btn"
+          :class="{ 'report-panel-view-btn--active': markdownPreviewView === 'raw' }"
+          @click="markdownPreviewView = 'raw'"
+        >
+          Raw
+        </button>
+      </div>
       <div class="report-panel-url-row">
         <input
           v-model="urlDraft"
@@ -73,6 +96,10 @@ import {
   withDefaults,
 } from 'vue'
 import type { ConversationSandboxRun } from '@store/agent/types'
+import {
+  isMarkdownPreviewFileUrl,
+  type MarkdownPreviewViewMode,
+} from '@shared/file-type/markdown-preview-url'
 
 const props = withDefaults(
   defineProps<{
@@ -94,6 +121,7 @@ const emit = defineEmits<{
 const sandboxHostEl = ref<HTMLElement | null>(null)
 /** Editable URL field; synced from the active tab unless the user is typing. */
 const urlDraft = ref('')
+const markdownPreviewView = ref<MarkdownPreviewViewMode>('html')
 
 const activeRun = computed((): ConversationSandboxRun | null => {
   const runs = props.sandboxRuns ?? []
@@ -118,6 +146,10 @@ const previewUrl = computed(() => {
   if (typed) return typed
   return activeResultsFileUrl.value
 })
+
+const showMarkdownViewToggle = computed(() =>
+  isMarkdownPreviewFileUrl(previewUrl.value),
+)
 
 watch(
   () => props.previewUrlOverride,
@@ -162,7 +194,26 @@ async function syncSandboxOutputBounds() {
   await ipc.invoke({
     screenBounds: screenBoundsForEl(host),
     fileUrl: previewUrl.value,
+    markdownView: markdownPreviewView.value,
   })
+}
+
+let boundsSyncTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleBoundsSync(immediate = false) {
+  if (immediate) {
+    if (boundsSyncTimer) {
+      clearTimeout(boundsSyncTimer)
+      boundsSyncTimer = null
+    }
+    void syncSandboxOutputBounds()
+    return
+  }
+  if (boundsSyncTimer) clearTimeout(boundsSyncTimer)
+  boundsSyncTimer = setTimeout(() => {
+    boundsSyncTimer = null
+    void syncSandboxOutputBounds()
+  }, 32)
 }
 
 async function clearSandboxOutputView() {
@@ -182,7 +233,7 @@ function copyResultsUrl() {
 async function applyPreviewUrl() {
   await nextTick()
   attachSandboxResizeObserver()
-  await syncSandboxOutputBounds()
+  scheduleBoundsSync(true)
 }
 
 let sandboxResizeObserver: ResizeObserver | null = null
@@ -190,7 +241,7 @@ let sandboxResizeObserver: ResizeObserver | null = null
 function attachSandboxResizeObserver() {
   sandboxResizeObserver?.disconnect()
   sandboxResizeObserver = new ResizeObserver(() => {
-    void syncSandboxOutputBounds()
+    scheduleBoundsSync()
   })
   if (sandboxHostEl.value) {
     sandboxResizeObserver.observe(sandboxHostEl.value)
@@ -198,15 +249,15 @@ function attachSandboxResizeObserver() {
 }
 
 function onWindowResize() {
-  void syncSandboxOutputBounds()
+  scheduleBoundsSync()
 }
 
 watch(
-  previewUrl,
+  [previewUrl, markdownPreviewView],
   async () => {
     await nextTick()
     attachSandboxResizeObserver()
-    await syncSandboxOutputBounds()
+    scheduleBoundsSync(true)
   },
   { flush: 'post' },
 )
@@ -215,11 +266,15 @@ onMounted(() => {
   window.addEventListener('resize', onWindowResize)
   void nextTick(() => {
     attachSandboxResizeObserver()
-    void syncSandboxOutputBounds()
+    scheduleBoundsSync(true)
   })
 })
 
 onBeforeUnmount(() => {
+  if (boundsSyncTimer) {
+    clearTimeout(boundsSyncTimer)
+    boundsSyncTimer = null
+  }
   sandboxResizeObserver?.disconnect()
   window.removeEventListener('resize', onWindowResize)
   void clearSandboxOutputView()
@@ -253,6 +308,36 @@ onBeforeUnmount(() => {
   padding: 8px 12px 10px;
   border-bottom: 1px solid var(--ui-border);
   background: var(--ui-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report-panel-view-toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 4px;
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-bg-elevated);
+}
+
+.report-panel-view-btn {
+  border: none;
+  background: transparent;
+  color: var(--ui-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.report-panel-view-btn--active {
+  color: var(--ui-text);
+  background: var(--ui-bg);
+  box-shadow: inset 0 0 0 1px var(--ui-border);
 }
 
 .report-panel-url-row {

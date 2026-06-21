@@ -41,6 +41,7 @@ const inputSchema = z.object({
 
 export const exportResearchPdf: SkillTool = {
   name: 'export_research_pdf',
+  tags: ['research'],
   description:
     'Export a research paper markdown file to a print-ready PDF under output/results/.',
   inputSchema,

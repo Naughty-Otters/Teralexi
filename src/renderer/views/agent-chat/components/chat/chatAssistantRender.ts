@@ -22,8 +22,7 @@ export function createAssistantTextPartHtmlRenderer(opts: {
   return function assistantTextPartHtml(msg: UIMessage, part: unknown): string {
     if ((part as { type?: string }).type !== 'text') return ''
     const textPart = part as TextUIPart
-    const streaming =
-      textPart.state === 'streaming' || isAssistantMessageStreaming(msg)
+    const streaming = textPart.state === 'streaming'
     const overrideText = opts.getStreamingText?.(msg, textPart)
     const text = overrideText ?? textPart.text ?? ''
     if (!text.trim()) {

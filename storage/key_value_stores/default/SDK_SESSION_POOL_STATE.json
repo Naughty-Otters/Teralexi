@@ -3,7 +3,7 @@
   "retiredSessionsCount": 0,
   "sessions": [
     {
-      "id": "session_Ic5ZeK0vKv",
+      "id": "session_HHV5tL2SgD",
       "cookieJar": {
         "version": "tough-cookie@6.0.1",
         "storeType": "MemoryCookieStore",
@@ -11,13 +11,25 @@
         "enableLooseMode": false,
         "allowSpecialUseDomain": true,
         "prefixSecurity": "silent",
-        "cookies": []
+        "cookies": [
+          {
+            "key": "PHPSESSID",
+            "value": "f91tpsfn0qo12v2e4io84isvjq",
+            "domain": "top10ai.com",
+            "path": "/",
+            "secure": true,
+            "httpOnly": true,
+            "hostOnly": true,
+            "creation": "2026-06-21T17:41:27.595Z",
+            "lastAccessed": "2026-06-21T17:41:27.595Z"
+          }
+        ]
       },
       "userData": {},
       "maxErrorScore": 3,
       "errorScoreDecrement": 0.5,
-      "expiresAt": "2026-06-19T17:39:31.773Z",
-      "createdAt": "2026-06-19T16:49:31.773Z",
+      "expiresAt": "2026-06-21T18:31:26.324Z",
+      "createdAt": "2026-06-21T17:41:26.324Z",
       "usageCount": 1,
       "maxUsageCount": 50,
       "errorScore": 0

@@ -11,6 +11,20 @@ function messageWithParts(parts: unknown[]): UIMessage {
 }
 
 describe('assistantBubbleFramework', () => {
+  it('resolves reasoning bubbles when reasoning parts have text', () => {
+    const message = messageWithParts([
+      { type: 'reasoning', text: 'thinking aloud', state: 'streaming' },
+    ])
+
+    const bubbles = resolveAssistantBubbles(message, {
+      structuredLayoutEnabled: false,
+      shouldShowStepProgress: () => false,
+    })
+
+    expect(bubbles).toHaveLength(1)
+    expect(bubbles[0]?.kind).toBe('reasoning')
+  })
+
   it('resolves markdown bubbles for text parts in non-structured mode', () => {
     const message = messageWithParts([
       { type: 'text', text: 'hello', state: 'complete' },

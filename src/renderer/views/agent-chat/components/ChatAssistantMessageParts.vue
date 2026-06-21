@@ -13,6 +13,19 @@
       role="alert"
       v-html="renderAgentErrorMarkdown(errorText)"
     />
+    <template v-for="bubble in reasoningBubbles" :key="bubble.key">
+      <details class="reasoning-bubble" open>
+        <summary class="reasoning-bubble__summary">
+          <UIcon
+            name="i-lucide-brain"
+            class="reasoning-bubble__icon"
+            aria-hidden="true"
+          />
+          <span>{{ t.chat.thoughtBubbleTitle }}</span>
+        </summary>
+        <pre class="reasoning-bubble__body">{{ reasoningTextFromPart(bubble.part) }}</pre>
+      </details>
+    </template>
     <ChatAssistantConversationView
       v-if="useConversationViewForMessage(props.message)"
       :message="props.message"
@@ -35,7 +48,14 @@
           class="reasoning-bubble"
           open
         >
-          <summary class="reasoning-bubble__summary">Reasoning</summary>
+          <summary class="reasoning-bubble__summary">
+          <UIcon
+            name="i-lucide-brain"
+            class="reasoning-bubble__icon"
+            aria-hidden="true"
+          />
+          <span>{{ t.chat.thoughtBubbleTitle }}</span>
+        </summary>
           <pre class="reasoning-bubble__body">{{ reasoningTextFromPart(bubble.part) }}</pre>
         </details>
         <div
@@ -126,6 +146,7 @@
 
 <script setup lang="ts">
 import type { UIMessage } from '@openfde-ai'
+import { useI18n } from '@renderer/composables/useI18n'
 import ChatAssistantConversationView from './ChatAssistantConversationView.vue'
 import {
   type ChatBoxDisplayMode,
@@ -186,6 +207,8 @@ import {
 } from '../stepProgressDisplay'
 import { messageHasStructuredDebugTimelineSource } from '../structuredDebugViewModel'
 
+const { t } = useI18n()
+
 const props = withDefaults(
   defineProps<{
     message: UIMessage
@@ -240,6 +263,13 @@ const resolvedBubbles = computed<AssistantBubbleDescriptor[]>(() => {
     shouldShowStepProgress: shouldShowAgentStepProgressPart,
   })
 })
+
+const reasoningBubbles = computed(() =>
+  resolveAssistantBubbles(props.message, {
+    structuredLayoutEnabled: false,
+    shouldShowStepProgress: () => false,
+  }).filter((bubble) => bubble.kind === 'reasoning'),
+)
 
 /** Brief mode: all part types including forms. */
 const briefModeBubbles = computed(() =>
@@ -737,6 +767,15 @@ function toolGroupIsActive(bubble: AssistantBubbleDescriptor): boolean {
   font-weight: 600;
   color: var(--ui-text-muted);
   list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.reasoning-bubble__icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  opacity: 0.75;
 }
 .reasoning-bubble__summary::-webkit-details-marker {
   display: none;

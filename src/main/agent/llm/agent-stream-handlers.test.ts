@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createDefaultLlmEventHandlerRegistry } from './handlers/registry'
 import { LlmProcessor } from './processor'
 import { createLlmProcessorState } from './handlers/types'
+import { ReasoningDeltaHandler } from './handlers/reasoning-delta-handler'
 import { TextDeltaHandler } from './handlers/text-delta-handler'
 import { ToolApprovalRequestHandler } from './handlers/tool-approval-request-handler'
 import { ToolCallHandler } from './handlers/tool-call-handler'
@@ -12,12 +13,19 @@ import { ToolOutputDeniedHandler } from './handlers/tool-output-denied-handler'
 function handlerCtx(overrides: {
   onChunk?: ReturnType<typeof vi.fn>
   onUIMessageChunk?: ReturnType<typeof vi.fn>
+  synthesizeUiChunk?: ReturnType<typeof vi.fn>
 } = {}) {
   const onChunk = overrides.onChunk ?? vi.fn()
   const onUIMessageChunk = overrides.onUIMessageChunk ?? vi.fn()
+  const synthesizeUiChunk = overrides.synthesizeUiChunk
   const processor = new LlmProcessor(createLlmProcessorState())
-  const run = { mode: 'progress' as const, onChunk, onUIMessageChunk }
-  return { processor, run, onChunk, onUIMessageChunk }
+  const run = {
+    mode: 'progress' as const,
+    onChunk,
+    onUIMessageChunk,
+    ...(synthesizeUiChunk ? { synthesizeUiChunk } : {}),
+  }
+  return { processor, run, onChunk, onUIMessageChunk, synthesizeUiChunk }
 }
 
 describe('agent stream LlmProcessor handlers', () => {
@@ -30,6 +38,24 @@ describe('agent stream LlmProcessor handlers', () => {
     expect(processor.state.text).toBe('hello')
     expect(onChunk).toHaveBeenCalledWith('hello')
     expect(onUIMessageChunk).not.toHaveBeenCalled()
+  })
+
+  it('ReasoningDeltaHandler emits reasoning UI chunks via synthesizeUiChunk', () => {
+    const synthesizeUiChunk = vi.fn()
+    const { processor, run } = handlerCtx({ synthesizeUiChunk })
+    new ReasoningDeltaHandler().handle(
+      { type: 'reasoning-delta', id: 'r1', text: 'thinking' },
+      { state: processor.state, run },
+    )
+    expect(synthesizeUiChunk).toHaveBeenCalledWith({
+      type: 'reasoning-start',
+      id: 'r1',
+    })
+    expect(synthesizeUiChunk).toHaveBeenCalledWith({
+      type: 'reasoning-delta',
+      id: 'r1',
+      delta: 'thinking',
+    })
   })
 
   it('ToolApprovalRequestHandler tracks pending approval and forwards UI chunk', () => {

@@ -2,9 +2,11 @@ import {
   nextTick,
   onBeforeUnmount,
   onMounted,
+  ref,
   watch,
   type Ref,
 } from 'vue'
+import type { MarkdownPreviewViewMode } from '@shared/file-type/markdown-preview-url'
 
 function screenBoundsForEl(el: HTMLElement) {
   const r = el.getBoundingClientRect()
@@ -20,7 +22,9 @@ function screenBoundsForEl(el: HTMLElement) {
 export function useSandboxOutputView(
   hostRef: Ref<HTMLElement | null>,
   fileUrl: Ref<string | null | undefined>,
+  markdownView?: Ref<MarkdownPreviewViewMode>,
 ) {
+  const viewMode = markdownView ?? ref<MarkdownPreviewViewMode>('html')
   async function syncSandboxOutputBounds() {
     const ipc = window.ipcRendererChannel?.SyncSandboxOutputView
     if (!ipc?.invoke) return
@@ -35,6 +39,7 @@ export function useSandboxOutputView(
     await ipc.invoke({
       screenBounds: screenBoundsForEl(host),
       fileUrl: fileUrl.value?.trim() || null,
+      markdownView: viewMode.value,
     })
   }
 
@@ -63,7 +68,7 @@ export function useSandboxOutputView(
   }
 
   watch(
-    fileUrl,
+    [fileUrl, viewMode],
     async () => {
       await nextTick()
       attachSandboxResizeObserver()

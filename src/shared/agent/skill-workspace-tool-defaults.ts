@@ -13,12 +13,24 @@ export const DEFAULT_SKILL_TOOLSET_TAGS = [
 
 export type DefaultSkillToolsetTag = (typeof DEFAULT_SKILL_TOOLSET_TAGS)[number]
 
+/** Extra toolSet tags enabled for the research skill by default. */
+export const RESEARCH_SKILL_TOOLSET_TAGS = [
+  ...DEFAULT_SKILL_TOOLSET_TAGS,
+  'web',
+  'research',
+  'scholar',
+  'shell-command',
+] as const
+
 /** @deprecated Use {@link DEFAULT_SKILL_TOOLSET_TAGS}. */
 export const WORKSPACE_TOOL_TAGS = DEFAULT_SKILL_TOOLSET_TAGS
 
 export function defaultToolsetTagsForSkill(skillId: string): readonly string[] {
   if (skillId === 'github') {
     return [...DEFAULT_SKILL_TOOLSET_TAGS, 'github']
+  }
+  if (skillId === 'research') {
+    return RESEARCH_SKILL_TOOLSET_TAGS
   }
   return DEFAULT_SKILL_TOOLSET_TAGS
 }
