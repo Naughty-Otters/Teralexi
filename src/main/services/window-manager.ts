@@ -1,6 +1,6 @@
 import config from '@config/index'
 import { app, BrowserWindow, dialog } from 'electron'
-import { winURL, loadingURL, getPreloadFile } from '../config/static-path'
+import { getLoadingURL, getPreloadFile, getWinURL } from '../config/static-path'
 import { APP_DISPLAY_NAME, loadWindowIcon } from '../config/app-icons'
 import { useProcessException } from '@main/hooks/exception-hook'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
@@ -21,8 +21,8 @@ class MainInit {
   constructor() {
     instrumentInstanceMethods(this, log)
     const { childProcessGone, mainWindowGone } = useProcessException()
-    this.winURL = winURL
-    this.shartURL = loadingURL
+    this.winURL = getWinURL()
+    this.shartURL = getLoadingURL()
     this.childProcessGone = childProcessGone
     this.mainWindowGone = mainWindowGone
   }

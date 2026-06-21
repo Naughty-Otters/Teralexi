@@ -15,6 +15,7 @@ import {
   parseClientUiMessages,
   resolveEnabledSkillToolNames,
 } from '@main/agent/utils'
+import { loadChatContextWindowMessages } from '@main/agent/utils/chat-context-settings'
 import { streamAgentResponse } from '@main/agent/flow'
 import { createAgentStreamBridge } from '@main/agent/agent-stream-bridge'
 import { createAgentEventBus } from '@main/agent/bus/agent-event-bus'
@@ -28,6 +29,9 @@ import { ProviderContext } from '@main/agent/providers/context'
 import { clearPlanExecutionCompleted } from '@main/agent/coding/plan-mode-session-reminders'
 import { autoCompactStoredConversationIfNeeded } from '@main/agent/compaction'
 import { resolveResponseLanguageForAgent } from '@main/i18n/resolve-response-language'
+import { StageModelRegistry } from '@main/agent/providers/stage-model-registry'
+import { AgentRun } from '@main/agent/run/agent-run'
+import { mergeSubFlowOutputText } from '@main/agent/run/resolve-child-agent'
 
 const inFlightControllers = new Map<string, AbortController>()
 const log = createLogger('agent.engine')
@@ -697,14 +701,6 @@ async function executeSubAgentMentionDelegation(
       onSandboxResultWritten: streamBridge.onSandboxResultWritten,
       eventBus,
     }
-
-    const { StageModelRegistry } = await import(
-      '@main/agent/providers/stage-model-registry'
-    )
-    const { AgentRun } = await import('@main/agent/run/agent-run')
-    const { mergeSubFlowOutputText } = await import(
-      '@main/agent/run/resolve-child-agent'
-    )
 
     const stageModels = StageModelRegistry.fromOpts(opts)
     const model = stageModels.getModel('default')

@@ -2,7 +2,7 @@ import { dialog, BrowserWindow, app, shell } from 'electron'
 import { join, relative } from 'path'
 import { promises as fsPromises } from 'fs'
 import { fileURLToPath, pathToFileURL } from 'url'
-import { getPreloadFile, winURL } from '../config/static-path'
+import { getPreloadFile, getWinURL } from '../config/static-path'
 import { updater } from '../services/hot-updater'
 import DownloadFile from '../services/download-file'
 import { getAppUpdateManager } from '../services/check-update'
@@ -261,7 +261,7 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     if (process.env.NODE_ENV === 'development') {
       childWin.webContents.openDevTools({ mode: 'undocked', activate: true })
     }
-    childWin.loadURL(winURL + `#${arg.url}`)
+    childWin.loadURL(getWinURL() + `#${arg.url}`)
     childWin.once('ready-to-show', () => {
       // childWin.show()
       if (arg.IsPay) {

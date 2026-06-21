@@ -247,24 +247,9 @@ Write to **`output/results/<slug>-research-paper.md`** using this exact structur
 
 ---
 
-#### Phase 6 — Quality gate (mandatory)
+#### Phase 6 — Export PDF (mandatory)
 
-Before finishing, verify:
-
-- [ ] Every **statistic, date, name, ranking, or causal claim** in Results and Literature Review has `[n]`.
-- [ ] Every inline `[n]` appears in References with URL.
-- [ ] No `[n]` in the body without a References entry.
-- [ ] Methodology section lists actual queries and tools used (from search log).
-- [ ] Discussion states **limitations** (source bias, language, recency, paywalls).
-- [ ] Paper reads as one coherent argument, not a list of summaries.
-
-If the gate fails, fix citations or run one more targeted search+scrape cycle — do not weaken standards.
-
----
-
-#### Phase 7 — Export PDF (mandatory)
-
-After Phase 6 passes, export the final paper as a print-ready PDF:
+After Phase 5 passes, export the final paper as a print-ready PDF:
 
 1. Confirm `output/results/<slug>-research-paper.md` exists and matches the quality-gated version from Phase 5.
 2. Call **`export_research_pdf`**:

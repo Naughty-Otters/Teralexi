@@ -34,3 +34,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.electron-vite/skill-module-cache/*
+.electron-vite/skill-module-cache-test/*
+dist/**

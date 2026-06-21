@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../toolSet/run-script-types.ts"],
-  "sourcesContent": ["export type NormalizedScriptType = 'bash' | 'python' | 'nodejs'\n"],
-  "mappings": ";;;;;;;;;;;;;;;AAAA;AAAA;",
-  "names": []
-}

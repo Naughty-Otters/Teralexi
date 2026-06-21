@@ -9,31 +9,57 @@ import { basename, extname, join } from 'path'
 import type { SkillTool } from './types'
 import { SKILL_FILES, SKILL_MODULE } from './constants'
 import { resolveToolSetSourceRoots } from './skill-path'
+import { createLogger } from '@main/logger'
 import {
   entryCacheKey,
   esbuildPathAliases,
   fingerprintFromMetafile,
+  loadCachedCommonJsModule,
+  resolveEsbuildForSkillCompile,
   shouldRebuildSkillModuleBundle,
   skillModuleCacheDir,
+  toOnDiskAppPath,
   writeSkillModuleBundleFingerprint,
 } from './skill-module-cache'
+
+const log = createLogger('skills.module-loader')
+
+const MODULE_PROBE_RE = /(?:^|\/)index(?:\.(?:ts|js|mjs|cjs))?$/i
+
+function isModuleProbePath(filepath: string): boolean {
+  return MODULE_PROBE_RE.test(filepath.replace(/\\/g, '/'))
+}
+
+function warnMissingModule(filepath: string, reason: string): void {
+  if (isModuleProbePath(filepath)) {
+    log.debug('Skill/toolSet module probe path not found', { filepath, reason })
+    return
+  }
+  log.warn('Skill/toolSet module path not found', { filepath, reason })
+}
 
 async function requireModule(
   filepath: string,
 ): Promise<Record<string, unknown> | undefined> {
   if (filepath.endsWith('.ts')) {
+    const onDiskPath = toOnDiskAppPath(filepath)
+    if (!existsSync(onDiskPath)) {
+      warnMissingModule(filepath, 'typescript source missing on disk')
+      return undefined
+    }
+
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const esbuild = require('esbuild') as typeof import('esbuild')
+      const esbuild = resolveEsbuildForSkillCompile()
 
       const cacheDir = skillModuleCacheDir()
       mkdirSync(cacheDir, { recursive: true })
-      const cacheKey = entryCacheKey(filepath)
+      const cacheKey = entryCacheKey(onDiskPath)
       const outJs = join(cacheDir, `${cacheKey}.js`)
 
       if (shouldRebuildSkillModuleBundle(outJs)) {
         const result = await esbuild.build({
-          entryPoints: [filepath],
+          entryPoints: [onDiskPath],
           outfile: outJs,
           bundle: true,
           format: 'cjs',
@@ -52,17 +78,21 @@ async function requireModule(
         }
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      return require(outJs) as Record<string, unknown>
-    } catch {
+      return loadCachedCommonJsModule(outJs)
+    } catch (err) {
+      log.warn('Failed to compile skill/toolSet module', { filepath, err })
       return undefined
     }
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return require(filepath) as Record<string, unknown>
-  } catch {
+    if (!existsSync(filepath)) {
+      warnMissingModule(filepath, 'javascript module missing on disk')
+      return undefined
+    }
+    return loadCachedCommonJsModule(filepath)
+  } catch (err) {
+    log.warn('Failed to load skill/toolSet module', { filepath, err })
     return undefined
   }
 }
@@ -77,17 +107,30 @@ function isSkillTool(value: unknown): value is SkillTool {
   )
 }
 
-function collectToolsFromModule(loaded: Record<string, unknown>): SkillTool[] {
+function collectToolsFromModule(
+  loaded: Record<string, unknown>,
+  source?: string,
+): SkillTool[] {
+  let tools: SkillTool[] = []
   if (Array.isArray(loaded.tools)) {
-    return loaded.tools.filter(isSkillTool)
+    tools = loaded.tools.filter(isSkillTool)
+  } else {
+    const def = loaded.default
+    if (def && typeof def === 'object' && Array.isArray((def as any).tools)) {
+      tools = ((def as any).tools as unknown[]).filter(isSkillTool)
+    } else {
+      tools = Object.values(loaded).filter(isSkillTool)
+    }
   }
 
-  const def = loaded.default
-  if (def && typeof def === 'object' && Array.isArray((def as any).tools)) {
-    return ((def as any).tools as unknown[]).filter(isSkillTool)
+  if (tools.length === 0 && source) {
+    log.warn('Module loaded but exported no skill tools', {
+      source,
+      exportKeys: Object.keys(loaded),
+    })
   }
 
-  return Object.values(loaded).filter(isSkillTool)
+  return tools
 }
 
 function filterByDeclared(
@@ -105,7 +148,10 @@ const ACTION_INDEX_RE = /^index\.(ts|js|mjs|cjs)$/
 async function loadSkillActionsFromDirectory(
   actionsDir: string,
 ): Promise<SkillTool[]> {
-  if (!existsSync(actionsDir)) return []
+  if (!existsSync(actionsDir)) {
+    log.debug('Skill actions directory missing', { actionsDir })
+    return []
+  }
 
   const indexCandidates = [
     actionsDir,
@@ -119,7 +165,7 @@ async function loadSkillActionsFromDirectory(
   for (const candidate of indexCandidates) {
     const loaded = await requireModule(candidate)
     if (!loaded) continue
-    const tools = collectToolsFromModule(loaded)
+    const tools = collectToolsFromModule(loaded, candidate)
     if (tools.length > 0) return tools
   }
 
@@ -127,7 +173,8 @@ async function loadSkillActionsFromDirectory(
   let entries: Dirent[]
   try {
     entries = readdirSync(actionsDir, { withFileTypes: true })
-  } catch {
+  } catch (err) {
+    log.warn('Failed to read skill actions directory', { actionsDir, err })
     return []
   }
 
@@ -150,9 +197,16 @@ async function loadSkillActionsFromDirectory(
     for (const modulePath of fileCandidates) {
       const loaded = await requireModule(modulePath)
       if (!loaded) continue
-      allTools.push(...collectToolsFromModule(loaded))
+      const tools = collectToolsFromModule(loaded, modulePath)
+      if (tools.length > 0) {
+        allTools.push(...tools)
+      }
       break
     }
+  }
+
+  if (allTools.length === 0) {
+    log.warn('Skill actions directory produced no tools', { actionsDir })
   }
 
   return allTools
@@ -164,13 +218,24 @@ export async function loadSkillActions(
 ): Promise<SkillTool[]> {
   const actionsDir = join(skillFolder, SKILL_FILES.ACTIONS_DIR)
   const allTools = await loadSkillActionsFromDirectory(actionsDir)
-  return filterByDeclared(allTools, declaredToolNames)
+  const filtered = filterByDeclared(allTools, declaredToolNames)
+  if (filtered.length === 0 && declaredToolNames.length > 0) {
+    log.warn('No skill action tools matched declared allowed_tools names', {
+      skillFolder,
+      declaredToolNames,
+      loadedToolNames: allTools.map((t) => t.name),
+    })
+  }
+  return filtered
 }
 
 export async function loadToolSetToolsFromDirectory(
   toolSetDir: string,
 ): Promise<SkillTool[]> {
-  if (!existsSync(toolSetDir)) return []
+  if (!existsSync(toolSetDir)) {
+    log.warn('toolSet directory does not exist', { toolSetDir })
+    return []
+  }
 
   const withDefaultTags = (
     tools: SkillTool[],
@@ -210,9 +275,10 @@ export async function loadToolSetToolsFromDirectory(
       if (!loaded) continue
 
       const tools = withDefaultTags(
-        collectToolsFromModule(loaded),
+        collectToolsFromModule(loaded, moduleFile.filePath),
         moduleFile.moduleTag,
       )
+      if (tools.length === 0) continue
       for (const tool of tools) {
         if (!toolMap.has(tool.name)) toolMap.set(tool.name, tool)
       }
@@ -221,6 +287,11 @@ export async function loadToolSetToolsFromDirectory(
     if (toolMap.size > 0) {
       return Array.from(toolMap.values())
     }
+
+    log.warn('toolSet module files loaded but produced no tools; trying index', {
+      toolSetDir,
+      moduleFiles: moduleFiles.map((f) => f.name),
+    })
   }
 
   const candidates = [
@@ -234,25 +305,71 @@ export async function loadToolSetToolsFromDirectory(
     const loaded = await requireModule(candidate)
     if (!loaded) continue
     const tools = withDefaultTags(
-      collectToolsFromModule(loaded),
+      collectToolsFromModule(loaded, candidate),
       SKILL_MODULE.DEFAULT_TOOL_SET_TAG,
     )
     if (tools.length > 0) return tools
   }
 
+  log.warn('toolSet directory produced no tools after scanning modules and index', {
+    toolSetDir,
+  })
   return []
 }
 
 /** Merges bundled then user `toolSet/`; user tools win on name conflicts. */
 export async function loadToolSetTools(): Promise<SkillTool[]> {
+  const roots = resolveToolSetSourceRoots()
   const merged = new Map<string, SkillTool>()
-  for (const toolSetDir of resolveToolSetSourceRoots()) {
+  const perRoot: Array<{ dir: string; count: number; exists: boolean }> = []
+
+  for (const toolSetDir of roots) {
+    const exists = existsSync(toolSetDir)
+    if (!exists) {
+      log.warn('toolSet source directory missing', { toolSetDir })
+      perRoot.push({ dir: toolSetDir, count: 0, exists: false })
+      continue
+    }
+
     const tools = await loadToolSetToolsFromDirectory(toolSetDir)
+    perRoot.push({ dir: toolSetDir, count: tools.length, exists: true })
+
+    if (tools.length > 0) {
+      log.info('Loaded toolSet tools from directory', {
+        toolSetDir,
+        count: tools.length,
+        sample: tools.slice(0, 10).map((t) => t.name),
+      })
+    } else {
+      log.warn('toolSet directory exists but produced no tools', { toolSetDir })
+    }
+
     for (const tool of tools) {
       merged.set(tool.name, tool)
     }
   }
-  return Array.from(merged.values())
+
+  const tools = Array.from(merged.values())
+  if (tools.length === 0) {
+    const detail = perRoot
+      .map((r) => `${r.dir}${r.exists ? '' : ' (missing)'}: ${r.count} tools`)
+      .join('; ')
+    const message = `toolSet failed to load: 0 tools from ${roots.length} source(s) — ${detail}`
+    log.error(message)
+    throw new Error(message)
+  }
+
+  log.info('toolSet catalog ready', {
+    toolCount: tools.length,
+    sources: perRoot.map(({ dir, count, exists }) => ({
+      dir,
+      count,
+      exists,
+    })),
+    sample: tools.slice(0, 12).map((t) => t.name),
+  })
+
+  return tools
 }
 
 export { clearSkillModuleCache } from './skill-module-cache'

@@ -1,1 +1,0 @@
-import{y as e}from"./index-CQt_m1Kd.js";const s=e("template",{state:()=>({testData:localStorage.getItem("testData")||""}),getters:{getTest:t=>t.testData,getTest1(){return this.testData}},actions:{TEST_ACTION(t){this.testData=t,localStorage.setItem("testData",t)}}});export{s as u};

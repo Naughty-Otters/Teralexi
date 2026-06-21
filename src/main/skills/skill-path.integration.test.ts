@@ -119,13 +119,19 @@ describe('skill-path integration', () => {
     expect(resolveSkillsRootDirectory()).toBe(resolveUserSkillsDirectory())
   })
 
-  it('resolveBundledSkillsDirectory uses app path when packaged', async () => {
+  it('resolveBundledSkillsDirectory uses unpacked app path when packaged', async () => {
     vi.doMock('electron', () => ({
-      app: { isPackaged: true, getAppPath: () => '/packaged/app' },
+      app: {
+        isPackaged: true,
+        getAppPath: () =>
+          '/Applications/OpenFDE.app/Contents/Resources/app.asar',
+      },
     }))
     vi.resetModules()
     const { resolveBundledSkillsDirectory } = await import('./skill-path')
-    expect(resolveBundledSkillsDirectory()).toBe('/packaged/app/skills')
+    expect(resolveBundledSkillsDirectory()).toBe(
+      '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked/skills',
+    )
     vi.resetModules()
     vi.doMock('electron', () => ({
       app: { isPackaged: false, getAppPath: () => '/packaged/app' },

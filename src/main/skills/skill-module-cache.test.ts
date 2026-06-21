@@ -1,13 +1,30 @@
 import { mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   fingerprintFromMetafile,
   isSkillModuleBundleStale,
+  loadCachedCommonJsModule,
+  resolveAppRoot,
   shouldRebuildSkillModuleBundle,
+  toOnDiskAppPath,
   writeSkillModuleBundleFingerprint,
 } from './skill-module-cache'
+
+vi.mock('electron', () => ({
+  app: { isPackaged: false, getAppPath: () => '/Applications/OpenFDE.app/Contents/Resources/app.asar' },
+}))
+
+vi.mock('@config/openfde-home', () => ({
+  getopenfdeHome: () => '/Users/test/.openfde',
+}))
+
+vi.mock('@main/config/app-paths', () => ({
+  isPackagedApp: () => false,
+  resolveAppRoot: () => process.cwd(),
+  toOnDiskAppPath: (filePath: string) => filePath,
+}))
 
 describe('skill-module-cache', () => {
   let tempRoot = ''
@@ -64,5 +81,51 @@ describe('skill-module-cache', () => {
     })
 
     expect(fingerprint.inputs[depPath]).toBe(mtime)
+  })
+
+  it('loadCachedCommonJsModule resolves npm deps outside the app tree', () => {
+    tempRoot = mkdtempSync(join(tmpdir(), 'skill-cache-'))
+    const outJs = join(tempRoot, 'bundle.js')
+    writeFileSync(
+      outJs,
+      "module.exports = { hasZod: !!require('zod') }",
+      'utf8',
+    )
+
+    expect(loadCachedCommonJsModule(outJs)).toEqual({ hasZod: true })
+  })
+
+  it('toOnDiskAppPath leaves dev paths unchanged', async () => {
+    const { toOnDiskAppPath: mapPath } = await import('./skill-module-cache')
+    const devPath = join(process.cwd(), 'toolSet', 'index.ts')
+    expect(mapPath(devPath)).toBe(devPath)
+  })
+
+  it('toOnDiskAppPath maps asar paths to asar.unpacked when packaged', async () => {
+    vi.doMock('@main/config/app-paths', () => ({
+      isPackagedApp: () => true,
+      resolveAppRoot: () =>
+        '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked',
+      toOnDiskAppPath: (filePath: string) =>
+        filePath.replace(/app\.asar(?=\/|$)/i, 'app.asar.unpacked'),
+    }))
+    vi.resetModules()
+    const { toOnDiskAppPath: mapPath, resolveAppRoot: appRoot } = await import(
+      './skill-module-cache'
+    )
+    expect(appRoot()).toBe(
+      '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked',
+    )
+    expect(
+      mapPath('/Applications/OpenFDE.app/Contents/Resources/app.asar/skills/demo/actions/index.ts'),
+    ).toBe(
+      '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked/skills/demo/actions/index.ts',
+    )
+    vi.resetModules()
+    vi.doMock('@main/config/app-paths', () => ({
+      isPackagedApp: () => false,
+      resolveAppRoot: () => process.cwd(),
+      toOnDiskAppPath: (filePath: string) => filePath,
+    }))
   })
 })

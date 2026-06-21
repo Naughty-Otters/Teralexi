@@ -4,6 +4,8 @@ import { AgentFlowContext } from '../context'
 import type { FlowPipelineRegistry } from './pipeline'
 import { createFlowStageRegistry } from './stage-runners'
 import { AgentFlowBase } from './agent-flow-base'
+import { StageModelRegistry } from '../providers/stage-model-registry'
+import { AgentRun } from '../run/agent-run'
 
 export type {
   FlowStageId,
@@ -56,7 +58,6 @@ export class AgentFlow extends AgentFlowBase {
 
   /** @deprecated Prefer {@link AgentRun.execute}; kept for tests and direct flow use. */
   async run(): Promise<string> {
-    const { AgentRun } = await import('../run/agent-run')
     const result = await AgentRun.forFlow(this).execute()
     return result.structuredContent
   }
@@ -71,10 +72,8 @@ export type StreamAgentResponseResult = {
 export async function streamAgentResponse(
   opts: AgentResponseOpts,
 ): Promise<StreamAgentResponseResult> {
-  const { StageModelRegistry } = await import('../providers/stage-model-registry')
   const stageModels = StageModelRegistry.fromOpts(opts)
   const model = stageModels.getModel('default')
-  const { AgentRun } = await import('../run/agent-run')
   const result = await AgentRun.startRoot(opts, model).execute()
   return {
     structuredContent: result.structuredContent,
