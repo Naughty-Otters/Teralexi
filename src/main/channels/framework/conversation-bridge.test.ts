@@ -37,8 +37,8 @@ vi.mock('@main/engine', () => ({
   })),
 }))
 
-vi.mock('@main/agent/context', () => ({
-  serializeAssistantMessageForHistory: (s: string) => s,
+vi.mock('@main/agent/utils', () => ({
+  serializeAssistantMessageForExternalReply: (s: string) => s,
 }))
 
 import { getChannelConversationBridge } from './conversation-bridge'

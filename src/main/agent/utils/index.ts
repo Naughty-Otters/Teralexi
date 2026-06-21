@@ -13,6 +13,7 @@ export {
   isAssistantStructuredContent,
   parseAssistantStructuredContent,
   serializeAssistantMessageForHistory,
+  serializeAssistantMessageForExternalReply,
 } from './structured-content'
 
 export type {

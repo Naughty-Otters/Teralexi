@@ -4,7 +4,7 @@ import { notifyConversationStoreChanged } from '@main/services/conversation-stor
 import { resolveChannelSessionId } from '@shared/conversation/session-id'
 import { getChannelRegistry } from './channel-registry'
 import { runAgentForConversation } from '@main/engine'
-import { serializeAssistantMessageForHistory } from '@main/agent/utils'
+import { serializeAssistantMessageForExternalReply } from '@main/agent/utils'
 import { ConfigContext } from '@main/agent/config/context'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
 import { randomShortUuid } from '@shared/utils/short-uuid'
@@ -108,10 +108,12 @@ class ChannelConversationBridge {
       try {
         const sender = getChannelRegistry().get(args.channelId)
         if (sender) {
-          const replyText = serializeAssistantMessageForHistory(
+          const replyText = serializeAssistantMessageForExternalReply(
             result.finalContent,
           )
-          await sender.sendToTarget(args.senderTarget, replyText)
+          if (replyText.trim()) {
+            await sender.sendToTarget(args.senderTarget, replyText)
+          }
         }
       } catch (err) {
         log.error('Failed to send channel reply', {

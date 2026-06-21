@@ -1,4 +1,5 @@
 import type { AssistantStructuredContent } from '../types'
+import { userFacingTextFromStructuredOuter } from '@shared/agent/assistant-external-reply'
 
 const EMBEDDED_STRUCTURED_MARKER =
   /<!--\s*otter-structured:([A-Za-z0-9+/=]+)\s*-->/i
@@ -134,4 +135,11 @@ export function serializeAssistantMessageForHistory(raw: string): string {
 
   const joined = lines.join('\n\n').trim()
   return (joined + artifactSummary).trim() || raw
+}
+
+/** Outbound channel/scheduler reply: user-facing text only (no tools, reasoning, or step dumps). */
+export function serializeAssistantMessageForExternalReply(raw: string): string {
+  const structured = parseAssistantStructuredContent(raw)
+  if (!structured) return raw.trim()
+  return userFacingTextFromStructuredOuter(structured.assistantContent.outer)
 }
