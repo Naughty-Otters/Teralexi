@@ -13,7 +13,7 @@ describe('loadChatContextWindowMessages', () => {
   })
 
   it('defaults to 50 messages when unset', () => {
-    expect(loadChatContextWindowMessages()).toBe(50)
+    expect(loadChatContextWindowMessages()).toBe(200)
   })
 
   it('reads configured value from system props', () => {

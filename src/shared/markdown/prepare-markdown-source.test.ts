@@ -55,11 +55,13 @@ describe('unwrapOuterMarkdownFence', () => {
 describe('prepareMarkdownSource', () => {
   it('strips orphan fence lines left by head/tail truncation', () => {
     const row = '| 1 | 3:38 PM | GitHub | subject |\n'
+    const rowCount =
+      Math.ceil((HEAD_TAIL_KEEP_CHARS * 2 + 1) / row.length) + 1
     const raw =
       '### Title\n' +
-      row.repeat(100) +
+      row.repeat(rowCount) +
       '\n```markdown\n' +
-      row.repeat(100) +
+      row.repeat(rowCount) +
       '\n```'
     const truncated = prepareAndTruncateMarkdownSource(
       raw,
@@ -79,7 +81,7 @@ describe('prepareMarkdownSource', () => {
     const row = '| 1 | 3:38 PM | GitHub | subject |\n'
     const table =
       '| # | Time | From | Subject |\n|---|------|------|----------|\n' +
-      row.repeat(400)
+      row.repeat(40000)
     const raw = `\`\`\`### 📬 Today\n\n${table}\n\`\`\``
     const truncated = prepareAndTruncateMarkdownSource(
       raw,
