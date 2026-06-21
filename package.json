@@ -20,6 +20,7 @@
     "build:win32": "npm run icons:generate && tsx .electron-vite/build.ts -m prod  && electron-builder -c build.json --win  --ia32 --publish never",
     "build:win64": "npm run icons:generate && tsx .electron-vite/build.ts -m prod  && electron-builder -c build.json --win  --x64 --publish never",
     "build:mac": "npm run icons:generate && tsx .electron-vite/build.ts -m prod  && electron-builder -c build.json --mac --publish never",
+    "build:linux": "npm run icons:generate && tsx .electron-vite/build.ts -m prod && electron-builder -c build.json --linux --publish never",
     "build:dir": "npm run icons:generate && tsx .electron-vite/build.ts -m prod  && electron-builder -c build.json --dir --publish never",
     "build:clean": "tsx .electron-vite/build.ts --clean",
     "icons:generate": "node scripts/generate-app-icons.mjs",
