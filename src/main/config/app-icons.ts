@@ -38,17 +38,31 @@ function firstExistingPath(candidates: string[]): string | null {
   return null
 }
 
-/** Source-of-truth app icon PNG (also used for the menu bar tray). */
+/** Source-of-truth app icon PNG (dock, window, favicon). */
 export function getAppIconPngPath(): string {
   const root = projectRoot()
   const resolved = firstExistingPath([
-    join(resolveBuildIconsDir(), 'tray-icon.png'),
+    join(resolveBuildIconsDir(), 'icon.png'),
     join(root, 'src', 'renderer', 'public', 'favicon.png'),
     join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-logo.png'),
     join(root, 'dist', 'electron', 'renderer', 'favicon.png'),
   ])
   if (!resolved) {
     throw new Error('openfde-logo.png not found')
+  }
+  return resolved
+}
+
+/** Bold template PNG for the macOS menu bar / system tray. */
+export function getTrayIconPngPath(): string {
+  const root = projectRoot()
+  const resolved = firstExistingPath([
+    join(resolveBuildIconsDir(), 'tray-icon.png'),
+    join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-tray-icon.png'),
+    join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-logo.png'),
+  ])
+  if (!resolved) {
+    throw new Error('tray icon PNG not found')
   }
   return resolved
 }
@@ -71,18 +85,25 @@ function resizeSquare(image: NativeImage, size: number): NativeImage {
   return image.resize({ width: size, height: size, quality: 'best' })
 }
 
-/** macOS menu bar / system tray — logo PNG at menu-bar size. */
+/** macOS menu bar / system tray — bold template PNG at menu-bar size. */
 export function loadTrayIcon(): NativeImage {
-  const pngPath = getAppIconPngPath()
-  const logicalSize = process.platform === 'darwin' ? 28 : 38
+  const pngPath = getTrayIconPngPath()
+  const logicalSize = process.platform === 'darwin' ? 22 : 38
   const image = resizeSquare(loadNativeImageFromPath(pngPath), logicalSize)
   if (!image.isEmpty()) {
+    if (process.platform === 'darwin') {
+      image.setTemplateImage(true)
+    }
     return image
   }
 
   const fallback = join(resolveBuildIconsDir(), 'tray-icon.png')
   log.warn('Falling back to tray PNG', { fallback })
-  return loadNativeImageFromPath(fallback)
+  const fallbackImage = loadNativeImageFromPath(fallback)
+  if (process.platform === 'darwin' && !fallbackImage.isEmpty()) {
+    fallbackImage.setTemplateImage(true)
+  }
+  return fallbackImage
 }
 
 /** Dock (macOS) and window icon — .icns in production, logo PNG fallback in dev. */
