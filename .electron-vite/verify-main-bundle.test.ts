@@ -136,12 +136,34 @@ describe('findForbiddenSubstringsInMainJs', () => {
 })
 
 describe('findUnbundledDynamicImportsInMainJs', () => {
-  it('collects unresolved filesystem dynamic import specs', () => {
+  it('collects unresolved app-module dynamic import specs', () => {
     expect(
       findUnbundledDynamicImportsInMainJs(
         `import('../run/resolve-child-agent'); import('node:fs')`,
       ),
     ).toEqual(['../run/resolve-child-agent'])
+  })
+
+  it('ignores bundled CJS interop imports', () => {
+    const bundledInterop = `
+      import('.')
+      import('./types')
+      import('./get')
+      import('cloakbrowser')
+      import('node:fs')
+    `
+    expect(findUnbundledDynamicImportsInMainJs(bundledInterop)).toEqual([])
+  })
+
+  it('flags alias and parent-relative imports', () => {
+    expect(
+      findUnbundledDynamicImportsInMainJs(
+        `import('@main/workflows/workflow-compiler'); import('../hooks/user-hooks')`,
+      ),
+    ).toEqual([
+      '@main/workflows/workflow-compiler',
+      '../hooks/user-hooks',
+    ])
   })
 })
 

@@ -83,6 +83,15 @@ export function findForbiddenSubstringsInMainJs(code: string): string[] {
   return FORBIDDEN_SUBSTRINGS.filter((needle) => code.includes(needle))
 }
 
+function isUnbundledAppDynamicImportInMainJs(spec: string): boolean {
+  if (isAllowedRuntimeDynamicImport(spec)) return false
+  if (spec.startsWith('../')) return true
+  if (spec.startsWith('@')) return true
+  // Single-segment ./foo and "." are common Rollup/CJS interop in the bundle.
+  if (spec.startsWith('./') && spec.includes('/', 2)) return true
+  return false
+}
+
 export function findUnbundledDynamicImportsInMainJs(code: string): string[] {
   const bad: string[] = []
   for (const match of code.matchAll(/import\(([^)]+)\)/g)) {
@@ -90,8 +99,7 @@ export function findUnbundledDynamicImportsInMainJs(code: string): string[] {
     const quoted = raw.match(/^['"]([^'"]+)['"]$/)
     if (!quoted) continue
     const spec = quoted[1]
-    if (isAllowedRuntimeDynamicImport(spec)) continue
-    if (spec.includes('/') || spec.startsWith('.') || spec.startsWith('@')) {
+    if (isUnbundledAppDynamicImportInMainJs(spec)) {
       bad.push(spec)
     }
   }
