@@ -7,7 +7,6 @@ import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import png2icons from 'png2icons'
-import { createLightBackgroundLogo, createTrayTemplateIcon } from './logo-variants.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const assets = join(root, 'src/renderer/assets/icons')
@@ -52,9 +51,25 @@ function writeIcnsFromPng(pngPath, icnsPath) {
 mkdirSync(out, { recursive: true })
 mkdirSync(publicDir, { recursive: true })
 
-async function generateDerivedLogos() {
-  await createLightBackgroundLogo(logoPng, brightLogoPng)
-  await createTrayTemplateIcon(logoPng, trayLogoPng, { canvasSize: 128, dilateRadius: 4 })
+async function generateDerivedLogosIfNeeded() {
+  const needBright = !existsSync(brightLogoPng)
+  const needTray = !existsSync(trayLogoPng)
+  if (!needBright && !needTray) {
+    return
+  }
+
+  const { createLightBackgroundLogo, createTrayTemplateIcon } = await import(
+    './logo-variants.mjs'
+  )
+  if (needBright) {
+    await createLightBackgroundLogo(logoPng, brightLogoPng)
+  }
+  if (needTray) {
+    await createTrayTemplateIcon(logoPng, trayLogoPng, {
+      canvasSize: 128,
+      dilateRadius: 4,
+    })
+  }
 }
 
 try {
@@ -62,7 +77,7 @@ try {
     throw new Error(`Logo source not found: ${logoPng}`)
   }
 
-  await generateDerivedLogos()
+  await generateDerivedLogosIfNeeded()
 
   copyLogo(join(out, '256x256.png'))
   copyLogo(join(out, 'icon.png'))
@@ -79,7 +94,7 @@ try {
 } catch (err) {
   if (hasPrebuiltIcons()) {
     console.warn(
-      'Skipping icon regeneration because source PNG is unavailable. Using existing generated icon assets.',
+      'Skipping icon regeneration; using existing generated icon assets.',
       err,
     )
   } else {
