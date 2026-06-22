@@ -22,6 +22,7 @@
     "build:mac": "npm run icons:generate && tsx .electron-vite/build.ts -m prod  && electron-builder -c build.json --mac --publish never",
     "build:linux": "npm run icons:generate && tsx .electron-vite/build.ts -m prod && electron-builder -c build.json --linux --publish never",
     "build:dir": "npm run icons:generate && tsx .electron-vite/build.ts -m prod  && electron-builder -c build.json --dir --publish never",
+    "analyze:pack-size": "du -sh build/mac-arm64/OpenFDE.app 2>/dev/null; du -sh build/mac-arm64/OpenFDE.app/Contents/Resources/app.asar build/mac-arm64/OpenFDE.app/Contents/Resources/app.asar.unpacked 2>/dev/null",
     "build:clean": "tsx .electron-vite/build.ts --clean",
     "icons:generate": "node scripts/generate-app-icons.mjs",
     "build:web": "tsx .electron-vite/build.ts",
@@ -113,7 +114,6 @@
     "turndown-plugin-gfm": "^1.0.2",
     "typescript-language-server": "^5.3.0",
     "wasp-protocol": "^0.4.2",
-    "workflow": "^4.2.4",
     "zhipu-ai-provider": "^0.3.1",
     "zod": "4.4.2"
   },
