@@ -5,10 +5,10 @@
 
 | | |
 | --- | --- |
-| **Last successful build** | 2026-06-22T00:32:12Z |
+| **Last successful build** | 2026-06-22T02:01:16Z |
 | **Branch** | `main` |
-| **Commit** | [`e80d1e5`](https://github.com/Naughty-Otters/OpenFDE/commit/e80d1e5b33948b959991298af0f5d3f1273f2d97) |
-| **Workflow run** | [View logs](https://github.com/Naughty-Otters/OpenFDE/actions/runs/27921877275) |
+| **Commit** | [`c374471`](https://github.com/Naughty-Otters/OpenFDE/commit/c3744711f339c8752797a55b352fb0096675ec27) |
+| **Workflow run** | [View logs](https://github.com/Naughty-Otters/OpenFDE/actions/runs/27924282700) |
 <!-- ci-status-end -->
 
 OpenFDE is an Electron desktop app for running and managing AI agents in a local desktop workspace. It combines a Vue 3 renderer, Electron main process services, persisted conversations, tool execution, MCP integrations, scheduled jobs, and channel/account integrations inside one desktop app.
