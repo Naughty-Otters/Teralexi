@@ -3,6 +3,7 @@
     v-if="hasContent"
     type="button"
     class="chat-bubble-pdf-btn"
+    :class="{ 'chat-bubble-pdf-btn--corner': corner }"
     :title="t.chat.exportBubblePdf"
     :aria-label="t.chat.exportBubblePdf"
     :disabled="exporting"
@@ -26,13 +27,18 @@ import {
   type BubblePdfDocumentKind,
 } from '../bubblePdfExport'
 
-const props = defineProps<{
-  markdown?: string | null
-  sectionTitle: string
-  sectionId?: string
-  messageId: string
-  kind?: BubblePdfDocumentKind
-}>()
+const props = withDefaults(
+  defineProps<{
+    markdown?: string | null
+    sectionTitle: string
+    sectionId?: string
+    messageId: string
+    kind?: BubblePdfDocumentKind
+    /** Pin to the top-right corner of a positioned parent bubble. */
+    corner?: boolean
+  }>(),
+  { corner: false },
+)
 
 const emit = defineEmits<{
   exported: [savedPath: string]
@@ -101,6 +107,13 @@ async function onExport(): Promise<void> {
     color 0.15s ease,
     border-color 0.15s ease,
     background-color 0.15s ease;
+}
+
+.chat-bubble-pdf-btn--corner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
 }
 
 .chat-bubble-pdf-btn:hover:not(:disabled) {

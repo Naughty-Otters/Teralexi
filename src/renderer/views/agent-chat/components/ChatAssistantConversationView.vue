@@ -13,6 +13,8 @@
         :class="{
           [`conversation-bubble--${bubblePresentation(section).tone}`]: true,
           'conversation-bubble--attachments': isAttachmentsSection(section),
+          'conversation-bubble--exportable':
+            !isAttachmentsSection(section) && Boolean(section.bodyMarkdown?.trim()),
           'conversation-bubble--running': section.status === 'running',
           'conversation-bubble--done': section.status === 'done',
           'conversation-bubble--compact': !isBubbleExpanded(section.id),
@@ -23,6 +25,14 @@
         @keydown.enter.prevent="onSectionActivate(section)"
         @keydown.space.prevent="onSectionActivate(section)"
       >
+      <ChatBubblePdfExportButton
+        v-if="!isAttachmentsSection(section)"
+        corner
+        :markdown="section.bodyMarkdown"
+        :section-title="section.title"
+        :section-id="section.id"
+        :message-id="props.message.id"
+      />
       <header class="conversation-bubble__header">
         <button
           type="button"
@@ -50,13 +60,6 @@
           />
         </button>
         <span class="conversation-bubble__meta">
-          <ChatBubblePdfExportButton
-            v-if="!isAttachmentsSection(section)"
-            :markdown="section.bodyMarkdown"
-            :section-title="section.title"
-            :section-id="section.id"
-            :message-id="props.message.id"
-          />
           <span class="conversation-bubble__badge">
             {{ bubblePresentation(section).badge }}
           </span>
@@ -720,6 +723,7 @@ function bubblePresentation(
 }
 
 .conversation-bubble {
+  position: relative;
   flex-shrink: 0;
   align-self: flex-start;
   min-width: var(--chat-response-bubble-min-width, 50%);
@@ -931,6 +935,10 @@ function bubblePresentation(
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.conversation-bubble--exportable .conversation-bubble__meta {
+  padding-right: 30px;
 }
 
 .conversation-bubble__title {

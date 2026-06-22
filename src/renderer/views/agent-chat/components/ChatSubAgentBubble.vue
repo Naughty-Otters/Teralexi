@@ -38,14 +38,15 @@
         class="sub-agent-bubble__section"
         :class="`sub-agent-bubble__section--${section.status}`"
       >
+        <ChatBubblePdfExportButton
+          corner
+          :markdown="section.bodyMarkdown"
+          :section-title="section.title"
+          :section-id="section.id"
+          :message-id="messageId"
+        />
         <header class="sub-agent-bubble__section-header">
           <span class="sub-agent-bubble__section-title">{{ section.title }}</span>
-          <ChatBubblePdfExportButton
-            :markdown="section.bodyMarkdown"
-            :section-title="section.title"
-            :section-id="section.id"
-            :message-id="messageId"
-          />
         </header>
         <div
           v-if="section.bodyHtml"
@@ -238,17 +239,17 @@ export default {
 }
 
 .sub-agent-bubble__section {
+  position: relative;
   border-radius: 6px;
   border: 1px solid var(--ui-border);
   background: var(--ui-bg-elevated);
-  padding: 6px 8px;
+  padding: 6px 34px 6px 8px;
 }
 
 .sub-agent-bubble__section-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  min-width: 0;
   margin-bottom: 4px;
 }
 
