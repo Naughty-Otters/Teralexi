@@ -26,6 +26,7 @@ vi.mock('./skill-path', () => ({
   isLoadableSkillFolder: vi.fn(() => true),
   extractYamlFrontmatterBlock: vi.fn(() => null),
   stripYamlFrontmatter: vi.fn((s: string) => s),
+  normalizeSkillFileText: vi.fn((s: string) => s),
   resolvePropertiesRaw: vi.fn(() => 'name: Demo\nmodel: llama\nprovider: ollama'),
   resolveSkillsSourceRoots: vi.fn(() => ['/bundled/skills', '/user/skills']),
   resolveUserSkillsDirectory: vi.fn(() => '/user/skills'),

@@ -7,6 +7,7 @@ import type { SkillTool } from './types'
 import {
   extractYamlFrontmatterBlock,
   isLoadableSkillFolder,
+  normalizeSkillFileText,
   resolvePropertiesRaw,
   resolveSkillsSourceRoots,
   stripYamlFrontmatter,
