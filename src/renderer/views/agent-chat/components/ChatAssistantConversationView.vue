@@ -50,6 +50,13 @@
           />
         </button>
         <span class="conversation-bubble__meta">
+          <ChatBubblePdfExportButton
+            v-if="!isAttachmentsSection(section)"
+            :markdown="section.bodyMarkdown"
+            :section-title="section.title"
+            :section-id="section.id"
+            :message-id="props.message.id"
+          />
           <span class="conversation-bubble__badge">
             {{ bubblePresentation(section).badge }}
           </span>
@@ -179,6 +186,7 @@
         :step-progress-parts="stepProgressParts"
         :markdown="markdown"
         :is-streaming="isStreaming"
+        :message-id="props.message.id"
       />
     </div>
   </div>
@@ -187,14 +195,15 @@
     class="conversation-view assistant-content-v2 conversation-sub-agents--standalone"
     :style="bubbleUiStyle"
   >
-    <ChatSubAgentBubble
-      v-for="node in subAgentRuns"
-      :key="node.runId"
-      :node="node"
-      :step-progress-parts="stepProgressParts"
-      :markdown="markdown"
-      :is-streaming="isStreaming"
-    />
+      <ChatSubAgentBubble
+        v-for="node in subAgentRuns"
+        :key="node.runId"
+        :node="node"
+        :step-progress-parts="stepProgressParts"
+        :markdown="markdown"
+        :is-streaming="isStreaming"
+        :message-id="props.message.id"
+      />
   </div>
   <template v-else-if="standaloneToolLoopPanelSlots.length">
     <div
@@ -250,6 +259,7 @@ import ChatConversationSnapshotPreview from './ChatConversationSnapshotPreview.v
 import ChatConversationToolResponseBubble from './ChatConversationToolResponseBubble.vue'
 import AttachmentFileTypeIcon from './AttachmentFileTypeIcon.vue'
 import ChatSubAgentBubble from './ChatSubAgentBubble.vue'
+import ChatBubblePdfExportButton from './ChatBubblePdfExportButton.vue'
 import ChatToolLoopPanel from './ChatToolLoopPanel.vue'
 import {
   type AssistantBubbleDescriptor,
@@ -474,6 +484,7 @@ function onSectionActivate(
   if (event?.target instanceof Element) {
     if (event.target.closest('.conversation-bubble__title')) return
     if (event.target.closest('.conversation-bubble__file-item')) return
+    if (event.target.closest('.chat-bubble-pdf-btn')) return
   }
   openPreview(primaryPreviewUrl(section))
 }

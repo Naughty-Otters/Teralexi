@@ -131,6 +131,9 @@ export const lang: AppLocaleBundle = {
   },
   chat: {
     thoughtBubbleTitle: 'Thought briefly',
+    exportBubblePdf: 'Export as PDF',
+    exportBubblePdfSuccess: 'PDF saved',
+    exportBubblePdfFailed: 'Could not export PDF',
   },
   monitor: {
     title: 'Token monitor',

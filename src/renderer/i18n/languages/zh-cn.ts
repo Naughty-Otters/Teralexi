@@ -127,6 +127,9 @@ export const lang: AppLocaleBundle = {
   },
   chat: {
     thoughtBubbleTitle: '稍作思考',
+    exportBubblePdf: '导出为 PDF',
+    exportBubblePdfSuccess: 'PDF 已保存',
+    exportBubblePdfFailed: '无法导出 PDF',
   },
   monitor: {
     title: 'Token 监控',

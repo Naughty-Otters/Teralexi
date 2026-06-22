@@ -1452,6 +1452,18 @@ export class IpcChannelMainClass {
     { savedPath: string | null }
   > = null
   /**
+   * Render markdown to PDF and save via a native Save-As dialog.
+   * Returns the saved path, or null when the user cancels.
+   */
+  ExportMarkdownAsPdf: IpcMainEventListener<
+    {
+      markdown: string
+      defaultFileName: string
+      kind?: 'default' | 'research-report'
+    },
+    { savedPath: string | null; error?: string }
+  > = null
+  /**
    * Position the sandbox results WebContentsView over the given screen rect (or hide).
    */
   SyncSandboxOutputView: IpcMainEventListener<

@@ -121,6 +121,9 @@ export type AppLabels = {
   }
   chat: {
     thoughtBubbleTitle: string
+    exportBubblePdf: string
+    exportBubblePdfSuccess: string
+    exportBubblePdfFailed: string
   }
   monitor: {
     title: string
