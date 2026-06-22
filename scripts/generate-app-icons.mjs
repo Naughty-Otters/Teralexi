@@ -79,6 +79,10 @@ try {
 
   await generateDerivedLogosIfNeeded()
 
+  if (!existsSync(trayLogoPng)) {
+    throw new Error(`Tray template PNG not found: ${trayLogoPng}`)
+  }
+
   copyLogo(join(out, '256x256.png'))
   copyLogo(join(out, 'icon.png'))
   copyLogo(join(out, 'tray-icon.png'), trayLogoPng)

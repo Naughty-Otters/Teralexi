@@ -170,13 +170,13 @@ export const settingsPanelsEn: SettingsPanelLabels = {
   },
   googleOAuth: {
     intro:
-      'OAuth client used for Google sign-in (Settings → Accounts → Google). Leave both fields empty to use the built-in client shipped with Otter.',
+      'OAuth client used for Google sign-in (Settings → Accounts → Google). Set a Google Cloud Desktop client ID and secret here before signing in.',
     clientIdLabel: 'OAuth client ID',
-    clientIdPlaceholder: 'Leave empty for built-in default',
+    clientIdPlaceholder: 'Google Cloud OAuth 2.0 Desktop client ID',
     clientIdHint:
-      'Your Google Cloud OAuth 2.0 Desktop client ID. Required when using your own Google Cloud project instead of the built-in client.',
+      'Required for Google sign-in. Create a Desktop OAuth client in Google Cloud Console.',
     clientSecretLabel: 'OAuth client secret',
-    clientSecretPlaceholder: 'Leave empty for built-in default',
+    clientSecretPlaceholder: 'Matching client secret from Google Cloud Console',
     clientSecretHint:
       'Matching client secret from Google Cloud Console. Keep this private.',
     redirectUriHint:
@@ -209,10 +209,12 @@ export const settingsPanelsEn: SettingsPanelLabels = {
       missingScopes:
         'Workspace permissions are missing. Sign out and sign in again to grant Gmail, Calendar, and Drive access.',
       signInHint:
-        'Sign in with Google to connect Gmail, Calendar, and Drive for the Google Workspace skill. By default this uses the built-in OAuth client.',
+        'Sign in with Google to connect Gmail, Calendar, and Drive for the Google Workspace skill.',
       signInWithGoogle: 'Sign in with Google',
       customClientHint:
-        'To use your own Google Cloud OAuth client, set the client ID and secret under Settings → General → Google properties, then sign out and sign in again here.',
+        'Set the OAuth client ID and secret under Settings → General → Google properties before signing in.',
+      oauthNotConfigured:
+        'Google sign-in is not configured. Open Settings → General → Google properties and enter your OAuth client ID and secret, then try again.',
     },
     github: {
       signedInHint:

@@ -162,6 +162,7 @@ export type SettingsPanelLabels = {
       signInHint: string
       signInWithGoogle: string
       customClientHint: string
+      oauthNotConfigured: string
     }
     github: {
       signedInHint: string

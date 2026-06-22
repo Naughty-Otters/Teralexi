@@ -164,13 +164,13 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
   },
   googleOAuth: {
     intro:
-      'Google 登录（设置 → 账户 → Google）使用的 OAuth 客户端。两项均留空则使用 Otter 内置客户端。',
+      'Google 登录（设置 → 账户 → Google）使用的 OAuth 客户端。登录前请在此填写 Google Cloud 桌面客户端 ID 与密钥。',
     clientIdLabel: 'OAuth 客户端 ID',
-    clientIdPlaceholder: '留空使用内置默认值',
+    clientIdPlaceholder: 'Google Cloud OAuth 2.0 桌面客户端 ID',
     clientIdHint:
-      'Google Cloud OAuth 2.0 桌面客户端 ID。使用自有 Google Cloud 项目而非内置客户端时必填。',
+      'Google 登录必填。请在 Google Cloud Console 创建桌面 OAuth 客户端。',
     clientSecretLabel: 'OAuth 客户端密钥',
-    clientSecretPlaceholder: '留空使用内置默认值',
+    clientSecretPlaceholder: 'Google Cloud Console 中的对应客户端密钥',
     clientSecretHint: 'Google Cloud Console 中对应的客户端密钥，请妥善保管。',
     redirectUriHint:
       '若创建自有 OAuth 应用，请在 Google Cloud Console 中添加授权重定向 URI：http://127.0.0.1:7779。',
@@ -199,10 +199,12 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
       missingScopes:
         '缺少 Workspace 权限。请退出后重新登录以授权 Gmail、Calendar 与 Drive。',
       signInHint:
-        '使用 Google 登录以连接 Gmail、Calendar 与 Drive（Google Workspace 技能）。默认使用内置 OAuth 客户端。',
+        '使用 Google 登录以连接 Gmail、Calendar 与 Drive（Google Workspace 技能）。',
       signInWithGoogle: '使用 Google 登录',
       customClientHint:
-        '若要使用自有 Google Cloud OAuth 客户端，请在 设置 → 通用 → Google 属性 中填写客户端 ID 与密钥，然后在此退出并重新登录。',
+        '登录前请在 设置 → 通用 → Google 属性 中填写 OAuth 客户端 ID 与密钥。',
+      oauthNotConfigured:
+        '尚未配置 Google 登录。请打开 设置 → 通用 → Google 属性，填写 OAuth 客户端 ID 与密钥后再试。',
     },
     github: {
       signedInHint:
