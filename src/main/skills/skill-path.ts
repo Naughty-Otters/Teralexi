@@ -137,19 +137,25 @@ export function resolveSkillsRootDirectory(): string {
   return resolveUserSkillsDirectory()
 }
 
+export function normalizeSkillFileText(raw: string): string {
+  return raw.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+}
+
 export function extractYamlFrontmatterBlock(markdown: string): string | null {
-  const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/)
+  const match = normalizeSkillFileText(markdown).match(
+    /^---\n([\s\S]*?)\n---\n?/,
+  )
   if (!match?.[1]?.trim()) return null
   return match[1].trim()
 }
 
 export function stripYamlFrontmatter(markdown: string): string {
-  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '')
+  return normalizeSkillFileText(markdown).replace(/^---\n[\s\S]*?\n---\n?/, '')
 }
 
 export function parsePropertiesKeyValues(raw: string): Record<string, string> {
   const out: Record<string, string> = {}
-  for (const line of raw.split('\n')) {
+  for (const line of normalizeSkillFileText(raw).split('\n')) {
     const m = line.match(/^([\w-]+):\s*(.+)$/)
     if (!m) continue
     out[m[1]] = m[2].trim()
@@ -199,7 +205,7 @@ export function resolvePropertiesRaw(
 ): string {
   const propertiesFile = join(skillFolder, SKILL_FILES.PROPERTIES_MD)
   const propertiesFromFile = existsSync(propertiesFile)
-    ? readFileSync(propertiesFile, 'utf-8')
+    ? normalizeSkillFileText(readFileSync(propertiesFile, 'utf-8'))
     : ''
 
   const frontmatter = extractYamlFrontmatterBlock(skillRaw) ?? ''

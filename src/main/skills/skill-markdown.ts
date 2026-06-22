@@ -7,13 +7,14 @@ import type {
   SkillTool,
 } from './types'
 import type { SkillDefinition } from './skill-models'
+import { normalizeSkillFileText } from './skill-path'
 import { parseSkillVisibility } from './skill-visibility'
 import { SKILL_MARKDOWN_LLM, SKILL_MARKDOWN_SECTIONS } from './llm-constants'
 
 /** Parse simple `key: value` frontmatter (no nested YAML needed) */
 export function parseFrontmatter(raw: string): Partial<SkillProperties> {
   const result: Record<string, unknown> = {}
-  for (const line of raw.split('\n')) {
+  for (const line of normalizeSkillFileText(raw).split('\n')) {
     const m = line.match(/^(\w+):\s*(.+)$/)
     if (!m) continue
     const [, key, val] = m
