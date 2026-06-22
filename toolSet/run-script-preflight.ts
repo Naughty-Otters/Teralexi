@@ -1,6 +1,7 @@
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
+import { access, mkdir } from 'node:fs/promises'
 import type { NormalizedScriptType } from './run-script-types'
 
 const execFileAsync = promisify(execFile)
@@ -82,7 +83,7 @@ export async function runScriptPreflight(options: {
   const issues: PreflightIssue[] = []
 
   try {
-    await import('fs/promises').then((fs) => fs.access(options.scriptPath))
+    await access(options.scriptPath)
   } catch {
     issues.push({
       code: 'script_missing',
@@ -105,9 +106,7 @@ export async function runScriptPreflight(options: {
     } else {
       const parent = path.dirname(abs)
       try {
-        await import('fs/promises').then((fs) =>
-          fs.mkdir(parent, { recursive: true }),
-        )
+        await mkdir(parent, { recursive: true })
       } catch (err) {
         issues.push({
           code: 'result_path',

@@ -25,6 +25,5 @@ export async function ensureWorkflowSourceFiles(args: {
   description?: string
   version?: import('@main/services/conversation-store/types').StoredWorkflowVersion | null
 }): Promise<void> {
-  const { syncWorkflowSourceFiles } = await import('./workflow-store')
   syncWorkflowSourceFiles(args)
 }

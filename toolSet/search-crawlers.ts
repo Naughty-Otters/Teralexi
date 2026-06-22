@@ -6,6 +6,7 @@ import { CheerioCrawler, Configuration, Request } from 'crawlee'
 import type { CheerioAPI } from 'cheerio'
 import * as cheerio from 'cheerio'
 import type { Browser } from 'playwright-core'
+import { chromium } from 'playwright-core'
 import type {
   SearchCrawlMode,
   SearchCrawlRequest,
@@ -106,7 +107,6 @@ export async function launchSearchChromium(
     /* fall through to playwright-core */
   }
 
-  const { chromium } = await import('playwright-core')
   const launchOptions = {
     headless: config.headless,
     timeout: config.timeoutSecs * 1000,

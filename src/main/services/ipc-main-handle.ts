@@ -23,6 +23,8 @@ import {
   setSystemPropValue,
 } from '@config/system-prop'
 import { LLM_DEBUG_MODE_PROPERTY_KEY } from '@shared/agent/llm-debug'
+import { invalidateLlmDebugCache } from '@main/agent/llm/llm-debug-writer'
+import { toIpcSerializable } from '@shared/utils/ipc-serializable'
 import type { ProviderType } from '@shared/agent/llm-provider-registry'
 import { IIpcMainHandle } from '@ipcManager/index'
 import { webContentSend } from './web-content-send'
@@ -61,7 +63,16 @@ import { appCache } from '../cache/app-cache'
 import {
   compileWorkflow,
   confirmWorkflowVersion,
+  saveWorkflowDefinitionFromJson,
 } from '../workflows/workflow-compiler'
+import { runWorkflowCompilerAgent } from '../workflows/workflow-compiler-agent'
+import { runWorkflowTest } from '../workflows/workflow-test-runner'
+import { runWorkflowManual } from '../workflows/workflow-executor'
+import { resolveWorkflowDeploymentTarget } from '../workflows/deployment/agent-server'
+import {
+  deployWorkflowLocally,
+  getLocalWorkflowDeploymentTarget,
+} from '../workflows/deployment/local'
 import { listWorkflowPanelSkills } from '../workflows/workflow-skills'
 import {
   createWorkflow,
@@ -951,11 +962,7 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       args.propertyValue,
     )
     if (args.propertyKey === LLM_DEBUG_MODE_PROPERTY_KEY) {
-      void import('@main/agent/llm/llm-debug-writer').then(
-        ({ invalidateLlmDebugCache }) => {
-          invalidateLlmDebugCache(args.userId)
-        },
-      )
+      invalidateLlmDebugCache(args.userId)
     }
   }
 
@@ -1180,11 +1187,7 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     },
   ) => Promise<
     import('@main/workflows/workflow-compiler').WorkflowCompileResponse
-  > = async (_event, args) => {
-    const { compileWorkflow } =
-      await import('@main/workflows/workflow-compiler')
-    return compileWorkflow(args)
-  }
+  > = async (_event, args) => compileWorkflow(args)
 
   RunWorkflowCompilerAgent: (
     event: Electron.IpcMainInvokeEvent,
@@ -1205,9 +1208,6 @@ export class IpcMainHandleClass implements IIpcMainHandle {
   ) => Promise<
     import('@shared/workflows/workflow-studio').RunWorkflowCompilerAgentIpcResult
   > = async (event, args) => {
-    const { runWorkflowCompilerAgent } =
-      await import('@main/workflows/workflow-compiler-agent')
-    const { toIpcSerializable } = await import('@shared/utils/ipc-serializable')
     const result = await runWorkflowCompilerAgent({
       ...args,
       webContents: event.sender,
@@ -1237,11 +1237,7 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     },
   ) => Promise<
     import('@main/workflows/workflow-compiler').SaveWorkflowDefinitionResponse
-  > = async (_event, args) => {
-    const { saveWorkflowDefinitionFromJson } =
-      await import('@main/workflows/workflow-compiler')
-    return saveWorkflowDefinitionFromJson(args)
-  }
+  > = async (_event, args) => saveWorkflowDefinitionFromJson(args)
 
   RunWorkflowTest: (
     _event: Electron.IpcMainInvokeEvent,
@@ -1256,8 +1252,6 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     const store = getConversationStore()
     const version = store.getWorkflowVersion(args.versionId)
     if (!version) throw new Error('Workflow version not found')
-    const { runWorkflowTest } =
-      await import('@main/workflows/workflow-test-runner')
     const result = await runWorkflowTest({
       workflowId: args.workflowId,
       version,
@@ -1283,8 +1277,6 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     async (_event, args) => {
       const target = args.target ?? 'local'
       if (target === 'agent-server') {
-        const { resolveWorkflowDeploymentTarget } =
-          await import('@main/workflows/deployment/agent-server')
         const store = getConversationStore()
         const version = store.getWorkflowVersion(args.versionId)
         if (!version) throw new Error('Workflow version not found')
@@ -1295,8 +1287,6 @@ export class IpcMainHandleClass implements IIpcMainHandle {
           { enabled: args.enabled ?? true, workspacePath: args.workspacePath },
         )
       }
-      const { deployWorkflowLocally } =
-        await import('@main/workflows/deployment/local')
       return deployWorkflowLocally({
         workflowId: args.workflowId,
         versionId: args.versionId,
@@ -1311,8 +1301,6 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     _event: Electron.IpcMainInvokeEvent,
     args: { deploymentId: string },
   ) => Promise<{ ok: true }> = async (_event, args) => {
-    const { getLocalWorkflowDeploymentTarget } =
-      await import('@main/workflows/deployment/local')
     await getLocalWorkflowDeploymentTarget().undeploy(args.deploymentId)
     return { ok: true }
   }
@@ -1326,11 +1314,7 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     },
   ) => Promise<
     import('@main/workflows/workflow-executor').WorkflowExecuteResult
-  > = async (_event, args) => {
-    const { runWorkflowManual } =
-      await import('@main/workflows/workflow-executor')
-    return runWorkflowManual(args)
-  }
+  > = async (_event, args) => runWorkflowManual(args)
 
   DeleteWorkflow: (
     _event: Electron.IpcMainInvokeEvent,
@@ -2429,9 +2413,8 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     if (!absolutePath) {
       return { ok: false, error: 'Failed to resolve file path.' }
     }
-    const { shell: electronShell } = await import('electron')
     try {
-      await electronShell.openPath(absolutePath)
+      await shell.openPath(absolutePath)
       return { ok: true }
     } catch (err) {
       return { ok: false, error: String(err) }

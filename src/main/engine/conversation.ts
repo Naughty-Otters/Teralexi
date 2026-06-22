@@ -27,11 +27,15 @@ import { createLlmDebugRunId } from '@main/agent/llm/llm-debug-writer'
 import { formatLlmErrorForUi, llmErrorFields } from '@main/agent/llm/log-llm-error'
 import { ProviderContext } from '@main/agent/providers/context'
 import { clearPlanExecutionCompleted } from '@main/agent/coding/plan-mode-session-reminders'
+import { isPlanModeActive } from '@main/agent/coding/plan-mode-state'
+import { runUserHooks } from '@main/agent/hooks/user-hooks'
+import { getWorkspacePath } from '@main/agent/workspace/conversation-workspace'
 import { autoCompactStoredConversationIfNeeded } from '@main/agent/compaction'
 import { resolveResponseLanguageForAgent } from '@main/i18n/resolve-response-language'
 import { StageModelRegistry } from '@main/agent/providers/stage-model-registry'
 import { AgentRun } from '@main/agent/run/agent-run'
-import { mergeSubFlowOutputText } from '@main/agent/run/resolve-child-agent'
+import { mergeSubFlowOutputText } from '@main/agent/run/sub-flow-output-text'
+import { resolveDelegatableSubAgentTargets } from '@shared/agent/sub-agent-targets'
 
 const inFlightControllers = new Map<string, AbortController>()
 const log = createLogger('agent.engine')
@@ -288,10 +292,6 @@ async function executeAgentForConversation(
   } = args
 
   try {
-    const { runUserHooks } = await import('@main/agent/hooks/user-hooks')
-    const { getWorkspacePath } = await import(
-      '@main/agent/workspace/conversation-workspace'
-    )
     let workspacePath: string | null = null
     try {
       workspacePath = getWorkspacePath(conversationId)
@@ -576,7 +576,6 @@ async function executeSubAgentMentionDelegation(
     webContents,
   } = args
 
-  const { isPlanModeActive } = await import('@main/agent/coding/plan-mode-state')
   if (isPlanModeActive(conversationId)) {
     return {
       finalContent: '',
@@ -604,9 +603,6 @@ async function executeSubAgentMentionDelegation(
     }
   }
 
-  const { resolveDelegatableSubAgentTargets } = await import(
-    '@shared/agent/sub-agent-targets'
-  )
   const delegatable = resolveDelegatableSubAgentTargets(
     {
       id: caller.id,

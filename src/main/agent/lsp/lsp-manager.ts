@@ -5,6 +5,7 @@ import { createLogger } from '@main/logger'
 import { LspClient } from './lsp-client'
 import { matchLanguageServer, detectWorkspaceServers, LANGUAGE_SERVERS, type LanguageServerDef } from './language-servers'
 import { findWorkspaceSeedFile } from './workspace-seed'
+import { getEditorLspBridge } from './editor-lsp-bridge'
 import { buildDiagnosticReport, type DiagnosticReport } from './diagnostic-format'
 import type { LspDiagnostic } from './types'
 import {
@@ -520,7 +521,6 @@ class LspManager {
 
     if (conversationId?.trim()) {
       try {
-        const { getEditorLspBridge } = await import('./editor-lsp-bridge')
         for (const doc of getEditorLspBridge().listOpenDocumentsForWorkspace(root)) {
           add(doc.absPath)
         }

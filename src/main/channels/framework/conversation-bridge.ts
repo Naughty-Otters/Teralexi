@@ -9,6 +9,7 @@ import { ConfigContext } from '@main/agent/config/context'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
 import { randomShortUuid } from '@shared/utils/short-uuid'
 import { extractThreadTag } from '@main/agent/expr/thread-tagger'
+import { getWorkflowDispatcher } from '@main/workflows/workflow-dispatcher'
 
 const log = createLogger('channels.conversation-bridge')
 
@@ -164,9 +165,6 @@ class ChannelConversationBridge {
 
     void (async () => {
       try {
-        const { getWorkflowDispatcher } = await import(
-          '@main/workflows/workflow-dispatcher'
-        )
         const workflowResult =
           await getWorkflowDispatcher().tryDispatchChannelMessage({
             channelId: args.channelId,

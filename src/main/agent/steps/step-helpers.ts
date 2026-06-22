@@ -15,6 +15,8 @@ import {
 } from '../agent-memory'
 import { STEP_ERRORS, STEP_HELPERS_LABELS } from '../constants/pipeline'
 import { toolLoopFilesystemScopeFromStepKey } from '../run/flow-scoped-ids'
+import { resolveEngineAgent } from '../run/resolve-child-agent'
+import { runUserHooks } from '../hooks/user-hooks'
 import { getCurrentAgentRunScope } from '../run/run-scope'
 import { getWorkspacePath } from '../workspace/conversation-workspace'
 import {
@@ -279,7 +281,6 @@ function buildSubAgentDelegationFromRunCtx(
     subAgentIds: toolLoop?.subAgentIds,
     resolveSubAgentTargetId: userId
       ? async (agentId: string) => {
-          const { resolveEngineAgent } = await import('../run/resolve-child-agent')
           const agent = await resolveEngineAgent(userId, agentId)
           return agent.id
         }
@@ -302,7 +303,6 @@ export async function callSkillToolDirect(
       ? (input as Record<string, unknown>)
       : { input }
 
-  const { runUserHooks } = await import('../hooks/user-hooks')
   const hookResult = await runUserHooks({
     event: 'beforeToolCall',
     conversationId: runCtx?.opts.conversationId,
@@ -373,7 +373,6 @@ export async function callSkillToolDirect(
       )
     },
   ).then(async (result) => {
-    const { runUserHooks } = await import('../hooks/user-hooks')
     await runUserHooks({
       event: 'afterToolCall',
       conversationId: runCtx?.opts.conversationId,

@@ -3,6 +3,7 @@ import type { ClientUiMessage } from '../utils/client-ui-parse'
 import type { ReferenceContext } from '../resources/context'
 import type { ReferenceDoc, TodoItem } from '../types'
 import {
+  CollectFormDataStep,
   findFormReferenceDoc,
   referenceDocIsCollectFormSchemaDoc,
   resolveFormDocName,
@@ -106,7 +107,6 @@ export class FormContext {
       readiness: TodoFormReadiness
     },
   ): Promise<boolean> {
-    const { CollectFormDataStep } = await import('./collect-data-step')
     return new CollectFormDataStep(stepCtx).maybePauseForFormBeforeTodoExecution(
       params,
     )

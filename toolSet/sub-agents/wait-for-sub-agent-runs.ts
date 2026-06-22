@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { SkillTool } from '@main/skills/actions'
 import { assertRootSubAgentDelegation } from './delegation-context'
 import { WAIT_FOR_SUB_AGENT_RUNS_TOOL_NAME, SUB_AGENT_TAG } from './constants'
+import { mergeSubFlowOutputText } from '@main/agent/run/sub-flow-output-text'
 
 export const waitForSubAgentRunsTool: SkillTool = {
   name: WAIT_FOR_SUB_AGENT_RUNS_TOOL_NAME,
@@ -29,9 +30,6 @@ export const waitForSubAgentRunsTool: SkillTool = {
 
     const runIds = parsed.data.runIds.map((id) => id.trim()).filter(Boolean)
     const results = await parentRun.waitForChildRuns(runIds)
-    const { mergeSubFlowOutputText } = await import(
-      '@main/agent/run/resolve-child-agent'
-    )
 
     return {
       results: results.map((result, i) => ({

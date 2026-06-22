@@ -3,7 +3,7 @@
   "retiredSessionsCount": 0,
   "sessions": [
     {
-      "id": "session_HHV5tL2SgD",
+      "id": "session_YzCey90pwc",
       "cookieJar": {
         "version": "tough-cookie@6.0.1",
         "storeType": "MemoryCookieStore",
@@ -13,23 +13,38 @@
         "prefixSecurity": "silent",
         "cookies": [
           {
-            "key": "PHPSESSID",
-            "value": "f91tpsfn0qo12v2e4io84isvjq",
-            "domain": "top10ai.com",
+            "key": "NID",
+            "value": "532=P6Z64vuX3EqoIOiCyrgjYPiKkM2Ic3qL7nurOuoZFHTp4FgbTMy2Uh26A4yRSmGTCetdt6hys0yb3nfMdkFahMUySnhaC_U86K9IF3u0j66A3az2Y_MytkJckD5YJfUeSjs8bqBQcEXvs_KgfvnVwH2vz2SFR4kRw09Hr1nz-hLsG7MQXB5MYY-kQ7IlKDaf-3NSsoIxLQ4",
+            "expires": "2026-12-22T03:01:07.000Z",
+            "domain": "google.com",
             "path": "/",
             "secure": true,
             "httpOnly": true,
-            "hostOnly": true,
-            "creation": "2026-06-21T17:41:27.595Z",
-            "lastAccessed": "2026-06-21T17:41:27.595Z"
+            "hostOnly": false,
+            "creation": "2026-06-22T03:01:07.321Z",
+            "lastAccessed": "2026-06-22T03:01:07.321Z",
+            "sameSite": "none"
+          },
+          {
+            "key": "GSP",
+            "value": "LM=1782097267:S=bkmQwLch_QJvBD9u",
+            "expires": "2028-06-21T03:01:07.000Z",
+            "domain": "scholar.google.com",
+            "path": "/",
+            "secure": true,
+            "httpOnly": true,
+            "hostOnly": false,
+            "creation": "2026-06-22T03:01:07.323Z",
+            "lastAccessed": "2026-06-22T03:01:07.323Z",
+            "sameSite": "none"
           }
         ]
       },
       "userData": {},
       "maxErrorScore": 3,
       "errorScoreDecrement": 0.5,
-      "expiresAt": "2026-06-21T18:31:26.324Z",
-      "createdAt": "2026-06-21T17:41:26.324Z",
+      "expiresAt": "2026-06-22T03:51:07.151Z",
+      "createdAt": "2026-06-22T03:01:07.151Z",
       "usageCount": 1,
       "maxUsageCount": 50,
       "errorScore": 0

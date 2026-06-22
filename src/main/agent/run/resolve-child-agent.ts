@@ -27,6 +27,9 @@ import {
 import { createSubAgentLlmDebugRunId } from '../llm/llm-debug-writer'
 import { resolveResponseLanguageForAgent } from '@main/i18n/resolve-response-language'
 import { StageModelRegistry } from '../providers/stage-model-registry'
+import { mergeSubFlowOutputText } from './sub-flow-output-text'
+
+export { mergeSubFlowOutputText } from './sub-flow-output-text'
 
 export type { SubAgentContextEnvelope }
 
@@ -231,25 +234,6 @@ export async function buildChildAgentResponseOpts(
   const stageModels = StageModelRegistry.fromOpts(opts)
   const model = stageModels.getModel('default')
   return { opts, model, agent }
-}
-
-export function mergeSubFlowOutputText(
-  stepOutputs: StepOutputs,
-  merge: 'report' | 'summary' | 'all' = 'report',
-): string {
-  if (merge === 'summary' && stepOutputs.summary?.summary?.trim()) {
-    return stepOutputs.summary.summary.trim()
-  }
-  if (merge === 'report' && stepOutputs.report?.trim()) {
-    return stepOutputs.report.trim()
-  }
-  const parts: string[] = []
-  if (stepOutputs.report?.trim()) parts.push(stepOutputs.report.trim())
-  if (stepOutputs.summary?.summary?.trim()) {
-    parts.push(stepOutputs.summary.summary.trim())
-  }
-  if (stepOutputs.toolLoop?.trim()) parts.push(stepOutputs.toolLoop.trim())
-  return parts.join('\n\n') || 'Sub-agent completed with no report output.'
 }
 
 export function formatSubFlowStepTitle(agent: EngineAgent): string {
