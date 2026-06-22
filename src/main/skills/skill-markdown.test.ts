@@ -21,6 +21,18 @@ describe('parseFrontmatter', () => {
       model: 'gpt-4',
     })
   })
+
+  it('parses CRLF property lines from Windows-checked-out files', () => {
+    expect(
+      parseFrontmatter(
+        'name: Research\r\nmodel: gemma4\r\nprovider: ollama\r\n',
+      ),
+    ).toEqual({
+      name: 'Research',
+      model: 'gemma4',
+      provider: 'ollama',
+    })
+  })
 })
 
 describe('extractSection', () => {

@@ -25,6 +25,7 @@ import {
   isReservedSkillDirName,
   resolveBundledSkillsDirectory,
   mergePropertiesRaw,
+  parsePropertiesKeyValues,
   resolvePropertiesRaw,
   resolveSkillsSourceRoots,
   resolveSkillFolder,
@@ -71,6 +72,24 @@ describe('skill-path', () => {
     const md = '---\nname: X\n---\nBody'
     expect(extractYamlFrontmatterBlock(md)).toContain('name: X')
     expect(stripYamlFrontmatter(md)).toBe('Body')
+  })
+
+  it('parsePropertiesKeyValues accepts CRLF property files', () => {
+    const raw = 'name: Research\r\nmodel: gemma4\r\nprovider: ollama\r\n'
+    expect(parsePropertiesKeyValues(raw)).toEqual({
+      name: 'Research',
+      model: 'gemma4',
+      provider: 'ollama',
+    })
+  })
+
+  it('normalizeSkillFileText strips BOM and CR-only line endings', () => {
+    const raw = '\uFEFFname: Demo\rmodel: x\r\nprovider: ollama\n'
+    expect(parsePropertiesKeyValues(raw)).toEqual({
+      name: 'Demo',
+      model: 'x',
+      provider: 'ollama',
+    })
   })
 
   it('mergePropertiesRaw lets properties.md override skill frontmatter', () => {

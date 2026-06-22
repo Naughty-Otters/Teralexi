@@ -87,7 +87,7 @@ export async function loadSkillsFromDirectory(
     const skillFile = join(skillFolder, SKILL_FILES.SKILL_MD)
 
     try {
-      let skillRaw = readFileSync(skillFile, 'utf-8')
+      let skillRaw = normalizeSkillFileText(readFileSync(skillFile, 'utf-8'))
       const propertiesRaw = resolvePropertiesRaw(entry, skillFolder, skillRaw)
       if (extractYamlFrontmatterBlock(skillRaw)) {
         skillRaw = stripYamlFrontmatter(skillRaw)
