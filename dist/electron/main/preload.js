@@ -135,7 +135,7 @@ class IpcChannelMainClass {
      */
     this.SaveMessage = null;
     /**
-     * LLM token usage for the monitor chart, one series per provider/model.
+     * LLM token usage dashboard: overview stats and daily model breakdown.
      */
     this.ListTokenUsageChart = null;
     /**

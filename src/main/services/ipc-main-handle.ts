@@ -905,17 +905,15 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       userId?: string
       since?: string
       until?: string
-      bucketMinutes?: number
     },
   ) => ReturnType<
-    ReturnType<typeof getConversationStore>['listTokenUsageChartSeries']
+    ReturnType<typeof getConversationStore>['getTokenUsageDashboard']
   > = (_event, args) => {
     const payload = args ?? {}
-    return getConversationStore().listTokenUsageChartSeries({
+    return getConversationStore().getTokenUsageDashboard({
       userId: payload.userId ?? 'default',
       since: payload.since,
       until: payload.until,
-      bucketMinutes: payload.bucketMinutes,
     })
   }
 

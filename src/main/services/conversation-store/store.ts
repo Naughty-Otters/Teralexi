@@ -32,6 +32,7 @@ import type {
   StoredUserProperty,
   StoredSkillCompilation,
   TokenUsageChartSeries,
+  TokenUsageDashboard,
   ToolResultSearchHit,
   StoredWorkflow,
   StoredWorkflowVersion,
@@ -590,6 +591,14 @@ export class ConversationStore {
     bucketMinutes?: number
   }): TokenUsageChartSeries[] {
     return this.tokenUsage.listChartSeries(args)
+  }
+
+  getTokenUsageDashboard(args: {
+    userId: string
+    since?: string
+    until?: string
+  }): TokenUsageDashboard {
+    return this.tokenUsage.getDashboard(args)
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
