@@ -54,6 +54,7 @@ import { shortFingerprint } from '../skills/skill-compiler-log'
 
 const skillCompilationIpcLog = createLogger('skills.compilation.ipc')
 import { generateStepOutputPreview } from '../agent/sandbox/step-output-preview'
+import { exportMarkdownBodyToPdf } from '../agent/sandbox/markdown-to-pdf'
 import { callSkillToolDirect } from '../agent/steps/step-helpers'
 import { previewFileChange } from '../../../toolSet/file-system/file-change-preview'
 import { normalizeToolResult } from '@shared/tool-result/normalize-tool-result'
@@ -1897,6 +1898,39 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     if (result.canceled || !result.filePath) return { savedPath: null }
     await fsPromises.copyFile(resolved, result.filePath)
     return { savedPath: result.filePath }
+  }
+
+  ExportMarkdownAsPdf: (
+    event: Electron.IpcMainInvokeEvent,
+    args: {
+      markdown: string
+      defaultFileName: string
+      kind?: 'default' | 'research-report'
+    },
+  ) => Promise<{ savedPath: string | null; error?: string }> = async (
+    event,
+    { markdown, defaultFileName, kind = 'default' },
+  ) => {
+    const body = markdown.trim()
+    if (!body) {
+      return { savedPath: null, error: 'No content to export' }
+    }
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const result = await dialog.showSaveDialog(win ?? (undefined as never), {
+      defaultPath: defaultFileName,
+      buttonLabel: 'Save',
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    })
+    if (result.canceled || !result.filePath) {
+      return { savedPath: null }
+    }
+    try {
+      await exportMarkdownBodyToPdf(body, result.filePath, kind)
+      return { savedPath: result.filePath }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      return { savedPath: null, error: message }
+    }
   }
 
   SyncSandboxOutputView: (

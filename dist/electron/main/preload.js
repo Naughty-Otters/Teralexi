@@ -424,6 +424,11 @@ class IpcChannelMainClass {
      */
     this.SaveFileAs = null;
     /**
+     * Render markdown to PDF and save via a native Save-As dialog.
+     * Returns the saved path, or null when the user cancels.
+     */
+    this.ExportMarkdownAsPdf = null;
+    /**
      * Position the sandbox results WebContentsView over the given screen rect (or hide).
      */
     this.SyncSandboxOutputView = null;

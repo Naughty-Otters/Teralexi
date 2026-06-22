@@ -38,10 +38,11 @@
     />
     <template v-else-if="!UI_CHAT_CONVERSATION_MODE_ONLY">
       <template v-for="bubble in briefModeBubbles" :key="bubble.key">
-        <div
+        <ChatBriefMarkdownBubble
           v-if="bubble.kind === 'markdown'"
-          class="msg-html"
-          v-html="props.renderTextPartHtml(props.message, bubble.part)"
+          :message="props.message"
+          :part="bubble.part"
+          :html="props.renderTextPartHtml(props.message, bubble.part)"
         />
         <details
           v-else-if="bubble.kind === 'reasoning'"
@@ -148,6 +149,7 @@
 import type { UIMessage } from '@openfde-ai'
 import { useI18n } from '@renderer/composables/useI18n'
 import ChatAssistantConversationView from './ChatAssistantConversationView.vue'
+import ChatBriefMarkdownBubble from './ChatBriefMarkdownBubble.vue'
 import {
   type ChatBoxDisplayMode,
   UI_CHAT_CONVERSATION_MODE_ONLY,

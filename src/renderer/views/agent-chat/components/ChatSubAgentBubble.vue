@@ -38,7 +38,15 @@
         class="sub-agent-bubble__section"
         :class="`sub-agent-bubble__section--${section.status}`"
       >
-        <header class="sub-agent-bubble__section-title">{{ section.title }}</header>
+        <header class="sub-agent-bubble__section-header">
+          <span class="sub-agent-bubble__section-title">{{ section.title }}</span>
+          <ChatBubblePdfExportButton
+            :markdown="section.bodyMarkdown"
+            :section-title="section.title"
+            :section-id="section.id"
+            :message-id="messageId"
+          />
+        </header>
         <div
           v-if="section.bodyHtml"
           class="sub-agent-bubble__section-body msg-html"
@@ -57,6 +65,7 @@
         :step-progress-parts="stepProgressParts"
         :markdown="markdown"
         :is-streaming="isStreaming"
+        :message-id="messageId"
       />
     </div>
   </article>
@@ -78,12 +87,14 @@ import {
   chatUiBubbleTextKeepChars,
   limitBubbleTextForDisplay,
 } from '../chatUiSettings'
+import ChatBubblePdfExportButton from './ChatBubblePdfExportButton.vue'
 
 const props = defineProps<{
   node: SubAgentRunNode
   stepProgressParts: readonly StepProgressPartInput[]
   markdown: MarkdownIt
   isStreaming?: boolean
+  messageId: string
 }>()
 
 const expanded = ref(false)
@@ -233,11 +244,22 @@ export default {
   padding: 6px 8px;
 }
 
+.sub-agent-bubble__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
 .sub-agent-bubble__section-title {
   font-size: 11px;
   font-weight: 600;
-  margin-bottom: 4px;
   color: var(--ui-text-muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sub-agent-bubble__section-body {

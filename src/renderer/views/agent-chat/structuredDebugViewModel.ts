@@ -48,6 +48,8 @@ export type StructuredDebugSection = {
   id: string
   title: string
   bodyHtml: string
+  /** Markdown source used to render {@link bodyHtml} (for PDF export). */
+  bodyMarkdown?: string
   status: StructuredDebugSectionStatus
   sectionKind?: StructuredDebugSectionKind
   attachments?: StepAttachment[]
@@ -361,13 +363,29 @@ function buildLiveStructuredContent(
   }
 }
 
+export function markdownBodyFromText(text: string): string {
+  return prepareMarkdownSource(text) ?? ''
+}
+
+function sectionBodyFields(
+  markdown: MarkdownIt,
+  text: string,
+): Pick<StructuredDebugSection, 'bodyHtml' | 'bodyMarkdown'> {
+  const bodyMarkdown = markdownBodyFromText(text)
+  if (!bodyMarkdown) {
+    return { bodyHtml: '', bodyMarkdown: '' }
+  }
+  return {
+    bodyMarkdown,
+    bodyHtml: applyStatusBadges(markdown.render(bodyMarkdown)),
+  }
+}
+
 function bodyHtmlFromMarkdown(
   markdown: MarkdownIt,
   text: string,
 ): string {
-  const prepared = prepareMarkdownSource(text)
-  if (!prepared) return ''
-  return applyStatusBadges(markdown.render(prepared))
+  return sectionBodyFields(markdown, text).bodyHtml
 }
 
 function buildSectionsFromPipelineConversation(
@@ -389,7 +407,7 @@ function buildSectionsFromPipelineConversation(
     sections.push({
       id: sectionId,
       title: turn.title?.trim() || 'Step',
-      bodyHtml: bodyHtmlFromMarkdown(markdown, turn.content ?? ''),
+      ...sectionBodyFields(markdown, turn.content ?? ''),
       status: 'done',
       ...(attachments.length ? { attachments } : {}),
     })
@@ -422,7 +440,7 @@ function buildResearchReportSection(
   return {
     id: 'researchReport',
     title: 'Research Report',
-    bodyHtml: bodyHtmlFromMarkdown(markdown, body),
+    ...sectionBodyFields(markdown, body),
     status: 'done',
     attachments: normalizeSectionAttachments(
       undefined,
@@ -537,7 +555,7 @@ function buildAgentErrorSections(
     sections.push({
       id: 'agentError',
       title: 'Agent error',
-      bodyHtml: bodyHtmlFromMarkdown(markdown, trimmed),
+      ...sectionBodyFields(markdown, trimmed),
       status: 'done',
     })
   }
@@ -597,7 +615,7 @@ export function buildStructuredDebugViewFromStepProgress(
         : isResearchReport
           ? 'Research Report'
           : title,
-      bodyHtml: bodyHtmlFromMarkdown(markdown, content),
+      ...sectionBodyFields(markdown, content),
       status,
       ...(progressKey ? { progressPartKey: progressKey } : {}),
       ...(attachments.length ? { attachments } : {}),
@@ -625,7 +643,7 @@ function buildSectionsFromStructured(
       sections.push({
         id: 'finalResult',
         title: 'Final Result',
-        bodyHtml: bodyHtmlFromMarkdown(markdown, finalResult),
+        ...sectionBodyFields(markdown, finalResult),
         status: 'done',
       })
     }
@@ -633,7 +651,7 @@ function buildSectionsFromStructured(
       sections.push({
         id: 'report',
         title: 'Report',
-        bodyHtml: bodyHtmlFromMarkdown(markdown, reportFromOuter),
+        ...sectionBodyFields(markdown, reportFromOuter),
         status: 'done',
       })
     }
@@ -725,7 +743,7 @@ function buildSectionsFromStructured(
     return {
       id: step.type,
       title: renderStepLabel(step),
-      bodyHtml: bodyHtmlFromMarkdown(markdown, stepContent),
+      ...sectionBodyFields(markdown, stepContent),
       status: isRunning ? 'running' : 'done',
     }
   })
@@ -734,7 +752,7 @@ function buildSectionsFromStructured(
     sections.push({
       id: 'finalResult',
       title: 'Final Result',
-      bodyHtml: bodyHtmlFromMarkdown(markdown, finalResult),
+      ...sectionBodyFields(markdown, finalResult),
       status: 'done',
     })
   }
@@ -743,7 +761,7 @@ function buildSectionsFromStructured(
     sections.push({
       id: 'report',
       title: 'Report',
-      bodyHtml: bodyHtmlFromMarkdown(markdown, reportCombined),
+      ...sectionBodyFields(markdown, reportCombined),
       status: 'done',
     })
   }
