@@ -7,11 +7,14 @@ import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import png2icons from 'png2icons'
+import { createLightBackgroundLogo, createTrayTemplateIcon } from './logo-variants.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const assets = join(root, 'src/renderer/assets/icons')
 const out = join(root, 'build/icons')
 const logoPng = join(assets, 'openfde-logo.png')
+const brightLogoPng = join(assets, 'open-fde-logo-bright.png')
+const trayLogoPng = join(assets, 'openfde-tray-icon.png')
 const publicDir = join(root, 'src/renderer/public')
 
 function hasPrebuiltIcons() {
@@ -28,8 +31,8 @@ function hasPrebuiltIcons() {
   return required.every((p) => existsSync(p))
 }
 
-function copyLogo(dest) {
-  writeFileSync(dest, readFileSync(logoPng))
+function copyLogo(dest, source = logoPng) {
+  writeFileSync(dest, readFileSync(source))
 }
 
 function writeIcoFromPng(pngPath, icoPath) {
@@ -49,15 +52,22 @@ function writeIcnsFromPng(pngPath, icnsPath) {
 mkdirSync(out, { recursive: true })
 mkdirSync(publicDir, { recursive: true })
 
+async function generateDerivedLogos() {
+  await createLightBackgroundLogo(logoPng, brightLogoPng)
+  await createTrayTemplateIcon(logoPng, trayLogoPng, { canvasSize: 128, dilateRadius: 4 })
+}
+
 try {
   if (!existsSync(logoPng)) {
     throw new Error(`Logo source not found: ${logoPng}`)
   }
 
+  await generateDerivedLogos()
+
   copyLogo(join(out, '256x256.png'))
   copyLogo(join(out, 'icon.png'))
-  copyLogo(join(out, 'tray-icon.png'))
-  copyLogo(join(out, 'tray-icon@2x.png'))
+  copyLogo(trayLogoPng, join(out, 'tray-icon.png'))
+  copyLogo(trayLogoPng, join(out, 'tray-icon@2x.png'))
 
   writeIcoFromPng(join(out, '256x256.png'), join(out, 'icon.ico'))
   writeIcnsFromPng(join(out, 'icon.png'), join(out, 'icon.icns'))

@@ -11,8 +11,9 @@ vi.mock('electron', () => ({
   nativeImage: {
     createFromPath: vi.fn(() => ({
       isEmpty: () => false,
+      setTemplateImage: vi.fn(),
       resize: vi.fn(function resize() {
-        return { isEmpty: () => false }
+        return { isEmpty: () => false, setTemplateImage: vi.fn() }
       }),
     })),
   },
@@ -22,6 +23,8 @@ vi.mock('fs', () => ({
   existsSync: vi.fn((path: string) =>
     String(path).includes('favicon.png') ||
     String(path).includes('openfde-logo.png') ||
+    String(path).includes('openfde-tray-icon.png') ||
+    String(path).includes('tray-icon.png') ||
     String(path).includes('icon.icns'),
   ),
 }))
