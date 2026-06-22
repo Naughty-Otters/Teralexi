@@ -9,6 +9,7 @@ import type { WorkflowDefinition, WorkflowTrigger } from '@shared/workflows/sche
 import { parseWorkflowDefinition } from '@shared/workflows/schema'
 import { getWorkflowExecutor } from './workflow-executor'
 import { loadWorkflowDefinitionFromVersion } from './workflow-store'
+import { getSchedulerManager } from '@main/services/scheduler-manager'
 
 const log = createLogger('workflows.dispatcher')
 
@@ -188,7 +189,6 @@ export async function registerWorkflowTriggersForDeployment(args: {
       prompt: '',
       workflowId: args.workflowId,
     })
-    const { getSchedulerManager } = await import('@main/services/scheduler-manager')
     getSchedulerManager().upsertSchedule(schedulerId, 'default')
   }
 }
@@ -198,7 +198,6 @@ export async function undeployWorkflowTriggers(
   workflowId: string,
 ): Promise<void> {
   getConversationStore().replaceWorkflowTriggers(workflowId, deploymentId, [])
-  const { getSchedulerManager } = await import('@main/services/scheduler-manager')
   getSchedulerManager().removeSchedule(`wf-sched-${deploymentId}`)
 }
 

@@ -7,6 +7,7 @@ import {
   resolveSubAgentTargetIdFromDelegation,
 } from './delegation-context'
 import { INVOKE_AGENT_TOOL_NAME, SUB_AGENT_TAG } from './constants'
+import { mergeSubFlowOutputText } from '@main/agent/run/sub-flow-output-text'
 
 export const invokeAgent: SkillTool = {
   name: INVOKE_AGENT_TOOL_NAME,
@@ -80,9 +81,6 @@ export const invokeAgent: SkillTool = {
     if (result.hitlPaused) {
       throw new Error('Sub-agent paused for human approval')
     }
-    const { mergeSubFlowOutputText } = await import(
-      '@main/agent/run/resolve-child-agent'
-    )
     return mergeSubFlowOutputText(result.stepOutputs, 'report')
   },
 }

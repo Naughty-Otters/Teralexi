@@ -17,6 +17,7 @@ import { randomShortUuid } from '@shared/utils/short-uuid'
 import { extractThreadTag } from '@main/agent/expr/thread-tagger'
 import { ConfigContext } from '@main/agent/config/context'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
+import { getWorkflowDispatcher } from '@main/workflows/workflow-dispatcher'
 
 const log = createLogger('services.scheduler-manager')
 
@@ -212,9 +213,6 @@ class SchedulerManager {
       if (!workflowId) {
         throw new Error('Workflow id is required for run-workflow scheduler action')
       }
-      const { getWorkflowDispatcher } = await import(
-        '@main/workflows/workflow-dispatcher'
-      )
       await getWorkflowDispatcher().dispatchManual(workflowId)
     }
 

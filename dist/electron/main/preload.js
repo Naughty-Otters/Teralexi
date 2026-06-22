@@ -1,1 +1,610 @@
-"use strict";var i=require("electron"),p=require("os");(function(l,e){for(var t=c,n=l();;)try{var s=parseInt(t(514))/1+parseInt(t(487))/2+-parseInt(t(512))/3*(parseInt(t(498))/4)+parseInt(t(521))/5+parseInt(t(545))/6*(-parseInt(t(623))/7)+-parseInt(t(480))/8+-parseInt(t(484))/9;if(s===e)break;n.push(n.shift())}catch{n.push(n.shift())}})(u,970853);function u(){var l=["ListWorkspaceFiles","RunWorkspaceGitAdd","1799YFZSCk","CallSkillTool","GetWorkspaceGitStatus","ConfirmWorkflowVersion","UpsertAgentConfiguration","RunWorkflowCompilerAgent","GetSystemConfigs","UpsertScheduler","SetWhatsAppBotName","GetConversation","RefreshWhatsAppQrCode","6202024YPjwZd","SetMcpServerEnabled","GetTelegramState","WriteWorkspaceFile","6963534fhAwCR","DeleteMcpServer","CheckUpdate","2908204vxQZkk","PreviewPlanApproval","SendDiscordChatMessage","SetConversationWorkspace","DeleteUserProperty","LintWorkspaceFile","AgentStreamFinished","ConfirmUpdate","EditorLspRequest","TransitionPlanMode","GetMcpServerTools","142744NZTLbl","RunWorkflowManual","HandleWeChatWebhook","GetGoogleAccount","GetSkillCompilation","CompactConversation","CreateWorkflowDraft","updateMsg","GetWeChatState","CancelWorkspaceTerminalCommand","PickWorkspaceEditorFile","BrowserTabMouseup","AddSessionToolApproval","SaveFileAs","156DhsFMZ","GetConversationMessagesPage","1772761jUHgXS","SaveWorkflowDefinitionJson","SetSlackTokens","GetDiscordState","EditorLspWorkspaceSymbols","SetDiscordBotName","UpdateConversationAgent","9107335nmqaUS","GetClawHubSkill","SendDataTest","SendTelegramChatMessage","DownloadDone","DownloadUpdate","EditorLspSyncDocument","CompileSkill","GetPlanModeState","ListBackgroundTasks","CancelBackgroundTask","StopSlackBot","SetWeChatCredentials","OpenMessagebox","StartDownload","SearchMcpRegistry","UpdateAllClawHubSkills","GetStepOutputLinkPreview","EditorLspStartSession","InstallSkillFromGithub","EditorLspNotification","SetWhatsAppTargetPhone","LogoutWhatsAppSession","GetWorkspaceGitLog","15708TlgWwg","GetWhatsAppState","ListTokenUsageChart","ConversationStoreChanged","GetSupportConfig","StopDiscordBot","UndeployWorkflow","UpdateProcessStatus","SyncSandboxOutputView","ChannelIncomingToAgent","AgentStreamChunk","DeleteScheduler","BrowserViewTabPositionXUpdate","RunAgentForConversation","DeleteConversation","CompileWorkflow","SetTelegramBotToken","RunSubAgentMention","GitHubSignOut","SetSystemConfig","SaveSkillCompilation","SetDiscordBotToken","HotUpdate","ReadSkillAttachment","WorkspaceTerminalExit","HotUpdateStatus","AppClose","BrowserViewTabDataUpdate","WorkspaceTerminalData","ReadWorkspaceFile","RecompileSkill","PlanModeStateChanged","ListConversations","AgentSandboxOutput","ListMcpServers","WarmAgentCache","ListWorkflowPanelSkills","StopWorkspaceTerminalSession","GetConversationSandboxRuns","GetWorkspaceGitDiff","GetAppVersion","GetCodingMode","PreviewClawHubSkillFile","SaveMessage","StopWeChatBot","AgentUIMessageChunk","StopTelegramBot","GetSkillsDir","RemoveSandboxDirectories","RunWorkspaceGitPush","SetCodingMode","ClearUserProperties","GetWorkflowSnapshot","DeleteWorkflow","SaveDataToFile","GetWeChatChatMessages","SearchWorkspaceFiles","GetDiscordChatMessages","SubmitSupportReport","InstallClawHubSkill","GetWhatsAppChatMessages","OpenWin","RunWorkspaceGitCreatePR","StopAgentForConversation","GoogleSignOut","GetUserProperty","SearchClawHubSkills","RunWorkspaceGitCommit","OpenFileInDefaultApp","GoogleSignIn","GetTelegramChatMessages","SetWeChatBotName","WinReady","UpdateMessage","ListSkillAttachments","LoadSkills"];return u=function(){return l},u()}function c(l,e){l=l-473;var t=u(),n=t[l];return n}class d{constructor(){var e=c;this.GetSystemConfig=null,this[e(475)]=null,this[e(564)]=null,this.IsUseSysTitle=null,this[e(571)]=null,this[e(486)]=null,this[e(494)]=null,this[e(526)]=null,this[e(585)]=null,this[e(549)]=null,this.ReportClientError=null,this[e(603)]=null,this[e(534)]=null,this[e(535)]=null,this.OpenErrorbox=null,this.StartServer=null,this.StopServer=null,this[e(567)]=null,this[e(620)]=null,this[e(581)]=null,this.ListAgentConfigurations=null,this[e(473)]=null,this.DeleteAgentConfiguration=null,this.ListToolSetTools=null,this[e(624)]=null,this[e(592)]=null,this[e(619)]=null,this[e(568)]=null,this[e(502)]=null,this[e(528)]=null,this.ListSkillCompilations=null,this.CompileAllSkills=null,this[e(575)]=null,this[e(565)]=null,this[e(538)]=null,this.PreviewFileChange=null,this[e(488)]=null,this[e(577)]=null,this.CreateConversation=null,this.UpdateConversationTitle=null,this[e(520)]=null,this.GetConversationMeta=null,this[e(559)]=null,this.ClearConversationHistory=null,this[e(583)]=null,this[e(478)]=null,this[e(513)]=null,this[e(588)]=null,this[e(547)]=null,this[e(618)]=null,this.GetUserProperties=null,this.ListUserProperties=null,this[e(610)]=null,this.SetUserProperty=null,this[e(491)]=null,this[e(596)]=null,this[e(579)]=null,this.CreateMcpServer=null,this[e(481)]=null,this[e(485)]=null,this[e(497)]=null,this.CallMcpServerTool=null,this[e(536)]=null,this.GetMcpRegistryServer=null,this[e(599)]=null,this.ListSchedulers=null,this[e(476)]=null,this[e(556)]=null,this.ListWorkflows=null,this[e(597)]=null,this[e(560)]=null,this[e(474)]=null,this[e(626)]=null,this[e(515)]=null,this.RunWorkflowTest=null,this.DeployWorkflow=null,this[e(551)]=null,this[e(499)]=null,this[e(598)]=null,this[e(504)]=null,this[e(617)]=null,this[e(606)]=null,this[e(614)]=null,this[e(609)]=null,this[e(501)]=null,this.GitHubSignIn=null,this[e(563)]=null,this.GetGitHubAccount=null,this[e(546)]=null,this[e(477)]=null,this[e(542)]=null,this[e(479)]=null,this[e(543)]=null,this[e(605)]=null,this.SendWhatsAppChatMessage=null,this.SendWhatsAppMessageToJid=null,this[e(482)]=null,this.SetTelegramBotName=null,this[e(561)]=null,this[e(591)]=null,this[e(615)]=null,this[e(524)]=null,this[e(517)]=null,this[e(519)]=null,this[e(566)]=null,this[e(550)]=null,this[e(602)]=null,this[e(489)]=null,this[e(506)]=null,this[e(616)]=null,this[e(533)]=null,this[e(589)]=null,this[e(600)]=null,this.SendWeChatChatMessage=null,this[e(500)]=null,this.GetSlackState=null,this.SetSlackBotName=null,this[e(516)]=null,this[e(532)]=null,this.GetSlackChatMessages=null,this.SendSlackChatMessage=null,this.SendChannelMessage=null,this[e(558)]=null,this[e(562)]=null,this[e(608)]=null,this[e(580)]=null,this[e(613)]=null,this[e(511)]=null,this[e(553)]=null,this[e(593)]=null,this.SelectWorkspaceFolder=null,this.GetConversationWorkspace=null,this[e(490)]=null,this.ClearConversationWorkspace=null,this[e(625)]=null,this[e(584)]=null,this[e(544)]=null,this[e(622)]=null,this[e(612)]=null,this[e(594)]=null,this[e(607)]=null,this[e(621)]=null,this[e(601)]=null,this.OpenWorkspaceFile=null,this[e(574)]=null,this[e(483)]=null,this.RunWorkspaceTerminalCommand=null,this[e(507)]=null,this.StartWorkspaceTerminalSession=null,this.WriteWorkspaceTerminalInput=null,this.ResizeWorkspaceTerminalSession=null,this[e(582)]=null,this[e(510)]=null,this[e(503)]=null,this[e(586)]=null,this[e(595)]=null,this[e(529)]=null,this[e(496)]=null,this[e(530)]=null,this[e(531)]=null,this[e(540)]=null,this[e(611)]=null,this[e(522)]=null,this[e(587)]=null,this[e(604)]=null,this.ListClawHubInstalledSkills=null,this.UpdateClawHubSkill=null,this[e(537)]=null,this.UninstallClawHubSkill=null,this[e(539)]=null,this.EditorLspStopSession=null,this[e(527)]=null,this.EditorLspCloseDocument=null,this[e(495)]=null,this.FormatWorkspaceFile=null,this[e(492)]=null,this[e(508)]=null,this[e(518)]=null}}class S{constructor(){var e=c;this.DownloadProgress=null,this.DownloadError=null,this.DownloadPaused=null,this[e(525)]=null,this[e(505)]=null,this[e(552)]=null,this[e(523)]=null,this[e(572)]=null,this[e(557)]=null,this[e(509)]=null,this[e(570)]=null,this[e(548)]=null,this[e(576)]=null,this[e(554)]=null,this.WhatsAppIncomingToAgent=null,this[e(555)]=null,this[e(590)]=null,this[e(493)]=null,this[e(578)]=null,this[e(573)]=null,this.WorkspaceTerminalStarted=null,this[e(569)]=null,this[e(541)]=null}}(function(l,e){for(var t=C,n=l();;)try{var s=-parseInt(t(305))/1*(parseInt(t(315))/2)+-parseInt(t(311))/3*(parseInt(t(313))/4)+-parseInt(t(304))/5*(-parseInt(t(306))/6)+-parseInt(t(314))/7*(-parseInt(t(302))/8)+-parseInt(t(303))/9*(parseInt(t(312))/10)+parseInt(t(310))/11*(parseInt(t(308))/12)+-parseInt(t(309))/13*(-parseInt(t(307))/14);if(s===e)break;n.push(n.shift())}catch{n.push(n.shift())}})(h,812765);function C(l,e){l=l-302;var t=h(),n=t[l];return n}function h(){var l=["2491kSPRNS","12UTYRjM","774284IeVPFP","7636368ZdpDmJ","767BQImjO","11SSpjuW","18PuvURS","30ZqaSJf","510524qGqvOR","14YcvcCy","992ftaLjj","258520RCEbjP","4201119GCZdgV","626030thwfvA"];return h=function(){return l},h()}const o=r;(function(l,e){const t=r,n=l();for(;;)try{if(parseInt(t(420))/1+parseInt(t(413))/2*(parseInt(t(425))/3)+parseInt(t(412))/4+parseInt(t(414))/5*(parseInt(t(410))/6)+parseInt(t(411))/7*(parseInt(t(424))/8)+-parseInt(t(423))/9+-parseInt(t(426))/10*(parseInt(t(417))/11)===e)break;n.push(n.shift())}catch{n.push(n.shift())}})(x,850545);function x(){const l=["572yXhjBn","removeListener","forEach","922791UgFHXp","keys","removeAllListeners","13478418SFQNKj","8qkxsRQ","573bYWgPh","255880qFLzSC","systemInfo","crash","shell","36hNZgQz","10586093pdqPnv","1480896BYJBXA","4354CGDdro","381335LXwCHP","exposeInMainWorld","once"];return x=function(){return l},x()}function k(){const l=r,e={};return Object[l(421)](new d)[l(419)](t=>{e[t]={invoke:async n=>i.ipcRenderer.invoke(t,n)}}),Object.keys(new S)[l(419)](t=>{const n=l;e[t]={on:s=>{const a=r;i.ipcRenderer[a(418)](t,s),i.ipcRenderer.on(t,s)},once:s=>{const a=r;i.ipcRenderer.removeListener(t,s),i.ipcRenderer[a(416)](t,s)},removeListener:s=>{const a=r;i.ipcRenderer[a(418)](t,s)},removeAllListeners:()=>i.ipcRenderer[n(422)](t)}}),e}function r(l,e){return l=l-410,x()[l]}i.contextBridge[o(415)]("ipcRendererChannel",k()),i.contextBridge[o(415)](o(427),{platform:p.platform(),release:p.release(),arch:p.arch()}),i.contextBridge.exposeInMainWorld(o(429),i.shell),i.contextBridge.exposeInMainWorld("crash",{start:()=>{const l=o;process[l(428)]()}});
+'use strict';
+
+var electron = require('electron');
+var os = require('os');
+
+class IpcChannelMainClass {
+  constructor() {
+    this.GetSystemConfig = null;
+    this.GetSystemConfigs = null;
+    this.SetSystemConfig = null;
+    this.IsUseSysTitle = null;
+    /**
+     * Exit application
+     */
+    this.AppClose = null;
+    this.CheckUpdate = null;
+    this.ConfirmUpdate = null;
+    this.DownloadUpdate = null;
+    this.GetAppVersion = null;
+    this.GetSupportConfig = null;
+    this.ReportClientError = null;
+    this.SubmitSupportReport = null;
+    this.OpenMessagebox = null;
+    this.StartDownload = null;
+    this.OpenErrorbox = null;
+    this.StartServer = null;
+    this.StopServer = null;
+    this.HotUpdate = null;
+    /**
+     * Load all skills from the skills directory and return them as Agent objects
+     */
+    this.LoadSkills = null;
+    this.ListWorkflowPanelSkills = null;
+    /**
+     * List persisted agent configurations for a user
+     */
+    this.ListAgentConfigurations = null;
+    /**
+     * Persist a full editable agent configuration (upsert)
+     */
+    this.UpsertAgentConfiguration = null;
+    /**
+     * Delete a persisted agent configuration
+     */
+    this.DeleteAgentConfiguration = null;
+    /**
+     * List all tools available in the shared toolSet (toolSet/index.ts)
+     */
+    this.ListToolSetTools = null;
+    /**
+     * Execute a single tool from a skill action folder.
+     */
+    this.CallSkillTool = null;
+    /**
+     * Return the resolved path to the skills directory
+     */
+    this.GetSkillsDir = null;
+    /**
+     * List read-only skill attachments (refs, scripts, forms) for settings UI.
+     */
+    this.ListSkillAttachments = null;
+    /**
+     * Read a skill attachment for download (utf8 text or base64 binary).
+     */
+    this.ReadSkillAttachment = null;
+    /**
+     * Read skill compilation status and structured artifact for settings review.
+     */
+    this.GetSkillCompilation = null;
+    /**
+     * Compile skill sources into the structured artifact (manual; not run on app load).
+     * When `force` is false, skips LLM if DB row matches current source fingerprint.
+     */
+    this.CompileSkill = null;
+    /** List all loadable skills with compilation status (settings Skills tab). */
+    this.ListSkillCompilations = null;
+    /** Compile every loadable skill (manual bulk action). */
+    this.CompileAllSkills = null;
+    /** Force recompile skill sources (same as CompileSkill with force: true). */
+    this.RecompileSkill = null;
+    /** Save user-edited compiled artifact without re-running compile LLM. */
+    this.SaveSkillCompilation = null;
+    /**
+     * Small screenshot / thumbnail for a sandbox output file (image, HTML, PDF).
+     */
+    this.GetStepOutputLinkPreview = null;
+    /**
+     * Dry-run preview for file edit/write/patch tools (no writes).
+     */
+    this.PreviewFileChange = null;
+    /** Dry-run preview for exit_plan_mode approval (plan markdown + todos). */
+    this.PreviewPlanApproval = null;
+    /**
+     * List all conversations for a given agent, ordered by most recent
+     */
+    this.ListConversations = null;
+    /**
+     * Create a new conversation record
+     */
+    this.CreateConversation = null;
+    /**
+     * Update the title of an existing conversation
+     */
+    this.UpdateConversationTitle = null;
+    /**
+     * Update which agent/skill owns a conversation (persisted per conversation).
+     */
+    this.UpdateConversationAgent = null;
+    /**
+     * Load conversation metadata (agent binding, title, timestamps).
+     */
+    this.GetConversationMeta = null;
+    /**
+     * Delete a conversation and all its messages
+     */
+    this.DeleteConversation = null;
+    /**
+     * Clear chat history only — keeps conversation, workspace, and agent binding.
+     */
+    this.ClearConversationHistory = null;
+    /**
+     * Persisted sandbox runs for a conversation (report panel + cleanup).
+     */
+    this.GetConversationSandboxRuns = null;
+    /**
+     * Load all persisted messages for a given conversation
+     */
+    this.GetConversation = null;
+    /**
+     * Paginated message history (latest page or older rows before a timestamp).
+     */
+    this.GetConversationMessagesPage = null;
+    /**
+     * Persist a single message
+     */
+    this.SaveMessage = null;
+    /**
+     * LLM token usage for the monitor chart, one series per provider/model.
+     */
+    this.ListTokenUsageChart = null;
+    /**
+     * Update an existing message's content
+     */
+    this.UpdateMessage = null;
+    /**
+     * Get all user property key-value pairs for a user
+     */
+    this.GetUserProperties = null;
+    /**
+     * Get all user properties with metadata for a user
+     */
+    this.ListUserProperties = null;
+    /**
+     * Get a single user property by key
+     */
+    this.GetUserProperty = null;
+    /**
+     * Set a user property key-value pair (upsert)
+     */
+    this.SetUserProperty = null;
+    /**
+     * Delete a single user property by key
+     */
+    this.DeleteUserProperty = null;
+    /**
+     * Delete all user properties for a user
+     */
+    this.ClearUserProperties = null;
+    /**
+     * List all stored MCP servers for a user
+     */
+    this.ListMcpServers = null;
+    /**
+     * Create a new MCP server definition
+     */
+    this.CreateMcpServer = null;
+    /**
+     * Enable or disable an MCP server
+     */
+    this.SetMcpServerEnabled = null;
+    /**
+     * Delete an MCP server definition
+     */
+    this.DeleteMcpServer = null;
+    /**
+     * Discover tools exposed by a specific MCP server
+     */
+    this.GetMcpServerTools = null;
+    /**
+     * Execute one tool call on a specific MCP server
+     */
+    this.CallMcpServerTool = null;
+    /**
+     * Search the official MCP Registry for installable servers
+     */
+    this.SearchMcpRegistry = null;
+    /**
+     * Load configuration drafts for a registry server
+     */
+    this.GetMcpRegistryServer = null;
+    /**
+     * Save arbitrary data to a file under user.workspace
+     */
+    this.SaveDataToFile = null;
+    /**
+     * List persisted scheduler definitions
+     */
+    this.ListSchedulers = null;
+    /**
+     * Create or update one scheduler definition
+     */
+    this.UpsertScheduler = null;
+    /**
+     * Delete one scheduler definition
+     */
+    this.DeleteScheduler = null;
+    this.ListWorkflows = null;
+    this.GetWorkflowSnapshot = null;
+    this.CompileWorkflow = null;
+    this.RunWorkflowCompilerAgent = null;
+    this.ConfirmWorkflowVersion = null;
+    this.SaveWorkflowDefinitionJson = null;
+    this.RunWorkflowTest = null;
+    this.DeployWorkflow = null;
+    this.UndeployWorkflow = null;
+    this.RunWorkflowManual = null;
+    this.DeleteWorkflow = null;
+    this.CreateWorkflowDraft = null;
+    /**
+     * Window ready
+     */
+    this.WinReady = null;
+    /**
+     *
+     * Open window
+     */
+    this.OpenWin = null;
+    /**
+     * Start Google OAuth2 sign-in flow, returns the authenticated account info
+     */
+    this.GoogleSignIn = null;
+    /**
+     * Sign out and clear stored Google account tokens
+     */
+    this.GoogleSignOut = null;
+    /**
+     * Return the currently stored Google account info, or null if not signed in
+     */
+    this.GetGoogleAccount = null;
+    /**
+     * Start GitHub OAuth2 sign-in flow, returns the authenticated account info
+     */
+    this.GitHubSignIn = null;
+    /**
+     * Sign out and clear stored GitHub account tokens
+     */
+    this.GitHubSignOut = null;
+    /**
+     * Return the currently stored GitHub account info, or null if not signed in
+     */
+    this.GetGitHubAccount = null;
+    /**
+     * Return current WhatsApp integration state
+     */
+    this.GetWhatsAppState = null;
+    /**
+     * Save the WhatsApp bot display name
+     */
+    this.SetWhatsAppBotName = null;
+    /**
+     * Save the WhatsApp target phone number used by mini chat
+     */
+    this.SetWhatsAppTargetPhone = null;
+    /**
+     * Refresh WhatsApp QR code by restarting the socket session
+     */
+    this.RefreshWhatsAppQrCode = null;
+    /**
+     * Log out WhatsApp and clear local auth session
+     */
+    this.LogoutWhatsAppSession = null;
+    /**
+     * Get WhatsApp mini chat messages
+     */
+    this.GetWhatsAppChatMessages = null;
+    /**
+     * Send one WhatsApp chat message and return updated messages
+     */
+    this.SendWhatsAppChatMessage = null;
+    /**
+     * Send one WhatsApp message to a specific JID and return updated mini chat messages
+     */
+    this.SendWhatsAppMessageToJid = null;
+    /**
+     * Return current Telegram bot integration state
+     */
+    this.GetTelegramState = null;
+    /**
+     * Save the Telegram bot display name
+     */
+    this.SetTelegramBotName = null;
+    /**
+     * Save the Telegram bot token and restart the bot
+     */
+    this.SetTelegramBotToken = null;
+    /**
+     * Stop the Telegram bot
+     */
+    this.StopTelegramBot = null;
+    /**
+     * Get Telegram mini chat messages
+     */
+    this.GetTelegramChatMessages = null;
+    /**
+     * Send one Telegram chat message and return updated messages
+     */
+    this.SendTelegramChatMessage = null;
+    /**
+     * Return current Discord bot integration state
+     */
+    this.GetDiscordState = null;
+    /**
+     * Save the Discord bot display name
+     */
+    this.SetDiscordBotName = null;
+    /**
+     * Save the Discord bot token and restart the bot
+     */
+    this.SetDiscordBotToken = null;
+    /**
+     * Stop the Discord bot
+     */
+    this.StopDiscordBot = null;
+    /**
+     * Get Discord mini chat messages
+     */
+    this.GetDiscordChatMessages = null;
+    /**
+     * Send one Discord chat message and return updated messages
+     */
+    this.SendDiscordChatMessage = null;
+    /**
+     * Return current WeChat Work bot integration state
+     */
+    this.GetWeChatState = null;
+    /**
+     * Save the WeChat bot display name
+     */
+    this.SetWeChatBotName = null;
+    /**
+     * Save WeChat Work credentials (corpId, corpSecret, agentId) and reconnect
+     */
+    this.SetWeChatCredentials = null;
+    /**
+     * Stop the WeChat bot
+     */
+    this.StopWeChatBot = null;
+    /**
+     * Get WeChat mini chat messages
+     */
+    this.GetWeChatChatMessages = null;
+    /**
+     * Send one WeChat message to a user and return updated messages
+     */
+    this.SendWeChatChatMessage = null;
+    /**
+     * Handle an incoming WeChat webhook payload
+     */
+    this.HandleWeChatWebhook = null;
+    /**
+     * Return current Slack bot integration state
+     */
+    this.GetSlackState = null;
+    /**
+     * Save the Slack bot display name
+     */
+    this.SetSlackBotName = null;
+    /**
+     * Save the Slack bot tokens and restart the bot
+     */
+    this.SetSlackTokens = null;
+    /**
+     * Stop the Slack bot
+     */
+    this.StopSlackBot = null;
+    /**
+     * Get Slack mini chat messages
+     */
+    this.GetSlackChatMessages = null;
+    /**
+     * Send one Slack chat message and return updated messages
+     */
+    this.SendSlackChatMessage = null;
+    /**
+     * Send one message through any registered channel target
+     */
+    this.SendChannelMessage = null;
+    /**
+     * Run the agent engine for a conversation (main process)
+     */
+    this.RunAgentForConversation = null;
+    /**
+     * Directly delegate to a catalog sub-agent from an @mention in the composer.
+     */
+    this.RunSubAgentMention = null;
+    /**
+     * Stop a running agent for a conversation
+     */
+    this.StopAgentForConversation = null;
+    /**
+     * Pre-warm the in-process cache for a user+agent before the first message.
+     * Called by the renderer when the user switches to an agent or opens the chat panel.
+     * Fire-and-forget; the handler never throws.
+     */
+    this.WarmAgentCache = null;
+    /**
+     * Open a file (absolute path or file:// URL) in the OS default application.
+     * Returns success=false with an error message when the OS rejects the path.
+     */
+    this.OpenFileInDefaultApp = null;
+    /**
+     * Show a Save-As dialog and copy a sandbox file to the user-chosen location.
+     * Returns the saved path, or null when the user cancels.
+     */
+    this.SaveFileAs = null;
+    /**
+     * Position the sandbox results WebContentsView over the given screen rect (or hide).
+     */
+    this.SyncSandboxOutputView = null;
+    /**
+     * Delete on-disk sandbox directories (validated under `~/.openfde/workspace/sandbox/` or legacy tmpdir).
+     */
+    this.RemoveSandboxDirectories = null;
+    /**
+     * Open a native folder-picker dialog and return the chosen path (or null on cancel).
+     */
+    this.SelectWorkspaceFolder = null;
+    /** Per-conversation workspace (session) settings. */
+    this.GetConversationWorkspace = null;
+    this.SetConversationWorkspace = null;
+    this.ClearConversationWorkspace = null;
+    // ── Workspace git operations (UI → main process, no agent required) ─────────
+    /** git status for the conversation workspace (path resolved in main). */
+    this.GetWorkspaceGitStatus = null;
+    /** git diff (unstaged or staged) for the workspace. */
+    this.GetWorkspaceGitDiff = null;
+    /** git log for the workspace. */
+    this.GetWorkspaceGitLog = null;
+    /** git add files (or all) in the workspace. */
+    this.RunWorkspaceGitAdd = null;
+    /** git commit staged changes in the workspace. */
+    this.RunWorkspaceGitCommit = null;
+    /** git push the current branch to remote. */
+    this.RunWorkspaceGitPush = null;
+    /** Create a GitHub PR via `gh pr create`. */
+    this.RunWorkspaceGitCreatePR = null;
+    /** List immediate children under a workspace path (filesystem + git status badges). */
+    this.ListWorkspaceFiles = null;
+    /** Fuzzy file search for composer `@file` mentions. */
+    this.SearchWorkspaceFiles = null;
+    /** Open a workspace file in the OS default application. */
+    this.OpenWorkspaceFile = null;
+    /** Read workspace file text for the in-app editor. */
+    this.ReadWorkspaceFile = null;
+    /** Write workspace file text from the in-app editor. */
+    this.WriteWorkspaceFile = null;
+    /** Run a shell command in the workspace files panel context. */
+    this.RunWorkspaceTerminalCommand = null;
+    /** Interrupt currently running workspace terminal command (Ctrl+C semantics). */
+    this.CancelWorkspaceTerminalCommand = null;
+    /** Start or restart a persistent PTY session for workspace terminal. */
+    this.StartWorkspaceTerminalSession = null;
+    /** Write keyboard input bytes into the persistent PTY session. */
+    this.WriteWorkspaceTerminalInput = null;
+    /** Resize PTY dimensions to match xterm viewport. */
+    this.ResizeWorkspaceTerminalSession = null;
+    /** Stop and dispose persistent PTY session for the conversation. */
+    this.StopWorkspaceTerminalSession = null;
+    /** Approve a tool type for the rest of the conversation (session-scoped HITL). */
+    this.AddSessionToolApproval = null;
+    /** Manually compact persisted conversation history (`/compact`). */
+    this.CompactConversation = null;
+    /** Get Kimi-like coding mode for a conversation. */
+    this.GetCodingMode = null;
+    /** Set Kimi-like coding mode for a conversation. */
+    this.SetCodingMode = null;
+    /** Get high-level planning phase for a conversation. */
+    this.GetPlanModeState = null;
+    /** Apply a semantic planning lifecycle transition. */
+    this.TransitionPlanMode = null;
+    /** List background subagent/shell tasks for a conversation. */
+    this.ListBackgroundTasks = null;
+    /** Cancel a background task by id. */
+    this.CancelBackgroundTask = null;
+    /** Install a skill from a GitHub URL into ~/.openfde/skills. */
+    this.InstallSkillFromGithub = null;
+    /** Search ClawHub skill registry. */
+    this.SearchClawHubSkills = null;
+    /** Inspect one ClawHub skill (latest version + moderation). */
+    this.GetClawHubSkill = null;
+    /** Preview a file from a ClawHub skill package. */
+    this.PreviewClawHubSkillFile = null;
+    /** Install a skill from ClawHub into ~/.openfde/skills. */
+    this.InstallClawHubSkill = null;
+    /** List skills installed from ClawHub. */
+    this.ListClawHubInstalledSkills = null;
+    /** Update one ClawHub-installed skill to latest version. */
+    this.UpdateClawHubSkill = null;
+    /** Update all ClawHub-installed skills (manual; no auto-update). */
+    this.UpdateAllClawHubSkills = null;
+    /** Uninstall a ClawHub-managed skill folder. */
+    this.UninstallClawHubSkill = null;
+    /** Start an editor LSP session for a workspace conversation. */
+    this.EditorLspStartSession = null;
+    /** Stop the editor LSP session and close owned documents. */
+    this.EditorLspStopSession = null;
+    /** Sync editor buffer to the language server (debounced in main). */
+    this.EditorLspSyncDocument = null;
+    /** Close a document in the editor LSP session. */
+    this.EditorLspCloseDocument = null;
+    /** Forward an LSP request for an open editor document. */
+    this.EditorLspRequest = null;
+    /** Format a workspace file with Prettier when available. */
+    this.FormatWorkspaceFile = null;
+    /** Lint a workspace file with ESLint when available. */
+    this.LintWorkspaceFile = null;
+    /** Native open-file dialog scoped to the conversation workspace/sandbox. */
+    this.PickWorkspaceEditorFile = null;
+    /** LSP workspace/symbol search for editor go-to-symbol (⌘T). */
+    this.EditorLspWorkspaceSymbols = null;
+  }
+}
+class IpcChannelRendererClass {
+  constructor() {
+    // ipcRenderer
+    this.DownloadProgress = null;
+    this.DownloadError = null;
+    this.DownloadPaused = null;
+    this.DownloadDone = null;
+    this.updateMsg = null;
+    this.UpdateProcessStatus = null;
+    this.SendDataTest = null;
+    this.BrowserViewTabDataUpdate = null;
+    this.BrowserViewTabPositionXUpdate = null;
+    this.BrowserTabMouseup = null;
+    this.HotUpdateStatus = null;
+    this.ConversationStoreChanged = null;
+    this.PlanModeStateChanged = null;
+    this.ChannelIncomingToAgent = null;
+    this.WhatsAppIncomingToAgent = null;
+    /**
+     * Streaming chunk from the main-process agent engine
+     */
+    this.AgentStreamChunk = null;
+    /** AI SDK UIMessageChunks from tool-loop streams (text-delta, tool-approval-request, …) */
+    this.AgentUIMessageChunk = null;
+    this.AgentStreamFinished = null;
+    /**
+     * Sandbox run ready — Results panel can load `resultsFileUrl` (directory listing).
+     */
+    this.AgentSandboxOutput = null;
+    /** Streaming PTY output chunk for workspace terminal xterm view. */
+    this.WorkspaceTerminalData = null;
+    /** Session metadata after PTY spawn (cwd/shell). */
+    this.WorkspaceTerminalStarted = null;
+    /** PTY process exit notification. */
+    this.WorkspaceTerminalExit = null;
+    /** LSP notification pushed from main (diagnostics, etc.). */
+    this.EditorLspNotification = null;
+  }
+}
+
+function getIpcRenderer() {
+  const IpcRenderer = {};
+  Object.keys(new IpcChannelMainClass()).forEach((channel) => {
+    IpcRenderer[channel] = {
+      invoke: async (args) => electron.ipcRenderer.invoke(channel, args)
+    };
+  });
+  Object.keys(new IpcChannelRendererClass()).forEach((channel) => {
+    IpcRenderer[channel] = {
+      on: (listener) => {
+        electron.ipcRenderer.removeListener(channel, listener);
+        electron.ipcRenderer.on(channel, listener);
+      },
+      once: (listener) => {
+        electron.ipcRenderer.removeListener(channel, listener);
+        electron.ipcRenderer.once(channel, listener);
+      },
+      removeListener: (listener) => {
+        electron.ipcRenderer.removeListener(channel, listener);
+      },
+      removeAllListeners: () => electron.ipcRenderer.removeAllListeners(channel)
+    };
+  });
+  return IpcRenderer;
+}
+electron.contextBridge.exposeInMainWorld("ipcRendererChannel", getIpcRenderer());
+electron.contextBridge.exposeInMainWorld("systemInfo", {
+  platform: os.platform(),
+  release: os.release(),
+  arch: os.arch()
+});
+electron.contextBridge.exposeInMainWorld("shell", electron.shell);
+electron.contextBridge.exposeInMainWorld("crash", {
+  start: () => {
+    process.crash();
+  }
+});
+//# sourceMappingURL=preload.js.map

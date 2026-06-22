@@ -7,6 +7,7 @@ import {
   resolveSubAgentTargetIdFromDelegation,
 } from './delegation-context'
 import { INVOKE_AGENTS_TOOL_NAME, SUB_AGENT_TAG } from './constants'
+import { mergeSubFlowOutputText } from '@main/agent/run/sub-flow-output-text'
 
 const invokeAgentsSchema = z.object({
   runs: z
@@ -83,9 +84,6 @@ export const invokeAgents: SkillTool = {
     }
 
     const results = await parentRun.waitForChildRuns(spawned.map((s) => s.runId))
-    const { mergeSubFlowOutputText } = await import(
-      '@main/agent/run/resolve-child-agent'
-    )
     return {
       results: results.map((result, i) => ({
         runId: spawned[i]?.runId,

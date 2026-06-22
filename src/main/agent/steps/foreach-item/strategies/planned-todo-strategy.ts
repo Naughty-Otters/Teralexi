@@ -40,7 +40,7 @@ import {
   shouldSkipPlanModeTodoItem,
   isPlanModeTodosAllDoneOnDisk,
   syncPlanModeBatchTodosFromDisk,
-} from '../../../coding/plan-mode-execution-bridge'
+} from '../../../coding/plan-mode-todo-sync'
 import {
   defaultPlanningTodoItems,
   isPlanModeTodosPreset,

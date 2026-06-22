@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join, relative } from 'node:path'
 
 const MAIN_JS = join(process.cwd(), 'dist', 'electron', 'main', 'main.js')
 
@@ -11,6 +11,7 @@ const ALLOWED_DYNAMIC_IMPORTS = new Set([
   'node:https',
   'electron',
   'playwright-core',
+  'cloakbrowser',
   'mmdb-lib',
 ])
 
@@ -21,39 +22,149 @@ const FORBIDDEN_SUBSTRINGS = [
   '@main/agent/run/agent-run',
   '../providers/stage-model-registry',
   '../run/agent-run',
+  '../run/resolve-child-agent',
+  '../hooks/user-hooks',
+  'hooks/user-hooks',
+  'agent/hooks/user-hooks',
+  '@main/workflows/',
+  '@main/services/scheduler-manager',
+  '@main/agent/llm/llm-debug-writer',
   'node_modules/grammy/out/',
   'grammy/out/platform.node',
 ]
 
-export function verifyMainBundle(): void {
-  const code = readFileSync(MAIN_JS, 'utf8')
+const SOURCE_SCAN_ROOTS = [
+  'src/main',
+  'toolSet',
+  'config',
+  'src/shared',
+  'src/logging',
+  'src/openfde-ai',
+  'src/ipc',
+]
 
-  for (const needle of FORBIDDEN_SUBSTRINGS) {
-    if (code.includes(needle)) {
-      throw new Error(
-        `main.js still references "${needle}" — dynamic import was not bundled. Rebuild or fix rollup output.`,
-      )
-    }
+const SOURCE_SCAN_SKIP = /\.(test|integration\.test|mocked\.test)\.ts$/
+
+const RUNTIME_DYNAMIC_IMPORT_RE =
+  /(?:await\s+import|void\s+import)\(\s*['"]([^'"]+)['"]/g
+
+function isAllowedRuntimeDynamicImport(spec: string): boolean {
+  if (ALLOWED_DYNAMIC_IMPORTS.has(spec)) return true
+  if (spec.startsWith('node:')) return true
+  return false
+}
+
+/** Relative imports allowed at runtime (break ESM cycles; still bundled by Rollup). */
+const ALLOWED_SOURCE_DYNAMIC_IMPORTS = new Set([
+  '../steps/foreach-item/strategies/planned-todo-strategy',
+])
+
+export function isForbiddenRuntimeDynamicImport(spec: string): boolean {
+  if (isAllowedRuntimeDynamicImport(spec)) return false
+  if (ALLOWED_SOURCE_DYNAMIC_IMPORTS.has(spec)) return false
+  if (spec.startsWith('.') || spec.startsWith('@')) return true
+  return false
+}
+
+export function scanSourceTextForForbiddenDynamicImports(
+  content: string,
+  relPath = 'fixture.ts',
+): string[] {
+  const violations: string[] = []
+  for (const match of content.matchAll(RUNTIME_DYNAMIC_IMPORT_RE)) {
+    const spec = match[1]
+    if (!spec || !isForbiddenRuntimeDynamicImport(spec)) continue
+    violations.push(`${relPath}: import('${spec}')`)
   }
+  return violations
+}
 
-  const imports = [...code.matchAll(/import\(([^)]+)\)/g)]
+export function findForbiddenSubstringsInMainJs(code: string): string[] {
+  return FORBIDDEN_SUBSTRINGS.filter((needle) => code.includes(needle))
+}
+
+export function findUnbundledDynamicImportsInMainJs(code: string): string[] {
   const bad: string[] = []
-
-  for (const match of imports) {
+  for (const match of code.matchAll(/import\(([^)]+)\)/g)) {
     const raw = match[1]?.trim() ?? ''
     const quoted = raw.match(/^['"]([^'"]+)['"]$/)
     if (!quoted) continue
     const spec = quoted[1]
-    if (ALLOWED_DYNAMIC_IMPORTS.has(spec)) continue
-    if (spec.startsWith('node:')) continue
+    if (isAllowedRuntimeDynamicImport(spec)) continue
     if (spec.includes('/') || spec.startsWith('.') || spec.startsWith('@')) {
       bad.push(spec)
     }
   }
+  return bad
+}
 
+export function verifyMainBundleContents(code: string): void {
+  const forbidden = findForbiddenSubstringsInMainJs(code)
+  if (forbidden.length > 0) {
+    throw new Error(
+      `main.js still references forbidden paths: ${forbidden.join(', ')}`,
+    )
+  }
+
+  const bad = findUnbundledDynamicImportsInMainJs(code)
   if (bad.length > 0) {
     throw new Error(
       `main.js has unexpected filesystem dynamic imports: ${bad.join(', ')}`,
+    )
+  }
+}
+
+function walkSourceFiles(dir: string, out: string[]): void {
+  for (const entry of readdirSync(dir)) {
+    const abs = join(dir, entry)
+    const stat = statSync(abs)
+    if (stat.isDirectory()) {
+      walkSourceFiles(abs, out)
+      continue
+    }
+    if (!abs.endsWith('.ts') && !abs.endsWith('.tsx')) continue
+    if (SOURCE_SCAN_SKIP.test(abs)) continue
+    out.push(abs)
+  }
+}
+
+/** Fail CI when main-process sources use dynamic import() for app modules. */
+export function scanSourcesForForbiddenDynamicImports(
+  cwd = process.cwd(),
+): string[] {
+  const violations: string[] = []
+
+  for (const root of SOURCE_SCAN_ROOTS) {
+    const absRoot = join(cwd, root)
+    let stat
+    try {
+      stat = statSync(absRoot)
+    } catch {
+      continue
+    }
+    if (!stat.isDirectory()) continue
+
+    const files: string[] = []
+    walkSourceFiles(absRoot, files)
+
+    for (const file of files) {
+      const content = readFileSync(file, 'utf8')
+      const rel = relative(cwd, file)
+      violations.push(...scanSourceTextForForbiddenDynamicImports(content, rel))
+    }
+  }
+
+  return violations
+}
+
+export function verifyMainBundle(): void {
+  const code = readFileSync(MAIN_JS, 'utf8')
+  verifyMainBundleContents(code)
+
+  const sourceViolations = scanSourcesForForbiddenDynamicImports()
+  if (sourceViolations.length > 0) {
+    throw new Error(
+      `Forbidden dynamic imports in main-process sources:\n${sourceViolations.join('\n')}`,
     )
   }
 }

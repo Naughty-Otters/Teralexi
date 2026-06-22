@@ -1,0 +1,9 @@
+{
+	"id": "Em2htpMoHW50mTD",
+	"json": "{\"id\":\"Em2htpMoHW50mTD\",\"url\":\"https://scholar.google.com/scholar?q=global+warming+impacts+human+health+mortality+heatwaves&hl=en&as_sdt=0\",\"loadedUrl\":\"https://scholar.google.com/scholar?q=global+warming+impacts+human+health+mortality+heatwaves&hl=en&as_sdt=0\",\"uniqueKey\":\"https://scholar.google.com/scholar?as_sdt=0&hl=en&q=global+warming+impacts+human+health+mortality+heatwaves\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":0,\"errorMessages\":[],\"headers\":{\"Referer\":\"https://scholar.google.com/\",\"Accept\":\"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\",\"Accept-Language\":\"en-US,en;q=0.9\",\"User-Agent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36\"},\"userData\":{\"__crawlee\":{\"state\":4}},\"handledAt\":\"2026-06-22T03:01:07.324Z\"}",
+	"method": "GET",
+	"orderNo": null,
+	"retryCount": 0,
+	"uniqueKey": "https://scholar.google.com/scholar?as_sdt=0&hl=en&q=global+warming+impacts+human+health+mortality+heatwaves",
+	"url": "https://scholar.google.com/scholar?q=global+warming+impacts+human+health+mortality+heatwaves&hl=en&as_sdt=0"
+}
