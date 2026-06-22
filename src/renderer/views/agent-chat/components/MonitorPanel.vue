@@ -339,7 +339,7 @@ const loading = ref(false)
 const loadError = ref('')
 const dailyDashboard = ref<TokenUsageDashboard | null>(null)
 const heatmapDashboard = ref<TokenUsageDashboard | null>(null)
-const breakdownView = ref<BreakdownView>('daily')
+const breakdownView = ref<BreakdownView>('heatmap')
 const heatmapTip = ref<HeatmapTip | null>(null)
 
 const heatmapScaleSteps = [0.15, 0.35, 0.55, 0.75, 1] as const
