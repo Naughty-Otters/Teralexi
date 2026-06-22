@@ -26,6 +26,8 @@ const EXTERNAL_PACKAGES = new Set([
   'playwright',
   'discord.js',
   'zlib-sync',
+  'grammy',
+  '@whiskeysockets/baileys',
   'node-pty',
   'fsevents',
   'crawlee',
@@ -39,6 +41,7 @@ function isRollupExternal(id: string): boolean {
     if (id.startsWith(`${pkg}/`)) return true
   }
   if (id.startsWith('@crawlee/')) return true
+  if (id.startsWith('@slack/')) return true
   if (builtinModules.includes(id)) return true
   if (id.startsWith('node:')) {
     const bare = id.slice(5)

@@ -21,6 +21,8 @@ const FORBIDDEN_SUBSTRINGS = [
   '@main/agent/run/agent-run',
   '../providers/stage-model-registry',
   '../run/agent-run',
+  'node_modules/grammy/out/',
+  'grammy/out/platform.node',
 ]
 
 export function verifyMainBundle(): void {
