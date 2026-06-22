@@ -1,13 +1,12 @@
 <template>
   <div class="brief-markdown-bubble">
-    <div class="brief-markdown-bubble__toolbar">
-      <ChatBubblePdfExportButton
-        :markdown="markdown"
-        section-title="Response"
-        section-id="markdown"
-        :message-id="message.id"
-      />
-    </div>
+    <ChatBubblePdfExportButton
+      corner
+      :markdown="markdown"
+      section-title="Response"
+      section-id="markdown"
+      :message-id="message.id"
+    />
     <div class="msg-html brief-markdown-bubble__body" v-html="html" />
   </div>
 </template>
@@ -33,12 +32,8 @@ const markdown = computed(() =>
 .brief-markdown-bubble {
   position: relative;
   min-width: var(--chat-response-bubble-min-width, 50%);
-}
-
-.brief-markdown-bubble__toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 4px;
+  padding-top: 4px;
+  padding-right: 34px;
 }
 
 .brief-markdown-bubble__body {
