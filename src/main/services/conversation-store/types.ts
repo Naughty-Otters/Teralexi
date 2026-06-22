@@ -178,6 +178,38 @@ export interface TokenUsageChartSeries {
   points: TokenUsageChartPoint[]
 }
 
+export interface TokenUsageOverview {
+  sessions: number
+  messages: number
+  totalTokens: number
+  activeDays: number
+}
+
+export interface TokenUsageModelSummary {
+  seriesKey: string
+  provider: string | null
+  model: string | null
+  label: string
+  totalTokens: number
+}
+
+export interface TokenUsageDailySegment {
+  seriesKey: string
+  totalTokens: number
+}
+
+export interface TokenUsageDailyBar {
+  date: string
+  segments: TokenUsageDailySegment[]
+  totalTokens: number
+}
+
+export interface TokenUsageDashboard {
+  overview: TokenUsageOverview
+  models: TokenUsageModelSummary[]
+  dailyBars: TokenUsageDailyBar[]
+}
+
 /** One tool call + result pair recorded per tool-loop execution. */
 export interface StoredToolResult {
   id: string

@@ -473,27 +473,37 @@ export class IpcChannelMainClass {
     createdAt: string
   }> = null
   /**
-   * LLM token usage for the monitor chart, one series per provider/model.
+   * LLM token usage dashboard: overview stats and daily model breakdown.
    */
   ListTokenUsageChart: IpcMainEventListener<
     {
       userId?: string
       since?: string
       until?: string
-      bucketMinutes?: number
     },
-    Array<{
-      seriesKey: string
-      provider: string | null
-      model: string | null
-      label: string
-      points: Array<{
-        recordedAt: string
-        inputTokens: number
-        outputTokens: number
+    {
+      overview: {
+        sessions: number
+        messages: number
+        totalTokens: number
+        activeDays: number
+      }
+      models: Array<{
+        seriesKey: string
+        provider: string | null
+        model: string | null
+        label: string
         totalTokens: number
       }>
-    }>
+      dailyBars: Array<{
+        date: string
+        totalTokens: number
+        segments: Array<{
+          seriesKey: string
+          totalTokens: number
+        }>
+      }>
+    }
   > = null
   /**
    * Update an existing message's content
