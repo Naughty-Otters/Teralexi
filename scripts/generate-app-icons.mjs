@@ -66,8 +66,8 @@ try {
 
   copyLogo(join(out, '256x256.png'))
   copyLogo(join(out, 'icon.png'))
-  copyLogo(trayLogoPng, join(out, 'tray-icon.png'))
-  copyLogo(trayLogoPng, join(out, 'tray-icon@2x.png'))
+  copyLogo(join(out, 'tray-icon.png'), trayLogoPng)
+  copyLogo(join(out, 'tray-icon@2x.png'), trayLogoPng)
 
   writeIcoFromPng(join(out, '256x256.png'), join(out, 'icon.ico'))
   writeIcnsFromPng(join(out, 'icon.png'), join(out, 'icon.icns'))
