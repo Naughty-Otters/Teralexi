@@ -18,7 +18,7 @@
   "electronLanguages": [
     "en-US"
   ],
-  "afterPack": ".electron-vite/after-pack.mjs",
+  "afterPack": "scripts/electron-after-pack.cjs",
   "extraFiles": [
     {
       "from": "build/icons",
