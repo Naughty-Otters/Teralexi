@@ -14,7 +14,7 @@
  */
 
 import { BrowserWindow, app } from 'electron'
-import { createServer } from 'http'
+import { createServer, type Server } from 'http'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { request as httpsRequest } from 'node:https'
@@ -26,6 +26,10 @@ import {
   BUNDLED_GOOGLE_OAUTH_CLIENT_SECRET,
 } from '@config/google-oauth-defaults'
 import { getopenfdeAccountsDir } from '@config/openfde-home'
+import {
+  GoogleOAuthNotConfiguredError,
+  isGoogleOAuthConfigured,
+} from '@shared/google-oauth-settings'
 import { createLogger, traceFunction } from '@main/logger'
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -88,6 +92,16 @@ export function resolveGoogleOAuthCredentials(): {
     process.env.GOOGLE_CLIENT_SECRET?.trim() ||
     BUNDLED_GOOGLE_OAUTH_CLIENT_SECRET
   return { clientId, clientSecret }
+}
+
+export function googleOAuthIsConfigured(): boolean {
+  return isGoogleOAuthConfigured(resolveGoogleOAuthCredentials())
+}
+
+function assertGoogleOAuthConfigured(): void {
+  if (!googleOAuthIsConfigured()) {
+    throw new GoogleOAuthNotConfiguredError()
+  }
 }
 
 export function googleAccountHasWorkspaceAccess(scope: string | undefined): boolean {
@@ -223,15 +237,65 @@ function httpsGet(
   })
 }
 
-// ── Loopback server ───────────────────────────────────────────────────────
+const GOOGLE_OAUTH_LOOPBACK_PORT = 7779
 
-/** Listen on a random available port, wait for the OAuth redirect, return the code or error */
+type GoogleSignInSession = {
+  cancel: (error: Error) => void
+  browserWindow: BrowserWindow | null
+}
+
+let activeGoogleSignInSession: GoogleSignInSession | null = null
+let inFlightGoogleSignIn: Promise<GoogleAccount> | null = null
+
+function cancelActiveGoogleSignIn(reason: string): void {
+  const session = activeGoogleSignInSession
+  if (!session) return
+  activeGoogleSignInSession = null
+  session.cancel(new Error(reason))
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function waitForLoopbackPortRelease(): Promise<void> {
+  // Give the OS a moment to release the loopback port after server.close().
+  await delay(150)
+}
+/** Listen on loopback, wait for the OAuth redirect, return the auth code or error. */
 function waitForOAuthCallback(
   port: number,
   state: string,
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const server = createServer((req, res) => {
+): GoogleSignInSession & { promise: Promise<string> } {
+  let server: Server | undefined
+  let resolveCode: ((code: string) => void) | undefined
+  let rejectCode: ((err: Error) => void) | undefined
+  let settled = false
+  let browserWindow: BrowserWindow | null = null
+
+  const settle = (action: 'resolve' | 'reject', value: string | Error) => {
+    if (settled) return
+    settled = true
+    if (server) {
+      server.close()
+      server = undefined
+    }
+    if (action === 'resolve') resolveCode!(value as string)
+    else rejectCode!(value as Error)
+  }
+
+  const cancel = (error: Error) => {
+    settle('reject', error)
+    if (browserWindow && !browserWindow.isDestroyed()) {
+      browserWindow.close()
+    }
+  }
+
+  const promise = new Promise<string>((resolve, reject) => {
+    resolveCode = resolve
+    rejectCode = reject
+
+    server = createServer((req, res) => {
       const reqUrl = parseUrl(req.url ?? '', true)
       const code = reqUrl.query.code as string | undefined
       const returnedState = reqUrl.query.state as string | undefined
@@ -243,39 +307,81 @@ function waitForOAuthCallback(
       if (error) {
         res.writeHead(400, { 'Content-Type': 'text/html' })
         res.end(html(`Sign-in failed: ${error}`))
-        server.close()
-        reject(new Error(`OAuth error: ${error}`))
+        settle('reject', new Error(`OAuth error: ${error}`))
         return
       }
 
       if (!code || returnedState !== state) {
         res.writeHead(400, { 'Content-Type': 'text/html' })
         res.end(html('Invalid callback.'))
-        server.close()
-        reject(new Error('Invalid OAuth callback: state mismatch or missing code.'))
+        settle('reject', new Error('Invalid OAuth callback: state mismatch or missing code.'))
         return
       }
 
       res.writeHead(200, { 'Content-Type': 'text/html' })
       res.end(html('Sign-in successful! You can close this window.'))
-      server.close()
-      resolve(code)
+      settle('resolve', code)
     })
 
-    server.on('error', reject)
+    server.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        settle(
+          'reject',
+          new Error(
+            'Google sign-in is already in progress. Close the sign-in window and try again.',
+          ),
+        )
+        return
+      }
+      settle('reject', err)
+    })
     server.listen(port)
   })
+
+  return {
+    promise,
+    cancel,
+    get browserWindow() {
+      return browserWindow
+    },
+    set browserWindow(win: BrowserWindow | null) {
+      browserWindow = win
+    },
+  }
 }
 
 // ── Main OAuth flow ───────────────────────────────────────────────────────
 
 async function startGoogleSignInImpl(): Promise<GoogleAccount> {
+  if (inFlightGoogleSignIn) {
+    cancelActiveGoogleSignIn('Restarting Google sign-in')
+    try {
+      await inFlightGoogleSignIn
+    } catch {
+      /* prior attempt failed or was cancelled */
+    }
+    await waitForLoopbackPortRelease()
+  }
+
+  const flow = runGoogleSignInFlow()
+  inFlightGoogleSignIn = flow
+  try {
+    return await flow
+  } finally {
+    if (inFlightGoogleSignIn === flow) {
+      inFlightGoogleSignIn = null
+    }
+  }
+}
+
+async function runGoogleSignInFlow(): Promise<GoogleAccount> {
+  assertGoogleOAuthConfigured()
   log.info('Starting Google sign-in flow')
   const { clientId, clientSecret } = getCredentials()
 
   // Use a fixed loopback port (7779) for the redirect URI; must match what's
   // registered in the Google Cloud console as an authorised redirect URI.
-  const port = 7779
+  const port = GOOGLE_OAUTH_LOOPBACK_PORT
   const redirectUri = `http://127.0.0.1:${port}`
   const state = randomBytes(16).toString('hex')
   const codeVerifier = base64Url(randomBytes(64))
@@ -297,11 +403,12 @@ async function startGoogleSignInImpl(): Promise<GoogleAccount> {
       code_challenge_method: 'S256',
     }).toString()
 
-  // Start the callback server before opening the browser window so we don't
-  // miss a fast redirect.
-  const codePromise = waitForOAuthCallback(port, state)
+  cancelActiveGoogleSignIn('Starting a new Google sign-in')
+  await waitForLoopbackPortRelease()
 
-  // Open the consent screen in a dedicated window
+  const callback = waitForOAuthCallback(port, state)
+  activeGoogleSignInSession = callback
+
   const win = new BrowserWindow({
     width: 520,
     height: 680,
@@ -312,16 +419,20 @@ async function startGoogleSignInImpl(): Promise<GoogleAccount> {
       contextIsolation: true,
     },
   })
+  callback.browserWindow = win
 
   win.loadURL(authUrl)
   win.on('closed', () => {
-    // If the user closes the window before completing OAuth, reject the promise.
+    callback.cancel(new Error('Sign-in cancelled'))
   })
 
   let code: string
   try {
-    code = await codePromise
+    code = await callback.promise
   } finally {
+    if (activeGoogleSignInSession === callback) {
+      activeGoogleSignInSession = null
+    }
     if (!win.isDestroyed()) win.close()
   }
 

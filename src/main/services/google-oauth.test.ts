@@ -26,8 +26,8 @@ vi.mock('@config/system-prop', () => ({
 }))
 
 vi.mock('@config/google-oauth-defaults', () => ({
-  BUNDLED_GOOGLE_OAUTH_CLIENT_ID: 'bundled-client-id',
-  BUNDLED_GOOGLE_OAUTH_CLIENT_SECRET: 'bundled-client-secret',
+  BUNDLED_GOOGLE_OAUTH_CLIENT_ID: '',
+  BUNDLED_GOOGLE_OAUTH_CLIENT_SECRET: '',
 }))
 
 vi.mock('@config/openfde-home', () => ({
@@ -37,21 +37,30 @@ vi.mock('@config/openfde-home', () => ({
 import {
   clearStoredAccount,
   googleAccountHasWorkspaceAccess,
+  googleOAuthIsConfigured,
   GOOGLE_WORKSPACE_SCOPES,
   loadStoredAccount,
   resolveGoogleOAuthCredentials,
+  startGoogleSignIn,
 } from './google-oauth'
+import { GOOGLE_OAUTH_NOT_CONFIGURED } from '@shared/google-oauth-settings'
 import { getSystemPropValue } from '@config/system-prop'
 
 describe('google-oauth', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllEnvs()
+    delete process.env.GOOGLE_CLIENT_ID
+    delete process.env.GOOGLE_CLIENT_SECRET
+    vi.mocked(getSystemPropValue).mockImplementation(
+      (_key: string, fallback = '') => fallback,
+    )
   })
 
-  it('resolveGoogleOAuthCredentials falls back to bundled client', () => {
+  it('resolveGoogleOAuthCredentials falls back to bundled defaults', () => {
     expect(resolveGoogleOAuthCredentials()).toEqual({
-      clientId: 'bundled-client-id',
-      clientSecret: 'bundled-client-secret',
+      clientId: '',
+      clientSecret: '',
     })
   })
 
@@ -64,6 +73,23 @@ describe('google-oauth', () => {
     expect(resolveGoogleOAuthCredentials()).toEqual({
       clientId: 'custom-id',
       clientSecret: 'custom-secret',
+    })
+  })
+
+  it('googleOAuthIsConfigured is false without a client ID', () => {
+    expect(googleOAuthIsConfigured()).toBe(false)
+  })
+
+  it('googleOAuthIsConfigured is true when client ID is set', () => {
+    vi.mocked(getSystemPropValue).mockImplementation((key: string) =>
+      key === 'app.google.clientId' ? 'custom-id' : '',
+    )
+    expect(googleOAuthIsConfigured()).toBe(true)
+  })
+
+  it('startGoogleSignIn rejects when OAuth client is not configured', async () => {
+    await expect(startGoogleSignIn()).rejects.toMatchObject({
+      message: GOOGLE_OAUTH_NOT_CONFIGURED,
     })
   })
 

@@ -53,9 +53,13 @@
         <p class="acct-hint">{{ p.accounts.google.signInHint }}</p>
         <p class="acct-hint acct-hint--muted">{{ p.accounts.google.customClientHint }}</p>
 
+        <p v-if="!oauthConfigured" class="acct-hint acct-hint--warn">
+          {{ p.accounts.google.oauthNotConfigured }}
+        </p>
+
         <div v-if="error" class="acct-error">{{ error }}</div>
 
-        <button class="acct-action-btn" :disabled="loading" @click="signIn">
+        <button class="acct-action-btn" :disabled="loading || !oauthConfigured" @click="signIn">
           <svg class="acct-provider-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path
               fill="#4285F4"
@@ -84,6 +88,11 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
+import {
+  GOOGLE_OAUTH_NOT_CONFIGURED,
+  GOOGLE_OAUTH_PROP_KEYS,
+} from '@shared/google-oauth-settings'
+import { getSystemConfigValues } from '@store/agent/config'
 import './sp-shared.css'
 
 const { t } = useI18n()
@@ -99,20 +108,43 @@ interface GoogleAccountInfo {
 const account = ref<GoogleAccountInfo | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
+const oauthConfigured = ref(true)
+
+function resolveSignInError(e: unknown): string {
+  if (e instanceof Error && e.message === GOOGLE_OAUTH_NOT_CONFIGURED) {
+    return p.value.accounts.google.oauthNotConfigured
+  }
+  return e instanceof Error ? e.message : String(e)
+}
+
+async function refreshOAuthConfigured(): Promise<void> {
+  const values = await getSystemConfigValues(
+    Object.values(GOOGLE_OAUTH_PROP_KEYS),
+  )
+  oauthConfigured.value = Boolean(
+    values[GOOGLE_OAUTH_PROP_KEYS.clientId]?.trim(),
+  )
+}
 
 onMounted(async () => {
   const stored = await window.ipcRendererChannel?.GetGoogleAccount?.invoke()
   account.value = stored ?? null
+  await refreshOAuthConfigured()
 })
 
 async function signIn() {
+  if (!oauthConfigured.value) {
+    error.value = p.value.accounts.google.oauthNotConfigured
+    return
+  }
+
   loading.value = true
   error.value = null
   try {
     const result = await window.ipcRendererChannel?.GoogleSignIn?.invoke()
     account.value = result ?? null
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : String(e)
+    error.value = resolveSignInError(e)
   } finally {
     loading.value = false
   }

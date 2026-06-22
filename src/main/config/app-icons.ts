@@ -57,14 +57,23 @@ export function getAppIconPngPath(): string {
 export function getTrayIconPngPath(): string {
   const root = projectRoot()
   const resolved = firstExistingPath([
-    join(resolveBuildIconsDir(), 'tray-icon.png'),
     join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-tray-icon.png'),
+    join(resolveBuildIconsDir(), 'tray-icon.png'),
     join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-logo.png'),
   ])
   if (!resolved) {
     throw new Error('tray icon PNG not found')
   }
   return resolved
+}
+
+function isTrayTemplateIconPath(path: string): boolean {
+  const normalized = path.replace(/\\/g, '/')
+  return (
+    normalized.includes('openfde-tray-icon') ||
+    normalized.endsWith('/tray-icon.png') ||
+    normalized.endsWith('/tray-icon@2x.png')
+  )
 }
 
 /** @deprecated Use {@link getAppIconPngPath} */
@@ -91,7 +100,7 @@ export function loadTrayIcon(): NativeImage {
   const logicalSize = process.platform === 'darwin' ? 22 : 38
   const image = resizeSquare(loadNativeImageFromPath(pngPath), logicalSize)
   if (!image.isEmpty()) {
-    if (process.platform === 'darwin') {
+    if (process.platform === 'darwin' && isTrayTemplateIconPath(pngPath)) {
       image.setTemplateImage(true)
     }
     return image
@@ -99,8 +108,12 @@ export function loadTrayIcon(): NativeImage {
 
   const fallback = join(resolveBuildIconsDir(), 'tray-icon.png')
   log.warn('Falling back to tray PNG', { fallback })
-  const fallbackImage = loadNativeImageFromPath(fallback)
-  if (process.platform === 'darwin' && !fallbackImage.isEmpty()) {
+  const fallbackImage = resizeSquare(loadNativeImageFromPath(fallback), logicalSize)
+  if (
+    process.platform === 'darwin' &&
+    !fallbackImage.isEmpty() &&
+    isTrayTemplateIconPath(fallback)
+  ) {
     fallbackImage.setTemplateImage(true)
   }
   return fallbackImage
