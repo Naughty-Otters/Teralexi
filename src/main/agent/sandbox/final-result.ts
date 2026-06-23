@@ -1,16 +1,16 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import MarkdownIt from 'markdown-it'
+import { formatFinalResultHtmlBody } from '@shared/agent/assistant-external-reply'
+import {
+  createStandardMarkdownIt,
+  resolveDiagramBlocksInHtml,
+} from '@shared/markdown/create-markdown-it'
 import { parseAssistantStructuredContent } from '../utils/structured-content'
 
 export const FINAL_RESULT_FILENAME = 'final-result.html'
 
-const markdown = new MarkdownIt({
-  html: false,
-  breaks: true,
-  linkify: true,
-})
+const markdown = createStandardMarkdownIt()
 
 function buildHtmlDocument(bodyHtml: string): string {
   return `<!doctype html>
@@ -94,6 +94,23 @@ function buildHtmlDocument(bodyHtml: string): string {
         padding: 8px 10px;
         text-align: left;
       }
+      .diagram-block {
+        margin: 16px 0;
+        overflow-x: auto;
+      }
+      .diagram-block svg {
+        display: block;
+        max-width: 100%;
+        height: auto;
+      }
+      .diagram-block--error {
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #fecaca;
+        background: #fef2f2;
+        color: #b91c1c;
+        font-size: 13px;
+      }
     </style>
   </head>
   <body>
@@ -122,52 +139,15 @@ export async function writeFinalResultToSandbox(
   const parsed = parseAssistantStructuredContent(structuredAssistantJson)
   let body = ''
   if (parsed) {
-    const outer = parsed.assistantContent.outer
-    const parts: string[] = []
-    if (outer.finalResult?.trim()) {
-      parts.push(`# Final result\n\n${outer.finalResult.trim()}`)
-    }
-    if (outer.report?.trim()) {
-      parts.push(`# Report\n\n${outer.report.trim()}`)
-    }
-    const research = outer.researchReport
-    if (research) {
-      const researchLines = [
-        '# Research report',
-        research.topic?.trim() ? `**Topic:** ${research.topic.trim()}` : '',
-        Number.isFinite(research.sourceCount)
-          ? `**Sources:** ${research.sourceCount}`
-          : '',
-        research.paperExcerpt?.trim() ?? '',
-        research.pdfPath?.trim()
-          ? `**PDF:** \`${research.pdfPath.trim()}\``
-          : '',
-      ].filter((line) => line.length > 0)
-      parts.push(researchLines.join('\n\n'))
-    }
-    const captures = outer.stepCaptures
-    if (captures?.length) {
-      const capLines = captures.map((c) => {
-        const paths =
-          c.outputPaths?.filter(Boolean).length > 0
-            ? `\n\n**Paths:**\n${c.outputPaths.map((p) => `- \`${p}\``).join('\n')}`
-            : ''
-        return `### ${c.title}\n\n${c.content.trim()}${paths}`
-      })
-      parts.push(`# Step outputs\n\n${capLines.join('\n\n---\n\n')}`)
-    }
-    if (outer.allArtifactPaths?.length) {
-      parts.push(
-        `# Artifact index\n\n${outer.allArtifactPaths.map((p) => `- \`${p}\``).join('\n')}`,
-      )
-    }
-    body = parts.join('\n\n---\n\n')
+    body = formatFinalResultHtmlBody(parsed.assistantContent.outer)
   }
   if (!body.trim()) {
-    body = `# Raw assistant output\n\n\`\`\`json\n${structuredAssistantJson.slice(0, 100_000)}\n\`\`\`\n`
+    body = 'No result content available.'
   }
 
-  const html = buildHtmlDocument(markdown.render(body))
+  const html = buildHtmlDocument(
+    resolveDiagramBlocksInHtml(markdown.render(body)),
+  )
   await writeFile(resultFilePath, html, 'utf8')
   const resultsFileUrl = pathToFileURL(resultFilePath).href
   return { outputResultsDir, resultFilePath, resultsFileUrl }

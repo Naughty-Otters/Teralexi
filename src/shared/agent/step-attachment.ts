@@ -3,6 +3,7 @@ import {
   type FileChangeAction,
 } from '@shared/file-change/types'
 import { parseToolFileChanges } from '@shared/file-change/parse-tool-file-changes'
+import { isCaptureArtifactPath } from '@shared/agent/capture-artifact-path'
 
 export type { FileChangeAction }
 
@@ -176,6 +177,7 @@ function pushAttachment(
 ): void {
   const path = candidate.path.trim()
   if (!path) return
+  if (isCaptureArtifactPath(path)) return
   // Step attachment bubbles keep non-delete files only (sandbox + workspace creates/edits).
   if (candidate.action === 'delete') return
   const key = normalizePathKey(path)
@@ -303,6 +305,7 @@ function attachmentsFromRunScript(
       const rawPath = a.path
       if (typeof rawPath !== 'string' || !rawPath.trim()) continue
       const abs = resolveToAbsolutePath(rawPath, resolvedRoot) ?? rawPath.trim()
+      if (isCaptureArtifactPath(abs)) continue
       const label =
         role === 'primary'
           ? `primary: ${labelForPath(abs, typeof a.relPath === 'string' ? a.relPath : undefined)}`
@@ -317,22 +320,13 @@ function attachmentsFromRunScript(
             : undefined,
       })
     }
-    if (out.length > 0) return out
-  }
-
-  const capture = root.captureAbsolutePath
-  if (typeof capture === 'string' && capture.trim()) {
-    pushAttachment(out, seen, {
-      path: capture.trim(),
-      label: labelForPath(capture),
-      toolName,
-    })
+    return out
   }
 
   const resultReadFrom = root.resultReadFrom
   if (typeof resultReadFrom === 'string' && resultReadFrom.trim()) {
     const abs = resolveToAbsolutePath(resultReadFrom, resolvedRoot)
-    if (abs) {
+    if (abs && !isCaptureArtifactPath(abs)) {
       pushAttachment(out, seen, {
         path: abs,
         label: labelForPath(abs, resultReadFrom),

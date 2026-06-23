@@ -1,10 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: [main, master, mini-main]
-  pull_request:
-    branches: [main, master, mini-main]
   workflow_dispatch:
 
 concurrency:
@@ -106,7 +102,6 @@ jobs:
   update-readme:
     name: Update README
     needs: build
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

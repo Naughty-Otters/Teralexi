@@ -126,6 +126,9 @@ export const lang: AppLocaleBundle = {
     reasoningMaxTitle: 'Reasoning preview length',
     reasoningMaxDesc:
       'While the model is reasoning, keep at most this many recent characters visible per reasoning block. Older reasoning is omitted from the UI and is not saved.',
+    showAgenticRunTitle: 'Show Agentic Run bubbles',
+    showAgenticRunDesc:
+      'Display Agentic Run step bubbles and tool-loop panels during agent execution. Form and approval steps are always shown.',
     defaultsFootnote:
       'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars.',
   },
@@ -134,6 +137,10 @@ export const lang: AppLocaleBundle = {
     exportBubblePdf: 'Export as PDF',
     exportBubblePdfSuccess: 'PDF saved',
     exportBubblePdfFailed: 'Could not export PDF',
+    copyBubbleContent: 'Copy content',
+    copyBubbleContentSuccess: 'Copied to clipboard',
+    copyBubbleContentFailed: 'Could not copy content',
+    printBubbleContent: 'Print content',
   },
   monitor: {
     title: 'Token monitor',

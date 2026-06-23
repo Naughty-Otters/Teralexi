@@ -1,84 +1,119 @@
 <template>
   <article
-    class="tool-loop-panel"
-    :class="{
-      'tool-loop-panel--active': props.active,
-      'tool-loop-panel--expanded': expanded,
-    }"
+    class="exploring-panel"
+    :class="{ 'exploring-panel--active': props.active }"
   >
-    <button
-      type="button"
-      class="tool-loop-panel__header"
-      :aria-expanded="expanded"
-      :title="expanded ? 'Collapse tool calls' : 'Expand tool calls'"
-      @click="toggleExpanded"
-    >
+    <header class="exploring-panel__header">
       <UIcon
-        name="i-lucide-wrench"
-        class="tool-loop-panel__icon"
+        name="i-lucide-compass"
+        class="exploring-panel__icon"
         aria-hidden="true"
       />
-      <span class="tool-loop-panel__title">{{ title }}</span>
-      <span class="tool-loop-panel__count">{{ itemCount }}</span>
-      <span class="tool-loop-panel__header-end">
-        <span
-          v-if="props.active"
-          class="tool-loop-panel__status"
-          aria-live="polite"
-        >
-          Running
-        </span>
-        <UIcon
-          :name="expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
-          class="tool-loop-panel__chevron"
-          aria-hidden="true"
-        />
+      <span class="exploring-panel__title">{{ panelTitle }}</span>
+      <span class="exploring-panel__status" aria-live="polite">
+        {{ statusText }}
       </span>
-    </button>
+    </header>
 
-    <template v-if="expanded">
-      <p v-if="droppedEarlierCount > 0" class="tool-loop-panel__hint">
-        +{{ droppedEarlierCount }} earlier tools omitted
-      </p>
+    <div v-if="latestDetail" class="exploring-panel__body">
+      <p class="exploring-panel__action">{{ latestDetail.action }}</p>
+
+      <dl
+        v-if="latestDetail.details.length > 0"
+        class="exploring-panel__details"
+      >
+        <div
+          v-for="field in latestDetail.details"
+          :key="field.label"
+          class="exploring-panel__detail-row"
+        >
+          <dt class="exploring-panel__detail-label">{{ field.label }}</dt>
+          <dd class="exploring-panel__detail-value">{{ field.value }}</dd>
+        </div>
+      </dl>
 
       <div
-        ref="scrollEl"
-        class="tool-loop-panel__body"
-        role="log"
-        aria-live="polite"
-        aria-label="Agent tool calls"
+        v-if="latestDetail.command"
+        class="exploring-panel__command"
       >
-        <template
-          v-for="entry in visibleItemsWithState"
-          :key="entry.item.key"
-        >
-          <ChatTerminalMessageBubble
-            v-if="entry.item.kind === 'terminal'"
-            :part="entry.item.part"
-          />
-          <ChatToolInvocationRow
-            v-else
-            :part="entry.item.part"
-            :compact="entry.running"
-          />
-        </template>
+        <span class="exploring-panel__command-label">Running</span>
+        <p class="exploring-panel__command-text">{{ latestDetail.command }}</p>
       </div>
-    </template>
+
+      <div
+        v-if="latestDetail.result"
+        class="exploring-panel__outcome"
+      >
+        <p
+          v-if="latestDetail.result.headline"
+          class="exploring-panel__headline"
+        >
+          {{ latestDetail.result.headline }}
+        </p>
+        <ul
+          v-if="latestDetail.result.bullets?.length"
+          class="exploring-panel__list"
+        >
+          <li
+            v-for="(item, index) in latestDetail.result.bullets"
+            :key="`${item}-${index}`"
+          >
+            {{ item }}
+          </li>
+        </ul>
+        <p
+          v-if="latestDetail.result.note"
+          class="exploring-panel__note"
+        >
+          {{ latestDetail.result.note }}
+        </p>
+      </div>
+
+      <p
+        v-else-if="latestDetail.running"
+        class="exploring-panel__pending"
+        aria-live="polite"
+      >
+        Working on it…
+      </p>
+
+      <p
+        v-if="latestDetail.error"
+        class="exploring-panel__error"
+        role="alert"
+      >
+        {{ latestDetail.error }}
+      </p>
+    </div>
   </article>
 </template>
 
 <script setup lang="ts">
-import { AGENTIC_RUN_STEP_TITLE } from '@shared/agent/agentic-run-labels'
-import { computed, nextTick, ref, watch } from 'vue'
+import { EXPLORING_PANEL_TITLE } from '@shared/agent/agentic-run-labels'
+import {
+  formatToolHumanReadableAction,
+} from '@shared/tool-result/tool-human-readable'
+import {
+  formatToolExploringCommand,
+  formatToolExploringDetails,
+  formatToolExploringResult,
+  type ExploringField,
+  type ExploringResult,
+} from '@shared/tool-result/tool-exploring-display'
+import { computed } from 'vue'
 import type { AssistantBubbleDescriptor } from './chat/assistantBubbleFramework'
 import {
+  extractTerminalView,
+  formatToolOutput,
+  getToolPartErrorText,
+  getToolPartInput,
+  getToolPartOutput,
   getToolPartState,
   isRunningState,
   isTerminalToolRunning,
+  parseTodoToolPart,
+  toolPartDisplayName,
 } from './chat/chatToolPartHelpers'
-import ChatTerminalMessageBubble from './ChatTerminalMessageBubble.vue'
-import ChatToolInvocationRow from './ChatToolInvocationRow.vue'
-import { visibleToolLoopPanelItems } from './chat/toolLoopPanelItems'
 
 const props = withDefaults(
   defineProps<{
@@ -90,51 +125,95 @@ const props = withDefaults(
   },
 )
 
-const scrollEl = ref<HTMLElement | null>(null)
-const expanded = ref(false)
+const panelTitle = EXPLORING_PANEL_TITLE
 
-const panelWindow = computed(() => visibleToolLoopPanelItems(props.items))
-
-const visibleItems = computed(() => panelWindow.value.visible)
-const droppedEarlierCount = computed(() => panelWindow.value.droppedCount)
-
-const visibleItemsWithState = computed(() =>
-  visibleItems.value.map((item) => ({
-    item,
-    running: rowIsRunning(item),
-  })),
-)
-
-const itemCount = computed(() => props.items.length)
-const title = computed(() => AGENTIC_RUN_STEP_TITLE)
-
-function rowIsRunning(item: AssistantBubbleDescriptor): boolean {
-  if (item.kind === 'terminal') return isTerminalToolRunning(item.part)
-  return isRunningState(getToolPartState(item.part))
+type ExploringToolDetail = {
+  action: string
+  details: ExploringField[]
+  command: string
+  result: ExploringResult | null
+  error: string
+  running: boolean
 }
 
-function toggleExpanded(): void {
-  expanded.value = !expanded.value
-}
+const latestItem = computed((): AssistantBubbleDescriptor | null => {
+  if (props.items.length === 0) return null
+  return props.items[props.items.length - 1] ?? null
+})
 
-function scrollBodyToEnd(): void {
-  const el = scrollEl.value
-  if (!el) return
-  el.scrollTop = el.scrollHeight
-}
+const latestDetail = computed((): ExploringToolDetail | null => {
+  const item = latestItem.value
+  if (!item) return null
 
-watch(
-  () => [props.items.length, props.active] as const,
-  () => {
-    if (!props.active || !expanded.value) return
-    void nextTick(scrollBodyToEnd)
-  },
-  { flush: 'post' },
-)
+  if (item.kind === 'terminal') {
+    const view = extractTerminalView(item.part)
+    const running = isTerminalToolRunning(item.part)
+    const input = getToolPartInput(item.part)
+    const toolName = toolPartDisplayName(item.part)
+    return {
+      action: formatToolHumanReadableAction(toolName, input),
+      details: formatToolExploringDetails(toolName, input),
+      command: view.command.trim(),
+      result: running
+        ? null
+        : formatToolExploringResult(
+            toolName,
+            input,
+            getToolPartOutput(item.part),
+            view.output.trim(),
+          ),
+      error: getToolPartErrorText(item.part).trim(),
+      running,
+    }
+  }
+
+  const toolName = toolPartDisplayName(item.part)
+  const input = getToolPartInput(item.part)
+  const output = getToolPartOutput(item.part)
+  const todos = parseTodoToolPart(item.part)
+  const running = isRunningState(getToolPartState(item.part))
+
+  if (todos) {
+    return {
+      action: formatToolHumanReadableAction(toolName, input),
+      details: [],
+      command: '',
+      result: running
+        ? null
+        : formatToolExploringResult(toolName, input, output),
+      error: getToolPartErrorText(item.part).trim(),
+      running,
+    }
+  }
+
+  return {
+    action: formatToolHumanReadableAction(toolName, input),
+    details: formatToolExploringDetails(toolName, input),
+    command: formatToolExploringCommand(input),
+    result: running
+      ? null
+      : formatToolExploringResult(
+          toolName,
+          input,
+          output,
+          formatToolOutput(item.part).trim(),
+        ),
+    error: getToolPartErrorText(item.part).trim(),
+    running,
+  }
+})
+
+const statusText = computed(() => {
+  const detail = latestDetail.value
+  if (detail?.result?.headline) return detail.result.headline
+  if (detail?.action) return detail.action
+  if (props.active) return 'Looking around…'
+  return 'Finished exploring'
+})
 </script>
 
 <style scoped>
-.tool-loop-panel {
+.exploring-panel {
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -143,117 +222,201 @@ watch(
   max-width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--ui-border);
-  border-radius: 10px;
+  border-radius: 12px;
   background: color-mix(
     in srgb,
-    var(--color-warning-500, #f59e0b) 4%,
+    var(--color-primary-500, #6366f1) 5%,
     var(--ui-bg-elevated)
   );
   overflow: hidden;
 }
 
-.tool-loop-panel--active {
+.exploring-panel--active {
   border-color: color-mix(
     in srgb,
-    var(--color-primary-500, #6366f1) 35%,
+    var(--color-primary-500, #6366f1) 32%,
     var(--ui-border)
   );
 }
 
-.tool-loop-panel__header {
+.exploring-panel__header {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
   margin: 0;
-  padding: 7px 10px;
-  border: none;
+  padding: 9px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-border) 80%, transparent);
   background: transparent;
   font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ui-text-muted);
-  cursor: pointer;
   text-align: left;
 }
 
-.tool-loop-panel__header:hover {
-  color: var(--ui-text);
+.exploring-panel--active .exploring-panel__header {
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--color-primary-500, #6366f1) 16%,
+    var(--ui-border)
+  );
 }
 
-.tool-loop-panel--active .tool-loop-panel__header {
-  color: var(--color-primary-500, #6366f1);
-}
-
-.tool-loop-panel__icon {
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
-}
-
-.tool-loop-panel__title {
-  flex: 0 1 auto;
-}
-
-.tool-loop-panel__count {
-  padding: 1px 7px;
-  border-radius: 999px;
-  border: 1px solid var(--ui-border);
-  background: var(--ui-bg);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.tool-loop-panel__status {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: normal;
-  color: var(--color-primary-500, #6366f1);
-}
-
-.tool-loop-panel__header-end {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-}
-
-.tool-loop-panel__chevron {
+.exploring-panel__icon {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
-  opacity: 0.7;
+  color: var(--color-primary-500, #6366f1);
 }
 
-.tool-loop-panel__hint {
+.exploring-panel__title {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ui-text);
+}
+
+.exploring-panel__status {
+  min-width: 0;
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ui-text-muted);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exploring-panel--active .exploring-panel__status {
+  color: var(--color-primary-600, #4f46e5);
+}
+
+.exploring-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.exploring-panel__action {
   margin: 0;
-  padding: 0 10px 6px;
-  font-size: 11px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ui-text);
+}
+
+.exploring-panel__details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.exploring-panel__detail-row {
+  display: grid;
+  grid-template-columns: minmax(88px, 34%) 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.exploring-panel__detail-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ui-text-muted);
 }
 
-.tool-loop-panel__body {
+.exploring-panel__detail-value {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ui-text);
+  word-break: break-word;
+}
+
+.exploring-panel__command {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(
+    in srgb,
+    var(--color-primary-500, #6366f1) 7%,
+    var(--ui-bg-elevated)
+  );
+}
+
+.exploring-panel__command-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ui-text-muted);
+}
+
+.exploring-panel__command-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ui-text);
+  word-break: break-word;
+}
+
+.exploring-panel__outcome {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: min(420px, 48vh);
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 0 8px 8px;
-  scrollbar-width: thin;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(
+    in srgb,
+    var(--color-primary-500, #6366f1) 6%,
+    var(--ui-bg-elevated)
+  );
 }
 
-.tool-loop-panel__body :deep(.tr),
-.tool-loop-panel__body :deep(.term) {
-  min-width: 0;
-  width: 100%;
-  max-width: 100%;
-  border: 1px solid var(--ui-border);
-  border-radius: 8px;
-  background: var(--ui-bg);
+.exploring-panel__headline {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ui-text);
+}
+
+.exploring-panel__list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ui-text);
+}
+
+.exploring-panel__list li + li {
+  margin-top: 4px;
+}
+
+.exploring-panel__note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ui-text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.exploring-panel__pending {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-primary-600, #4f46e5);
+}
+
+.exploring-panel__error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--color-error-500, #ef4444) 28%, var(--ui-border));
+  background: color-mix(in srgb, var(--color-error-500, #ef4444) 7%, var(--ui-bg-elevated));
+  color: var(--color-error-600, #dc2626);
+  font-size: 13px;
+  line-height: 1.5;
 }
 </style>

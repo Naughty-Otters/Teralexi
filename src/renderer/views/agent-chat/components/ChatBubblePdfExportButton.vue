@@ -69,7 +69,7 @@ async function onExport(): Promise<void> {
     })
     if (result.savedPath) {
       toast.add({
-        title: t.chat.exportBubblePdfSuccess,
+        title: t.value.chat.exportBubblePdfSuccess,
         color: 'success',
       })
       emit('exported', result.savedPath)
@@ -77,7 +77,7 @@ async function onExport(): Promise<void> {
     }
     if (result.error && !result.error.includes('cancel')) {
       toast.add({
-        title: t.chat.exportBubblePdfFailed,
+        title: t.value.chat.exportBubblePdfFailed,
         description: result.error,
         color: 'error',
       })

@@ -7,6 +7,7 @@ import {
   bootstrapPlanFileForConversation,
   isPlanModeActive,
 } from '../../coding/plan-mode-state'
+import { attachInjectorMessageMeta } from '../injection-message-meta'
 import type { AgentInjector, InjectionRunContext } from '../types'
 import { INJECTOR_ORDER } from './orders'
 
@@ -28,6 +29,15 @@ function ensurePlanFileReady(
   bootstrapPlanFileForConversation(id, undefined, { sandboxRoot })
 }
 
+function withPlanModeInjectorMeta(
+  message: NonNullable<ReturnType<typeof resolvePlanModeInjectionMessage>>,
+): ReturnType<typeof resolvePlanModeInjectionMessage> {
+  return attachInjectorMessageMeta(message, {
+    injectorId: 'plan-mode',
+    injectedAt: new Date().toISOString(),
+  })
+}
+
 export const planModeInjector: AgentInjector = {
   id: 'plan-mode',
   order: INJECTOR_ORDER.LANGUAGE + 1,
@@ -43,15 +53,16 @@ export const planModeInjector: AgentInjector = {
       sandboxRootFromCtx(ctx),
     )
   },
-  injectMessages({ profile, ctx, loopStep }) {
+  injectUserMessage({ profile, ctx, loopStep }) {
     if (profile.planModeUsesPrepareStep) return null
     if (!isRootRun(ctx)) return null
     ensurePlanFileReady(ctx.opts.conversationId, sandboxRootFromCtx(ctx))
-    return resolvePlanModeInjectionMessage(
+    const message = resolvePlanModeInjectionMessage(
       ctx.opts.conversationId,
       loopStep,
       sandboxRootFromCtx(ctx),
     )
+    return message ? withPlanModeInjectorMeta(message) : null
   },
   onPrepareStep({ profile, ctx, loopStep }, step) {
     if (!profile.planModeUsesPrepareStep) return undefined
@@ -82,7 +93,10 @@ export const planModeInjector: AgentInjector = {
     }
 
     if (injection) {
-      result.messages = [...step.messages, injection]
+      result.messages = [
+        ...step.messages,
+        withPlanModeInjectorMeta(injection),
+      ]
     }
 
     return Object.keys(result).length > 0 ? result : undefined

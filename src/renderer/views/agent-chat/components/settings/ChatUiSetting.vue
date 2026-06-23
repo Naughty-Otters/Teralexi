@@ -82,6 +82,21 @@
         </div>
       </div>
 
+      <div class="chat-ui-row">
+        <div class="chat-ui-row-text">
+          <span class="chat-ui-row-title">{{ t.chatUi.showAgenticRunTitle }}</span>
+          <span class="chat-ui-row-desc">{{ t.chatUi.showAgenticRunDesc }}</span>
+        </div>
+        <label class="chat-ui-toggle">
+          <input
+            type="checkbox"
+            :checked="draft.showAgenticRunBubbles"
+            :disabled="saving === 'showAgenticRunBubbles'"
+            @change="onShowAgenticRunChange"
+          />
+        </label>
+      </div>
+
       <p class="chat-ui-footnote">{{ defaultsFootnote }}</p>
     </div>
   </section>
@@ -137,6 +152,7 @@ async function loadSettings(): Promise<void> {
     draft.bubbleCompactLines = settings.bubbleCompactLines
     draft.contextWindowMessages = settings.contextWindowMessages
     draft.reasoningMaxChars = settings.reasoningMaxChars
+    draft.showAgenticRunBubbles = settings.showAgenticRunBubbles
   } finally {
     loading.value = false
   }
@@ -152,12 +168,14 @@ async function persist(partial: Partial<ChatUiSettings>): Promise<void> {
       bubbleCompactLines: draft.bubbleCompactLines,
       contextWindowMessages: draft.contextWindowMessages,
       reasoningMaxChars: draft.reasoningMaxChars,
+      showAgenticRunBubbles: draft.showAgenticRunBubbles,
       ...partial,
     })
     draft.bubbleTextKeepChars = next.bubbleTextKeepChars
     draft.bubbleCompactLines = next.bubbleCompactLines
     draft.contextWindowMessages = next.contextWindowMessages
     draft.reasoningMaxChars = next.reasoningMaxChars
+    draft.showAgenticRunBubbles = next.showAgenticRunBubbles
   } finally {
     saving.value = null
   }
@@ -201,6 +219,12 @@ function onReasoningMaxChange(event: Event): void {
   const next = clampChatUiReasoningMaxChars(raw)
   draft.reasoningMaxChars = next
   void persist({ reasoningMaxChars: next })
+}
+
+function onShowAgenticRunChange(event: Event): void {
+  const next = (event.target as HTMLInputElement).checked
+  draft.showAgenticRunBubbles = next
+  void persist({ showAgenticRunBubbles: next })
 }
 
 onMounted(() => {
@@ -276,5 +300,17 @@ onMounted(() => {
   font-size: 12px;
   color: var(--ui-text-muted);
   min-width: 2.5rem;
+}
+
+.chat-ui-toggle {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.chat-ui-toggle input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 </style>

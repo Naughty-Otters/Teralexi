@@ -12,6 +12,7 @@
  */
 
 import type { ModelMessage } from '@openfde-ai'
+import { stripInjectorMessageMeta } from '../injection/injection-message-meta'
 
 // ---------------------------------------------------------------------------
 // Public surface
@@ -30,6 +31,8 @@ export function sanitizeMessages(messages: ModelMessage[]): SanitizeResult {
   out = repairToolCallInputs(out, mutations)
   out = repairRoleAlternation(out, mutations)
   out = normalizeEmptyContent(out, mutations)
+
+  out = stripInjectorMessageMeta(out)
 
   return { messages: out, mutations }
 }

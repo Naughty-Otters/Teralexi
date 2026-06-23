@@ -1,4 +1,5 @@
 import type { AgentInjector } from './types'
+import { currentDatetimeInjector } from './injectors/current-datetime'
 import { baseToolLoopInjector } from './injectors/base-tool-loop'
 import { skillsInjector } from './injectors/skills'
 import { validationRulesInjector } from './injectors/validation-rules'
@@ -17,8 +18,16 @@ import { stepGoalInjector } from './injectors/step-goal'
 import { toolResultRulesInjector } from './injectors/tool-result-rules'
 import { exploreManifestInjector } from './injectors/explore-manifest'
 import { sessionToolLedgerInjector } from './injectors/session-tool-ledger'
+import { deepThinkingBeforeAnswerInjector } from './injectors/deep-thinking-before-answer'
+import { multipleBranchThinkingInjector } from './injectors/multiple-branch-thinking'
+import { deepThinkingAfterAnswerInjector } from './injectors/deep-thinking-after-answer'
+import { diagramOutputInjector } from './injectors/diagram-output'
 
 const ALL_INJECTORS: AgentInjector[] = [
+  deepThinkingBeforeAnswerInjector,
+  multipleBranchThinkingInjector,
+  currentDatetimeInjector,
+  deepThinkingAfterAnswerInjector,
   baseToolLoopInjector,
   skillsInjector,
   validationRulesInjector,
@@ -29,6 +38,7 @@ const ALL_INJECTORS: AgentInjector[] = [
   codingModeInstructionsInjector,
   previousStepInjector,
   sandboxStructureInjector,
+  diagramOutputInjector,
   workspaceStructureInjector,
   languageInjector,
   planModeInjector,

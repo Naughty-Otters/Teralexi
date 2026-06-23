@@ -1,4 +1,7 @@
-import MarkdownIt from 'markdown-it'
+import {
+  createStandardMarkdownIt,
+  resolveDiagramBlocksInHtml,
+} from '@shared/markdown/create-markdown-it'
 
 import {
   pdfDocumentFontFaceCss,
@@ -6,15 +9,12 @@ import {
   PDF_SANS_FONT_STACK,
 } from './pdf-print-styles'
 
-const markdown = new MarkdownIt({
-  html: false,
-  breaks: true,
-  linkify: true,
-})
+const markdown = createStandardMarkdownIt()
 
 /** Full HTML document wrapping rendered markdown (for PDF export). */
 export function renderMarkdownToHtmlDocument(markdownBody: string): string {
-  return buildHtmlDocument(markdown.render(markdownBody))
+  const bodyHtml = resolveDiagramBlocksInHtml(markdown.render(markdownBody))
+  return buildHtmlDocument(bodyHtml)
 }
 
 /** Full HTML document showing markdown source (raw preview mode). */
@@ -96,6 +96,23 @@ function buildHtmlDocument(bodyHtml: string): string {
         border: 1px solid #dbe2ea;
         padding: 8px 10px;
         text-align: left;
+      }
+      .diagram-block {
+        margin: 16px 0;
+        overflow-x: auto;
+      }
+      .diagram-block svg {
+        display: block;
+        max-width: 100%;
+        height: auto;
+      }
+      .diagram-block--error {
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #fecaca;
+        background: #fef2f2;
+        color: #b91c1c;
+        font-size: 13px;
       }
     </style>
   </head>

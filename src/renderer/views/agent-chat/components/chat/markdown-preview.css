@@ -1,4 +1,6 @@
 /* Shared typography for rendered markdown in chat bubbles (global CSS — no :deep). */
+@import '../../diagram.css';
+
 .md-preview,
 .msg-html,
 .structured-debug-body,

@@ -1,9 +1,9 @@
 {
-  "usableSessionsCount": 1,
+  "usableSessionsCount": 4,
   "retiredSessionsCount": 0,
   "sessions": [
     {
-      "id": "session_Cqf7Kv0Ira",
+      "id": "session_ufz8VYfWqV",
       "cookieJar": {
         "version": "tough-cookie@6.0.1",
         "storeType": "MemoryCookieStore",
@@ -11,85 +11,76 @@
         "enableLooseMode": false,
         "allowSpecialUseDomain": true,
         "prefixSecurity": "silent",
-        "cookies": [
-          {
-            "key": "idp_session",
-            "value": "sVERSION_16dd09652-0046-459c-b3ee-2474aadc7c73",
-            "domain": "nature.com",
-            "path": "/",
-            "secure": true,
-            "httpOnly": true,
-            "hostOnly": false,
-            "creation": "2026-06-22T17:31:52.324Z",
-            "lastAccessed": "2026-06-22T17:31:52.594Z",
-            "sameSite": "none"
-          },
-          {
-            "key": "idp_session_http",
-            "value": "hVERSION_1fed65b64-c760-4d53-a086-5a95cb183da7",
-            "domain": "nature.com",
-            "path": "/",
-            "httpOnly": true,
-            "hostOnly": false,
-            "creation": "2026-06-22T17:31:52.324Z",
-            "lastAccessed": "2026-06-22T17:31:52.594Z"
-          },
-          {
-            "key": "idp_marker",
-            "value": "c7569d9e-c00e-427a-8cfd-69507e8a43e8",
-            "maxAge": 34560000,
-            "domain": "nature.com",
-            "path": "/",
-            "httpOnly": true,
-            "hostOnly": false,
-            "creation": "2026-06-22T17:31:52.324Z",
-            "lastAccessed": "2026-06-22T17:31:52.594Z"
-          },
-          {
-            "key": "csrf-token",
-            "value": "\"utterlyidle:v1:Mkp5ZnZSbVFYU3BNdlNMelRuRXZ3K0tsSUtZWjE0Nzk0SHFWejA1enBWYz0=\"",
-            "expires": "2026-06-23T17:31:53.000Z",
-            "domain": "nature.com",
-            "path": "/articles/s41467-023-41888-1",
-            "secure": true,
-            "httpOnly": true,
-            "hostOnly": false,
-            "creation": "2026-06-22T17:31:53.756Z",
-            "lastAccessed": "2026-06-22T17:31:53.756Z"
-          },
-          {
-            "key": "CONTENT_USAGE_SESSIONID",
-            "value": "\"utterlyidle:v1:MjE4ZTBiNzUtMTUzZC00NDZiLWJjNzMtYTljOTEyZWQ2MTNh\"",
-            "domain": "nature.com",
-            "path": "/",
-            "secure": true,
-            "httpOnly": true,
-            "hostOnly": false,
-            "creation": "2026-06-22T17:31:53.756Z",
-            "lastAccessed": "2026-06-22T17:31:53.756Z"
-          },
-          {
-            "key": "user.uuid.v2",
-            "value": "\"b5b04bb5-b3e2-47d7-b67c-89edd0098fc9\"",
-            "expires": "2026-09-22T17:31:52.000Z",
-            "domain": "www.nature.com",
-            "path": "/",
-            "secure": true,
-            "httpOnly": true,
-            "hostOnly": true,
-            "creation": "2026-06-22T17:31:53.756Z",
-            "lastAccessed": "2026-06-22T17:31:53.756Z"
-          }
-        ]
+        "cookies": []
       },
       "userData": {},
       "maxErrorScore": 3,
       "errorScoreDecrement": 0.5,
-      "expiresAt": "2026-06-22T18:21:51.012Z",
-      "createdAt": "2026-06-22T17:31:51.012Z",
+      "expiresAt": "2026-06-23T17:24:51.221Z",
+      "createdAt": "2026-06-23T16:34:51.221Z",
       "usageCount": 1,
       "maxUsageCount": 50,
-      "errorScore": 0
+      "errorScore": 1
+    },
+    {
+      "id": "session_oVTDRyn8Yk",
+      "cookieJar": {
+        "version": "tough-cookie@6.0.1",
+        "storeType": "MemoryCookieStore",
+        "rejectPublicSuffixes": true,
+        "enableLooseMode": false,
+        "allowSpecialUseDomain": true,
+        "prefixSecurity": "silent",
+        "cookies": []
+      },
+      "userData": {},
+      "maxErrorScore": 3,
+      "errorScoreDecrement": 0.5,
+      "expiresAt": "2026-06-23T17:24:51.520Z",
+      "createdAt": "2026-06-23T16:34:51.520Z",
+      "usageCount": 1,
+      "maxUsageCount": 50,
+      "errorScore": 1
+    },
+    {
+      "id": "session_Fm6aS4mjw4",
+      "cookieJar": {
+        "version": "tough-cookie@6.0.1",
+        "storeType": "MemoryCookieStore",
+        "rejectPublicSuffixes": true,
+        "enableLooseMode": false,
+        "allowSpecialUseDomain": true,
+        "prefixSecurity": "silent",
+        "cookies": []
+      },
+      "userData": {},
+      "maxErrorScore": 3,
+      "errorScoreDecrement": 0.5,
+      "expiresAt": "2026-06-23T17:24:51.662Z",
+      "createdAt": "2026-06-23T16:34:51.662Z",
+      "usageCount": 1,
+      "maxUsageCount": 50,
+      "errorScore": 1
+    },
+    {
+      "id": "session_HDc2OhBUgV",
+      "cookieJar": {
+        "version": "tough-cookie@6.0.1",
+        "storeType": "MemoryCookieStore",
+        "rejectPublicSuffixes": true,
+        "enableLooseMode": false,
+        "allowSpecialUseDomain": true,
+        "prefixSecurity": "silent",
+        "cookies": []
+      },
+      "userData": {},
+      "maxErrorScore": 3,
+      "errorScoreDecrement": 0.5,
+      "expiresAt": "2026-06-23T17:24:51.791Z",
+      "createdAt": "2026-06-23T16:34:51.791Z",
+      "usageCount": 1,
+      "maxUsageCount": 50,
+      "errorScore": 1
     }
   ]
 }

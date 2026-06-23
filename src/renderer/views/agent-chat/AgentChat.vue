@@ -212,7 +212,7 @@ watchEffect(() => {
     isBusy: false,
     onToggleReportPanel: null,
     onStop: null,
-    onClearConversation: null,
+    onNewSession: null,
   })
 })
 
@@ -446,8 +446,7 @@ onUnmounted(() => {
 <style scoped>
 .agent-app {
   width: 100%;
-  height: 100vh;
-  padding-top: 30px;
+  height: 100%;
   box-sizing: border-box;
   overflow: hidden;
 }

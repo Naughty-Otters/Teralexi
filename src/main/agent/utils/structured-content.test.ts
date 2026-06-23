@@ -67,7 +67,7 @@ describe('structured-content', () => {
     const serialized = serializeAssistantMessageForHistory(raw)
     expect(serialized).toContain('Done')
     expect(serialized).toContain('Full report')
-    expect(serialized).toContain('Artifact paths:')
+    expect(serialized).not.toContain('Artifact paths:')
   })
 
   it('parses embedded structured content markers from live progress text', () => {
@@ -160,7 +160,7 @@ describe('structured-content', () => {
       },
     }
     expect(serializeAssistantMessageForExternalReply(JSON.stringify(payload))).toBe(
-      '**Summary**\n\nDone',
+      'Done',
     )
   })
 

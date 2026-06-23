@@ -28,6 +28,9 @@ describe('chat-persona', () => {
     expect(assistantBubbleActivityLabel('PlanningStep', 'done')).toBe(
       'explored the options',
     )
+    expect(assistantBubbleActivityLabel('SkillsToolExecutionStep', 'done')).toBe(
+      '',
+    )
   })
 
   it('labels attachment sections naturally', () => {

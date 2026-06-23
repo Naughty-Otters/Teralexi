@@ -113,10 +113,6 @@ export function serializeAssistantMessageForHistory(raw: string): string {
   if (finalResult) lines.push(finalResult)
   if (report) lines.push(report)
 
-  const artifactSummary = outer.allArtifactPaths?.filter(Boolean).length
-    ? `\n\nArtifact paths:\n${outer.allArtifactPaths!.join('\n')}`
-    : ''
-
   if (lines.length === 0) {
     const captures = outer.stepCaptures
     if (captures?.length) {
@@ -134,7 +130,7 @@ export function serializeAssistantMessageForHistory(raw: string): string {
   }
 
   const joined = lines.join('\n\n').trim()
-  return (joined + artifactSummary).trim() || raw
+  return joined || raw
 }
 
 /** Outbound channel/scheduler reply: user-facing text only (no tools, reasoning, or step dumps). */

@@ -28,6 +28,17 @@ describe('step-output-links', () => {
     expect(links.map((l) => l.label)).toEqual(['top-tags.md'])
   })
 
+  it('excludes capture*.txt files from output link lists', () => {
+    const root = mkdtempSync(join(tmpdir(), 'openfde-links-capture-'))
+    const results = join(root, 'results')
+    mkdirSync(results, { recursive: true })
+    writeFileSync(join(results, 'report.md'), '# report', 'utf8')
+    writeFileSync(join(results, 'capture-1234-abcd.txt'), 'stdout', 'utf8')
+
+    const links = buildOutputLinksFromPaths([results])
+    expect(links.map((l) => l.label)).toEqual(['report.md'])
+  })
+
   it('formatExistingSandboxArtifactsBlock lists sandbox-relative output paths', () => {
     const root = mkdtempSync(join(tmpdir(), 'openfde-artifacts-'))
     const outputRoot = sandboxOutputDir(root)

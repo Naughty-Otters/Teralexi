@@ -158,4 +158,41 @@ describe('useChatMessageScrollWindow', () => {
     await onScroll()
     expect(stickToBottom.value).toBe(false)
   })
+
+  it('re-enables stick to bottom when user scrolls back to the end', async () => {
+    const messages = ref(makeMessages(10))
+    const scrollEl = ref<HTMLElement | null>(null)
+    const { stickToBottom, resetWindow, onWheel, onScroll } =
+      useChatMessageScrollWindow(messages, scrollEl)
+
+    resetWindow(true)
+    await nextTick()
+
+    scrollEl.value = mockScrollEl({
+      scrollTop: 0,
+      scrollHeight: 2_000,
+      clientHeight: 600,
+    })
+    onWheel({ deltaY: -1 } as WheelEvent)
+    expect(stickToBottom.value).toBe(false)
+
+    scrollEl.value.scrollTop = 1_450
+    await onScroll()
+    expect(stickToBottom.value).toBe(true)
+  })
+
+  it('armStickToBottom forces follow mode after user detached', async () => {
+    const messages = ref(makeMessages(3))
+    const scrollEl = ref<HTMLElement | null>(null)
+    const { stickToBottom, resetWindow, onWheel, armStickToBottom } =
+      useChatMessageScrollWindow(messages, scrollEl)
+
+    resetWindow(true)
+    await nextTick()
+    onWheel({ deltaY: -1 } as WheelEvent)
+    expect(stickToBottom.value).toBe(false)
+
+    armStickToBottom()
+    expect(stickToBottom.value).toBe(true)
+  })
 })

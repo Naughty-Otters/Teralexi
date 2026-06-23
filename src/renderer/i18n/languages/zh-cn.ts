@@ -122,6 +122,9 @@ export const lang: AppLocaleBundle = {
     reasoningMaxTitle: '推理预览长度',
     reasoningMaxDesc:
       '模型推理时，每个推理块最多保留最近这么多字符。更早的推理不会显示，也不会写入数据库。',
+    showAgenticRunTitle: '显示 Agentic Run 气泡',
+    showAgenticRunDesc:
+      '在 Agent 执行过程中显示 Agentic Run 步骤气泡与工具循环面板。表单与审批步骤始终显示。',
     defaultsFootnote:
       '默认值：每端 {keepChars} 字符，{compactLines} 行紧凑高度，{contextMessages} 条上下文消息，推理 {reasoningMax} 字符。',
   },
@@ -130,6 +133,10 @@ export const lang: AppLocaleBundle = {
     exportBubblePdf: '导出为 PDF',
     exportBubblePdfSuccess: 'PDF 已保存',
     exportBubblePdfFailed: '无法导出 PDF',
+    copyBubbleContent: '复制内容',
+    copyBubbleContentSuccess: '已复制到剪贴板',
+    copyBubbleContentFailed: '无法复制内容',
+    printBubbleContent: '打印内容',
   },
   monitor: {
     title: 'Token 监控',

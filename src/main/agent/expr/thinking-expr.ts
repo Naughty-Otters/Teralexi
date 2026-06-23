@@ -45,6 +45,11 @@ export {
 } from './thinking-utils'
 
 import { truncateString } from '../utils/str-utils'
+import {
+  DIAGRAM_DIRECT_ANSWER_RETRY_HINT,
+  DIAGRAM_THINKING_ROUTING_HINT,
+} from '@shared/agent/diagram-output-instructions'
+import { downgradeAgentCallForInlineDiagram } from './thinking-route-guard'
 
 const thinkingRouterSchema = z.object({
   execution_mode: z
@@ -82,12 +87,12 @@ Routing rules:
 1. Always fill goal, task, and context — translate the user's request into language the next step can act on.
 2. Choose execution_mode:
    - planning — work spans multiple steps, touches many files, or needs a plan + approval before changes.
-   - agent_call — user wants actions done now (edit files, run commands, implement a focused change).
-   - direct_answer — **only** pure informational Q&A (definitions, concepts, comparisons) with **no** requested edits, commands, or tool use.
+   - agent_call — user wants files edited, commands run, data exported to disk, or work that cannot be answered as markdown alone. **Not** for inline plot/chart images — use direct_answer + \`\`\`diagram\` instead.
+   - direct_answer — pure informational Q&A and **explain/plot/visualize** math or simple diagrams; put prose plus any \`\`\`diagram\` fence in \`response\` (no tools).
 3. When execution_mode is direct_answer, write the complete answer in response (not just routing metadata). Otherwise set response to "".
 4. Always include rationale; use "" when there is nothing meaningful to add beyond goal/task.
 5. Do not ask the user questions. If details are missing, state reasonable assumptions in goal/task/context.
-6. **When uncertain, prefer agent_call over direct_answer.** If the user asks to fix, implement, add, create, update, run, refactor, or change anything, use agent_call or planning — never direct_answer.
+6. **When uncertain, prefer agent_call over direct_answer** — except for explain/plot/graph/visualize requests that need only prose + a built-in \`\`\`diagram\` block (use direct_answer).
 7. Never use direct_answer when the user delegates work ("please fix", "can you implement", "help me build", "go ahead and …").`,
   RESEARCH_CONTEXT_HEADER: 'Read-only research summary (for routing only):',
   ADDITIONAL_CONFIG_HEADER: 'Additional instructions:',
@@ -111,9 +116,9 @@ function buildThinkingInstructions(
     ? '\n\nExplore mode is already active for this conversation. Always set execution_mode to "planning". Do not use agent_call or direct_answer.'
     : ''
   const toolsRule = toolsEnabled
-    ? '\n\nThis agent has tools enabled. Use direct_answer ONLY for purely informational questions (definitions, concepts, comparisons) with no requested edits, commands, or tool use. For anything else, use agent_call or planning.'
+    ? '\n\nThis agent has tools enabled. Use direct_answer for purely informational questions and for explain/plot/visualize requests that you can answer with markdown plus a ```diagram``` fence — do not use agent_call or run_script just to draw a chart. Use agent_call when the user needs sandbox file changes, exports, or other tool work.'
     : ''
-  return `${THINKING_LLM.SYSTEM_INSTRUCTIONS}${planModeRule}${toolsRule}${
+  return `${THINKING_LLM.SYSTEM_INSTRUCTIONS}${planModeRule}${toolsRule}\n\n${DIAGRAM_THINKING_ROUTING_HINT}${
     extra ? `\n\n---\n${THINKING_LLM.ADDITIONAL_CONFIG_HEADER}\n${extra}` : ''
   }`
 }
@@ -298,9 +303,27 @@ class ThinkingStepDefinition extends StepExpressionDefinitionBase {
       routerMessages,
       this.llmOptions(),
     )
+    const userMessage = ctx.getLatestUserMessageContent()
+    const routeBeforeDowngrade = thinking.execution_mode
+    thinking = downgradeAgentCallForInlineDiagram(thinking, userMessage)
+    if (
+      routeBeforeDowngrade === 'agent_call' &&
+      thinking.execution_mode === 'direct_answer' &&
+      !thinking.response?.trim()
+    ) {
+      thinking = await runThinkingRouterLlm(
+        ctx,
+        plan,
+        [
+          ...routerMessages,
+          { role: 'user', content: DIAGRAM_DIRECT_ANSWER_RETRY_HINT },
+        ],
+        this.llmOptions(),
+      )
+    }
     thinking = correctMisroutedThinking(
       thinking,
-      ctx.getLatestUserMessageContent(),
+      userMessage,
       { toolsEnabled: agentHasRunnableTools(ctx) },
     )
     thinking = normalizeThinkingForSubAgentRun(ctx, thinking)

@@ -35,18 +35,27 @@ describe('extractAttachmentsFromToolResult', () => {
     expect(items[0]?.action).toBe('create')
   })
 
-  it('extracts capture path from run_script success', () => {
+  it('skips capture logs for run_script attachments', () => {
     const items = extractAttachmentsFromToolResult('run_script', {
       success: true,
-      captureAbsolutePath: '/sandbox/output/toolLoop/x/results/cap.txt',
+      captureAbsolutePath: '/sandbox/output/toolLoop/x/results/capture-1.txt',
+      resultReadFrom: 'output/toolLoop/x/results/capture-1.txt',
+      sandboxRoot: '/sandbox',
+    })
+    expect(items.some((a) => a.path.includes('capture'))).toBe(false)
+  })
+
+  it('keeps non-capture resultReadFrom for legacy run_script results', () => {
+    const items = extractAttachmentsFromToolResult('run_script', {
+      success: true,
+      captureAbsolutePath: '/sandbox/output/toolLoop/x/results/capture-1.txt',
       resultReadFrom: 'output/results/data.json',
       sandboxRoot: '/sandbox',
     })
-    expect(items.length).toBeGreaterThanOrEqual(1)
-    expect(items.some((a) => a.path.includes('cap.txt'))).toBe(true)
-    expect(
-      items.some((a) => a.path.endsWith('output/results/data.json')),
-    ).toBe(true)
+    expect(items.some((a) => a.path.endsWith('output/results/data.json'))).toBe(
+      true,
+    )
+    expect(items.some((a) => a.path.includes('capture'))).toBe(false)
   })
 
   it('prefers artifacts[] over capture for run_script attachments', () => {

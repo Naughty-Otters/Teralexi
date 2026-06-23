@@ -44,7 +44,7 @@ export function assistantBubbleActivityLabel(
   const done: Record<string, string> = {
     ThinkingStep: 'shared a thought',
     PlanningStep: 'explored the options',
-    SkillsToolExecutionStep: 'made some progress',
+    SkillsToolExecutionStep: '',
     SummaryStep: 'wrapped up',
     AnalysisStep: 'wrapped up',
     ReportStep: 'shared a report',

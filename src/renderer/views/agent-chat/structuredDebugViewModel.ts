@@ -7,8 +7,9 @@
  */
 import type MarkdownIt from 'markdown-it'
 
-import { prepareMarkdownSource } from '@shared/markdown/prepare-markdown-source'
+import { extractUserFacingTextFromFinalResult } from '@shared/agent/assistant-external-reply'
 import { AGENTIC_RUN_STEP_TITLE } from '@shared/agent/agentic-run-labels'
+import { prepareMarkdownSource } from '@shared/markdown/prepare-markdown-source'
 import {
   attachmentsFromOutputLinks,
   dedupeStepAttachments,
@@ -367,6 +368,10 @@ export function markdownBodyFromText(text: string): string {
   return prepareMarkdownSource(text) ?? ''
 }
 
+function userFacingFinalResultMarkdown(finalResult: string): string {
+  return extractUserFacingTextFromFinalResult(finalResult) || finalResult.trim()
+}
+
 function sectionBodyFields(
   markdown: MarkdownIt,
   text: string,
@@ -643,7 +648,7 @@ function buildSectionsFromStructured(
       sections.push({
         id: 'finalResult',
         title: 'Final Result',
-        ...sectionBodyFields(markdown, finalResult),
+        ...sectionBodyFields(markdown, userFacingFinalResultMarkdown(finalResult)),
         status: 'done',
       })
     }
@@ -752,7 +757,7 @@ function buildSectionsFromStructured(
     sections.push({
       id: 'finalResult',
       title: 'Final Result',
-      ...sectionBodyFields(markdown, finalResult),
+      ...sectionBodyFields(markdown, userFacingFinalResultMarkdown(finalResult)),
       status: 'done',
     })
   }

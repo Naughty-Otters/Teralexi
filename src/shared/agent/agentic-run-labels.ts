@@ -1,6 +1,9 @@
 /** User-facing title for the tool-loop / agentic execution pipeline stage. */
 export const AGENTIC_RUN_STEP_TITLE = 'Agentic Run' as const
 
+/** End-user label for the live tool exploration panel in chat. */
+export const EXPLORING_PANEL_TITLE = 'Exploring' as const
+
 /** Persisted history and older streams may still use this title. */
 export const LEGACY_TOOL_LOOP_STEP_TITLE = 'Tool Loop' as const
 

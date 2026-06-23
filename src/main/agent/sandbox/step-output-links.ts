@@ -13,6 +13,7 @@ import {
 } from '../constants/step-ids'
 import { createPaperOutputDir } from '../steps/create-paper/paths'
 import { webScrapeOutputDir } from '../steps/web-scrape/paths'
+import { isCaptureArtifactPath } from '@shared/agent/capture-artifact-path'
 import type { SandboxContext } from './context'
 
 export type StepOutputLink = {
@@ -58,6 +59,7 @@ function pushUniqueLink(
   absPath: string,
   label?: string,
 ): void {
+  if (isCaptureArtifactPath(absPath)) return
   const url = pathToSandboxPreviewUrl(absPath)
   if (!url || seen.has(url)) return
   seen.add(url)
@@ -180,6 +182,7 @@ export function collectSandboxOutputRelativePaths(
         continue
       }
       if (!st.isFile()) continue
+      if (isCaptureArtifactPath(full)) continue
       const rel = toSandboxRelativePath(trimmed, full)
       if (!rel || seen.has(rel)) continue
       seen.add(rel)

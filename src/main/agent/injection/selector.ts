@@ -17,9 +17,11 @@ const TOOL_LOOP_DEFAULT_INSTRUCTIONS = [
   'sub-agents',
   'previous-step',
   'sandbox-structure',
+  'diagram-output',
   'workspace-structure',
   'language',
   'plan-mode',
+  'deep-thinking-after-answer',
 ] as const
 
 const TOOL_LOOP_CODING_INSTRUCTIONS = [
@@ -33,9 +35,11 @@ const TOOL_LOOP_CODING_INSTRUCTIONS = [
   'coding-mode-instructions',
   'previous-step',
   'sandbox-structure',
+  'diagram-output',
   'workspace-structure',
   'session-tool-ledger',
   'language',
+  'deep-thinking-after-answer',
 ] as const
 
 const TODO_EXECUTION_INSTRUCTIONS = [
@@ -45,10 +49,29 @@ const TODO_EXECUTION_INSTRUCTIONS = [
   'session-tool-ledger',
   'previous-step',
   'sandbox-structure',
+  'diagram-output',
   'workspace-structure',
   'tool-result-rules',
   'memory-persona',
   'language',
+] as const
+
+const TOOL_LOOP_DEFAULT_USER_MESSAGES = [
+  'deep-thinking-before-answer',
+  'multiple-branch-thinking',
+  'current-datetime',
+  'plan-mode',
+] as const
+const TOOL_LOOP_CODING_ROOT_USER_MESSAGES = [
+  'deep-thinking-before-answer',
+  'multiple-branch-thinking',
+  'current-datetime',
+] as const
+const TOOL_LOOP_CODING_CHILD_USER_MESSAGES = [
+  'deep-thinking-before-answer',
+  'multiple-branch-thinking',
+  'current-datetime',
+  'plan-mode',
 ] as const
 
 const PROFILE_INJECTOR_IDS: Record<InjectionProfileKey, readonly string[]> = {
@@ -59,6 +82,14 @@ const PROFILE_INJECTOR_IDS: Record<InjectionProfileKey, readonly string[]> = {
   ],
   'toolLoop.coding.child': TOOL_LOOP_CODING_INSTRUCTIONS,
   todoExecution: TODO_EXECUTION_INSTRUCTIONS,
+}
+
+const PROFILE_USER_MESSAGE_INJECTOR_IDS: Partial<
+  Record<InjectionProfileKey, readonly string[]>
+> = {
+  'toolLoop.default': TOOL_LOOP_DEFAULT_USER_MESSAGES,
+  'toolLoop.coding.root': TOOL_LOOP_CODING_ROOT_USER_MESSAGES,
+  'toolLoop.coding.child': TOOL_LOOP_CODING_CHILD_USER_MESSAGES,
 }
 
 function resolveRunDepth(ctx: AgentStepContext): number {
@@ -116,12 +147,28 @@ export function resolveInjectionProfile(
   }
 }
 
-export function selectInjectors(profile: InjectionProfile): AgentInjector[] {
-  const ids = PROFILE_INJECTOR_IDS[profile.key]
+function resolveInjectors(ids: readonly string[]): AgentInjector[] {
   const injectors: AgentInjector[] = []
   for (const id of ids) {
     const injector = getInjectorById(id)
     if (injector) injectors.push(injector)
   }
   return injectors
+}
+
+export function selectInjectors(profile: InjectionProfile): AgentInjector[] {
+  return resolveInjectors(PROFILE_INJECTOR_IDS[profile.key])
+}
+
+export function selectInstructionInjectors(
+  profile: InjectionProfile,
+): AgentInjector[] {
+  return selectInjectors(profile)
+}
+
+export function selectUserMessageInjectors(
+  profile: InjectionProfile,
+): AgentInjector[] {
+  const ids = PROFILE_USER_MESSAGE_INJECTOR_IDS[profile.key] ?? []
+  return resolveInjectors(ids)
 }
