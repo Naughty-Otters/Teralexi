@@ -3,47 +3,65 @@
  */
 import { describe, expect, it, vi } from 'vitest'
 import {
-  handleSandboxPreviewLinkClick,
-  isSandboxPreviewHref,
-  resolveSandboxPreviewUrlFromElement,
+
+  handleChatPanelLinkClick,
+  isChatPreviewHref,
+  isInsideChatMessageLinkScope,
 } from './sandboxPreview'
 
-describe('sandboxPreview', () => {
-  it('detects file urls', () => {
-    expect(isSandboxPreviewHref('file:///tmp/out.html')).toBe(true)
-    expect(isSandboxPreviewHref('https://example.com')).toBe(false)
+describe('isChatPreviewHref', () => {
+  it('accepts file, http, and https URLs', () => {
+    expect(isChatPreviewHref('file:///tmp/a.html')).toBe(true)
+    expect(isChatPreviewHref('https://example.com/x')).toBe(true)
+    expect(isChatPreviewHref('http://localhost:3000/')).toBe(true)
   })
 
-  it('resolves sandbox preview links by class and data attribute', () => {
+  it('rejects non-preview schemes and fragments', () => {
+    expect(isChatPreviewHref('#section')).toBe(false)
+    expect(isChatPreviewHref('mailto:a@b.com')).toBe(false)
+    expect(isChatPreviewHref('javascript:alert(1)')).toBe(false)
+    expect(isChatPreviewHref('')).toBe(false)
+  })
+})
+
+describe('isInsideChatMessageLinkScope', () => {
+  it('matches links inside chat scroll but not composer', () => {
     document.body.innerHTML = `
-      <a href="#" class="sandbox-preview-link" data-sandbox-preview-url="file:///tmp/report.html">Report</a>
-      <a href="#" class="sandbox-preview-link" data-sandbox-preview-url="file:///tmp/from-data.html">
-        <span class="step-output-link-preview__status">Loading</span>
-      </a>
+      <div class="chat-scroll">
+        <a id="in-scroll" href="https://example.com">x</a>
+      </div>
+      <form class="chat-composer">
+        <a id="in-composer" href="https://example.com">y</a>
+      </form>
     `
-    const label = document.querySelector('.sandbox-preview-link')!
-    expect(resolveSandboxPreviewUrlFromElement(label)).toBe(
-      'file:///tmp/report.html',
-    )
-
-    const status = document.querySelector('.step-output-link-preview__status')!
-    expect(resolveSandboxPreviewUrlFromElement(status)).toBe(
-      'file:///tmp/from-data.html',
-    )
+    expect(
+      isInsideChatMessageLinkScope(
+        document.getElementById('in-scroll') as HTMLAnchorElement,
+      ),
+    ).toBe(true)
+    expect(
+      isInsideChatMessageLinkScope(
+        document.getElementById('in-composer') as HTMLAnchorElement,
+      ),
+    ).toBe(false)
   })
+})
 
-  it('opens preview in capture handler and prevents navigation', () => {
-    document.body.innerHTML =
-      '<a href="#" class="sandbox-preview-link" data-sandbox-preview-url="file:///tmp/a.html">Open</a>'
-    const anchor = document.querySelector('a')!
+describe('handleChatPanelLinkClick', () => {
+  it('opens previewable chat links in the right panel callback', () => {
+    document.body.innerHTML = `
+      <div class="chat-scroll">
+        <a id="link" href="https://example.com/doc">open</a>
+      </div>
+    `
+    const anchor = document.getElementById('link') as HTMLAnchorElement
     const onOpen = vi.fn()
     const event = new MouseEvent('click', { bubbles: true, cancelable: true })
     Object.defineProperty(event, 'target', { value: anchor })
-    Object.defineProperty(event, 'currentTarget', { value: document.body })
 
-    handleSandboxPreviewLinkClick(event, onOpen)
+    handleChatPanelLinkClick(event, onOpen)
 
-    expect(onOpen).toHaveBeenCalledWith('file:///tmp/a.html')
     expect(event.defaultPrevented).toBe(true)
+    expect(onOpen).toHaveBeenCalledWith('https://example.com/doc')
   })
 })
