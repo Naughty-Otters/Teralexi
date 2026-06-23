@@ -34,4 +34,21 @@ describe('renderMarkdownHtml', () => {
     const html = md.render('<img onerror=alert(1) src=x>')
     expect(html).not.toMatch(/<img/i)
   })
+
+  it('renders diagram fence to inline SVG', () => {
+    const spec = JSON.stringify({
+      version: 1,
+      viewBox: [0, 0, 200, 60],
+      layers: [
+        {
+          type: 'text',
+          items: [{ at: { x: 10, y: 20 }, text: 'Diagram test' }],
+        },
+      ],
+    })
+    const html = renderMarkdownHtml(`Intro\n\n\`\`\`diagram\n${spec}\n\`\`\``)
+    expect(html).toContain('<svg')
+    expect(html).toContain('Diagram test')
+    expect(html).not.toContain('diagram-block--pending')
+  })
 })

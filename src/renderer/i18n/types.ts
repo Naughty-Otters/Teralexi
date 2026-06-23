@@ -117,6 +117,8 @@ export type AppLabels = {
     contextWindowDesc: string
     reasoningMaxTitle: string
     reasoningMaxDesc: string
+    showAgenticRunTitle: string
+    showAgenticRunDesc: string
     defaultsFootnote: string
   }
   chat: {
@@ -124,6 +126,10 @@ export type AppLabels = {
     exportBubblePdf: string
     exportBubblePdfSuccess: string
     exportBubblePdfFailed: string
+    copyBubbleContent: string
+    copyBubbleContentSuccess: string
+    copyBubbleContentFailed: string
+    printBubbleContent: string
   }
   monitor: {
     title: string

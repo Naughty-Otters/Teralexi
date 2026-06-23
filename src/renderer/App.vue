@@ -1,6 +1,8 @@
 <template>
   <UApp>
-    <title-bar />
+    <Teleport to="body">
+      <TitleBar />
+    </Teleport>
     <div class="main">
       <router-view v-slot="{ Component }">
         <component :is="Component" />
@@ -17,6 +19,10 @@ import TitleBar from '@renderer/components/title-bar/title-bar.vue'
 .main {
   width: 100%;
   height: 100vh;
+  padding-top: var(--app-title-bar-height, 30px);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 0;
 }
 </style>
 

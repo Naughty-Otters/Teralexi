@@ -14,7 +14,7 @@ export type TitleBarChatControlsState = {
   onToggleSidebar: TitleBarChatAction
   onToggleReportPanel: TitleBarChatAction
   onStop: TitleBarChatAction
-  onClearConversation: TitleBarChatAction
+  onNewSession: TitleBarChatAction
 }
 
 function createDefaultState(): TitleBarChatControlsState {
@@ -30,7 +30,7 @@ function createDefaultState(): TitleBarChatControlsState {
     onToggleSidebar: null,
     onToggleReportPanel: null,
     onStop: null,
-    onClearConversation: null,
+    onNewSession: null,
   }
 }
 

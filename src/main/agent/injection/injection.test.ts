@@ -58,16 +58,26 @@ describe('injection framework', () => {
       [{ role: 'user', content: 'hi' }],
       0,
     )
-    expect(messages).toHaveLength(1)
+    expect(messages).toHaveLength(4)
+    expect(String(messages[1].content)).toContain('Before answering, write a comprehensive breakdown')
+    expect(String(messages[2].content)).toContain(
+      'Evaluate multiple branches of logic and explore different reasoning paths',
+    )
+    expect(String(messages[3].content)).toContain('## Current date and time')
   })
 
-  it('skips injection for non-coding skills', async () => {
+  it('adds current datetime for non-coding skills', async () => {
     const messages = await injectMessages(
       makeCtx('demo'),
       [{ role: 'user', content: 'hi' }],
       0,
     )
-    expect(messages).toHaveLength(1)
+    expect(messages).toHaveLength(4)
+    expect(String(messages[1].content)).toContain('Before answering, write a comprehensive breakdown')
+    expect(String(messages[2].content)).toContain(
+      'Evaluate multiple branches of logic and explore different reasoning paths',
+    )
+    expect(String(messages[3].content)).toContain('## Current date and time')
   })
 
   it('createPrepareStepFromInjectors registers plan-mode hook for non-coding skills', () => {

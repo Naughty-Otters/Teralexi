@@ -1,0 +1,68 @@
+{
+  "requestsFinished": 0,
+  "requestsFailed": 1,
+  "requestsRetries": 1,
+  "requestsFailedPerMinute": 67,
+  "requestsFinishedPerMinute": 0,
+  "requestMinDurationMillis": null,
+  "requestMaxDurationMillis": 0,
+  "requestTotalFailedDurationMillis": 127,
+  "requestTotalFinishedDurationMillis": 0,
+  "crawlerStartedAt": "2026-06-23T16:34:51.111Z",
+  "crawlerFinishedAt": "2026-06-23T16:34:51.948Z",
+  "statsPersistedAt": "2026-06-23T16:34:51.948Z",
+  "crawlerRuntimeMillis": 883,
+  "crawlerLastStartTimestamp": 1782232491065,
+  "requestRetryHistogram": [
+    null,
+    null,
+    null,
+    1
+  ],
+  "statsId": 11,
+  "requestAvgFailedDurationMillis": 127,
+  "requestAvgFinishedDurationMillis": null,
+  "requestTotalDurationMillis": 127,
+  "requestsTotal": 1,
+  "requestsWithStatusCode": {},
+  "errors": {
+    "file:///Users/zhenqi.li/code/OpenFDE/node_modules/got-scraping/node_modules/got/dist/source/core/index.js:198:21": {
+      "ECONNRESET": {
+        "RequestError": {
+          "Client network socket disconnected before secure TLS connection was established": {
+            "count": 1
+          }
+        }
+      }
+    },
+    "node:_tls_wrap:1750:19": {
+      "ECONNRESET": {
+        "Error": {
+          "Client network socket disconnected before secure TLS connection was established": {
+            "count": 1
+          }
+        }
+      }
+    }
+  },
+  "retryErrors": {
+    "file:///Users/zhenqi.li/code/OpenFDE/node_modules/got-scraping/node_modules/got/dist/source/core/index.js:198:21": {
+      "ECONNRESET": {
+        "RequestError": {
+          "Client network socket disconnected before secure TLS connection was established": {
+            "count": 3
+          }
+        }
+      }
+    },
+    "node:_tls_wrap:1750:19": {
+      "ECONNRESET": {
+        "Error": {
+          "Client network socket disconnected before secure TLS connection was established": {
+            "count": 3
+          }
+        }
+      }
+    }
+  }
+}

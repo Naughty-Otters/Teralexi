@@ -177,7 +177,7 @@ import {
 import { contentHash } from './chat/assistantHtmlCache'
 import { injectCodeCopyButtons } from './chat/streamingMarkdown'
 import { useAgentStore } from '@store/agent'
-import MarkdownIt from 'markdown-it'
+import { createStandardMarkdownIt, resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
 import { prepareMarkdownSource } from '@shared/markdown/prepare-markdown-source'
 import {
   computed,
@@ -199,6 +199,7 @@ import {
   type StepOutputLinkView,
 } from '../stepOutputLinksRender'
 import { hydrateStepOutputLinkPreviews } from '../stepOutputLinkPreviewHydrate'
+import { hydrateDiagramBlocks } from '../diagramHydrate'
 import {
   activeStepProgressPartKey,
   agentStepProgressShouldBeOpen,
@@ -208,6 +209,13 @@ import {
   stepProgressPartKey,
 } from '../stepProgressDisplay'
 import { messageHasStructuredDebugTimelineSource } from '../structuredDebugViewModel'
+import {
+  isAgenticRunStepProgressPart,
+  messageFinalTextStarted,
+} from '../conversationBubbleDisplay'
+import {
+  chatUiShowAgenticRunBubbles,
+} from '../chatUiSettings'
 
 const { t } = useI18n()
 
@@ -228,11 +236,7 @@ const agentStore = useAgentStore()
 
 const assistantMsgPartsEl = ref<HTMLElement | null>(null)
 
-const stepProgressMarkdown = new MarkdownIt({
-  html: false,
-  breaks: true,
-  linkify: true,
-})
+const stepProgressMarkdown = createStandardMarkdownIt()
 
 const emit = defineEmits<{
   'collect-form-submit': [
@@ -266,17 +270,29 @@ const resolvedBubbles = computed<AssistantBubbleDescriptor[]>(() => {
   })
 })
 
-const reasoningBubbles = computed(() =>
-  resolveAssistantBubbles(props.message, {
+const reasoningBubbles = computed(() => {
+  if (messageFinalTextStarted(props.message)) return []
+  return resolveAssistantBubbles(props.message, {
     structuredLayoutEnabled: false,
     shouldShowStepProgress: () => false,
-  }).filter((bubble) => bubble.kind === 'reasoning'),
-)
+  }).filter((bubble) => bubble.kind === 'reasoning')
+})
 
 /** Brief mode: all part types including forms. */
-const briefModeBubbles = computed(() =>
-  usesStructuredAssistantLayoutForMessage.value ? [] : resolvedBubbles.value,
-)
+const briefModeBubbles = computed(() => {
+  let bubbles = usesStructuredAssistantLayoutForMessage.value
+    ? []
+    : resolvedBubbles.value
+  if (messageFinalTextStarted(props.message)) {
+    bubbles = bubbles.filter(
+      (bubble) => bubble.kind !== 'reasoning' && bubble.kind !== 'tool-group',
+    )
+  }
+  if (!chatUiShowAgenticRunBubbles.value) {
+    bubbles = bubbles.filter((bubble) => bubble.kind !== 'tool-group')
+  }
+  return bubbles
+})
 
 /** Conversation/timeline modes: forms and approvals render outside structured views. */
 const structuredHitlBubbles = computed(() =>
@@ -408,6 +424,9 @@ function shouldShowAgentStepProgressPart(
   part: unknown,
 ): boolean {
   if (!isAgentStepProgressPart(part)) return false
+  if (!chatUiShowAgenticRunBubbles.value && isAgenticRunStepProgressPart(part)) {
+    return false
+  }
   if (hasCompletedAssistantText(message)) return false
   const activeKey = activeStepProgressPartKeyForMessage(message)
   if (!activeKey) return false
@@ -472,11 +491,13 @@ function renderStepProgressBodyHtml(
   const raw = agentStepProgressText(part)
   const prepared = prepareMarkdownSource(raw)
   if (!prepared) return ''
-  return applyStatusBadges(stepProgressMarkdown.render(prepared))
+  const html = applyStatusBadges(stepProgressMarkdown.render(prepared))
+  return resolveDiagramBlocksInHtml(html)
 }
 
 async function refreshOutputLinkPreviews(): Promise<void> {
   await nextTick()
+  hydrateDiagramBlocks(assistantMsgPartsEl.value)
   await hydrateStepOutputLinkPreviews(assistantMsgPartsEl.value)
 }
 

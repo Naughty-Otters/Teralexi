@@ -1,4 +1,5 @@
 import { RUN_SCRIPT_TOOLS } from '@shared/constants'
+import { DIAGRAM_NO_RUN_SCRIPT_RULE } from '@shared/agent/diagram-output-instructions'
 import type { AgentInjector, InjectionRunContext } from '../types'
 import type { RuntimeToolMeta } from '../../types'
 import { INJECTOR_ORDER } from './orders'
@@ -17,6 +18,7 @@ const RUN_SCRIPT_SECTION = {
     'Never pass raw shell one-liners through non-script tools; wrap shell in `run_script` with `scriptType` `bash` if you must use the shell.',
   MCP_FALLBACK:
     'Reserve MCP or other tools for cases that cannot be done reasonably in the sandbox or are explicitly out of scope for scripting.',
+  DIAGRAM_EXCEPTION: DIAGRAM_NO_RUN_SCRIPT_RULE,
 } as const
 
 export function buildRunScriptPreferenceBlock(tools: RuntimeToolMeta[]): string {
@@ -33,6 +35,7 @@ export function buildRunScriptPreferenceBlock(tools: RuntimeToolMeta[]): string 
   lines.push(
     RUN_SCRIPT_SECTION.LANGUAGE_DEFAULT,
     RUN_SCRIPT_SECTION.NO_RAW_SHELL,
+    RUN_SCRIPT_SECTION.DIAGRAM_EXCEPTION,
     RUN_SCRIPT_SECTION.MCP_FALLBACK,
   )
   return lines.join('\n')

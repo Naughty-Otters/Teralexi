@@ -1,5 +1,9 @@
-/** Lower order values appear earlier in assembled instructions. */
+/** Lower order values appear earlier in assembled instructions / user-message injection. */
 export const INJECTOR_ORDER = {
+  DEEP_THINKING_BEFORE: 1,
+  MULTIPLE_BRANCH_THINKING: 2,
+  DEEP_THINKING_AFTER: 3,
+  CURRENT_DATETIME: 4,
   BASE_TOOL_LOOP: 10,
   EXECUTOR_BASE: 10,
   SKILLS: 20,
@@ -12,6 +16,7 @@ export const INJECTOR_ORDER = {
   CODING_MODE: 60,
   PREVIOUS_STEP: 70,
   SANDBOX_STRUCTURE: 80,
+  DIAGRAM_OUTPUT: 85,
   WORKSPACE_STRUCTURE: 90,
   EXPLORE_MANIFEST: 92,
   SESSION_TOOL_LEDGER: 93,

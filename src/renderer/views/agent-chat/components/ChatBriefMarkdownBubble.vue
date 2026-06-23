@@ -1,7 +1,8 @@
 <template>
   <div class="brief-markdown-bubble">
-    <ChatBubblePdfExportButton
+    <ChatBubbleContentActions
       corner
+      show-copy-print
       :markdown="markdown"
       section-title="Response"
       section-id="markdown"
@@ -15,7 +16,7 @@
 import type { UIMessage } from '@openfde-ai'
 import { computed } from 'vue'
 import { assistantTextPartMarkdown } from '../bubblePdfExport'
-import ChatBubblePdfExportButton from './ChatBubblePdfExportButton.vue'
+import ChatBubbleContentActions from './ChatBubbleContentActions.vue'
 
 const props = defineProps<{
   message: UIMessage
@@ -33,7 +34,7 @@ const markdown = computed(() =>
   position: relative;
   min-width: var(--chat-response-bubble-min-width, 50%);
   padding-top: 4px;
-  padding-right: 34px;
+  padding-right: 96px;
 }
 
 .brief-markdown-bubble__body {

@@ -1,0 +1,34 @@
+@import 'katex/dist/katex.min.css';
+
+.diagram-block {
+  margin: 16px 0;
+  overflow-x: auto;
+}
+
+.diagram-block svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.diagram-block--pending {
+  min-height: 48px;
+  border: 1px dashed var(--ui-border, #dbe2ea);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ui-bg-muted, #f8fafc) 80%, transparent);
+}
+
+.diagram-block--error {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--ui-error, #fecaca);
+  background: color-mix(in srgb, var(--ui-error, #ef4444) 8%, transparent);
+  color: var(--ui-error, #b91c1c);
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.msg-html .diagram-block--ready,
+.md-preview .diagram-block--ready {
+  line-height: 0;
+}

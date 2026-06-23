@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { assembleInstructions } from './pipeline'
+import { assembleInstructions, injectUserMessages } from './pipeline'
+import { recordDatetimeInjection } from './conversation-injection-state'
 
 vi.mock('../coding/plan-mode-state', () => ({
   isPlanModeActive: vi.fn(() => false),
@@ -92,6 +93,7 @@ describe('injector pipeline', () => {
 
   it('assembles tool-loop instructions with skills and sandbox blocks', () => {
     const out = assembleInstructions(makeToolLoopCtx() as never, 'toolLoop')
+    expect(out).not.toContain('## Current date and time')
     expect(out).not.toContain('expert tool manager')
     expect(out).toContain('### Skill instructions')
     expect(out).toContain('Skill body from skill.md')
@@ -123,6 +125,13 @@ describe('injector pipeline', () => {
     expect(out).toContain('use run_script for host metrics')
   })
 
+  it('includes diagram output instructions for tool loop', () => {
+    const out = assembleInstructions(makeToolLoopCtx() as never, 'toolLoop')
+    expect(out).toContain('## Diagrams (DiagramSpec v1)')
+    expect(out).toContain('```diagram')
+    expect(out).toContain('"type": "graph"')
+  })
+
   it('includes run_script guidance for default skill when tools are available', () => {
     const out = assembleInstructions(
       makeToolLoopCtx({
@@ -135,7 +144,8 @@ describe('injector pipeline', () => {
       'toolLoop',
     )
     expect(out).toContain('Prefer sandbox script tools')
-    expect(out).toContain('uptime')
+    expect(out).toContain('```diagram`')
+    expect(out).toContain('**Do not** use `run_script`')
   })
 
   it('assembles todo execution instructions', () => {
@@ -159,4 +169,67 @@ describe('injector pipeline', () => {
     expect(out).toContain('Tool Result Decision Rules')
   })
 
+  it('injects current datetime as a user message once per day', async () => {
+    const ctx = makeToolLoopCtx({
+      opts: { skillId: 'coding', conversationId: 'conv-datetime', userId: 'user-1' },
+      agentRun: { meta: { depth: 0 } },
+    }) as never
+    const first = await injectUserMessages(
+      ctx,
+      [{ role: 'user', content: 'hi' }],
+      0,
+    )
+    expect(first).toHaveLength(4)
+    expect(String(first[1].content)).toContain('Before answering, write a comprehensive breakdown')
+    expect(String(first[2].content)).toContain(
+      'Evaluate multiple branches of logic and explore different reasoning paths',
+    )
+    expect(String(first[3].content)).toContain('## Current date and time')
+
+    const second = await injectUserMessages(ctx, first, 1)
+    expect(second).toHaveLength(4)
+  })
+
+  it('injects datetime again for a later user turn in the same conversation', async () => {
+    const ctx = makeToolLoopCtx({
+      opts: {
+        skillId: 'coding',
+        conversationId: 'conv-follow-up',
+        userId: 'user-1',
+        clientUiMessages: [
+          {
+            id: 'user-2',
+            role: 'user',
+            createdAt: '2026-06-20T10:00:00.000Z',
+            parts: [{ type: 'text', text: 'follow up' }],
+          },
+        ],
+      },
+      agentRun: { meta: { depth: 0 } },
+    }) as never
+
+    recordDatetimeInjection('conv-follow-up', {
+      userMessageId: 'user-1',
+      userMessageAt: '2026-06-20T08:00:00.000Z',
+      dayKey: '2026-06-20',
+      injectedAt: '2026-06-20T08:00:01.000Z',
+    })
+
+    const messages = await injectUserMessages(
+      ctx,
+      [
+        { role: 'user', content: 'first' },
+        { role: 'assistant', content: 'ok' },
+        { role: 'user', content: 'follow up' },
+      ],
+      0,
+    )
+
+    expect(messages).toHaveLength(6)
+    expect(String(messages[3].content)).toContain('Before answering, write a comprehensive breakdown')
+    expect(String(messages[4].content)).toContain(
+      'Evaluate multiple branches of logic and explore different reasoning paths',
+    )
+    expect(String(messages[5].content)).toContain('## Current date and time')
+  })
 })

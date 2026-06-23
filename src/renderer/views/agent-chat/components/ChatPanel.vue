@@ -47,6 +47,7 @@
             @scroll.passive="onMessagesScroll"
             @wheel.passive="onMessagesWheel"
           >
+            <div ref="messagesContentEl" class="chat-scroll__content">
             <div
               v-if="hasHiddenAbove || isLoadingOlderMessages"
               class="chat-scroll-edge chat-scroll-edge--top"
@@ -129,6 +130,7 @@
                 </li>
               </ul>
             </div>
+            </div>
           </div>
         </div>
 
@@ -196,7 +198,7 @@ import {
   watch,
   watchEffect,
 } from 'vue'
-import MarkdownIt from 'markdown-it'
+import { createStandardMarkdownIt } from '@shared/markdown/create-markdown-it'
 import './chat/markdown-preview.css'
 import { Chat } from '@openfde-ai/vue'
 import {
@@ -347,7 +349,7 @@ const PLAN_CMD_ALIAS_RE = /^\/plan(?:\s+(\S+))?\b/i
 const HELP_CMD_RE = /^\/help\b/i
 const MCP_CMD_RE = /^\/mcp(?:\s+([\s\S]*))?$/i
 const INSTALL_SKILL_CMD_RE = /^\/skill:install\s+(\S+)/i
-const markdown = new MarkdownIt({ html: false, breaks: true, linkify: true })
+const markdown = createStandardMarkdownIt()
 
 const codingMode = ref<CodingMode>(DEFAULT_CODING_MODE)
 const planModeView = ref<PlanModeView>(defaultPlanModeView())
@@ -359,6 +361,7 @@ const showReportPanel = ref(false)
 const showWorkspaceSplitPanel = ref(false)
 const reportPreviewUrlOverride = ref<string | null>(null)
 const messagesEl = ref<HTMLElement | null>(null)
+const messagesContentEl = ref<HTMLElement | null>(null)
 const chatBodyEl = ref<HTMLElement | null>(null)
 const chatInst = shallowRef<InstanceType<typeof Chat> | null>(null)
 
@@ -763,13 +766,16 @@ const {
   resetWindow: resetMessageWindow,
   onScroll: onMessagesScroll,
   onWheel: onMessagesWheel,
+  armStickToBottom,
   scrollToBottomIfStuck,
+  startContentAutoScroll,
 } = useChatMessageScrollWindow(reactiveMessages, messagesEl, {
   onLoadOlder: loadOlderMessagesForScroll,
   hasOlderOnServer: () => {
     const cid = agentStore.currentConversationId
     return cid ? agentStore.conversationHasOlderMessages(cid) : false
   },
+  contentEl: messagesContentEl,
 })
 
 /** In-progress assistant row while the agent run is active (submitted / streaming). */
@@ -858,12 +864,23 @@ watch(
       : ''
   },
   () => {
-    scheduleScrollToBottom(isBusy.value ? 'auto' : 'smooth')
+    scheduleScrollToBottom('auto')
   },
 )
 
+watch(
+  () => streamingTextBuffer.displayText.value,
+  () => {
+    scheduleScrollToBottom('auto')
+  },
+)
+
+watch(draft, () => {
+  scheduleScrollToBottom('auto')
+})
+
 watch(messageQueue, () => {
-  scheduleScrollToBottom('smooth')
+  scheduleScrollToBottom('auto')
 })
 
 function removeQueuedMessage(id: string) {
@@ -1118,9 +1135,11 @@ function onPlanModeStateChanged(
 }
 
 let unregisterConversationStoreUiSync: (() => void) | null = null
+let stopContentAutoScroll: (() => void) | null = null
 
 onMounted(() => {
   setVisibleConversationForUiFlush(agentStore.currentConversationId)
+  stopContentAutoScroll = startContentAutoScroll()
   unregisterConversationStoreUiSync = registerConversationStoreUiSync(
     syncVisibleConversationFromStore,
   )
@@ -1157,6 +1176,8 @@ watch(
 )
 
 onUnmounted(() => {
+  stopContentAutoScroll?.()
+  stopContentAutoScroll = null
   unregisterConversationStoreUiSync?.()
   unregisterConversationStoreUiSync = null
   stopBackgroundTaskPolling()
@@ -1842,10 +1863,14 @@ async function onSubmit() {
       { id: crypto.randomUUID(), text },
     ]
     draft.value = ''
+    armStickToBottom()
+    scheduleScrollToBottom('auto')
     return
   }
 
   draft.value = ''
+  armStickToBottom()
+  scheduleScrollToBottom('auto')
   if (subAgentMention) {
     await chatInst.value!.sendMessage({
       text,
@@ -1902,22 +1927,10 @@ watch(
   },
 )
 
-function clearConversationFromTitleBar() {
-  void clearConversation()
-}
-
-async function clearConversation() {
-  const id = agentStore.currentConversationId
-  if (!id) return
-  if (isBusy.value) await chatInst.value?.stop()
-  showReportPanel.value = false
-  reportPreviewUrlOverride.value = null
-  messageQueue.value = []
-  reactiveMessages.value = []
-  clearConversationSession(id)
-  agentStore.markUiChatInFlight(id, false)
-  await agentStore.clearConversationHistory(id)
-  await rebuildChat()
+async function startNewSessionFromTitleBar() {
+  const conv = await agentStore.createNewConversation()
+  if (!conv) return
+  await agentStore.selectConversation(conv.id)
 }
 
 watchEffect(() => {
@@ -1932,7 +1945,7 @@ watchEffect(() => {
     onToggleSidebar: toggleSidebar,
     onToggleReportPanel: toggleReportPanel,
     onStop,
-    onClearConversation: clearConversationFromTitleBar,
+    onNewSession: startNewSessionFromTitleBar,
   })
 })
 </script>
@@ -2000,11 +2013,14 @@ watchEffect(() => {
   overflow-y: auto;
   overflow-anchor: none;
   padding: 16px;
+}
+.chat-scroll__content {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex-shrink: 0;
 }
-.chat-scroll > * {
+.chat-scroll__content > * {
   flex-shrink: 0;
 }
 .chat-scroll-edge {

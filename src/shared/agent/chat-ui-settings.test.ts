@@ -34,6 +34,7 @@ describe('chat-ui-settings', () => {
       bubbleCompactLines: 10,
       contextWindowMessages: 200,
       reasoningMaxChars: 2000,
+      showAgenticRunBubbles: true,
     })
   })
 
@@ -49,6 +50,7 @@ describe('chat-ui-settings', () => {
       bubbleCompactLines: 8,
       contextWindowMessages: 32,
       reasoningMaxChars: 2000,
+      showAgenticRunBubbles: true,
     })
   })
 })

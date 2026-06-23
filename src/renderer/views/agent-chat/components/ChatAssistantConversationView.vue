@@ -17,7 +17,7 @@
             !isAttachmentsSection(section) && Boolean(section.bodyMarkdown?.trim()),
           'conversation-bubble--running': section.status === 'running',
           'conversation-bubble--done': section.status === 'done',
-          'conversation-bubble--compact': !isBubbleExpanded(section.id),
+          'conversation-bubble--compact': shouldShowCompactBubble(section, sectionIndex),
         }"
         :tabindex="isAttachmentsSection(section) ? 0 : undefined"
         :role="isAttachmentsSection(section) ? 'button' : undefined"
@@ -25,48 +25,51 @@
         @keydown.enter.prevent="onSectionActivate(section)"
         @keydown.space.prevent="onSectionActivate(section)"
       >
-      <ChatBubblePdfExportButton
-        v-if="!isAttachmentsSection(section)"
-        corner
-        :markdown="section.bodyMarkdown"
-        :section-title="section.title"
-        :section-id="section.id"
-        :message-id="props.message.id"
-      />
-      <header class="conversation-bubble__header">
-        <button
-          type="button"
-          class="conversation-bubble__title"
-          :aria-expanded="isBubbleExpanded(section.id)"
-          :title="titleButtonHint(section)"
-          @click.stop="onTitleClick(section, $event)"
-        >
-          <UIcon
-            :name="bubblePresentation(section).icon"
-            class="conversation-bubble__title-icon"
-            aria-hidden="true"
-          />
-          <span class="conversation-bubble__title-text">{{
-            assistantBubbleSpeakerName()
-          }}</span>
-          <UIcon
-            :name="
-              isBubbleExpanded(section.id)
-                ? 'i-lucide-chevron-down'
-                : 'i-lucide-chevron-right'
-            "
-            class="conversation-bubble__title-chevron"
-            aria-hidden="true"
-          />
-        </button>
-        <span class="conversation-bubble__meta">
-          <span class="conversation-bubble__badge">
+      <div class="conversation-bubble__top-bar">
+        <header class="conversation-bubble__header">
+          <button
+            type="button"
+            class="conversation-bubble__title"
+            :aria-expanded="isBubbleExpanded(section, sectionIndex)"
+            :title="titleButtonHint(section, sectionIndex)"
+            @click.stop="onTitleClick(section, sectionIndex, $event)"
+          >
+            <UIcon
+              :name="bubblePresentation(section).icon"
+              class="conversation-bubble__title-icon"
+              aria-hidden="true"
+            />
+            <span class="conversation-bubble__title-text">{{
+              assistantBubbleSpeakerName()
+            }}</span>
+            <UIcon
+              :name="
+                isBubbleExpanded(section, sectionIndex)
+                  ? 'i-lucide-chevron-down'
+                  : 'i-lucide-chevron-right'
+              "
+              class="conversation-bubble__title-chevron"
+              aria-hidden="true"
+            />
+          </button>
+          <span
+            v-if="bubblePresentation(section).badge"
+            class="conversation-bubble__badge"
+          >
             {{ bubblePresentation(section).badge }}
           </span>
-          <span class="conversation-bubble__status-slot" aria-live="polite">
+        </header>
+        <div
+          v-if="section.bodyMarkdown?.trim() || section.status === 'running'"
+          class="conversation-bubble__toolbar"
+        >
+          <span
+            v-if="section.status === 'running'"
+            class="conversation-bubble__status-slot"
+            aria-live="polite"
+          >
             <Transition name="conversation-bubble-phase" mode="out-in">
               <span
-                v-if="section.status === 'running'"
                 :key="section.status"
                 class="conversation-bubble__status conversation-bubble__status--running"
               >
@@ -74,8 +77,15 @@
               </span>
             </Transition>
           </span>
-        </span>
-      </header>
+          <ChatBubbleContentActions
+            v-if="section.bodyMarkdown?.trim()"
+            :markdown="section.bodyMarkdown"
+            :section-title="section.title"
+            :section-id="section.id"
+            :message-id="props.message.id"
+          />
+        </div>
+      </div>
       <ChatConversationSnapshotPreview
         v-if="section.previewFileUrl && !isAttachmentsSection(section)"
         class="conversation-bubble__preview"
@@ -83,14 +93,14 @@
       />
       <div
         v-if="section.bodyHtml"
-        :ref="(el) => registerCompactBodyEl(section.id, el)"
+        :ref="(el) => registerCompactBodyEl(sectionExpandKey(section, sectionIndex), el)"
         class="conversation-bubble__body msg-html"
         :class="`conversation-bubble__body--${bubblePresentation(section).tone}`"
         v-html="section.bodyHtml"
       />
       <div
         v-else-if="section.status === 'running' && !section.previewFileUrl"
-        :ref="(el) => registerCompactBodyEl(section.id, el)"
+        :ref="(el) => registerCompactBodyEl(sectionExpandKey(section, sectionIndex), el)"
         class="conversation-bubble__body conversation-bubble__body--empty"
         aria-live="polite"
       >
@@ -99,7 +109,7 @@
       <ul
         v-if="
           isAttachmentsSection(section) &&
-          isBubbleExpanded(section.id) &&
+          isBubbleExpanded(section, sectionIndex) &&
           attachmentItemsForSection(section).length
         "
         class="conversation-bubble__file-list"
@@ -150,7 +160,7 @@
       <p
         v-else-if="
           isAttachmentsSection(section) &&
-          isBubbleExpanded(section.id) &&
+          isBubbleExpanded(section, sectionIndex) &&
           !attachmentItemsForSection(section).length
         "
         class="conversation-bubble__file-hint"
@@ -159,6 +169,7 @@
       </p>
       </article>
       <template
+        v-if="showExploringPanel"
         v-for="slot in toolLoopPanelSlotsAfter(sectionIndex)"
         :key="`tool-loop-${slot.key}`"
       >
@@ -208,7 +219,7 @@
         :message-id="props.message.id"
       />
   </div>
-  <template v-else-if="standaloneToolLoopPanelSlots.length">
+  <template v-else-if="showExploringPanel && standaloneToolLoopPanelSlots.length">
     <div
       v-for="slot in standaloneToolLoopPanelSlots"
       :key="`tool-loop-standalone-${slot.key}`"
@@ -232,15 +243,24 @@
     />
   </div>
   <div
-    v-else
-    class="msg-html structured-debug-fallback"
-    v-html="fallbackHtml"
-  />
+    v-else-if="fallbackHtml"
+    class="conversation-bubble conversation-bubble--summary conversation-bubble--exportable conversation-fallback-bubble"
+  >
+    <div class="conversation-bubble__toolbar conversation-fallback-bubble__toolbar">
+      <ChatBubbleContentActions
+        :markdown="fallbackMarkdown"
+        section-title="Response"
+        section-id="fallback"
+        :message-id="props.message.id"
+      />
+    </div>
+    <div class="msg-html structured-debug-fallback" v-html="fallbackHtml" />
+  </div>
 </template>
 
 <script setup lang="ts">
 import type { UIMessage } from '@openfde-ai'
-import MarkdownIt from 'markdown-it'
+import { createStandardMarkdownIt } from '@shared/markdown/create-markdown-it'
 import { computed, nextTick, ref, watch, watchEffect } from 'vue'
 import {
   dedupeStepAttachments,
@@ -262,10 +282,11 @@ import ChatConversationSnapshotPreview from './ChatConversationSnapshotPreview.v
 import ChatConversationToolResponseBubble from './ChatConversationToolResponseBubble.vue'
 import AttachmentFileTypeIcon from './AttachmentFileTypeIcon.vue'
 import ChatSubAgentBubble from './ChatSubAgentBubble.vue'
-import ChatBubblePdfExportButton from './ChatBubblePdfExportButton.vue'
+import ChatBubbleContentActions from './ChatBubbleContentActions.vue'
 import ChatToolLoopPanel from './ChatToolLoopPanel.vue'
 import {
   type AssistantBubbleDescriptor,
+  messageHasToolLoopAgent,
   toolGroupHasRunningItem,
 } from './chat/assistantBubbleFramework'
 import {
@@ -280,16 +301,49 @@ import {
 } from './chat/conversationToolResponseModel'
 import { buildSubAgentRunTree } from './chat/subAgentRunModel'
 import {
-  filterConversationBubbleSections,
-  type StructuredDebugSection,
-} from '../structuredDebugViewModel'
+  conversationSectionExpandedByDefault,
+  filterVisibleConversationBubbles,
+  isPrimaryReplyConversationSection,
+  isTextResponseConversationSection,
+  messageFinalTextStarted,
+} from '../conversationBubbleDisplay'
+import { chatUiShowAgenticRunBubbles } from '../chatUiSettings'
+import type { StructuredDebugSection } from '../structuredDebugViewModel'
 import type { StepOutputLinkView } from '../stepOutputLinksRender'
 
-/** Section ids that open in full view by default; all others start compact. */
-const BUBBLE_FULL_VIEW_BY_DEFAULT = new Set(['ReportStep'])
+function sectionExpandKey(
+  section: StructuredDebugSection,
+  sectionIndex: number,
+): string {
+  return `${section.id}-${sectionIndex}`
+}
 
-function defaultBubbleExpanded(sectionId: string): boolean {
-  return BUBBLE_FULL_VIEW_BY_DEFAULT.has(sectionId)
+/** Conversation bubbles default expanded; user toggle always wins. */
+function isBubbleExpanded(
+  section: StructuredDebugSection,
+  sectionIndex: number,
+): boolean {
+  const key = sectionExpandKey(section, sectionIndex)
+  const explicit = bubbleViewExpanded.value[key]
+  if (typeof explicit === 'boolean') return explicit
+
+  const tone = bubblePresentation(section).tone
+  if (isTextResponseConversationSection(section)) return true
+  if (tone === 'summary' || tone === 'report') return true
+
+  return conversationSectionExpandedByDefault(section, {
+    isPrimaryReply: isPrimaryReplyConversationSection(
+      conversationSections.value,
+      sectionIndex,
+    ),
+  })
+}
+
+function shouldShowCompactBubble(
+  section: StructuredDebugSection,
+  sectionIndex: number,
+): boolean {
+  return !isBubbleExpanded(section, sectionIndex)
 }
 
 type ConversationBubbleTone =
@@ -320,22 +374,24 @@ const {
   view,
   sections,
   fallbackHtml,
+  assistantTextRaw,
   stepProgressParts,
   parentStepProgressParts,
   isStreaming,
 } = useAssistantStructuredMessageView(() => props.message)
 
+const fallbackMarkdown = computed(() => assistantTextRaw.value.trim())
+
 const conversationSections = computed(() =>
-  filterConversationBubbleSections(sections.value),
+  filterVisibleConversationBubbles(sections.value, {
+    finalTextStarted: messageFinalTextStarted(props.message),
+    showAgenticRunBubbles: chatUiShowAgenticRunBubbles.value,
+  }),
 )
 
 const bubbleUiStyle = computed(() => chatUiBubbleCssVars())
 
-const markdown = new MarkdownIt({
-  html: false,
-  breaks: true,
-  linkify: true,
-})
+const markdown = createStandardMarkdownIt()
 
 const subAgentRuns = computed(() => buildSubAgentRunTree(props.message))
 
@@ -343,8 +399,14 @@ const toolResponseBubbles = computed(() =>
   resolveConversationToolResponseBubbles(props.message),
 )
 
-const useToolLoopPanel = computed(() =>
-  conversationShouldUseToolLoopPanel(props.message, sections.value),
+const useToolLoopPanel = computed(
+  () =>
+    chatUiShowAgenticRunBubbles.value &&
+    conversationShouldUseToolLoopPanel(props.message, sections.value),
+)
+
+const showExploringPanel = computed(
+  () => useToolLoopPanel.value && !messageFinalTextStarted(props.message),
 )
 
 const frozenToolLoopPanelItemsByMessageId = ref(
@@ -425,6 +487,12 @@ function toolLoopPanelActive(
 }
 
 function shouldShowLegacyToolResponsesAfter(sectionIndex: number): boolean {
+  if (
+    !chatUiShowAgenticRunBubbles.value &&
+    messageHasToolLoopAgent(props.message)
+  ) {
+    return false
+  }
   if (useToolLoopPanel.value && toolLoopPanelSlots.value.length > 0) return false
   if (toolResponseBubbles.value.length === 0) return false
   if (conversationSections.value.length === 0) return sectionIndex === 0
@@ -487,33 +555,40 @@ function onSectionActivate(
   if (event?.target instanceof Element) {
     if (event.target.closest('.conversation-bubble__title')) return
     if (event.target.closest('.conversation-bubble__file-item')) return
-    if (event.target.closest('.chat-bubble-pdf-btn')) return
+    if (event.target.closest('.chat-bubble-action-btn')) return
   }
   openPreview(primaryPreviewUrl(section))
 }
 
-function titleButtonHint(section: StructuredDebugSection): string {
+function titleButtonHint(
+  section: StructuredDebugSection,
+  sectionIndex: number,
+): string {
   if (isAttachmentsSection(section)) {
-    return isBubbleExpanded(section.id)
+    return isBubbleExpanded(section, sectionIndex)
       ? 'Collapse file list'
       : 'Expand file list · click bubble to preview'
   }
-  return isBubbleExpanded(section.id)
+  return isBubbleExpanded(section, sectionIndex)
     ? 'Collapse message'
     : 'Expand message'
 }
 
-function onTitleClick(section: StructuredDebugSection, event: MouseEvent): void {
+function onTitleClick(
+  section: StructuredDebugSection,
+  sectionIndex: number,
+  event: MouseEvent,
+): void {
   if (isAttachmentsSection(section)) {
     event.stopPropagation()
-    toggleBubbleView(section.id)
+    toggleBubbleView(section, sectionIndex)
     openPreview(primaryPreviewUrl(section))
     return
   }
-  toggleBubbleView(section.id)
+  toggleBubbleView(section, sectionIndex)
 }
 
-/** Per-bubble full (true) vs compact (false); unset ids use {@link defaultBubbleExpanded}. */
+/** Per-bubble collapsed state; unset means expanded. */
 const bubbleViewExpanded = ref<Record<string, boolean>>({})
 
 watch(
@@ -566,11 +641,12 @@ function onCompactBodyScroll(sectionId: string, el: HTMLElement): void {
 }
 
 function scrollCompactBodiesToEnd(): void {
-  for (const section of conversationSections.value) {
-    if (isBubbleExpanded(section.id)) continue
-    const el = compactBodyEls.get(section.id)
+  for (const [sectionIndex, section] of conversationSections.value.entries()) {
+    if (isBubbleExpanded(section, sectionIndex)) continue
+    const key = sectionExpandKey(section, sectionIndex)
+    const el = compactBodyEls.get(key)
     if (!el) continue
-    const stick = compactBodyStickToBottom.get(section.id) ?? true
+    const stick = compactBodyStickToBottom.get(key) ?? true
     if (!stick) continue
     el.scrollTop = el.scrollHeight
   }
@@ -587,20 +663,20 @@ watch(
   { flush: 'post' },
 )
 
-function isBubbleExpanded(sectionId: string): boolean {
-  return bubbleViewExpanded.value[sectionId] ?? defaultBubbleExpanded(sectionId)
-}
-
-function toggleBubbleView(sectionId: string): void {
-  const next = !isBubbleExpanded(sectionId)
+function toggleBubbleView(
+  section: StructuredDebugSection,
+  sectionIndex: number,
+): void {
+  const key = sectionExpandKey(section, sectionIndex)
+  const next = !isBubbleExpanded(section, sectionIndex)
   bubbleViewExpanded.value = {
     ...bubbleViewExpanded.value,
-    [sectionId]: next,
+    [key]: next,
   }
   if (next) {
-    compactBodyStickToBottom.delete(sectionId)
+    compactBodyStickToBottom.delete(key)
   } else {
-    compactBodyStickToBottom.set(sectionId, true)
+    compactBodyStickToBottom.set(key, true)
     void nextTick(scrollCompactBodiesToEnd)
   }
 }
@@ -659,12 +735,22 @@ function bubblePresentation(
         icon: 'i-lucide-alert-triangle',
         badge,
       }
-    default:
+    default: {
+      const title = section.title?.trim().toLowerCase() ?? ''
+      if (
+        title === 'summary' ||
+        title === 'analysis' ||
+        title.includes('summary') ||
+        title.includes('analysis')
+      ) {
+        return { tone: 'summary', icon: 'i-lucide-circle-user', badge }
+      }
       return {
         tone: 'generic',
         icon: 'i-lucide-circle-user',
         badge,
       }
+    }
   }
 }
 </script>
@@ -922,23 +1008,50 @@ function bubblePresentation(
   );
 }
 
-.conversation-bubble__header {
+.conversation-bubble__top-bar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 6px;
 }
 
-.conversation-bubble__meta {
-  margin-left: auto;
-  display: inline-flex;
+.conversation-bubble__header {
+  display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-bottom: 0;
 }
 
-.conversation-bubble--exportable .conversation-bubble__meta {
-  padding-right: 30px;
+.conversation-bubble__toolbar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.conversation-fallback-bubble__toolbar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+}
+
+.conversation-fallback-bubble {
+  position: relative;
+  min-width: var(--chat-response-bubble-min-width, 50%);
+  padding: 10px 12px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-bg-elevated);
+}
+
+.conversation-fallback-bubble .structured-debug-fallback {
+  padding-right: 96px;
 }
 
 .conversation-bubble__title {
@@ -1086,7 +1199,7 @@ function bubblePresentation(
   mask-image: linear-gradient(to bottom, #000 0%, #000 65%, transparent 100%);
 }
 
-.conversation-bubble--compact .conversation-bubble__header {
+.conversation-bubble--compact .conversation-bubble__top-bar {
   margin-bottom: 4px;
 }
 

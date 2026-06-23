@@ -96,10 +96,6 @@ export function serializeAssistantMessageForHistory(raw: string): string {
   if (finalResult) lines.push(finalResult)
   if (report) lines.push(report)
 
-  const artifactSummary = outer.allArtifactPaths?.filter(Boolean).length
-    ? `\n\nArtifact paths:\n${outer.allArtifactPaths!.join('\n')}`
-    : ''
-
   // Keep history concise and user-facing. Fall back to step content when
   // outer sections are empty (e.g. clarification-only flows).
   if (lines.length === 0) {
@@ -119,7 +115,7 @@ export function serializeAssistantMessageForHistory(raw: string): string {
   }
 
   const joined = lines.join('\n\n').trim()
-  return (joined + artifactSummary).trim() || raw
+  return joined || raw
 }
 
 export function serializeAssistantMessageForExternalReply(raw: string): string {

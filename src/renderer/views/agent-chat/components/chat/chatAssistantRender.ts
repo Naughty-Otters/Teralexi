@@ -1,5 +1,6 @@
 import type { UIMessage, TextUIPart } from '@openfde-ai'
 import type MarkdownIt from 'markdown-it'
+import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
 import { renderAssistantMessageHtml } from '../../assistantStructuredRender'
 import {
   getCachedAssistantHtml,
@@ -36,10 +37,13 @@ export function createAssistantTextPartHtmlRenderer(opts: {
     }
 
     chatUiPerfMark('markdown')
-    const html = renderAssistantMessageHtml(text, opts.markdown, {
+    let html = renderAssistantMessageHtml(text, opts.markdown, {
       isStreaming: streaming,
       structuredDebug: opts.getStructuredDebug(),
     })
+    if (!streaming) {
+      html = resolveDiagramBlocksInHtml(html)
+    }
     chatUiPerfMarkEnd('markdown')
 
     if (!streaming) {

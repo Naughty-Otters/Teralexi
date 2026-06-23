@@ -16,6 +16,8 @@ type ScrollWindowOptions = {
   windowMax?: number
   onLoadOlder?: () => Promise<boolean>
   hasOlderOnServer?: () => boolean
+  /** Observed for height changes (e.g. streaming bubbles). Falls back to scrollEl. */
+  contentEl?: Ref<HTMLElement | null>
 }
 
 type PreserveScrollOptions = {
@@ -117,6 +119,26 @@ export function useChatMessageScrollWindow(
     lastScrollTop = el.scrollTop
   }
 
+  function maxScrollTop(el: HTMLElement): number {
+    return Math.max(0, el.scrollHeight - el.clientHeight)
+  }
+
+  function scrollElementToBottom(el: HTMLElement, behavior: ScrollBehavior): void {
+    const top = maxScrollTop(el)
+    if (behavior === 'auto' || behavior === 'instant') {
+      el.scrollTop = top
+    } else {
+      el.scrollTo({ top, behavior })
+    }
+    lastScrollTop = el.scrollTop
+    wasNearTop = top <= CHAT_SCROLL_EDGE_THRESHOLD_PX
+  }
+
+  function armStickToBottom(): void {
+    userDetachedFromBottom = false
+    stickToBottom.value = true
+  }
+
   function detachFromBottom(): void {
     userDetachedFromBottom = true
     stickToBottom.value = false
@@ -168,16 +190,68 @@ export function useChatMessageScrollWindow(
     await nextTick()
     const el = scrollEl.value
     if (!el) return
-    const top = el.scrollHeight
-    if (behavior === 'auto' || behavior === 'instant') {
-      el.scrollTop = top
-      lastScrollTop = top
-      wasNearTop = false
-      return
+    scrollElementToBottom(el, behavior)
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => {
+        if (!stickToBottom.value) return
+        scrollElementToBottom(el, behavior)
+      })
     }
-    el.scrollTo({ top, behavior })
-    lastScrollTop = top
-    wasNearTop = false
+  }
+
+  function startContentAutoScroll(): () => void {
+    if (typeof ResizeObserver === 'undefined') {
+      return () => {}
+    }
+
+    const observedEl = options.contentEl ?? scrollEl
+    let observer: ResizeObserver | null = null
+    let rafHandle: number | null = null
+
+    const stopWatch = watch(
+      observedEl,
+      (el, _prev, onCleanup) => {
+        observer?.disconnect()
+        observer = null
+        if (rafHandle != null && typeof cancelAnimationFrame === 'function') {
+          cancelAnimationFrame(rafHandle)
+        }
+        rafHandle = null
+        if (!el) return
+
+        observer = new ResizeObserver(() => {
+          if (!stickToBottom.value) return
+          if (rafHandle != null) return
+          if (typeof requestAnimationFrame !== 'function') {
+            void scrollToBottomIfStuck('auto')
+            return
+          }
+          rafHandle = requestAnimationFrame(() => {
+            rafHandle = null
+            void scrollToBottomIfStuck('auto')
+          })
+        })
+        observer.observe(el)
+
+        onCleanup(() => {
+          observer?.disconnect()
+          observer = null
+          if (rafHandle != null && typeof cancelAnimationFrame === 'function') {
+            cancelAnimationFrame(rafHandle)
+          }
+          rafHandle = null
+        })
+      },
+      { immediate: true },
+    )
+
+    return () => {
+      stopWatch()
+      observer?.disconnect()
+      if (rafHandle != null && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(rafHandle)
+      }
+    }
   }
 
   return {
@@ -190,6 +264,8 @@ export function useChatMessageScrollWindow(
     onScroll,
     onWheel,
     detachFromBottom,
+    armStickToBottom,
     scrollToBottomIfStuck,
+    startContentAutoScroll,
   }
 }

@@ -1,6 +1,6 @@
 import type { UIMessage } from '@openfde-ai'
-import MarkdownIt from 'markdown-it'
 import { computed, type MaybeRefOrGetter, toValue } from 'vue'
+import { createStandardMarkdownIt } from '@shared/markdown/create-markdown-it'
 import { prepareMarkdownSource } from '@shared/markdown/prepare-markdown-source'
 import { applyStatusBadges } from './assistantStructuredRender'
 import { chatUiBubbleTextKeepChars } from './chatUiSettings'
@@ -15,11 +15,7 @@ import { excludeSubAgentStepProgressParts } from './stepProgressDisplay'
 export function useAssistantStructuredMessageView(
   messageSource: MaybeRefOrGetter<UIMessage>,
 ) {
-  const markdown = new MarkdownIt({
-    html: false,
-    breaks: true,
-    linkify: true,
-  })
+  const markdown = createStandardMarkdownIt()
 
   const message = computed(() => toValue(messageSource))
 

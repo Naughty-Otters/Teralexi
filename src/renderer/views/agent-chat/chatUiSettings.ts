@@ -4,6 +4,7 @@ import {
   CHAT_UI_BUBBLE_TEXT_KEEP_CHARS_KEY,
   CHAT_UI_CONTEXT_WINDOW_MESSAGES_KEY,
   CHAT_UI_REASONING_MAX_CHARS_KEY,
+  CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY,
   CHAT_UI_SETTINGS_PROP_KEYS,
   DEFAULT_CHAT_UI_SETTINGS,
   clampChatUiBubbleCompactLines,
@@ -30,6 +31,9 @@ export const chatUiContextWindowMessages = ref(
 )
 export const chatUiReasoningMaxChars = ref(
   DEFAULT_CHAT_UI_SETTINGS.reasoningMaxChars,
+)
+export const chatUiShowAgenticRunBubbles = ref(
+  DEFAULT_CHAT_UI_SETTINGS.showAgenticRunBubbles,
 )
 
 /** Head/tail cap for sub-agent streaming bubbles only (main assistant text is full). */
@@ -59,6 +63,7 @@ export function applyChatUiSettings(settings: ChatUiSettings): void {
   chatUiReasoningMaxChars.value = clampChatUiReasoningMaxChars(
     settings.reasoningMaxChars,
   )
+  chatUiShowAgenticRunBubbles.value = settings.showAgenticRunBubbles
 }
 
 export async function loadChatUiSettings(): Promise<ChatUiSettings> {
@@ -82,6 +87,7 @@ export async function saveChatUiSettings(
       settings.contextWindowMessages,
     ),
     reasoningMaxChars: clampChatUiReasoningMaxChars(settings.reasoningMaxChars),
+    showAgenticRunBubbles: settings.showAgenticRunBubbles,
   }
   await Promise.all([
     setSystemConfigValue(
@@ -99,6 +105,10 @@ export async function saveChatUiSettings(
     setSystemConfigValue(
       CHAT_UI_REASONING_MAX_CHARS_KEY,
       String(next.reasoningMaxChars),
+    ),
+    setSystemConfigValue(
+      CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY,
+      String(next.showAgenticRunBubbles),
     ),
   ])
   applyChatUiSettings(next)

@@ -27,6 +27,21 @@ const PLANNING_SIGNAL_RE =
 const PURE_INFO_RE =
   /^(what (is|are)|why (is|are|do|does)|how does|how do (?!i fix|i implement|i add|i create|i run)|tell me about|explain\b|explain (the )?concept|describe (the )?difference|what'?s the difference)\b/i
 
+/** Explain/plot/visualize requests answerable with markdown + ```diagram``` (no run_script). */
+const INLINE_DIAGRAM_RE =
+  /\b(explain|plot|graph|chart|visuali[sz]e|sketch|draw|show)\b/i
+
+export function userMessageLooksInlineDiagramExplanation(
+  userMessage: string,
+): boolean {
+  const text = userMessage.trim()
+  if (!text) return false
+  if (userMessageLooksActionable(text) || userMessageLooksLikePlanning(text)) {
+    return false
+  }
+  return INLINE_DIAGRAM_RE.test(text) || PURE_INFO_RE.test(text)
+}
+
 export function userMessageLooksActionable(userMessage: string): boolean {
   const text = userMessage.trim()
   if (!text) return false
@@ -56,7 +71,7 @@ export function userMessageLooksPurelyInformational(userMessage: string): boolea
   if (userMessageLooksActionable(text) || userMessageLooksLikePlanning(text)) {
     return false
   }
-  return PURE_INFO_RE.test(text)
+  return PURE_INFO_RE.test(text) || INLINE_DIAGRAM_RE.test(text)
 }
 
 /** Whether this agent can run the tool loop (skill tools or MCP). */
@@ -71,6 +86,28 @@ export function agentHasRunnableTools(ctx: ThinkingRouteToolContext): boolean {
 export type CorrectMisroutedThinkingOptions = {
   /** When true, direct_answer is only kept for purely informational user messages. */
   toolsEnabled?: boolean
+}
+
+/**
+ * Some models route explain/plot requests to agent_call and then run_script/matplotlib.
+ * Downgrade to direct_answer so the thinking response can include a ```diagram``` fence.
+ */
+export function downgradeAgentCallForInlineDiagram(
+  thinking: NormalizedThinkingOutput,
+  userMessage: string,
+): NormalizedThinkingOutput {
+  const user = userMessage.trim()
+  if (!user || thinking.execution_mode !== 'agent_call') {
+    return thinking
+  }
+  if (!userMessageLooksInlineDiagramExplanation(user)) {
+    return thinking
+  }
+  return {
+    ...thinking,
+    execution_mode: 'direct_answer',
+    response: thinking.response?.trim() ? thinking.response : undefined,
+  }
 }
 
 /**

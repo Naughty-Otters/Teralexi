@@ -82,6 +82,12 @@ export type AgentResponseOpts = {
    * Parsed via {@link parseClientUiMessages} and converted with {@link buildAgentModelMessages}.
    */
   clientUiMessages?: ClientUiMessage[] | undefined
+  /** Trailing user row when UI history ends with an assistant placeholder. */
+  pendingUserMessage?: {
+    id: string
+    content: string
+    createdAt: string
+  }
   executionSteps?: AgentExecutionSteps
   /** Max tool-loop steps; falls back to executionSteps.toolLoop.maxIterations or 40. */
   toolLoopMaxIterations?: number

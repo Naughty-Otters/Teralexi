@@ -245,4 +245,42 @@ describe('thinkingFlowStepDefinition', () => {
     }
     expect(recorded.execution_mode).toBe('agent_call')
   })
+
+  it('downgrades agent_call for explain/plot and retries for direct_answer response', async () => {
+    vi.mocked(runExpressionLlmObject)
+      .mockResolvedValueOnce({
+        execution_mode: 'agent_call',
+        goal: 'Explain sin',
+        task: 'Describe sin(x)',
+        context: [],
+        response: '',
+      })
+      .mockResolvedValueOnce({
+        execution_mode: 'direct_answer',
+        goal: 'Explain sin',
+        task: 'Describe sin(x)',
+        context: [],
+        response:
+          'Sine is periodic.\n\n```diagram\n{"version":1,"layers":[{"type":"plot","fn":"sin(x)"}]}\n```',
+      })
+
+    const stepCtx = makeStepCtx({
+      userMessage: 'Explain sin(x)',
+      runtimeTools: [{ name: 'run_script', source: 'skill' }],
+      skillId: 'demo',
+    })
+
+    await thinkingFlowStepDefinition.run!(makeRun(stepCtx))
+
+    expect(runExpressionLlmObject).toHaveBeenCalledTimes(2)
+    const recorded = stepCtx.recordStepOutput.mock.calls[0]?.[2] as {
+      execution_mode?: string
+      response?: string
+    }
+    expect(recorded.execution_mode).toBe('direct_answer')
+    expect(recorded.response).toContain('```diagram')
+    expect(stepCtx.appendAssistantTurn).toHaveBeenCalledWith(
+      expect.stringContaining('```diagram'),
+    )
+  })
 })

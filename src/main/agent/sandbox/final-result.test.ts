@@ -37,7 +37,7 @@ describe('writeFinalResultToSandbox', () => {
     expect(result.resultsFileUrl).toContain(FINAL_RESULT_FILENAME)
   })
 
-  it('includes research report metadata in snapshot body', async () => {
+  it('includes research report excerpt without pipeline titles', async () => {
     const structured = JSON.stringify({
       version: 2,
       assistantContent: {
@@ -58,13 +58,13 @@ describe('writeFinalResultToSandbox', () => {
     })
     await writeFinalResultToSandbox('/sandbox', structured)
     const html = String(vi.mocked(writeFile).mock.calls[0]?.[1] ?? '')
-    expect(html).toContain('Research report')
-    expect(html).toContain('Otters')
     expect(html).toContain('Key finding about otters')
-    expect(html).toContain('research-report.pdf')
+    expect(html).not.toContain('Research report')
+    expect(html).not.toContain('Otters')
+    expect(html).not.toContain('research-report.pdf')
   })
 
-  it('includes report, captures, and artifact index sections', async () => {
+  it('includes report body without pipeline section titles or step captures', async () => {
     const structured = JSON.stringify({
       version: 2,
       assistantContent: {
@@ -86,20 +86,53 @@ describe('writeFinalResultToSandbox', () => {
     })
     await writeFinalResultToSandbox('/sandbox', structured)
     const html = String(vi.mocked(writeFile).mock.calls[0]?.[1] ?? '')
-    expect(html).toContain('Final answer')
     expect(html).toContain('Detailed report')
-    expect(html).toContain('Found pages')
-    expect(html).toContain('hits.md')
+    expect(html).not.toContain('Final answer')
+    expect(html).not.toContain('Found pages')
+    expect(html).not.toContain('hits.md')
+    expect(html).not.toContain('Artifact index')
+    expect(html).not.toContain('Final result')
+    expect(html).not.toContain('Step outputs')
   })
 
-  it('falls back to raw JSON when parsing fails', async () => {
+  it('renders agentic prose without internal pipeline titles', async () => {
+    const structured = JSON.stringify({
+      version: 2,
+      assistantContent: {
+        outer: {
+          finalResult:
+            '**Skills & tool execution**\n\n**Agentic Run**\n\nI am **Claude**, built by **Anthropic**.',
+          report: '',
+          pipelineConversation: [
+            {
+              sectionId: 'SkillsToolExecutionStep',
+              stepId: 'toolLoop',
+              title: 'Agentic Run',
+              content:
+                'I am **Claude**, built by **Anthropic**. Is there something I can help you with?',
+              status: 'completed',
+            },
+          ],
+        },
+        subSteps: [],
+      },
+    })
+    await writeFinalResultToSandbox('/sandbox', structured)
+    const html = String(vi.mocked(writeFile).mock.calls[0]?.[1] ?? '')
+    expect(html).toContain('<strong>Claude</strong>')
+    expect(html).not.toContain('Agentic Run')
+    expect(html).not.toContain('Skills &amp; tool execution')
+    expect(html).not.toContain('Raw assistant output')
+  })
+
+  it('shows a short message when parsing fails', async () => {
     const result = await writeFinalResultToSandbox('/sandbox', 'not-json')
     expect(result.resultsFileUrl).toContain('results')
     const html = String(vi.mocked(writeFile).mock.calls[0]?.[1] ?? '')
-    expect(html).toContain('not-json')
+    expect(html).toContain('No result content available')
   })
 
-  it('falls back to raw JSON body when structured content has no sections', async () => {
+  it('shows a short message when structured content has no sections', async () => {
     const structured = JSON.stringify({
       version: 2,
       assistantContent: {
@@ -109,6 +142,6 @@ describe('writeFinalResultToSandbox', () => {
     })
     await writeFinalResultToSandbox('/sandbox', structured)
     const html = String(vi.mocked(writeFile).mock.calls.at(-1)?.[1] ?? '')
-    expect(html).toContain('Raw assistant output')
+    expect(html).toContain('No result content available')
   })
 })

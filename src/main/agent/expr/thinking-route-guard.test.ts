@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   agentHasRunnableTools,
   correctMisroutedThinking,
+  downgradeAgentCallForInlineDiagram,
   userMessageLooksActionable,
   userMessageLooksLikePlanning,
   userMessageLooksPurelyInformational,
@@ -55,9 +56,13 @@ describe('userMessageLooksLikePlanning', () => {
 })
 
 describe('userMessageLooksPurelyInformational', () => {
-  it('detects pure Q&A openers', () => {
+  it('detects pure Q&A openers and plot/explain visuals', () => {
     expect(userMessageLooksPurelyInformational('What is Rust?')).toBe(true)
     expect(userMessageLooksPurelyInformational('Explain how async works')).toBe(
+      true,
+    )
+    expect(userMessageLooksPurelyInformational('Explain sin(x)')).toBe(true)
+    expect(userMessageLooksPurelyInformational('Plot cos(x) from -pi to pi')).toBe(
       true,
     )
   })
@@ -145,5 +150,43 @@ describe('correctMisroutedThinking', () => {
       toolsEnabled: true,
     })
     expect(corrected).toEqual(thinking)
+  })
+})
+
+describe('downgradeAgentCallForInlineDiagram', () => {
+  it('downgrades agent_call to direct_answer for explain/plot requests', () => {
+    const corrected = downgradeAgentCallForInlineDiagram(
+      {
+        execution_mode: 'agent_call',
+        goal: 'Explain sin',
+        task: 'Plot sin(x)',
+        context: [],
+      },
+      'Explain sin(x)',
+    )
+    expect(corrected.execution_mode).toBe('direct_answer')
+  })
+
+  it('leaves agent_call for actionable work', () => {
+    expect(
+      downgradeAgentCallForInlineDiagram(
+        {
+          execution_mode: 'agent_call',
+          goal: 'Fix',
+          task: 'Fix test',
+          context: [],
+        },
+        'Fix the failing unit test',
+      ).execution_mode,
+    ).toBe('agent_call')
+  })
+
+  it('does not change planning or direct_answer routes', () => {
+    expect(
+      downgradeAgentCallForInlineDiagram(
+        directAnswerThinking(),
+        'Explain sin(x)',
+      ).execution_mode,
+    ).toBe('direct_answer')
   })
 })

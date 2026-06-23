@@ -1,4 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { readInjectorMessageMeta } from './injection-message-meta'
+import { readInjectorMessageMeta } from './injection-message-meta'
 import {
   buildValidationRulesBlock,
   validationRulesInjector,
@@ -199,8 +201,7 @@ describe('simple injectors', () => {
       { sandboxRoot: '/workspace' },
     )
 
-    expect(
-      planModeInjector.injectMessages({
+    const message = planModeInjector.injectUserMessage({
         profile: { stage: 'toolLoop', planModeUsesPrepareStep: false },
         ctx: {
           opts: { conversationId: 'conv-1' },
@@ -208,8 +209,12 @@ describe('simple injectors', () => {
           sandbox: { getRoot: () => '/workspace' },
         },
         loopStep: 1,
-      } as never),
-    ).toEqual({ role: 'assistant', content: 'plan message' })
+        messages: [],
+      } as never)
+    expect(message).toMatchObject({ role: 'assistant', content: 'plan message' })
+    expect(readInjectorMessageMeta(message!)).toMatchObject({
+      injectorId: 'plan-mode',
+    })
 
     expect(
       planModeInjector.onPrepareStep(
@@ -229,7 +234,16 @@ describe('simple injectors', () => {
       ),
     ).toEqual({
       activeTools: ['update_todos', 'exit_plan_mode'],
-      messages: ['existing', { role: 'assistant', content: 'plan message' }],
+      messages: [
+        'existing',
+        expect.objectContaining({
+          role: 'assistant',
+          content: 'plan message',
+          openfdeInjectorMeta: expect.objectContaining({
+            injectorId: 'plan-mode',
+          }),
+        }),
+      ],
     })
 
     isPlanModeActive.mockReturnValue(false)
