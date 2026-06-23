@@ -1,49 +1,64 @@
-import { isSandboxPreviewHref } from '@shared/markdown/sandbox-preview-links'
 
-export { isSandboxPreviewHref }
+const CHAT_MESSAGE_LINK_ROOT_SELECTOR =
+  '.chat-scroll, .conv-workspace-files, .conversation-view'
 
-function readPreviewUrlFromElement(element: Element): string | null {
-  const previewNode = element.closest(
-    '[data-sandbox-preview-url], [data-step-output-preview-url]',
+const CHAT_LINK_EXCLUDE_SELECTOR =
+  '.chat-composer, .report-panel, .workspace-panel, .chat-header'
+
+/** @deprecated Use {@link isChatPreviewHref}. */
+export function isSandboxPreviewHref(href: string): boolean {
+  return isChatPreviewHref(href)
+}
+
+export function isChatPreviewHref(href: string): boolean {
+  const trimmed = href.trim()
+  if (!trimmed || trimmed === '#') return false
+  if (trimmed.startsWith('#')) return false
+
+  const lower = trimmed.toLowerCase()
+  if (
+    lower.startsWith('javascript:') ||
+    lower.startsWith('mailto:') ||
+    lower.startsWith('tel:') ||
+    lower.startsWith('data:')
+  ) {
+    return false
+  }
+
+  return (
+    lower.startsWith('file://') ||
+    lower.startsWith('http://') ||
+    lower.startsWith('https://')
   )
-  if (previewNode instanceof HTMLElement) {
-    const fromData =
-      previewNode.dataset.sandboxPreviewUrl?.trim() ||
-      previewNode.dataset.stepOutputPreviewUrl?.trim()
-    if (fromData) return fromData
-  }
-
-  const anchor = element.closest('a[href]')
-  if (anchor instanceof HTMLAnchorElement) {
-    const href = anchor.getAttribute('href')?.trim() ?? ''
-    if (isSandboxPreviewHref(href)) return href
-  }
-
-  if (element.classList.contains('sandbox-preview-link')) {
-    const href = element.getAttribute('href')?.trim() ?? ''
-    if (isSandboxPreviewHref(href)) return href
-  }
-
-  return null
 }
 
-export function resolveSandboxPreviewUrlFromElement(
-  element: Element,
-): string | null {
-  return readPreviewUrlFromElement(element)
+export function isInsideChatMessageLinkScope(anchor: Element): boolean {
+  if (anchor.closest(CHAT_LINK_EXCLUDE_SELECTOR)) return false
+  return !!anchor.closest(CHAT_MESSAGE_LINK_ROOT_SELECTOR)
 }
 
-export function handleSandboxPreviewLinkClick(
+export function handleChatPanelLinkClick(
   event: MouseEvent,
   onOpen: (url: string) => void,
 ): void {
   const target = event.target
   if (!(target instanceof Element)) return
 
-  const previewUrl = readPreviewUrlFromElement(target)
-  if (!previewUrl) return
+  const anchor = target.closest('a[href]')
+  if (!(anchor instanceof HTMLAnchorElement)) return
+  if (!isInsideChatMessageLinkScope(anchor)) return
 
+  const href = anchor.getAttribute('href')?.trim() ?? ''
+  if (!isChatPreviewHref(href)) return
   event.preventDefault()
   event.stopPropagation()
   onOpen(previewUrl)
+}
+
+/** @deprecated Use {@link handleChatPanelLinkClick}. */
+export function handleSandboxPreviewLinkClick(
+  event: MouseEvent,
+  onOpen: (url: string) => void,
+): void {
+  handleChatPanelLinkClick(event, onOpen)
 }

@@ -1,23 +1,51 @@
 <template>
   <aside class="report-panel">
     <div
-      v-if="sandboxRuns.length > 0"
+      v-if="hasTabs"
       class="report-panel-tabs"
       role="tablist"
-      aria-label="Sandbox output runs"
+      aria-label="Preview tabs"
     >
       <button
         v-for="run in sandboxRuns"
-        :key="run.id"
+        :key="`run-${run.id}`"
         type="button"
         role="tab"
         class="cp-tab"
-        :aria-selected="run.id === activeRun?.id"
-        :class="{ 'cp-tab--active': run.id === activeRun?.id }"
-        @click="emit('update:selectedRunId', run.id)"
+        :aria-selected="isSandboxRunActive(run.id)"
+        :class="{ 'cp-tab--active': isSandboxRunActive(run.id) }"
+        :title="run.label"
+        @click="selectSandboxRun(run.id)"
       >
-        {{ run.label }}
+        <span class="cp-tab__label">{{ run.label }}</span>
       </button>
+      <div
+        v-for="tab in linkTabs"
+        :key="tab.id"
+        class="cp-tab-wrap"
+        :class="{ 'cp-tab-wrap--active': isLinkTabActive(tab.id) }"
+      >
+        <button
+          type="button"
+          role="tab"
+          class="cp-tab cp-tab--link"
+          :aria-selected="isLinkTabActive(tab.id)"
+          :class="{ 'cp-tab--active': isLinkTabActive(tab.id) }"
+          :title="tab.url"
+          @click="selectLinkTab(tab.id)"
+        >
+          <span class="cp-tab__label">{{ tab.label }}</span>
+        </button>
+        <button
+          type="button"
+          class="cp-tab__close"
+          :aria-label="`Close ${tab.label}`"
+          title="Close tab"
+          @click="emit('close-link-tab', tab.id)"
+        >
+          <UIcon name="i-lucide-x" class="cp-tab__close-icon" />
+        </button>
+      </div>
     </div>
 
     <div class="report-panel-url-section">
@@ -96,32 +124,70 @@ import {
   withDefaults,
 } from 'vue'
 import type { ConversationSandboxRun } from '@store/agent/types'
+import type { PreviewLinkTab } from '../report-preview-tabs'
 import {
   isMarkdownPreviewFileUrl,
   type MarkdownPreviewViewMode,
 } from '@shared/file-type/markdown-preview-url'
 
+export type ReportPanelPreviewSource = 'sandbox-run' | 'link'
+
 const props = withDefaults(
   defineProps<{
     sandboxRuns?: ConversationSandboxRun[]
     selectedRunId?: string | null
-    previewUrlOverride?: string | null
+    linkTabs?: PreviewLinkTab[]
+    activeLinkTabId?: string | null
+    previewSource?: ReportPanelPreviewSource
   }>(),
   {
     sandboxRuns: () => [],
     selectedRunId: null,
-    previewUrlOverride: null,
+    linkTabs: () => [],
+    activeLinkTabId: null,
+    previewSource: 'sandbox-run',
   },
 )
 
 const emit = defineEmits<{
   'update:selectedRunId': [id: string]
+  'update:activeLinkTabId': [id: string | null]
+  'update:previewSource': [source: ReportPanelPreviewSource]
+  'close-link-tab': [tabId: string]
 }>()
 
 const sandboxHostEl = ref<HTMLElement | null>(null)
 /** Editable URL field; synced from the active tab unless the user is typing. */
 const urlDraft = ref('')
 const markdownPreviewView = ref<MarkdownPreviewViewMode>('html')
+
+const activeLinkTab = computed(() => {
+  const id = props.activeLinkTabId
+  if (!id) return null
+  return props.linkTabs.find((tab) => tab.id === id) ?? null
+})
+
+const hasTabs = computed(
+  () => (props.sandboxRuns?.length ?? 0) > 0 || (props.linkTabs?.length ?? 0) > 0,
+)
+
+function isLinkTabActive(tabId: string): boolean {
+  return props.previewSource === 'link' && props.activeLinkTabId === tabId
+}
+
+function isSandboxRunActive(runId: string): boolean {
+  return props.previewSource === 'sandbox-run' && activeRun.value?.id === runId
+}
+
+function selectLinkTab(tabId: string) {
+  emit('update:previewSource', 'link')
+  emit('update:activeLinkTabId', tabId)
+}
+
+function selectSandboxRun(runId: string) {
+  emit('update:previewSource', 'sandbox-run')
+  emit('update:selectedRunId', runId)
+}
 
 const activeRun = computed((): ConversationSandboxRun | null => {
   const runs = props.sandboxRuns ?? []
@@ -140,8 +206,9 @@ const activeResultsFileUrl = computed(() => {
 })
 
 const previewUrl = computed(() => {
-  const override = props.previewUrlOverride?.trim()
-  if (override) return override
+  if (props.previewSource === 'link' && activeLinkTab.value?.url) {
+    return activeLinkTab.value.url
+  }
   const typed = urlDraft.value.trim()
   if (typed) return typed
   return activeResultsFileUrl.value
@@ -152,10 +219,10 @@ const showMarkdownViewToggle = computed(() =>
 )
 
 watch(
-  () => props.previewUrlOverride,
-  (override) => {
-    if (override?.trim()) {
-      urlDraft.value = override.trim()
+  () => [props.previewSource, activeLinkTab.value?.url] as const,
+  ([source, url]) => {
+    if (source === 'link' && url?.trim()) {
+      urlDraft.value = url.trim()
     }
   },
   { immediate: true },
@@ -164,7 +231,7 @@ watch(
 watch(
   () => [activeRun.value?.id, activeResultsFileUrl.value] as const,
   ([, url]) => {
-    if (props.previewUrlOverride?.trim()) return
+    if (props.previewSource !== 'sandbox-run') return
     urlDraft.value = url ?? ''
   },
   { immediate: true },
@@ -295,12 +362,71 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   display: flex;
   flex-wrap: nowrap;
-  gap: 6px;
+  align-items: flex-end;
+  gap: 4px;
   padding: 10px 10px 0;
   overflow-x: auto;
   scrollbar-width: thin;
   border-bottom: 1px solid var(--ui-border);
   background: var(--ui-bg-elevated);
+}
+
+.cp-tab-wrap {
+  display: inline-flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  max-width: min(220px, 42vw);
+  border-radius: 9px 9px 0 0;
+}
+
+.cp-tab-wrap--active .cp-tab {
+  color: var(--ui-text);
+  background: var(--ui-bg);
+  border-color: var(--ui-border);
+  border-bottom-color: var(--ui-bg);
+  margin-bottom: -1px;
+  padding-bottom: 9px;
+  box-shadow: 0 -1px 0 color-mix(in srgb, var(--ui-text) 5%, transparent);
+}
+
+.cp-tab__label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cp-tab--link {
+  max-width: 100%;
+  padding-right: 8px;
+}
+
+.cp-tab__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  margin-left: -4px;
+  margin-bottom: 1px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-text-muted);
+  cursor: pointer;
+}
+
+.cp-tab-wrap--active .cp-tab__close {
+  margin-bottom: 0;
+}
+
+.cp-tab__close:hover {
+  color: var(--ui-text);
+  background: color-mix(in srgb, var(--ui-text) 8%, transparent);
+}
+
+.cp-tab__close-icon {
+  width: 12px;
+  height: 12px;
 }
 
 .report-panel-url-section {

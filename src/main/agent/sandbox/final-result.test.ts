@@ -34,6 +34,8 @@ describe('writeFinalResultToSandbox', () => {
     const html = String(vi.mocked(writeFile).mock.calls[0]?.[1] ?? '')
     expect(html).toContain('<!doctype html>')
     expect(html).toContain('Hello')
+    expect(html).toContain('background: #ffffff')
+    expect(html).not.toContain('#0b1020')
     expect(result.resultsFileUrl).toContain(FINAL_RESULT_FILENAME)
   })
 

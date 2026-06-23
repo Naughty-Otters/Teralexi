@@ -186,10 +186,15 @@
       <ReportPanel
         v-if="showReportPanel"
         :style="{ width: `${reportPanelWidthPx}px` }"
-        :preview-url-override="reportPreviewUrlOverride"
+        :link-tabs="currentPreviewLinkTabs"
+        :active-link-tab-id="currentActivePreviewLinkTabId"
+        :preview-source="currentPreviewPanelSource"
         :sandbox-runs="agentStore.sandboxRunsForCurrentConversation"
         :selected-run-id="agentStore.selectedSandboxRunIdForCurrentConversation"
         @update:selected-run-id="agentStore.setSelectedSandboxRunId"
+        @update:active-link-tab-id="onUpdateActivePreviewLinkTabId"
+        @update:preview-source="onUpdatePreviewPanelSource"
+        @close-link-tab="onClosePreviewLinkTab"
       />
     </div>
   </div>
@@ -292,8 +297,18 @@ import { lastAssistantMessageIsCompleteWithCollectFormResponses } from './chat/c
 
 import { useHorizontalPanelResize } from '@renderer/composables/useHorizontalPanelResize'
 import PanelResizeHandle from '@renderer/components/PanelResizeHandle.vue'
+<<<<<<< HEAD
 import { handleSandboxPreviewLinkClick } from '../sandboxPreview'
 import { sandboxPreviewRequest } from '../sandboxPreviewBridge'
+=======
+import { handleChatPanelLinkClick } from '../sandboxPreview'
+import {
+  closePreviewLinkTab,
+  openPreviewLinkTab,
+  type PreviewLinkTab,
+} from '../report-preview-tabs'
+import type { ReportPanelPreviewSource } from './ReportPanel.vue'
+>>>>>>> 4fa93a1 (update the themes)
 import ReportPanel from './ReportPanel.vue'
 import ChatPanelHeader from './ChatPanelHeader.vue'
 import ChatUserMessage from './ChatUserMessage.vue'
@@ -416,7 +431,13 @@ function sendTextForAttachments(sourcePaths: readonly string[]): string {
 
 const showReportPanel = ref(false)
 const showWorkspaceSplitPanel = ref(false)
-const reportPreviewUrlOverride = ref<string | null>(null)
+const previewLinkTabsByConversation = ref<Record<string, PreviewLinkTab[]>>({})
+const activePreviewLinkTabIdByConversation = ref<Record<string, string | null>>(
+  {},
+)
+const previewPanelSourceByConversation = ref<
+  Record<string, ReportPanelPreviewSource>
+>({})
 const messagesEl = ref<HTMLElement | null>(null)
 const messagesContentEl = ref<HTMLElement | null>(null)
 const chatBodyEl = ref<HTMLElement | null>(null)
@@ -466,13 +487,87 @@ function onWorkspaceSplitPanelKeyboardResize(delta: number) {
   setWorkspaceSplitPanelWidth(workspaceSplitPanelWidthPx.value + delta)
 }
 
+const currentPreviewLinkTabs = computed(() => {
+  const cid = agentStore.currentConversationId
+  if (!cid) return []
+  return previewLinkTabsByConversation.value[cid] ?? []
+})
+
+const currentActivePreviewLinkTabId = computed(() => {
+  const cid = agentStore.currentConversationId
+  if (!cid) return null
+  return activePreviewLinkTabIdByConversation.value[cid] ?? null
+})
+
+const currentPreviewPanelSource = computed((): ReportPanelPreviewSource => {
+  const cid = agentStore.currentConversationId
+  if (!cid) return 'sandbox-run'
+  return previewPanelSourceByConversation.value[cid] ?? 'sandbox-run'
+})
+
+function setConversationPreviewTabs(
+  conversationId: string,
+  tabs: PreviewLinkTab[],
+  activeTabId: string | null,
+) {
+  previewLinkTabsByConversation.value = {
+    ...previewLinkTabsByConversation.value,
+    [conversationId]: tabs,
+  }
+  activePreviewLinkTabIdByConversation.value = {
+    ...activePreviewLinkTabIdByConversation.value,
+    [conversationId]: activeTabId,
+  }
+}
+
 function openSandboxPreview(url: string) {
-  reportPreviewUrlOverride.value = url
+  const cid = agentStore.currentConversationId?.trim()
+  if (!cid) return
+  const prevTabs = previewLinkTabsByConversation.value[cid] ?? []
+  const { tabs, activeTabId } = openPreviewLinkTab(prevTabs, url)
+  setConversationPreviewTabs(cid, tabs, activeTabId)
+  previewPanelSourceByConversation.value = {
+    ...previewPanelSourceByConversation.value,
+    [cid]: 'link',
+  }
   showReportPanel.value = true
 }
 
+function onUpdateActivePreviewLinkTabId(tabId: string | null) {
+  const cid = agentStore.currentConversationId?.trim()
+  if (!cid) return
+  activePreviewLinkTabIdByConversation.value = {
+    ...activePreviewLinkTabIdByConversation.value,
+    [cid]: tabId,
+  }
+}
+
+function onUpdatePreviewPanelSource(source: ReportPanelPreviewSource) {
+  const cid = agentStore.currentConversationId?.trim()
+  if (!cid) return
+  previewPanelSourceByConversation.value = {
+    ...previewPanelSourceByConversation.value,
+    [cid]: source,
+  }
+}
+
+function onClosePreviewLinkTab(tabId: string) {
+  const cid = agentStore.currentConversationId?.trim()
+  if (!cid) return
+  const prevTabs = previewLinkTabsByConversation.value[cid] ?? []
+  const activeId = activePreviewLinkTabIdByConversation.value[cid] ?? null
+  const { tabs, activeTabId } = closePreviewLinkTab(prevTabs, activeId, tabId)
+  setConversationPreviewTabs(cid, tabs, activeTabId)
+  if (tabs.length === 0) {
+    previewPanelSourceByConversation.value = {
+      ...previewPanelSourceByConversation.value,
+      [cid]: 'sandbox-run',
+    }
+  }
+}
+
 function onChatPanelClick(event: MouseEvent) {
-  handleSandboxPreviewLinkClick(event, openSandboxPreview)
+  handleChatPanelLinkClick(event, openSandboxPreview)
 }
 
 function onChatBodySandboxPreviewClick(event: MouseEvent) {
@@ -2025,9 +2120,6 @@ function toggleSidebar() {
 
 function toggleReportPanel() {
   showReportPanel.value = !showReportPanel.value
-  if (!showReportPanel.value) {
-    reportPreviewUrlOverride.value = null
-  }
 }
 
 function closeWorkspaceSplitPanel() {
