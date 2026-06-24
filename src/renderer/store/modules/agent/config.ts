@@ -78,6 +78,9 @@ export const SYSTEM_PROP_KEYS = {
   zhipuBaseURL: 'settings.zhipu.baseUrl',
 } as const
 
+/** When true, first-run LLM setup wizard is hidden even if no provider is configured. */
+export const PROVIDER_SETUP_DISMISSED_KEY = 'settings.onboarding.llmDismissed'
+
 export function normalizeBaseURL(url: string, fallback: string): string {
   const value = url.trim()
   if (!value) return fallback

@@ -65,6 +65,12 @@
         />
       </main>
     </div>
+
+    <ProviderSetupWizard
+      :open="providerSetupOpen"
+      @close="providerSetupOpen = false"
+      @finished="onProviderSetupFinished"
+    />
   </div>
 </template>
 
@@ -105,6 +111,8 @@ import { loadChatUiSettings } from './chatUiSettings'
 import { loadAppLocale } from '@renderer/i18n/appLocaleSettings'
 import { useI18n } from '@renderer/composables/useI18n'
 import { runConversationStoreUiSync } from './conversationStoreUiSync'
+import ProviderSetupWizard from './components/ProviderSetupWizard.vue'
+import { PROVIDER_SETUP_SESSION_KEY } from '@renderer/lib/provider-setup-session'
 
 const { t } = useI18n()
 
@@ -120,7 +128,12 @@ const rightPanelView = ref<
 >('chat')
 const sidebarCollapsed = ref(true)
 const layoutEl = ref<HTMLElement | null>(null)
+const providerSetupOpen = ref(false)
 let unbindAppUpdate: (() => void) | null = null
+
+function onProviderSetupFinished() {
+  providerSetupOpen.value = false
+}
 
 watch(
   () => appUpdateState.phase,
@@ -431,6 +444,13 @@ onMounted(async () => {
   )
   await agentStore.checkConnection()
   await agentStore.fetchModelsForProvider('ollama')
+  if (
+    agentStore.shouldShowProviderSetupWizard ||
+    sessionStorage.getItem(PROVIDER_SETUP_SESSION_KEY) === '1'
+  ) {
+    sessionStorage.removeItem(PROVIDER_SETUP_SESSION_KEY)
+    providerSetupOpen.value = true
+  }
 })
 
 onUnmounted(() => {

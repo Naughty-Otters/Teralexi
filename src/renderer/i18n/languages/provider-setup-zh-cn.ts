@@ -1,0 +1,136 @@
+import type { ProviderSetupLabels } from '../provider-setup-label-types'
+
+export const providerSetupZhCn: ProviderSetupLabels = {
+  wizard: {
+    title: '配置 LLM 提供商',
+    subtitle:
+      '连接本地模型服务，或粘贴云端 API 密钥。可随时在 设置 → LLM 中修改。',
+    chooseMode: '你想如何运行模型？',
+    localTitle: '本地（Ollama / llama.cpp）',
+    localDesc: '在本机运行模型，无需云端 API 密钥。',
+    cloudTitle: '云端 API',
+    cloudDesc: '使用 OpenAI、Anthropic、DeepSeek、Gemini 等托管 API。',
+    pickProvider: '选择提供商',
+    back: '返回',
+    continue: '进入对话',
+    skipForNow: '暂时跳过',
+    openConsole: '管理你的 LLM API 密钥',
+    openConsoleHint: '在浏览器中创建或复制 API 密钥，然后粘贴到下方。',
+    openDocs: '文档',
+    openInstall: '下载安装',
+    openInstallHint: '安装本地运行环境后，返回此处连接。',
+    testAndSave: '测试并保存',
+    testing: '正在测试连接…',
+    testSuccess: '已连接 — 设置已保存。',
+    testFailed: '连接失败，请检查密钥后重试。',
+    modelsFound: '可用模型 {count} 个',
+    setupGuide: '设置步骤',
+    getStarted: '开始配置',
+    openSettings: '打开 LLM 设置',
+  },
+  landing: {
+    title: '连接你的第一个模型',
+    subtitle:
+      '分步引导从 OpenAI、Anthropic、DeepSeek 等获取 API 密钥，并在 OpenFDE 中测试保存。',
+    cta: '开始设置向导',
+  },
+  providers: {
+    ollama: {
+      intro: 'Ollama 在本地运行开源模型。安装后拉取模型，再将 OpenFDE 指向服务器地址。',
+      steps: [
+        '下载并安装 Ollama。',
+        '在终端运行：ollama pull llama3.2（或其他模型）。',
+        '确保服务已启动（默认 http://localhost:11434）。',
+        '在下方填写服务器 URL，点击「测试并保存」。',
+      ],
+    },
+    llamacpp: {
+      intro: 'llama.cpp 服务器提供 OpenAI 兼容 API。启动服务后在此填写 base URL。',
+      steps: [
+        '构建或下载 llama.cpp 并启动 HTTP 服务器。',
+        '记下 base URL（常见为 http://127.0.0.1:8080/v1）。',
+        '可选：若服务器需要认证，填写 Bearer token。',
+        '点击「测试并保存」加载可用模型。',
+      ],
+    },
+    openai: {
+      intro: 'OpenAI 提供 GPT 等模型，需要启用计费的账户和 API 密钥。',
+      steps: [
+        '登录 platform.openai.com，打开 API keys。',
+        '创建密钥并复制（仅显示一次）。',
+        '粘贴到下方。仅 Azure 或代理需自定义 base URL。',
+        '点击「测试并保存」— 密钥保存在本机并拉取模型列表。',
+      ],
+    },
+    anthropic: {
+      intro: 'Anthropic 通过 Messages API 提供 Claude 模型。',
+      steps: [
+        '登录 platform.claude.com，打开 API 密钥（Settings → workspaces → keys）。',
+        '创建密钥并复制（以 sk-ant- 开头）。',
+        '粘贴到下方。代理场景才需自定义 base URL。',
+        '点击「测试并保存」在本机存储密钥。',
+      ],
+    },
+    gemini: {
+      intro: 'Google Gemini 使用 Google AI Studio 的 API 密钥。',
+      steps: [
+        '打开 Google AI Studio → API keys 并登录 Google 账号。',
+        '创建 API 密钥。',
+        '粘贴到下方并点击「测试并保存」。',
+      ],
+    },
+    deepseek: {
+      intro: 'DeepSeek 提供 OpenAI 兼容的对话与推理模型。',
+      steps: [
+        '登录 platform.deepseek.com/api_keys 并创建密钥。',
+        '创建并复制密钥。',
+        '粘贴到下方并点击「测试并保存」。',
+      ],
+    },
+    zhipu: {
+      intro: '智谱 GLM 使用 BigModel 开放平台。',
+      steps: [
+        '登录 z.ai，打开 Manage API key → API key list。',
+        '创建并复制密钥。',
+        '粘贴到下方并点击「测试并保存」。',
+      ],
+    },
+    moonshot: {
+      intro: 'Moonshot（Kimi）使用 OpenAI 兼容 API。',
+      steps: [
+        '登录 platform.moonshot.cn 并创建 API 密钥。',
+        '粘贴到下方，默认 base URL 已填好。',
+        '点击「测试并保存」。',
+      ],
+    },
+    qwen: {
+      intro: '通义千问通过 DashScope 兼容模式访问。',
+      steps: [
+        '登录 DashScope 控制台并创建 API 密钥。',
+        '粘贴到下方并点击「测试并保存」。',
+      ],
+    },
+    bytedance: {
+      intro: '火山方舟（豆包）使用 endpoint 模型 ID。',
+      steps: [
+        '打开火山方舟控制台并创建 API 密钥。',
+        '粘贴到下方。Agent 模型名填 Ark endpoint 模型 ID。',
+        '点击「测试并保存」。',
+      ],
+    },
+    huggingface: {
+      intro: 'Hugging Face Inference 路由提供 OpenAI 兼容模型。',
+      steps: [
+        '在 huggingface.co/settings/tokens 创建读权限 token。',
+        '粘贴到下方并点击「测试并保存」。',
+      ],
+    },
+    'nvidia-nim': {
+      intro: 'NVIDIA NIM 通过 OpenAI 兼容 API 提供托管模型。',
+      steps: [
+        '从 NVIDIA Build 获取 API 密钥。',
+        '粘贴到下方并点击「测试并保存」。',
+      ],
+    },
+  },
+}

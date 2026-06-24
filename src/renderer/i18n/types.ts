@@ -1,4 +1,5 @@
 import type { SettingsPanelLabels } from './panel-label-types'
+import type { ProviderSetupLabels } from './provider-setup-label-types'
 
 export type AppLabels = {
   common: {
@@ -241,6 +242,7 @@ export type AppLabels = {
     updateAvailableTitle: string
     updateAvailableDescription: string
   }
+  providerSetup: ProviderSetupLabels
 }
 
 export type AppLocaleBundle = AppLabels
