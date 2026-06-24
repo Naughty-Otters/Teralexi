@@ -1,4 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import {
+  DEEP_THINKING_BEFORE_MARKER,
+  MULTIPLE_BRANCH_THINKING_MARKER,
+} from './deep-thinking-blocks'
 import { assembleInstructions, injectUserMessages } from './pipeline'
 import { recordDatetimeInjection } from './conversation-injection-state'
 
@@ -180,10 +184,8 @@ describe('injector pipeline', () => {
       0,
     )
     expect(first).toHaveLength(4)
-    expect(String(first[1].content)).toContain('Before answering, write a comprehensive breakdown')
-    expect(String(first[2].content)).toContain(
-      'Evaluate multiple branches of logic and explore different reasoning paths',
-    )
+    expect(String(first[1].content)).toContain(DEEP_THINKING_BEFORE_MARKER)
+    expect(String(first[2].content)).toContain(MULTIPLE_BRANCH_THINKING_MARKER)
     expect(String(first[3].content)).toContain('## Current date and time')
 
     const second = await injectUserMessages(ctx, first, 1)
@@ -226,10 +228,8 @@ describe('injector pipeline', () => {
     )
 
     expect(messages).toHaveLength(6)
-    expect(String(messages[3].content)).toContain('Before answering, write a comprehensive breakdown')
-    expect(String(messages[4].content)).toContain(
-      'Evaluate multiple branches of logic and explore different reasoning paths',
-    )
+    expect(String(messages[3].content)).toContain(DEEP_THINKING_BEFORE_MARKER)
+    expect(String(messages[4].content)).toContain(MULTIPLE_BRANCH_THINKING_MARKER)
     expect(String(messages[5].content)).toContain('## Current date and time')
   })
 })
