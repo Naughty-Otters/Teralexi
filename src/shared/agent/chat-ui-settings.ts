@@ -5,6 +5,9 @@ export const CHAT_UI_BUBBLE_COMPACT_LINES_KEY = 'chat.ui.bubbleCompactLines'
 export const CHAT_UI_CONTEXT_WINDOW_MESSAGES_KEY = 'chat.ui.contextWindowMessages'
 export const CHAT_UI_REASONING_MAX_CHARS_KEY = 'chat.ui.reasoningMaxChars'
 export const CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY = 'chat.ui.showAgenticRunBubbles'
+/** Marks one-time migration from when showAgenticRunBubbles defaulted to false. */
+export const CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_MIGRATION_KEY =
+  'chat.ui.showAgenticRunBubbles.migratedDefaultTrue'
 
 export const CHAT_UI_SETTINGS_PROP_KEYS = [
   CHAT_UI_BUBBLE_TEXT_KEEP_CHARS_KEY,
@@ -132,4 +135,24 @@ export function parseChatUiSettings(
       DEFAULT_CHAT_UI_SETTINGS.showAgenticRunBubbles,
     ),
   }
+}
+
+/** Upgrade installs that persisted the old default (false) to the current default (true). */
+export function applyShowAgenticRunBubblesDefaultMigration(
+  values: Record<string, string | undefined>,
+): ChatUiSettings {
+  const parsed = parseChatUiSettings(values)
+  if (values[CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_MIGRATION_KEY] === 'true') {
+    return parsed
+  }
+  if (values[CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY] === 'false') {
+    return { ...parsed, showAgenticRunBubbles: true }
+  }
+  return parsed
+}
+
+export function shouldPersistShowAgenticRunBubblesMigration(
+  values: Record<string, string | undefined>,
+): boolean {
+  return values[CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_MIGRATION_KEY] !== 'true'
 }
