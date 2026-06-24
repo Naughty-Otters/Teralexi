@@ -1,0 +1,92 @@
+/**
+ * Mac Glass appearance — frosted translucent surfaces.
+ * Activated when `html.glass` is present (see appearanceSettings.ts).
+ */
+
+html.glass {
+  --glass-blur: 22px;
+  --glass-saturate: 180%;
+  --glass-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+
+  --ui-bg: rgba(248, 250, 252, 0.55);
+  --ui-bg-muted: rgba(241, 245, 249, 0.48);
+  --ui-bg-elevated: rgba(255, 255, 255, 0.68);
+  --ui-bg-accented: rgba(226, 232, 240, 0.42);
+  --ui-border: rgba(148, 163, 184, 0.38);
+  --ui-border-muted: rgba(203, 213, 225, 0.32);
+  --ui-border-accented: rgba(148, 163, 184, 0.45);
+}
+
+html.glass.dark {
+  --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+
+  --ui-bg: rgba(15, 23, 42, 0.62);
+  --ui-bg-muted: rgba(30, 41, 59, 0.55);
+  --ui-bg-elevated: rgba(30, 41, 59, 0.72);
+  --ui-bg-accented: rgba(51, 65, 85, 0.48);
+  --ui-border: rgba(71, 85, 105, 0.45);
+  --ui-border-muted: rgba(51, 65, 85, 0.42);
+  --ui-border-accented: rgba(100, 116, 139, 0.5);
+}
+
+@mixin glass-backdrop {
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+html.glass {
+  .main,
+  .agent-app,
+  .agent-layout {
+    background: transparent;
+  }
+
+  .window-title,
+  .sidebar,
+  .right-panel,
+  .chat-panel,
+  .monitor-panel,
+  .workspace-panel,
+  .conversation-bubble,
+  .conversation-fallback-bubble,
+  .assistant-msg-parts > :not(.thinking-strip),
+  .step-disclosure__toggle,
+  .report-panel,
+  .sp-card,
+  .chat-composer,
+  .footer-btn,
+  .cp-tab,
+  .cp-icon-btn {
+    @include glass-backdrop;
+    box-shadow: var(--glass-shadow);
+  }
+
+  .conversation-bubble,
+  .conversation-fallback-bubble {
+    background: color-mix(
+      in srgb,
+      var(--ui-bg-elevated) 88%,
+      transparent
+    );
+  }
+
+  .step-disclosure__toggle {
+    background: color-mix(
+      in srgb,
+      var(--ui-bg-elevated) 90%,
+      transparent
+    );
+  }
+
+  .chat-scroll-watermark {
+    opacity: 0.08;
+  }
+}
+
+/* Dropdown / popover surfaces inherit elevated token; add blur when glass is on. */
+html.glass .slash-command-menu,
+html.glass .agent-picker-menu,
+html.glass .sub-agent-mention-menu,
+html.glass .file-mention-menu {
+  @include glass-backdrop;
+}

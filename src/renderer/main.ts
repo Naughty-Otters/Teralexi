@@ -4,6 +4,7 @@ import NuxtUIPlugin from '@nuxt/ui/vue-plugin'
 
 import { initAppColorMode } from './composables/appColorMode'
 import { loadFontSettings } from './fontSettings'
+import { loadAppearanceSettings } from './appearanceSettings'
 import './styles/index.scss'
 import './permission'
 import App from './App.vue'
@@ -20,4 +21,5 @@ app.use(store)
 errorHandler(app)
 
 void loadFontSettings()
+void loadAppearanceSettings()
 app.mount('#app')

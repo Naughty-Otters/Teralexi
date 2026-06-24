@@ -15,6 +15,8 @@ import type {
   SupportReportOptions,
 } from '@shared/support-bundle'
 import config from '@config/index'
+import { parseAppAppearance } from '@shared/ui/appearance-settings'
+import { applyWindowGlassEffect } from './window-glass'
 import {
   ensureSystemPropFile,
   getSystemPropValue,
@@ -299,6 +301,15 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     event: Electron.IpcMainInvokeEvent,
   ) => boolean | Promise<boolean> = async () => {
     return config.IsUseSysTitle
+  }
+  SetAppWindowAppearance: (
+    event: Electron.IpcMainInvokeEvent,
+    args: { appearance: 'solid' | 'glass' },
+  ) => void | Promise<void> = (event, args) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win || win.isDestroyed()) return
+    const appearance = parseAppAppearance(args?.appearance)
+    applyWindowGlassEffect(win, appearance)
   }
   AppClose: (event: Electron.IpcMainInvokeEvent) => void | Promise<void> = (
     event,
