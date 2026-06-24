@@ -106,6 +106,7 @@ import {
   githubAccountInfoForUi,
 } from './github-oauth'
 import { getMcpServerManager } from './mcp-server-manager'
+import { checkMcpRuntimeStatus } from './mcp-runtime-check'
 import { getMcpRegistryService } from './mcp-registry-service'
 import { getWhatsAppChannelManager } from '@main/channels/whatsapp/manager'
 import { getTelegramChannelManager } from '@main/channels/telegram/manager'
@@ -1077,6 +1078,12 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       return []
     }
     return getMcpServerManager().listTools(server)
+  }
+
+  GetMcpRuntimeStatus: (
+    _event: Electron.IpcMainInvokeEvent,
+  ) => Promise<ReturnType<typeof checkMcpRuntimeStatus>> = async () => {
+    return checkMcpRuntimeStatus()
   }
 
   CallMcpServerTool: (

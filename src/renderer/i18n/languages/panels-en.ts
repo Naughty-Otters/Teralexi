@@ -260,6 +260,20 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     registryLoadFailed: 'Failed to load registry server.',
     registryBackToSearch: 'Back to registry',
     registryConfigureTitle: 'Configure server',
+    requiresNpxTitle: 'Requires Node.js (npx)',
+    requiresNpxHint:
+      'This server runs via npx. Install Node.js (includes npm and npx), then restart OpenFDE. On first enable, npx downloads the MCP package from npm.',
+    requiresNpx: 'Requires npx',
+    requiresUvTitle: 'Requires uv',
+    requiresUvHint:
+      'This server runs via uvx. Install uv, then restart OpenFDE so OpenFDE can find it.',
+    requiresUv: 'Requires uv',
+    installNode: 'Install Node.js',
+    installUv: 'Install uv',
+    launchCommand: 'Launch command',
+    toolsLoadFailedTitle: 'Failed to load tools',
+    toolsUnavailableHint:
+      'No tools were returned from this server. Disable and re-enable to retry, or check the launch command.',
   },
   scheduler: {
     addSchedule: 'Add Schedule',

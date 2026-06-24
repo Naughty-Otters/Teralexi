@@ -45,6 +45,21 @@
           :class="server.enabled ? 'mcp-tab-dot--on' : 'mcp-tab-dot--off'"
         />
         <span class="mcp-tab-name">{{ server.name }}</span>
+        <span
+          v-if="serverMissingRuntime(server)"
+          class="mcp-runtime-badge"
+          :class="{
+            'mcp-runtime-badge--missing': serverMissingRuntime(server),
+          }"
+          role="button"
+          tabindex="0"
+          :title="runtimeBadgeTitle(server)"
+          @click.stop="openRuntimeInstallPage(serverRuntimeKind(server)!)"
+          @keydown.enter.stop="openRuntimeInstallPage(serverRuntimeKind(server)!)"
+          @keydown.space.prevent.stop="openRuntimeInstallPage(serverRuntimeKind(server)!)"
+        >
+          {{ runtimeBadgeShortLabel(server) }}
+        </span>
       </button>
     </aside>
 
@@ -343,6 +358,53 @@
       </div>
 
       <div class="mcp-content-body">
+        <div
+          v-if="selectedServerMissingRuntime"
+          class="mcp-runtime-callout mcp-runtime-callout--missing"
+        >
+          <p class="mcp-runtime-callout__title">
+            {{
+              selectedServerRuntimeKind === 'uvx'
+                ? p.mcp.requiresUvTitle
+                : p.mcp.requiresNpxTitle
+            }}
+          </p>
+          <p class="mcp-runtime-callout__text">
+            {{
+              selectedServerRuntimeKind === 'uvx'
+                ? p.mcp.requiresUvHint
+                : p.mcp.requiresNpxHint
+            }}
+          </p>
+          <button
+            type="button"
+            class="mcp-action-btn mcp-action-btn--confirm mcp-runtime-callout__btn"
+            @click="openRuntimeInstallPage(selectedServerRuntimeKind!)"
+          >
+            {{
+              selectedServerRuntimeKind === 'uvx'
+                ? p.mcp.installUv
+                : p.mcp.installNode
+            }}
+          </button>
+        </div>
+
+        <div
+          v-else-if="selectedServerToolLoadIssue"
+          class="mcp-runtime-callout"
+          :class="selectedServerToolLoadError ? 'mcp-runtime-callout--error' : 'mcp-runtime-callout--warning'"
+        >
+          <p
+            v-if="selectedServerToolLoadError"
+            class="mcp-runtime-callout__title"
+          >
+            {{ p.mcp.toolsLoadFailedTitle }}
+          </p>
+          <p class="mcp-runtime-callout__text mcp-detail-val--mono">
+            {{ selectedServerToolLoadMessage }}
+          </p>
+        </div>
+
         <div class="mcp-detail-card">
           <div class="mcp-detail-row">
             <span class="mcp-detail-key">{{ p.fields.transport }}</span>
@@ -356,18 +418,29 @@
               {{ selectedServer.url }}
             </span>
           </div>
-          <div v-if="selectedServer.command" class="mcp-detail-row">
-            <span class="mcp-detail-key">{{ p.fields.command }}</span>
+          <div
+            v-if="selectedServerLaunchCommand"
+            class="mcp-detail-row"
+          >
+            <span class="mcp-detail-key">{{ p.mcp.launchCommand }}</span>
             <span class="mcp-detail-val mcp-detail-val--mono">
-              {{ selectedServer.command }}
+              {{ selectedServerLaunchCommand }}
             </span>
           </div>
-          <div v-if="selectedServer.args.length > 0" class="mcp-detail-row">
-            <span class="mcp-detail-key">{{ p.fields.args }}</span>
-            <span class="mcp-detail-val mcp-detail-val--mono">
-              {{ selectedServer.args.join(', ') }}
-            </span>
-          </div>
+          <template v-else>
+            <div v-if="selectedServer.command" class="mcp-detail-row">
+              <span class="mcp-detail-key">{{ p.fields.command }}</span>
+              <span class="mcp-detail-val mcp-detail-val--mono">
+                {{ selectedServer.command }}
+              </span>
+            </div>
+            <div v-if="selectedServer.args.length > 0" class="mcp-detail-row">
+              <span class="mcp-detail-key">{{ p.fields.args }}</span>
+              <span class="mcp-detail-val mcp-detail-val--mono">
+                {{ selectedServer.args.join(', ') }}
+              </span>
+            </div>
+          </template>
           <div class="mcp-detail-row">
             <span class="mcp-detail-key">{{ p.mcp.tools }}</span>
             <span class="mcp-detail-val">
@@ -414,15 +487,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
 import { useAgentStore, type McpTransportType } from '@store/agent'
 import { registryDraftToKvLines } from '@shared/mcp/registry-config-mapper'
 import { isReferenceMcpServer } from '@shared/mcp/reference-mcp-servers'
+import {
+  describeMcpLaunchCommand,
+  mcpRuntimeInstallUrl,
+  mcpRuntimeKindForCommand,
+  referenceMcpRuntimeKind,
+  type McpRuntimeKind,
+} from '@shared/mcp/mcp-runtime-requirements'
+import { openExternalUrl } from '@renderer/lib/open-external-url'
 import type {
   McpRegistryServerDraft,
   McpRegistryServerSummary,
 } from '@shared/mcp/registry-types'
+
+type McpRuntimeStatus = {
+  npx: { available: boolean; resolvedPath: string | null }
+  uvx: { available: boolean; resolvedPath: string | null }
+}
 
 type McpServerDraft = {
   name: string
@@ -455,6 +541,7 @@ const selectedRegistrySummary = ref<McpRegistryServerSummary | null>(null)
 const registryDraftOptions = ref<McpRegistryServerDraft[]>([])
 const selectedRegistryDraftIndex = ref(0)
 const registryKvValues = ref<Record<string, string>>({})
+const mcpRuntimeStatus = ref<McpRuntimeStatus | null>(null)
 let registrySearchTimer: ReturnType<typeof setTimeout> | null = null
 
 const selectedServer = computed(() =>
@@ -466,6 +553,106 @@ const selectedServer = computed(() =>
 const selectedServerIsReference = computed(
   () => selectedServer.value != null && isReferenceMcpServer(selectedServer.value),
 )
+
+const selectedServerRuntimeKind = computed((): McpRuntimeKind | null => {
+  const server = selectedServer.value
+  if (!server || server.transportType !== 'stdio') return null
+  return referenceMcpRuntimeKind(server) ?? mcpRuntimeKindForCommand(server.command)
+})
+
+const selectedServerLaunchCommand = computed(() => {
+  const server = selectedServer.value
+  if (!server) return ''
+  return describeMcpLaunchCommand(server)
+})
+
+function runtimeAvailable(kind: McpRuntimeKind): boolean {
+  return mcpRuntimeStatus.value?.[kind]?.available === true
+}
+
+function serverRuntimeKind(server: {
+  id: string
+  command: string
+  transportType: McpTransportType
+}): McpRuntimeKind | null {
+  if (server.transportType !== 'stdio') return null
+  return referenceMcpRuntimeKind(server) ?? mcpRuntimeKindForCommand(server.command)
+}
+
+function serverMissingRuntime(server: {
+  id: string
+  command: string
+  transportType: McpTransportType
+}): boolean {
+  const kind = serverRuntimeKind(server)
+  if (!kind) return false
+  return !runtimeAvailable(kind)
+}
+
+function runtimeBadgeShortLabel(server: {
+  id: string
+  command: string
+  transportType: McpTransportType
+}): string {
+  return serverRuntimeKind(server) === 'uvx' ? 'uv' : 'npx'
+}
+
+function runtimeBadgeTitle(server: {
+  id: string
+  command: string
+  transportType: McpTransportType
+}): string {
+  const kind = serverRuntimeKind(server)
+  if (kind === 'uvx') return p.value.mcp.requiresUvHint
+  if (kind === 'npx') return p.value.mcp.requiresNpxHint
+  return ''
+}
+
+const selectedServerMissingRuntime = computed(
+  () =>
+    selectedServer.value != null &&
+    serverMissingRuntime(selectedServer.value),
+)
+
+const selectedServerToolLoadError = computed(() => {
+  const server = selectedServer.value
+  if (!server?.enabled || selectedServerMissingRuntime.value) return null
+  return agentStore.mcpToolsLoadErrorByServer[server.id] ?? null
+})
+
+const selectedServerShowsToolsUnavailableHint = computed(() => {
+  const server = selectedServer.value
+  if (!server?.enabled || selectedServerMissingRuntime.value) return false
+  if (selectedServerToolLoadError.value) return false
+  return (agentStore.mcpToolsByServer[server.id] ?? []).length === 0
+})
+
+const selectedServerToolLoadIssue = computed(
+  () =>
+    selectedServerToolLoadError.value != null ||
+    selectedServerShowsToolsUnavailableHint.value,
+)
+
+const selectedServerToolLoadMessage = computed(() => {
+  if (selectedServerToolLoadError.value) return selectedServerToolLoadError.value
+  if (selectedServerShowsToolsUnavailableHint.value) {
+    return p.value.mcp.toolsUnavailableHint
+  }
+  return ''
+})
+
+async function loadMcpRuntimeStatus(): Promise<void> {
+  const channel = window.ipcRendererChannel?.GetMcpRuntimeStatus
+  if (!channel?.invoke) {
+    mcpRuntimeStatus.value = null
+    return
+  }
+  mcpRuntimeStatus.value = (await channel.invoke()) as McpRuntimeStatus
+}
+
+function openRuntimeInstallPage(kind: McpRuntimeKind): void {
+  openExternalUrl(mcpRuntimeInstallUrl(kind))
+}
 
 const selectedRegistryDraft = computed(
   () => registryDraftOptions.value[selectedRegistryDraftIndex.value] ?? null,
@@ -492,13 +679,21 @@ const canSubmit = computed(() => {
   return Boolean(draft.value.url.trim())
 })
 
-onMounted(() => {
+onMounted(async () => {
+  await loadMcpRuntimeStatus()
   if (agentStore.mcpServers.length > 0) {
     selectServer(agentStore.mcpServers[0]!.id)
   } else {
     createNew()
   }
 })
+
+watch(
+  () => agentStore.mcpServers.map((server) => `${server.id}:${server.enabled}`).join('|'),
+  () => {
+    void loadMcpRuntimeStatus()
+  },
+)
 
 function resetRegistryState() {
   registrySearchQuery.value = ''
@@ -805,8 +1000,10 @@ async function deleteSelected() {
 .mcp-tab {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -814,7 +1011,6 @@ async function deleteSelected() {
   text-align: left;
   color: var(--ui-text);
   transition: background 0.12s;
-  width: 100%;
 }
 
 .mcp-tab:hover {
@@ -855,11 +1051,91 @@ async function deleteSelected() {
 }
 
 .mcp-tab-name {
+  flex: 1;
+  min-width: 0;
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.mcp-runtime-badge {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 1px 5px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--ui-text-muted) 30%, transparent);
+  background: color-mix(in srgb, var(--ui-text-muted) 8%, transparent);
+  color: var(--ui-text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.mcp-runtime-badge:hover {
+  background: color-mix(in srgb, var(--ui-text-muted) 14%, transparent);
+}
+
+.mcp-runtime-badge--missing {
+  border-color: color-mix(in srgb, var(--color-warning-500) 45%, transparent);
+  background: color-mix(in srgb, var(--color-warning-500) 12%, transparent);
+  color: var(--color-warning-700);
+}
+
+.mcp-runtime-badge--missing:hover {
+  background: color-mix(in srgb, var(--color-warning-500) 18%, transparent);
+}
+
+.mcp-runtime-callout {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--ui-text-muted) 25%, transparent);
+  background: color-mix(in srgb, var(--ui-text-muted) 8%, transparent);
+}
+
+.mcp-runtime-callout--missing {
+  border-color: color-mix(in srgb, var(--color-warning-500) 35%, transparent);
+  background: color-mix(in srgb, var(--color-warning-500) 10%, transparent);
+}
+
+.mcp-runtime-callout--error {
+  border-color: color-mix(in srgb, var(--color-error-500, #ef4444) 35%, transparent);
+  background: color-mix(in srgb, var(--color-error-500, #ef4444) 10%, transparent);
+}
+
+.mcp-runtime-callout--warning {
+  border-color: color-mix(in srgb, var(--ui-text-muted) 25%, transparent);
+  background: color-mix(in srgb, var(--ui-text-muted) 8%, transparent);
+}
+
+.mcp-runtime-callout__title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ui-text);
+}
+
+.mcp-runtime-callout__text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ui-text);
+}
+
+.mcp-runtime-callout__btn {
+  align-self: flex-start;
 }
 
 .mcp-tab-dot {

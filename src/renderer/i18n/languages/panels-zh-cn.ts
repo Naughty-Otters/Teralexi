@@ -249,6 +249,20 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     registryLoadFailed: '加载注册表服务器失败。',
     registryBackToSearch: '返回注册表',
     registryConfigureTitle: '配置服务器',
+    requiresNpxTitle: '需要 Node.js（npx）',
+    requiresNpxHint:
+      '此服务器通过 npx 启动。请先安装 Node.js（包含 npm 和 npx），然后重启 OpenFDE。首次启用时，npx 会从 npm 下载 MCP 包。',
+    requiresNpx: '需要 npx',
+    requiresUvTitle: '需要 uv',
+    requiresUvHint:
+      '此服务器通过 uvx 启动。请先安装 uv，然后重启 OpenFDE 以便应用找到它。',
+    requiresUv: '需要 uv',
+    installNode: '安装 Node.js',
+    installUv: '安装 uv',
+    launchCommand: '启动命令',
+    toolsLoadFailedTitle: '加载工具失败',
+    toolsUnavailableHint:
+      '此服务器未返回任何工具。请关闭后重新启用以重试，或检查启动命令。',
   },
   scheduler: {
     addSchedule: '添加调度',

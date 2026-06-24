@@ -642,6 +642,13 @@ export class IpcChannelMainClass {
     }>
   > = null
   /**
+   * Whether npx / uvx are available for stdio MCP servers
+   */
+  GetMcpRuntimeStatus: IpcMainEventListener<
+    void,
+    import('@main/services/mcp-runtime-check').McpRuntimeStatus
+  > = null
+  /**
    * Execute one tool call on a specific MCP server
    */
   CallMcpServerTool: IpcMainEventListener<

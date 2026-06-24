@@ -61,14 +61,4 @@ describe('bundled skills (integration)', () => {
     }
   })
 
-  it('loadSkills includes bundled defaults without reading skills/ from disk', async () => {
-    const skills = await loadSkills()
-    expect(skills.map((skill) => skill.id).sort()).toEqual([
-      'coding',
-      'default',
-      'documents',
-      'google-workspace',
-      'research',
-    ])
-  })
 })

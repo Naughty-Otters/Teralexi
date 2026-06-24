@@ -204,7 +204,19 @@ export type SettingsPanelLabels = {
     registryLoadFailed: string
     registryBackToSearch: string
     registryConfigureTitle: string
+    requiresNpxTitle: string
+    requiresNpxHint: string
+    requiresNpx: string
+    requiresUvTitle: string
+    requiresUvHint: string
+    requiresUv: string
+    installNode: string
+    installUv: string
+    launchCommand: string
+    toolsLoadFailedTitle: string
+    toolsUnavailableHint: string
   }
+  scheduler: {
     addSchedule: string
     loadingSchedules: string
     noSchedules: string
