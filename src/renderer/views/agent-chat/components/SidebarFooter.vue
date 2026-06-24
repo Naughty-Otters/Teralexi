@@ -4,6 +4,14 @@
     <div class="footer-actions">
       <button
         class="footer-btn"
+        :title="t.sidebar.setupWizard"
+        :aria-label="t.sidebar.openSetupWizard"
+        @click="emit('open-setup-wizard')"
+      >
+        <UIcon name="i-lucide-wand-sparkles" class="footer-btn-icon" />
+      </button>
+      <button
+        class="footer-btn"
         :class="{ 'footer-btn--active': rightPanelView === 'settings' }"
         :title="t.sidebar.settings"
         :aria-label="t.sidebar.settings"
@@ -95,6 +103,7 @@ const emit = defineEmits<{
   'toggle-settings': []
   'open-monitor': []
   'open-workspace': []
+  'open-setup-wizard': []
 }>()
 
 const agentStore = useAgentStore()

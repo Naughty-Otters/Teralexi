@@ -28,6 +28,8 @@ export type AppLabels = {
     chatDisplay: string
     workflows: string
     openWorkflows: string
+    setupWizard: string
+    openSetupWizard: string
   }
   settings: {
     title: string

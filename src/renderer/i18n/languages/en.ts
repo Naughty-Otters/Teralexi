@@ -29,6 +29,8 @@ export const lang: AppLocaleBundle = {
     chatDisplay: 'Chat display',
     workflows: 'Workflows',
     openWorkflows: 'Open workflow studio',
+    setupWizard: 'Setup wizard',
+    openSetupWizard: 'Open setup wizard',
   },
   settings: {
     title: 'Settings',

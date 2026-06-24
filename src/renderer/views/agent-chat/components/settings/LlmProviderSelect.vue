@@ -70,10 +70,13 @@ const props = withDefaults(
     disabled?: boolean
     /** When true, changing provider fetches models for the new provider. */
     prefetchModels?: boolean
+    /** When set, only these providers appear in the menu. */
+    providerIds?: readonly ProviderType[]
   }>(),
   {
     disabled: false,
     prefetchModels: true,
+    providerIds: undefined,
   },
 )
 
@@ -82,7 +85,12 @@ const emit = defineEmits<{
 }>()
 
 const agentStore = useAgentStore()
-const options = LLM_PROVIDER_SETTINGS_OPTIONS
+const options = computed(() => {
+  const all = LLM_PROVIDER_SETTINGS_OPTIONS
+  if (!props.providerIds?.length) return all
+  const allowed = new Set(props.providerIds)
+  return all.filter((option) => allowed.has(option.id))
+})
 
 const rootEl = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLButtonElement | null>(null)
@@ -92,7 +100,7 @@ const highlightIndex = ref(0)
 const itemRefs = ref<(HTMLButtonElement | null)[]>([])
 
 const selectedLabel = computed(() => {
-  const known = options.find((option) => option.id === props.modelValue)
+  const known = options.value.find((option) => option.id === props.modelValue)
   if (known) return known.label
   if (isProviderType(props.modelValue)) return llmProviderSettingsLabel(props.modelValue)
   return `${props.modelValue} (unknown)`
@@ -105,7 +113,7 @@ function setItemRef(el: unknown, index: number) {
 }
 
 function initialHighlightIndex(): number {
-  const idx = options.findIndex((option) => option.id === props.modelValue)
+  const idx = options.value.findIndex((option) => option.id === props.modelValue)
   return idx >= 0 ? idx : 0
 }
 
@@ -117,7 +125,7 @@ function scrollToHighlight() {
 }
 
 function moveHighlight(delta: number) {
-  const len = options.length
+  const len = options.value.length
   if (len === 0) return
   highlightIndex.value = (highlightIndex.value + delta + len) % len
   scrollToHighlight()
@@ -151,7 +159,7 @@ function onItemKeydown(event: KeyboardEvent, index: number) {
       break
     case 'Enter':
       event.preventDefault()
-      selectProvider(options[index]?.id ?? props.modelValue)
+      selectProvider(options.value[index]?.id ?? props.modelValue)
       break
     case 'Escape':
       event.preventDefault()
@@ -179,7 +187,7 @@ function onDocumentKeydown(event: KeyboardEvent) {
     case 'Enter':
       event.preventDefault()
       event.stopPropagation()
-      selectProvider(options[highlightIndex.value]?.id ?? props.modelValue)
+      selectProvider(options.value[highlightIndex.value]?.id ?? props.modelValue)
       break
     case 'Escape':
       event.preventDefault()
