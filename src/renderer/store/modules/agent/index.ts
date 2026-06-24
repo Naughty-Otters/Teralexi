@@ -250,7 +250,7 @@ export const useAgentStore = defineStore('agent', () => {
   const deepseekApiKey = ref('')
   const deepseekApiUrl = ref('https://api.deepseek.com/v1')
   const zhipuApiKey = ref('')
-  const zhipuBaseURL = ref('https://open.bigmodel.cn/api/paas/v4')
+  const zhipuBaseURL = ref('https://api.z.ai/api/paas/v4')
   const openAiCompatibleApiKeys = ref(createInitialOpenAiCompatibleApiKeys())
   const openAiCompatibleBaseUrls = ref(createInitialOpenAiCompatibleBaseUrls())
 
@@ -649,7 +649,7 @@ export const useAgentStore = defineStore('agent', () => {
     zhipuApiKey.value = (values[SYSTEM_PROP_KEYS.zhipuApiKey] ?? '').trim()
     zhipuBaseURL.value = normalizeBaseURL(
       values[SYSTEM_PROP_KEYS.zhipuBaseURL] ?? zhipuBaseURL.value,
-      'https://open.bigmodel.cn/api/paas/v4',
+      'https://api.z.ai/api/paas/v4',
     )
     providerSetupDismissed.value =
       values[PROVIDER_SETUP_DISMISSED_KEY] === 'true' ||
@@ -2253,7 +2253,7 @@ export const useAgentStore = defineStore('agent', () => {
   function updateZhipuBaseURL(url: string) {
     zhipuBaseURL.value = normalizeBaseURL(
       url,
-      'https://open.bigmodel.cn/api/paas/v4',
+      'https://api.z.ai/api/paas/v4',
     )
     void setSystemConfigValue(SYSTEM_PROP_KEYS.zhipuBaseURL, zhipuBaseURL.value)
   }

@@ -177,6 +177,7 @@
           <ChatToolLoopPanel
             :items="slot.items"
             :active="slot.live && toolLoopPanelActive(slot.items)"
+            :list-display="chatUiToolCallListDisplay"
           />
         </div>
       </template>
@@ -185,7 +186,7 @@
         class="conversation-tool-responses"
       >
         <ChatConversationToolResponseBubble
-          v-for="toolBubble in toolResponseBubbles"
+          v-for="toolBubble in visibleToolResponseBubbles"
           :key="toolBubble.key"
           :part="toolBubble.part"
           :viewer="toolBubble.viewer"
@@ -228,11 +229,12 @@
       <ChatToolLoopPanel
         :items="slot.items"
         :active="slot.live && toolLoopPanelActive(slot.items)"
+        :list-display="chatUiToolCallListDisplay"
       />
     </div>
   </template>
   <div
-    v-else-if="toolResponseBubbles.length"
+    v-else-if="visibleToolResponseBubbles.length"
     class="conversation-tool-responses conversation-tool-responses--standalone"
   >
     <ChatConversationToolResponseBubble
@@ -307,7 +309,12 @@ import {
   isTextResponseConversationSection,
   messageFinalTextStarted,
 } from '../conversationBubbleDisplay'
-import { chatUiShowAgenticRunBubbles } from '../chatUiSettings'
+import {
+  filterConversationToolResponseBubbles,
+  filterToolLoopPanelSlots,
+  shouldShowToolCallLists,
+} from '@shared/agent/tool-call-list-display'
+import { chatUiToolCallListDisplay } from '../chatUiSettings'
 import type { StructuredDebugSection } from '../structuredDebugViewModel'
 import type { StepOutputLinkView } from '../stepOutputLinksRender'
 
@@ -385,7 +392,7 @@ const fallbackMarkdown = computed(() => assistantTextRaw.value.trim())
 const conversationSections = computed(() =>
   filterVisibleConversationBubbles(sections.value, {
     finalTextStarted: messageFinalTextStarted(props.message),
-    showAgenticRunBubbles: chatUiShowAgenticRunBubbles.value,
+    toolCallListDisplay: chatUiToolCallListDisplay.value,
   }),
 )
 
@@ -399,9 +406,16 @@ const toolResponseBubbles = computed(() =>
   resolveConversationToolResponseBubbles(props.message),
 )
 
+const visibleToolResponseBubbles = computed(() =>
+  filterConversationToolResponseBubbles(
+    toolResponseBubbles.value,
+    chatUiToolCallListDisplay.value,
+  ),
+)
+
 const useToolLoopPanel = computed(
   () =>
-    chatUiShowAgenticRunBubbles.value &&
+    shouldShowToolCallLists(chatUiToolCallListDisplay.value) &&
     conversationShouldUseToolLoopPanel(props.message, sections.value),
 )
 
@@ -459,13 +473,14 @@ const toolLoopPanelSlots = computed((): ConversationToolLoopPanelSlot[] => {
   const frozen =
     frozenToolLoopPanelItemsByMessageId.value.get(props.message.id) ??
     new Map<string, AssistantBubbleDescriptor[]>()
-  return resolveConversationToolLoopPanelSlots({
+  const slots = resolveConversationToolLoopPanelSlots({
     message: props.message,
     sections: sections.value,
     stepProgressParts: parentStepProgressParts.value,
     frozenItemsByAnchorKey: frozen,
     isStreaming: isStreaming.value,
   })
+  return filterToolLoopPanelSlots(slots, chatUiToolCallListDisplay.value)
 })
 
 const standaloneToolLoopPanelSlots = computed(() =>
@@ -488,13 +503,13 @@ function toolLoopPanelActive(
 
 function shouldShowLegacyToolResponsesAfter(sectionIndex: number): boolean {
   if (
-    !chatUiShowAgenticRunBubbles.value &&
+    !shouldShowToolCallLists(chatUiToolCallListDisplay.value) &&
     messageHasToolLoopAgent(props.message)
   ) {
     return false
   }
   if (useToolLoopPanel.value && toolLoopPanelSlots.value.length > 0) return false
-  if (toolResponseBubbles.value.length === 0) return false
+  if (visibleToolResponseBubbles.value.length === 0) return false
   if (conversationSections.value.length === 0) return sectionIndex === 0
   return sectionIndex === conversationSections.value.length - 1
 }

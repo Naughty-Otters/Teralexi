@@ -37,7 +37,7 @@ describe('chat-ui-settings', () => {
       bubbleCompactLines: 10,
       contextWindowMessages: 200,
       reasoningMaxChars: 2000,
-      showAgenticRunBubbles: true,
+      toolCallListDisplay: 'none',
     })
   })
 
@@ -53,21 +53,33 @@ describe('chat-ui-settings', () => {
       bubbleCompactLines: 8,
       contextWindowMessages: 32,
       reasoningMaxChars: 2000,
-      showAgenticRunBubbles: true,
+      toolCallListDisplay: 'none',
     })
   })
 
-  it('migrates persisted false to true once', () => {
+  it('parses tool call list display modes from stored key', () => {
+    expect(
+      parseChatUiSettings({
+        [CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY]: 'latest',
+      }).toolCallListDisplay,
+    ).toBe('latest')
+    expect(
+      parseChatUiSettings({
+        [CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY]: 'false',
+      }).toolCallListDisplay,
+    ).toBe('none')
+  })
+
+  it('maps legacy boolean storage to display modes', () => {
     expect(
       applyShowAgenticRunBubblesDefaultMigration({
         [CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY]: 'false',
-      }).showAgenticRunBubbles,
-    ).toBe(true)
+      }).toolCallListDisplay,
+    ).toBe('none')
     expect(
       applyShowAgenticRunBubblesDefaultMigration({
-        [CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY]: 'false',
-        [CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_MIGRATION_KEY]: 'true',
-      }).showAgenticRunBubbles,
-    ).toBe(false)
+        [CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY]: 'true',
+      }).toolCallListDisplay,
+    ).toBe('all')
   })
 })

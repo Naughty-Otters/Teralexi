@@ -122,6 +122,9 @@ export type AppLabels = {
     reasoningMaxDesc: string
     showAgenticRunTitle: string
     showAgenticRunDesc: string
+    toolCallListNone: string
+    toolCallListAll: string
+    toolCallListLatest: string
     defaultsFootnote: string
   }
   chat: {

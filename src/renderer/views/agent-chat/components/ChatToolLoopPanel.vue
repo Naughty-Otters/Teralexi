@@ -15,7 +15,24 @@
       </span>
     </header>
 
-    <div v-if="latestDetail" class="exploring-panel__body">
+    <div v-if="showFullList && listVisibleItems.length > 0" class="exploring-panel__body exploring-panel__body--list">
+      <div
+        v-for="item in listVisibleItems"
+        :key="item.key"
+        class="exploring-panel__item"
+      >
+        <ChatTerminalMessageBubble
+          v-if="item.kind === 'terminal'"
+          :part="item.part"
+        />
+        <ChatToolInvocationRow v-else :part="item.part" compact />
+      </div>
+      <p v-if="listDroppedCount > 0" class="exploring-panel__dropped">
+        {{ listDroppedCount }} earlier tool{{ listDroppedCount === 1 ? '' : 's' }} not shown
+      </p>
+    </div>
+
+    <div v-else-if="latestDetail" class="exploring-panel__body">
       <p class="exploring-panel__action">{{ latestDetail.action }}</p>
 
       <dl
@@ -89,6 +106,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ChatUiToolCallListDisplay } from '@shared/agent/tool-call-list-display'
 import { EXPLORING_PANEL_TITLE } from '@shared/agent/agentic-run-labels'
 import {
   formatToolHumanReadableAction,
@@ -101,7 +119,10 @@ import {
   type ExploringResult,
 } from '@shared/tool-result/tool-exploring-display'
 import { computed } from 'vue'
+import ChatTerminalMessageBubble from './ChatTerminalMessageBubble.vue'
+import ChatToolInvocationRow from './ChatToolInvocationRow.vue'
 import type { AssistantBubbleDescriptor } from './chat/assistantBubbleFramework'
+import { visibleToolLoopPanelItems } from './chat/toolLoopPanelItems'
 import {
   extractTerminalView,
   formatToolOutput,
@@ -119,13 +140,29 @@ const props = withDefaults(
   defineProps<{
     items: readonly AssistantBubbleDescriptor[]
     active?: boolean
+    /** When `all`, list every tool in this batch; when `latest`, show the most recent only. */
+    listDisplay?: ChatUiToolCallListDisplay
   }>(),
   {
     active: false,
+    listDisplay: 'all',
   },
 )
 
 const panelTitle = EXPLORING_PANEL_TITLE
+
+const showFullList = computed(() => props.listDisplay === 'all')
+
+const listPanelItems = computed(() => visibleToolLoopPanelItems(props.items))
+
+const listVisibleItems = computed(() => listPanelItems.value.visible)
+
+const listDroppedCount = computed(() => listPanelItems.value.droppedCount)
+
+function bubbleItemIsRunning(item: AssistantBubbleDescriptor): boolean {
+  if (item.kind === 'terminal') return isTerminalToolRunning(item.part)
+  return isRunningState(getToolPartState(item.part))
+}
 
 type ExploringToolDetail = {
   action: string
@@ -144,7 +181,12 @@ const latestItem = computed((): AssistantBubbleDescriptor | null => {
 const latestDetail = computed((): ExploringToolDetail | null => {
   const item = latestItem.value
   if (!item) return null
+  return buildExploringToolDetail(item)
+})
 
+function buildExploringToolDetail(
+  item: AssistantBubbleDescriptor,
+): ExploringToolDetail {
   if (item.kind === 'terminal') {
     const view = extractTerminalView(item.part)
     const running = isTerminalToolRunning(item.part)
@@ -201,9 +243,21 @@ const latestDetail = computed((): ExploringToolDetail | null => {
     error: getToolPartErrorText(item.part).trim(),
     running,
   }
-})
+}
 
 const statusText = computed(() => {
+  if (showFullList.value) {
+    const total = props.items.length
+    if (total === 0) {
+      return props.active ? 'Looking around…' : 'Finished exploring'
+    }
+    const running = props.items.filter(bubbleItemIsRunning).length
+    if (running > 0) {
+      return `${running} of ${total} in progress`
+    }
+    return `${total} tool${total === 1 ? '' : 's'}`
+  }
+
   const detail = latestDetail.value
   if (detail?.result?.headline) return detail.result.headline
   if (detail?.action) return detail.action
@@ -295,6 +349,21 @@ const statusText = computed(() => {
   flex-direction: column;
   gap: 10px;
   padding: 12px;
+}
+
+.exploring-panel__body--list {
+  gap: 8px;
+}
+
+.exploring-panel__item + .exploring-panel__item {
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--ui-border) 80%, transparent);
+}
+
+.exploring-panel__dropped {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ui-text-muted);
 }
 
 .exploring-panel__action {

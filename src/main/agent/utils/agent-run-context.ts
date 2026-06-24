@@ -68,7 +68,7 @@ export function loadAgentRunCredentialsFromDisk(): AgentRunCredentials {
     zhipuApiKey: propValues[ConfigContext.SYSTEM_PROP_KEYS.zhipuApiKey] ?? '',
     zhipuBaseURL: config.normalizeBaseURL(
       propValues[ConfigContext.SYSTEM_PROP_KEYS.zhipuBaseURL] ?? '',
-      'https://open.bigmodel.cn/api/paas/v4',
+      'https://api.z.ai/api/paas/v4',
     ),
     openAiCompatible: loadOpenAiCompatibleCredentials(propValues),
   }

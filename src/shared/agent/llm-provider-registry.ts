@@ -46,7 +46,7 @@ export const OPENAI_COMPATIBLE_LLM_PROVIDERS: Record<
     label: 'Moonshot',
     apiKeyConfigKey: 'settings.moonshot.apiKey',
     baseUrlConfigKey: 'settings.moonshot.baseUrl',
-    defaultBaseUrl: 'https://api.moonshot.cn/v1',
+    defaultBaseUrl: 'https://api.moonshot.ai/v1',
     defaultModels: [
       'kimi-k2-turbo-preview',
       'moonshot-v1-8k',

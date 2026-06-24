@@ -31,7 +31,7 @@ describe('loadAgentRunCredentials', () => {
     expect(creds.ollamaBaseURL).toBe('http://localhost:11434')
     expect(creds.openaiBaseURL).toBe('https://api.openai.com/v1')
     expect(creds.openAiCompatible.moonshot.baseURL).toBe(
-      'https://api.moonshot.cn/v1',
+      'https://api.moonshot.ai/v1',
     )
     expect(creds.openAiCompatible.qwen.baseURL).toBe(
       'https://dashscope.aliyuncs.com/compatible-mode/v1',
