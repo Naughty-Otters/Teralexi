@@ -39,7 +39,7 @@ export type IpcAgentChatTransportOptions = {
     content: string
   }) => void | Promise<void>
   /** Override the default RunAgentForConversation IPC invoke. */
-  invokeRunAgent?: (args: {
+    invokeRunAgent?: (args: {
     conversationId: string
     agentId: string
     assistantMessageId: string
@@ -51,6 +51,7 @@ export type IpcAgentChatTransportOptions = {
       content: string
       createdAt: string
     }
+    attachmentSourcePaths?: string[]
   }) => Promise<{
     finalContent: string
     hasError: boolean
@@ -81,6 +82,16 @@ function messageText(user: UIMessage): string {
     if (p.type === 'text' && typeof p.text === 'string') t += p.text
   }
   return t
+}
+
+function readAttachmentSourcePaths(
+  bodyExtras: Record<string, unknown>,
+): string[] {
+  const raw = bodyExtras.attachmentSourcePaths
+  if (!Array.isArray(raw)) return []
+  return raw.filter(
+    (path): path is string => typeof path === 'string' && path.trim().length > 0,
+  )
 }
 
 /** Persistable summary when the user row is only HITL form submit (no plain text). */
@@ -649,6 +660,8 @@ export class IpcAgentChatTransport implements ChatTransport<UIMessage> {
           onStreamUiChunk: this.options.onStreamUiChunk,
           onHitlBlocksQueue: this.options.onHitlBlocksQueue,
           invokeRunAgent: async () => {
+            const attachmentSourcePaths = readAttachmentSourcePaths(bodyExtras)
+
             if (subAgentTargetId && subAgentTask) {
               const invoke =
                 window.ipcRendererChannel?.RunSubAgentMention?.invoke
@@ -662,6 +675,8 @@ export class IpcAgentChatTransport implements ChatTransport<UIMessage> {
                 targetAgentId: subAgentTargetId,
                 task: subAgentTask,
                 uiMessages: uiMessagesPayload,
+                pendingUserMessage,
+                attachmentSourcePaths,
               })
             }
             if (this.options.invokeRunAgent) {
@@ -673,6 +688,7 @@ export class IpcAgentChatTransport implements ChatTransport<UIMessage> {
                 uiMessages: uiMessagesPayload,
                 bodyExtras,
                 pendingUserMessage,
+                attachmentSourcePaths,
               })
             }
             const invoke =
@@ -685,6 +701,8 @@ export class IpcAgentChatTransport implements ChatTransport<UIMessage> {
               assistantMessageId,
               userId,
               uiMessages: uiMessagesPayload,
+              pendingUserMessage,
+              attachmentSourcePaths,
             })
           },
         })

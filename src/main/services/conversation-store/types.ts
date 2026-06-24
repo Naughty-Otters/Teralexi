@@ -38,6 +38,17 @@ export interface StoredMessage {
   threadTag?: string
 }
 
+export interface StoredMessageAttachment {
+  id: string
+  messageId: string
+  conversationId: string
+  originalName: string
+  mimeType: string | null
+  sizeBytes: number
+  sandboxPath: string
+  createdAt: string
+}
+
 export interface StoredUserProperty {
   userId: string
   propertyKey: string

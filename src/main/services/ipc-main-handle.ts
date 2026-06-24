@@ -143,6 +143,13 @@ import {
   writeWorkspaceFileContent,
 } from '@main/agent/workspace/git-service'
 import {
+  buildPickChatAttachmentDialogFilters,
+  ingestChatAttachments,
+  listConversationAttachmentMetas,
+  resolveChatAttachmentAbsolutePath,
+  searchChatAttachments,
+} from '@main/services/chat-attachments'
+import {
   cancelWorkspaceTerminalCommand,
   runWorkspaceTerminalCommandWithControl,
 } from '@main/agent/workspace/workspace-terminal'
@@ -1813,6 +1820,8 @@ export class IpcMainHandleClass implements IIpcMainHandle {
         content: string
         createdAt: string
       }
+      userAttachments?: import('@shared/chat/attachments').ChatAttachmentMeta[]
+      attachmentSourcePaths?: string[]
     },
   ) => Promise<{
     finalContent: string
@@ -1838,6 +1847,8 @@ export class IpcMainHandleClass implements IIpcMainHandle {
         content: string
         createdAt: string
       }
+      userAttachments?: import('@shared/chat/attachments').ChatAttachmentMeta[]
+      attachmentSourcePaths?: string[]
     },
   ) => Promise<{
     finalContent: string
@@ -2238,6 +2249,92 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     )
     if (!searched.ok) return { ok: false, paths: [], error: searched.error }
     return { ok: true, paths: searched.paths }
+  }
+
+  PickChatAttachments: (
+    event: Electron.IpcMainInvokeEvent,
+  ) => Promise<{ ok: boolean; paths: string[]; error?: string }> = async (
+    event,
+  ) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const result = await dialog.showOpenDialog(win ?? undefined, {
+      properties: ['openFile', 'multiSelections'],
+      title: 'Attach files',
+      buttonLabel: 'Attach',
+      filters: buildPickChatAttachmentDialogFilters(),
+    })
+    if (result.canceled) return { ok: true, paths: [] }
+    return { ok: true, paths: result.filePaths ?? [] }
+  }
+
+  IngestChatAttachments: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: {
+      conversationId: string
+      messageId: string
+      sourcePaths: string[]
+    },
+  ) => Promise<{
+    ok: boolean
+    attachments: import('@shared/chat/attachments').ChatAttachmentMeta[]
+    error?: string
+  }> = async (_event, args) => {
+    return ingestChatAttachments({
+      conversationId: args?.conversationId ?? '',
+      messageId: args?.messageId ?? '',
+      sourcePaths: args?.sourcePaths ?? [],
+    })
+  }
+
+  GetConversationAttachments: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string },
+  ) => Promise<{
+    ok: boolean
+    attachments: import('@shared/chat/attachments').ChatAttachmentMeta[]
+    error?: string
+  }> = async (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) {
+      return { ok: false, attachments: [], error: 'conversationId is required.' }
+    }
+    return { ok: true, attachments: listConversationAttachmentMetas(conversationId) }
+  }
+
+  SearchChatAttachments: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string; query?: string; limit?: number },
+  ) => Promise<{ ok: boolean; paths: string[]; error?: string }> = async (
+    _event,
+    args,
+  ) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) return { ok: false, paths: [], error: 'conversationId is required.' }
+    const paths = searchChatAttachments(
+      conversationId,
+      args?.query ?? '',
+      args?.limit,
+    )
+    return { ok: true, paths }
+  }
+
+  RevealChatAttachment: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string; sandboxPath: string },
+  ) => Promise<{ ok: boolean; error?: string }> = async (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    const sandboxPath = args?.sandboxPath?.trim() ?? ''
+    if (!conversationId || !sandboxPath) {
+      return { ok: false, error: 'conversationId and sandboxPath are required.' }
+    }
+    try {
+      const abs = resolveChatAttachmentAbsolutePath({ conversationId, sandboxPath })
+      shell.showItemInFolder(abs)
+      return { ok: true }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      return { ok: false, error: message }
+    }
   }
 
   AddSessionToolApproval: (

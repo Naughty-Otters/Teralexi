@@ -3,7 +3,11 @@ import type { UIMessage } from '@openfde-ai'
 
 import { chatUiPerfMark, chatUiPerfMarkEnd } from './perf/chatUiPerf'
 
-export type QueuedUserMessage = { id: string; text: string }
+export type QueuedUserMessage = {
+  id: string
+  text: string
+  attachmentSourcePaths?: string[]
+}
 
 /** Survives {@link ChatPanel} remounts; holds live {@link Chat} + UI snapshots per conversation. */
 const chatsByConversationId = new Map<string, InstanceType<typeof Chat>>()

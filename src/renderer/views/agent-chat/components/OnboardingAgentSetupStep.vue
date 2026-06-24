@@ -238,6 +238,12 @@ defineExpose({
 .onboarding-agents-bulk {
   margin-bottom: 14px;
   padding: 14px;
+  position: relative;
+}
+
+.onboarding-agents-bulk:has(.llm-provider-select--open),
+.onboarding-agents-bulk:has(.llm-model-select--open) {
+  z-index: 40;
 }
 
 .onboarding-agents-bulk-label {
@@ -268,6 +274,12 @@ defineExpose({
 
 .onboarding-agents-row {
   padding: 12px 14px;
+  position: relative;
+}
+
+.onboarding-agents-row:has(.llm-provider-select--open),
+.onboarding-agents-row:has(.llm-model-select--open) {
+  z-index: 40;
 }
 
 .onboarding-agents-row--ok {

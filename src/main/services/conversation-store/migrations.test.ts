@@ -231,3 +231,20 @@ describe('runMigrations agent_configurations', () => {
     expect(row.allow_as_sub_agent).toBe(1)
   })
 })
+
+describe('runMigrations message_attachments', () => {
+  it('creates message_attachments table', () => {
+    const db = createMigrationTestDatabase()
+    runMigrations(db)
+    expect(columnNames(db, 'message_attachments')).toEqual([
+      'id',
+      'message_id',
+      'conversation_id',
+      'original_name',
+      'mime_type',
+      'size_bytes',
+      'sandbox_path',
+      'created_at',
+    ])
+  })
+})

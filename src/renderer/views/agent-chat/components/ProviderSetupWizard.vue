@@ -499,7 +499,9 @@ async function finish() {
 .provider-setup-body {
   padding: 16px 22px;
   overflow-y: auto;
+  overflow-x: visible;
   flex: 1;
+  position: relative;
 }
 
 .provider-setup-body--configure {

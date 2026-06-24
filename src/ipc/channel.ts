@@ -1400,6 +1400,9 @@ export class IpcChannelMainClass {
         content: string
         createdAt: string
       }
+      userAttachments?: import('@shared/chat/attachments').ChatAttachmentMeta[]
+      /** Local paths to copy into sandbox after the user message is persisted. */
+      attachmentSourcePaths?: string[]
     },
     {
       finalContent: string
@@ -1425,6 +1428,8 @@ export class IpcChannelMainClass {
         content: string
         createdAt: string
       }
+      userAttachments?: import('@shared/chat/attachments').ChatAttachmentMeta[]
+      attachmentSourcePaths?: string[]
     },
     {
       finalContent: string
@@ -1617,6 +1622,43 @@ export class IpcChannelMainClass {
   SearchWorkspaceFiles: IpcMainEventListener<
     { conversationId: string; query?: string; limit?: number },
     { ok: boolean; paths: string[]; error?: string }
+  > = null
+  /** Pick local files to attach in the chat composer (staging only). */
+  PickChatAttachments: IpcMainEventListener<
+    void,
+    { ok: boolean; paths: string[]; error?: string }
+  > = null
+  /** Copy picked files into the conversation sandbox and persist metadata. */
+  IngestChatAttachments: IpcMainEventListener<
+    {
+      conversationId: string
+      messageId: string
+      sourcePaths: string[]
+    },
+    {
+      ok: boolean
+      attachments: import('@shared/chat/attachments').ChatAttachmentMeta[]
+      error?: string
+    }
+  > = null
+  /** List chat attachments for a conversation. */
+  GetConversationAttachments: IpcMainEventListener<
+    { conversationId: string },
+    {
+      ok: boolean
+      attachments: import('@shared/chat/attachments').ChatAttachmentMeta[]
+      error?: string
+    }
+  > = null
+  /** Search uploaded chat attachments for `@file` mentions. */
+  SearchChatAttachments: IpcMainEventListener<
+    { conversationId: string; query?: string; limit?: number },
+    { ok: boolean; paths: string[]; error?: string }
+  > = null
+  /** Reveal an uploaded chat attachment in the system file manager. */
+  RevealChatAttachment: IpcMainEventListener<
+    { conversationId: string; sandboxPath: string },
+    { ok: boolean; error?: string }
   > = null
   /** Open a workspace file in the OS default application. */
   OpenWorkspaceFile: IpcMainEventListener<
@@ -1944,6 +1986,8 @@ export class IpcChannelRendererClass {
     outputResultsDir: string
     resultsFileUrl: string
   }> = null
+  /** Main window blocked a file:// navigation — open sandbox preview in Report panel. */
+  OpenSandboxPreview: IpcRendererEventListener<{ fileUrl: string }> = null
   /** Streaming PTY output chunk for workspace terminal xterm view. */
   WorkspaceTerminalData: IpcRendererEventListener<{
     conversationId: string

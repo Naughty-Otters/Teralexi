@@ -16,9 +16,9 @@ describe('stepOutputLinksRender', () => {
     ])
     expect(html).toContain('step-output-link-card')
     expect(html).toContain('sandbox-preview-link')
-    expect(html).toContain('href="file:///tmp/result.html"')
+    expect(html).toContain('href="#"')
     expect(html).toContain(
-      'data-step-output-preview-url="file:///tmp/result.html"',
+      'data-sandbox-preview-url="file:///tmp/result.html"',
     )
     expect(html).toContain('result.html')
   })
@@ -54,8 +54,9 @@ describe('stepOutputLinksRender', () => {
       { label: 'first.html', url: 'file:///first.html' },
       { label: 'second.html', url: 'file:///second.html' },
     ])
-    expect(html).toContain('href="file:///first.html"')
-    expect(html).toContain('href="file:///second.html"')
+    expect(html).toContain('href="#"')
+    expect(html).toContain('data-sandbox-preview-url="file:///first.html"')
+    expect(html).toContain('data-sandbox-preview-url="file:///second.html"')
     const cardCount = (html.match(/step-output-link-card"/g) ?? []).length
     expect(cardCount).toBe(2)
   })
@@ -65,11 +66,9 @@ describe('stepOutputLinksRender', () => {
       { label: '<b>bold & cool</b>', url: 'https://example.com/?a=1&b="2"' },
     ])
     // URL escaping
+    expect(html).toContain('href="#"')
     expect(html).toContain(
-      'href="https://example.com/?a=1&amp;b=&quot;2&quot;"',
-    )
-    expect(html).toContain(
-      'data-step-output-preview-url="https://example.com/?a=1&amp;b=&quot;2&quot;"',
+      'data-sandbox-preview-url="https://example.com/?a=1&amp;b=&quot;2&quot;"',
     )
     // Label escaping
     expect(html).toContain('&lt;b&gt;bold &amp; cool&lt;/b&gt;')

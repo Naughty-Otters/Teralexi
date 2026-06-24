@@ -16,6 +16,7 @@ import { createLogger, instrumentInstanceMethods } from '@main/logger'
 import { warmAppCacheOnStartup } from '@main/cache/cache-warmer'
 import { scheduleStartupUpdateCheck } from './check-update'
 import { DEFAULT_USER_ID } from '@main/agent/config/config'
+import { attachSandboxPreviewNavigation } from './sandbox-preview-navigation'
 
 const log = createLogger('services.window-manager')
 
@@ -69,6 +70,7 @@ class MainInit {
     })
 
     // Load main window
+    attachSandboxPreviewNavigation(this.mainWindow.webContents, this.winURL)
     this.mainWindow.loadURL(this.winURL)
     // Show window after dom-ready
     this.mainWindow.once('ready-to-show', () => {

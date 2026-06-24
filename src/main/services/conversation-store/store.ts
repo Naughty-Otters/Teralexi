@@ -18,6 +18,7 @@ import { SkillCompilationsRepository } from './skill-compilations-repository'
 import { ToolResultsRepository } from './tool-results-repository'
 import { ConversationSettingsRepository } from './conversation-settings-repository'
 import { WorkflowsRepository } from './workflows-repository'
+import { MessageAttachmentsRepository } from './message-attachments-repository'
 import type {
   MessageSearchHit,
   StoredAgentConfiguration,
@@ -38,6 +39,7 @@ import type {
   StoredWorkflowVersion,
   StoredWorkflowDeployment,
   StoredWorkflowTrigger,
+  StoredMessageAttachment,
 } from './types'
 import type { SkillCompilationSource } from '@main/skills/skill-compiled-schema'
 import type { SkillCompiledArtifact } from '@main/skills/skill-compiled-schema'
@@ -60,6 +62,7 @@ export class ConversationStore {
   private readonly toolResults: ToolResultsRepository
   private readonly conversationSettings: ConversationSettingsRepository
   private readonly workflows: WorkflowsRepository
+  private readonly messageAttachments: MessageAttachmentsRepository
 
   constructor() {
     const dbPath = getopenfdeDbPath()
@@ -82,6 +85,7 @@ export class ConversationStore {
     this.toolResults = new ToolResultsRepository(this.db)
     this.conversationSettings = new ConversationSettingsRepository(this.db)
     this.workflows = new WorkflowsRepository(this.db)
+    this.messageAttachments = new MessageAttachmentsRepository(this.db)
 
     this.userProperties.ensureDefaults('default')
     this.mcpServers.ensureReferenceServers(
@@ -278,6 +282,10 @@ export class ConversationStore {
     this.messages.save(msg)
   }
 
+  messageExists(messageId: string): boolean {
+    return this.messages.exists(messageId)
+  }
+
   updateMessage(id: string, content: string): void {
     this.messages.update(id, content)
   }
@@ -287,6 +295,32 @@ export class ConversationStore {
     opts: { conversationId?: string; agentId?: string; limit?: number } = {},
   ): MessageSearchHit[] {
     return this.messages.search(query, opts)
+  }
+
+  insertMessageAttachments(rows: StoredMessageAttachment[]): void {
+    this.messageAttachments.insertMany(rows)
+  }
+
+  getMessageAttachmentsForMessage(messageId: string): StoredMessageAttachment[] {
+    return this.messageAttachments.listForMessage(messageId)
+  }
+
+  getMessageAttachmentsForConversation(
+    conversationId: string,
+  ): StoredMessageAttachment[] {
+    return this.messageAttachments.listForConversation(conversationId)
+  }
+
+  searchMessageAttachments(
+    conversationId: string,
+    query: string,
+    limit = 20,
+  ): StoredMessageAttachment[] {
+    return this.messageAttachments.searchForConversation(
+      conversationId,
+      query,
+      limit,
+    )
   }
 
   // ── Tool results ──────────────────────────────────────────────────────────

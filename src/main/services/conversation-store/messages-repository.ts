@@ -18,6 +18,15 @@ export class MessagesRepository {
     return row.count
   }
 
+  exists(messageId: string): boolean {
+    const id = messageId.trim()
+    if (!id) return false
+    const row = this.db
+      .prepare('SELECT 1 AS ok FROM messages WHERE id = ? LIMIT 1')
+      .get(id) as { ok: number } | undefined
+    return row?.ok === 1
+  }
+
   /**
    * Returns the latest `limit` messages (chronological order) plus whether older
    * rows exist. Pass `before` (ISO created_at) to page into older history.
