@@ -70,7 +70,7 @@ export {
 } from './web-search-engines'
 
 const DEFAULT_MAX_SEARCH_RESULTS = 8
-const CRAWLER_TIMEOUT_SECS = 25
+const CRAWLER_TIMEOUT_SECS = 5
 
 const crawlerPreNavigationHooks = [
   ({ request }: { request: { headers?: Record<string, string> } }) => {
