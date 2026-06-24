@@ -39,8 +39,11 @@ const FORM_TEMPLATE_IDS = [
   'formal-brief',
 ]
 
-vi.mock('../../../../src/main/skills/skill-attachments', () => ({
-  readSkillAttachment: vi.fn((skillId: string, relPath: string) => {
+vi.mock('@openfde/skill-sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@openfde/skill-sdk')>()
+  return {
+    ...actual,
+    readSkillAttachment: vi.fn((skillId: string, relPath: string) => {
     const full = resolve(SKILLS_ROOT, relPath.replace(/^templates\//, 'templates/'))
     if (relPath === 'templates/manifest.json') {
       return { content: MANIFEST_RAW, encoding: 'utf8' as const, mimeType: 'application/json' }
@@ -61,7 +64,8 @@ vi.mock('../../../../src/main/skills/skill-attachments', () => ({
     }
     throw new Error(`Unexpected attachment: ${skillId}/${relPath} -> ${full}`)
   }),
-}))
+  }
+})
 
 describe('template manifest', () => {
   it('parses bundled manifest.json', () => {

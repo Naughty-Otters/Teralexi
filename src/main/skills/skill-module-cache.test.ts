@@ -100,32 +100,6 @@ describe('skill-module-cache', () => {
     expect(mapPath(devPath)).toBe(devPath)
   })
 
-  it('esbuildPathAliases points at skill-compile-runtime when packaged', async () => {
-    vi.doMock('@main/config/app-paths', () => ({
-      isPackagedApp: () => true,
-      resolveAppRoot: () =>
-        '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked',
-      toOnDiskAppPath: (filePath: string) => filePath,
-    }))
-    vi.resetModules()
-    const {
-      esbuildPathAliases: aliasesForPackaged,
-      skillCompileRuntimeRoot: runtimeRoot,
-    } = await import('./skill-module-cache')
-    const runtime =
-      '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked/dist/electron/skill-compile-runtime'
-    expect(runtimeRoot()).toBe(runtime)
-    expect(aliasesForPackaged()['@main']).toBe(`${runtime}/src/main`)
-    expect(aliasesForPackaged()['@shared']).toBe(`${runtime}/src/shared`)
-    expect(aliasesForPackaged()['@toolSet']).toBe(`${runtime}/toolSet`)
-    vi.resetModules()
-    vi.doMock('@main/config/app-paths', () => ({
-      isPackagedApp: () => false,
-      resolveAppRoot: () => process.cwd(),
-      toOnDiskAppPath: (filePath: string) => filePath,
-    }))
-  })
-
   it('toOnDiskAppPath maps asar paths to asar.unpacked when packaged', async () => {
     vi.doMock('@main/config/app-paths', () => ({
       isPackagedApp: () => true,

@@ -9,11 +9,11 @@
 import ExcelJS from 'exceljs'
 import path from 'path'
 import fs from 'fs'
-import type { SkillTool } from '../../../src/main/skills/types'
+import type { SkillTool } from '@openfde/skill-sdk'
 import {
-  requireActiveSandbox,
   getOutputResultsRelPrefix,
-} from '../../../toolSet/sandbox-paths'
+  requireActiveSandbox,
+} from '@openfde/skill-sdk'
 import { resolveExcelTheme } from './template-core/load-themes'
 import type { ExcelThemeStyle } from './template-core/types'
 

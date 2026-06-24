@@ -5,11 +5,11 @@
 
 import ExcelJS from 'exceljs'
 import path from 'path'
-import type { SkillTool } from '../../../src/main/skills/types'
+import type { SkillTool } from '@openfde/skill-sdk'
 import {
   requireActiveSandbox,
   resolvePathAllowingOutside,
-} from '../../../toolSet/sandbox-paths'
+} from '@openfde/skill-sdk'
 
 export const readSpreadsheet: SkillTool = {
   name: 'read_spreadsheet',

@@ -6,11 +6,11 @@
 import pptxgen from 'pptxgenjs'
 import path from 'path'
 import fs from 'fs'
-import type { SkillTool } from '../../../src/main/skills/types'
+import type { SkillTool } from '@openfde/skill-sdk'
 import {
-  requireActiveSandbox,
   getOutputResultsRelPrefix,
-} from '../../../toolSet/sandbox-paths'
+  requireActiveSandbox,
+} from '@openfde/skill-sdk'
 import { resolvePptTheme, type PptThemeEntry } from './template-core/load-themes'
 
 function resolveThemeFromInput(input: Record<string, unknown>): {

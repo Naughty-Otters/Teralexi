@@ -1,4 +1,4 @@
-import { readSkillAttachment } from '../../../../src/main/skills/skill-attachments'
+import { readSkillAttachment } from '@openfde/skill-sdk'
 import {
   DOCUMENTS_SKILL_ID,
   type TemplateManifest,

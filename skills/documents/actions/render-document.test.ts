@@ -57,44 +57,42 @@ const mockWordExecute = vi.hoisted(() =>
 )
 const mockExportPdf = vi.hoisted(() => vi.fn(async () => undefined))
 
-vi.mock('../../../toolSet/sandbox-paths', () => ({
-  requireActiveSandbox: () => ({ ok: true, root: '/tmp/sandbox-test' }),
-  getOutputResultsRelPrefix: () => 'output/results',
-}))
-
-vi.mock('../../../src/main/skills/skill-attachments', () => ({
-  readSkillAttachment: vi.fn((_skillId: string, relPath: string) => {
-    if (relPath === 'templates/manifest.json') {
-      return { content: MANIFEST_RAW, encoding: 'utf8' as const, mimeType: 'application/json' }
-    }
-    if (relPath === 'templates/html/corporate-report.html') {
-      return {
-        content: HTML_TEMPLATE,
-        encoding: 'utf8' as const,
-        mimeType: 'text/html',
+vi.mock('@openfde/skill-sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@openfde/skill-sdk')>()
+  return {
+    ...actual,
+    requireActiveSandbox: () => ({ ok: true, root: '/tmp/sandbox-test' }),
+    getOutputResultsRelPrefix: () => 'output/results',
+    readSkillAttachment: vi.fn((_skillId: string, relPath: string) => {
+      if (relPath === 'templates/manifest.json') {
+        return { content: MANIFEST_RAW, encoding: 'utf8' as const, mimeType: 'application/json' }
       }
-    }
-    if (relPath === 'templates/styles/excel-themes.json') {
-      return {
-        content: EXCEL_THEMES_RAW,
-        encoding: 'utf8' as const,
-        mimeType: 'application/json',
+      if (relPath === 'templates/html/corporate-report.html') {
+        return {
+          content: HTML_TEMPLATE,
+          encoding: 'utf8' as const,
+          mimeType: 'text/html',
+        }
       }
-    }
-    if (relPath === 'templates/styles/ppt-themes.json') {
-      return {
-        content: PPT_THEMES_RAW,
-        encoding: 'utf8' as const,
-        mimeType: 'application/json',
+      if (relPath === 'templates/styles/excel-themes.json') {
+        return {
+          content: EXCEL_THEMES_RAW,
+          encoding: 'utf8' as const,
+          mimeType: 'application/json',
+        }
       }
-    }
-    throw new Error(`Unexpected attachment: ${relPath}`)
-  }),
-}))
-
-vi.mock('../../../src/main/agent/sandbox/html-to-pdf', () => ({
-  exportHtmlFileToPdf: (...args: unknown[]) => mockExportPdf(...args),
-}))
+      if (relPath === 'templates/styles/ppt-themes.json') {
+        return {
+          content: PPT_THEMES_RAW,
+          encoding: 'utf8' as const,
+          mimeType: 'application/json',
+        }
+      }
+      throw new Error(`Unexpected attachment: ${relPath}`)
+    }),
+    exportHtmlFileToPdf: (...args: unknown[]) => mockExportPdf(...args),
+  }
+})
 
 vi.mock('./create-spreadsheet', () => ({
   createSpreadsheet: { execute: (...args: unknown[]) => mockSpreadsheetExecute(...args) },

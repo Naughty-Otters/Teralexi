@@ -12,10 +12,14 @@ const fetchMock = vi.hoisted(() => vi.fn())
 const getValidAccessTokenMock = vi.hoisted(() => vi.fn())
 const loadStoredAccountMock = vi.hoisted(() => vi.fn())
 
-vi.mock('@main/services/google-oauth', () => ({
-  getValidAccessToken: getValidAccessTokenMock,
-  loadStoredAccount: loadStoredAccountMock,
-}))
+vi.mock('@openfde/skill-sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@openfde/skill-sdk')>()
+  return {
+    ...actual,
+    getValidAccessToken: getValidAccessTokenMock,
+    loadStoredAccount: loadStoredAccountMock,
+  }
+})
 
 import {
   googleCalendarCreateEvent,

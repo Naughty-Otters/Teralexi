@@ -1,15 +1,13 @@
 import { mkdirSync, writeFileSync } from 'fs'
 import { dirname } from 'path'
 import { z } from 'zod'
-import type { SkillTool } from '@main/skills/actions'
+import type { SkillTool } from '@openfde/skill-sdk'
 import {
   getValidAccessToken,
   loadStoredAccount,
-} from '@main/services/google-oauth'
-import {
   requireActiveSandbox,
   resolveSandboxRelativePath,
-} from '../../../toolSet/sandbox-paths'
+} from '@openfde/skill-sdk'
 
 const GMAIL_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me'
 const CALENDAR_BASE = 'https://www.googleapis.com/calendar/v3'

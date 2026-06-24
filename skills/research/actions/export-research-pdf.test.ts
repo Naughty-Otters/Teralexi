@@ -7,9 +7,13 @@ const exportMarkdownBodyToPdf = vi.hoisted(() =>
   vi.fn(async () => undefined),
 )
 
-vi.mock('../../../src/main/agent/sandbox/markdown-to-pdf', () => ({
-  exportMarkdownBodyToPdf,
-}))
+vi.mock('@openfde/skill-sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@openfde/skill-sdk')>()
+  return {
+    ...actual,
+    exportMarkdownBodyToPdf,
+  }
+})
 
 import { exportResearchPdf } from './export-research-pdf'
 

@@ -10,7 +10,6 @@ import rollupOptions from './rollup.config'
 import { verifyMainBundle } from './verify-main-bundle'
 import { verifyBundledToolSetCatalog } from './verify-bundled-toolset'
 import { generateBundledSkillsManifest } from './generate-bundled-skills'
-import { generateSkillCompileRuntime } from './generate-skill-compile-runtime'
 import { errorLog, doneLog } from './log'
 import { getArgv } from './utils'
 
@@ -51,8 +50,6 @@ async function unionBuild() {
             generateBundledSkillsManifest()
             const build = await rollup(mainOpt)
             await build.write(mainOpt.output as OutputOptions)
-            const runtimeModules = generateSkillCompileRuntime()
-            console.log(`verify: skill-compile-runtime (${runtimeModules} modules)`)
             verifyMainBundle()
             verifyBundledToolSetCatalog()
             const { verifyBundledSkillsCatalog } = await import(

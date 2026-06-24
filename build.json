@@ -6,8 +6,7 @@
     "**/node_modules/node-pty/**",
     "**/node_modules/esbuild/**",
     "**/node_modules/@esbuild/**",
-    "config/**",
-    "dist/electron/skill-compile-runtime/**"
+    "config/**"
   ],
   "electronLanguages": [
     "en-US"

@@ -58,6 +58,10 @@ const pathAliases = {
       replacement: path.join(__dirname, '..', 'src', 'main'),
     },
     {
+      find: '@openfde/skill-sdk',
+      replacement: path.join(__dirname, '..', 'skill-sdk'),
+    },
+    {
       find: '@toolSet',
       replacement: path.join(__dirname, '..', 'toolSet'),
     },
