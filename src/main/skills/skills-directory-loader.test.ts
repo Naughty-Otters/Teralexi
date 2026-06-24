@@ -22,13 +22,40 @@ vi.mock('./skill-markdown', () => ({
   parseSkillMarkdown: vi.fn(),
 }))
 
+vi.mock('./bundled-skills', () => ({
+  buildBundledSkillDefinitions: vi.fn(async () => [
+    {
+      id: 'default',
+      folder: 'bundled-skills/default',
+      properties: {
+        name: 'Default',
+        description: '',
+        model: 'llama',
+        provider: 'ollama',
+        color: 'primary',
+        enabled: true,
+      },
+      sections: {
+        fullMarkdown: 'Bundled',
+        instructions: 'Bundled',
+        summary: '',
+        report: '',
+        examples: [],
+        tools: [],
+      },
+      systemPrompt: 'Bundled',
+      tools: [],
+      actionToolNames: [],
+    },
+  ]),
+}))
+
 vi.mock('./skill-path', () => ({
   isLoadableSkillFolder: vi.fn(() => true),
   extractYamlFrontmatterBlock: vi.fn(() => null),
   stripYamlFrontmatter: vi.fn((s: string) => s),
   normalizeSkillFileText: vi.fn((s: string) => s),
   resolvePropertiesRaw: vi.fn(() => 'name: Demo\nmodel: llama\nprovider: ollama'),
-  resolveSkillsSourceRoots: vi.fn(() => ['/bundled/skills', '/user/skills']),
   resolveUserSkillsDirectory: vi.fn(() => '/user/skills'),
 }))
 
@@ -122,13 +149,9 @@ describe('loadSkills', () => {
     )
   })
 
-  it('merges skills from bundled and user source roots', async () => {
+  it('merges bundled skills with user-installed skills', async () => {
     vi.mocked(existsSync).mockReturnValue(true)
-    let dirCall = 0
-    vi.mocked(readdirSync).mockImplementation(() => {
-      dirCall += 1
-      return dirCall === 1 ? ['bundled-skill'] : ['user-skill']
-    })
+    vi.mocked(readdirSync).mockReturnValue(['user-skill'])
     vi.mocked(readFileSync).mockImplementation((p) => {
       if (String(p).endsWith(SKILL_FILES.SKILL_MD)) {
         return '## Instructions\nDo work'
@@ -137,6 +160,6 @@ describe('loadSkills', () => {
     })
     const skills = await loadSkills()
     expect(skills).toHaveLength(2)
-    expect(skills.map((s) => s.id).sort()).toEqual(['bundled-skill', 'user-skill'])
+    expect(skills.map((s) => s.id).sort()).toEqual(['default', 'user-skill'])
   })
 })

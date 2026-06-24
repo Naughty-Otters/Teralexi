@@ -5,7 +5,16 @@ import {
   resolveSkillAttachmentDirs,
   type SkillAttachmentCategory,
 } from './skill-attachment-dirs'
-import { resolveSkillsSources } from './skill-path'
+import {
+  isBundledSkillId,
+  listBundledSkillAttachments,
+  readBundledSkillAttachment,
+} from './bundled-skills-manifest'
+import {
+  isLoadableSkillFolder,
+  resolveSkillsSources,
+  resolveUserSkillsDirectory,
+} from './skill-path'
 
 export type { SkillAttachmentCategory } from './skill-attachment-dirs'
 
@@ -89,6 +98,45 @@ function listCategoryFiles(
   return [...new Set(paths)]
 }
 
+function listDiskSkillAttachments(
+  source: SkillAttachmentSource,
+  dir: string,
+): SkillAttachment[] {
+  if (!existsSync(join(dir, SKILL_FILES.SKILL_MD))) return []
+
+  const attachmentDirs = resolveSkillAttachmentDirs(dir)
+  const out: SkillAttachment[] = []
+
+  for (const category of Object.keys(
+    attachmentDirs,
+  ) as SkillAttachmentCategory[]) {
+    for (const rel of listCategoryFiles(dir, category, attachmentDirs)) {
+      const absolutePath = join(dir, rel)
+      let sizeBytes = 0
+      try {
+        sizeBytes = statSync(absolutePath).size
+      } catch {
+        continue
+      }
+      out.push({
+        category,
+        relativePath: rel,
+        fileName: basename(rel),
+        absolutePath,
+        source,
+        sizeBytes,
+      })
+    }
+  }
+
+  return out
+}
+
+function userOverridesBundledSkill(skillId: string): boolean {
+  const userDir = resolveUserSkillsDirectory()
+  return isLoadableSkillFolder(userDir, skillId)
+}
+
 /**
  * Lists ref docs, scripts, and forms for a skill from bundled + user trees.
  * User entries overwrite bundled entries with the same `relativePath`.
@@ -99,40 +147,28 @@ export function listSkillAttachments(skillId: string): SkillAttachment[] {
   const id = skillId.trim()
   if (!id) return []
 
-  const { bundled, user } = resolveSkillsSources()
-  const roots: Array<{ source: SkillAttachmentSource; dir: string }> = [
-    { source: 'bundled', dir: join(bundled, id) },
-    { source: 'user', dir: join(user, id) },
-  ]
-
   const merged = new Map<string, SkillAttachment>()
 
-  for (const { source, dir } of roots) {
-    if (!existsSync(join(dir, SKILL_FILES.SKILL_MD))) continue
-
-    const attachmentDirs = resolveSkillAttachmentDirs(dir)
-
-    for (const category of Object.keys(
-      attachmentDirs,
-    ) as SkillAttachmentCategory[]) {
-      for (const rel of listCategoryFiles(dir, category, attachmentDirs)) {
-        const absolutePath = join(dir, rel)
-        let sizeBytes = 0
-        try {
-          sizeBytes = statSync(absolutePath).size
-        } catch {
-          continue
-        }
-        merged.set(rel, {
-          category,
-          relativePath: rel,
-          fileName: basename(rel),
-          absolutePath,
-          source,
-          sizeBytes,
-        })
-      }
+  if (isBundledSkillId(id) && !userOverridesBundledSkill(id)) {
+    for (const attachment of listBundledSkillAttachments(id)) {
+      merged.set(attachment.relativePath, {
+        ...attachment,
+        absolutePath: join('bundled-skills', id, attachment.relativePath),
+      })
     }
+  } else {
+    const { bundled } = resolveSkillsSources()
+    for (const attachment of listDiskSkillAttachments(
+      'bundled',
+      join(bundled, id),
+    )) {
+      merged.set(attachment.relativePath, attachment)
+    }
+  }
+
+  const { user } = resolveSkillsSources()
+  for (const attachment of listDiskSkillAttachments('user', join(user, id))) {
+    merged.set(attachment.relativePath, attachment)
   }
 
   return Array.from(merged.values()).sort((a, b) => {
@@ -158,9 +194,18 @@ export function readSkillAttachment(
   skillId: string,
   relativePath: string,
 ): { content: string; encoding: 'utf8' | 'base64'; mimeType: string } {
-  const entry = resolveSkillAttachment(skillId, relativePath)
+  const normalized = relativePath.replace(/^[/\\]+/, '').split('\\').join('/')
+  const entry = resolveSkillAttachment(skillId, normalized)
   if (!entry) {
     throw new Error(`Attachment not found: ${relativePath}`)
+  }
+
+  if (
+    entry.source === 'bundled' &&
+    isBundledSkillId(skillId) &&
+    !userOverridesBundledSkill(skillId)
+  ) {
+    return readBundledSkillAttachment(skillId, normalized)
   }
 
   const lower = entry.fileName.toLowerCase()

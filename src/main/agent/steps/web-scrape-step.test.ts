@@ -8,9 +8,13 @@ import { StepOutputStore } from './step-output-store'
 import type { SearchStepData } from './step-io'
 import { SEARCH_STEP_ID } from '../constants/step-ids'
 
-vi.mock('@toolSet/web', () => ({
-  scrapePage: vi.fn(),
-}))
+vi.mock('@toolSet/web', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@toolSet/web')>()
+  return {
+    ...actual,
+    scrapePage: vi.fn(),
+  }
+})
 
 import { scrapePage } from '@toolSet/web'
 

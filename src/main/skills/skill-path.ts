@@ -198,16 +198,11 @@ export function mergePropertiesRaw(baseRaw: string, overrideRaw: string): string
   })
 }
 
-export function resolvePropertiesRaw(
+export function resolvePropertiesRawFromContent(
   skillId: string,
-  skillFolder: string,
   skillRaw: string,
+  propertiesFromFile: string,
 ): string {
-  const propertiesFile = join(skillFolder, SKILL_FILES.PROPERTIES_MD)
-  const propertiesFromFile = existsSync(propertiesFile)
-    ? normalizeSkillFileText(readFileSync(propertiesFile, 'utf-8'))
-    : ''
-
   const frontmatter = extractYamlFrontmatterBlock(skillRaw) ?? ''
   if (frontmatter.trim() || propertiesFromFile.trim()) {
     return mergePropertiesRaw(frontmatter, propertiesFromFile)
@@ -220,4 +215,17 @@ export function resolvePropertiesRaw(
     .join(' ')
 
   return buildDefaultPropertiesYaml(displayName, skillId)
+}
+
+export function resolvePropertiesRaw(
+  skillId: string,
+  skillFolder: string,
+  skillRaw: string,
+): string {
+  const propertiesFile = join(skillFolder, SKILL_FILES.PROPERTIES_MD)
+  const propertiesFromFile = existsSync(propertiesFile)
+    ? normalizeSkillFileText(readFileSync(propertiesFile, 'utf-8'))
+    : ''
+
+  return resolvePropertiesRawFromContent(skillId, skillRaw, propertiesFromFile)
 }

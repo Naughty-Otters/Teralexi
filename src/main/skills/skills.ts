@@ -15,6 +15,7 @@ import { resolveUserSkillsDirectory } from './skill-path'
 import { parseSkillMarkdown as parseSkillMarkdownCore } from './skill-markdown'
 import {
   loadSkillActions,
+  loadSkillActionsForSkillId,
   loadToolSetTools,
   loadToolSetToolsFromDirectory,
 } from './skill-module-loader'
@@ -38,6 +39,7 @@ export { runAgent } from './actions'
 
 export {
   loadSkillActions,
+  loadSkillActionsForSkillId,
   loadToolSetTools,
   loadToolSetToolsFromDirectory,
   loadSkillsFromDirectory,

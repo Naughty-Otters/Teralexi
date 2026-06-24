@@ -8,7 +8,9 @@ import { rollup, OutputOptions } from 'rollup'
 import { Listr } from 'listr2'
 import rollupOptions from './rollup.config'
 import { verifyMainBundle } from './verify-main-bundle'
-import { prewarmSkillModuleCache } from './prewarm-skill-modules'
+import { verifyBundledToolSetCatalog } from './verify-bundled-toolset'
+import { generateBundledSkillsManifest } from './generate-bundled-skills'
+import { generateSkillCompileRuntime } from './generate-skill-compile-runtime'
 import { errorLog, doneLog } from './log'
 import { getArgv } from './utils'
 
@@ -46,10 +48,21 @@ async function unionBuild() {
         title: 'building main process',
         task: async () => {
           try {
+            generateBundledSkillsManifest()
             const build = await rollup(mainOpt)
             await build.write(mainOpt.output as OutputOptions)
+            const runtimeModules = generateSkillCompileRuntime()
+            console.log(`verify: skill-compile-runtime (${runtimeModules} modules)`)
             verifyMainBundle()
-            await prewarmSkillModuleCache()
+            verifyBundledToolSetCatalog()
+            const { verifyBundledSkillsCatalog } = await import(
+              '../src/main/skills/bundled-skills'
+            )
+            const { verifyBundledSkillActions } = await import(
+              '../src/main/skills/bundled-skill-actions'
+            )
+            verifyBundledSkillsCatalog()
+            verifyBundledSkillActions()
           } catch (error) {
             errorLog(`failed to build main process\n`)
             return Promise.reject(error)

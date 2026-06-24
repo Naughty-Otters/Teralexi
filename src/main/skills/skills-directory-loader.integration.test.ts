@@ -1,10 +1,19 @@
-import { describe, expect, it } from 'vitest'
-import { loadSkillsFromDirectory } from './skills-directory-loader'
-import { resolveBundledSkillsDirectory } from './skill-path'
+import { describe, expect, it, vi } from 'vitest'
 
-describe('loadSkillsFromDirectory (integration)', () => {
+vi.mock('@main/services/conversation-store', () => ({
+  getConversationStore: () => ({
+    getEffectiveSkillCompilation: vi.fn(() => null),
+  }),
+}))
+
+import { loadToolSetTools } from './skill-module-loader'
+import { loadSkills } from './skills-directory-loader'
+
+describe('bundled skills (integration)', () => {
   it('scopes google_* tools to google-workspace skill only', async () => {
-    const skills = await loadSkillsFromDirectory(resolveBundledSkillsDirectory())
+    const globalTools = await loadToolSetTools()
+    const { buildBundledSkillDefinitions } = await import('./bundled-skills')
+    const skills = await buildBundledSkillDefinitions(globalTools)
     const google = skills.find((s) => s.id === 'google-workspace')
     const documents = skills.find((s) => s.id === 'documents')
     const defaultSkill = skills.find((s) => s.id === 'default')
@@ -20,7 +29,9 @@ describe('loadSkillsFromDirectory (integration)', () => {
   })
 
   it('keeps git_* tools in default when github skill is absent', async () => {
-    const skills = await loadSkillsFromDirectory(resolveBundledSkillsDirectory())
+    const globalTools = await loadToolSetTools()
+    const { buildBundledSkillDefinitions } = await import('./bundled-skills')
+    const skills = await buildBundledSkillDefinitions(globalTools)
     const github = skills.find((s) => s.id === 'github')
     const defaultSkill = skills.find((s) => s.id === 'default')
 
@@ -36,7 +47,9 @@ describe('loadSkillsFromDirectory (integration)', () => {
   })
 
   it('documents catalog is allowed toolSet plus action tools only', async () => {
-    const skills = await loadSkillsFromDirectory(resolveBundledSkillsDirectory())
+    const globalTools = await loadToolSetTools()
+    const { buildBundledSkillDefinitions } = await import('./bundled-skills')
+    const skills = await buildBundledSkillDefinitions(globalTools)
     const documents = skills.find((s) => s.id === 'documents')
     expect(documents).toBeDefined()
     const names = new Set(documents!.tools.map((t) => t.name))
@@ -48,4 +61,14 @@ describe('loadSkillsFromDirectory (integration)', () => {
     }
   })
 
+  it('loadSkills includes bundled defaults without reading skills/ from disk', async () => {
+    const skills = await loadSkills()
+    expect(skills.map((skill) => skill.id).sort()).toEqual([
+      'coding',
+      'default',
+      'documents',
+      'google-workspace',
+      'research',
+    ])
+  })
 })

@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { loadSkillsFromDirectory } from './skills-directory-loader'
-import { resolveBundledSkillsDirectory } from './skill-path'
+import { loadToolSetTools } from './skill-module-loader'
 import { skillToAgent } from './skill-serializer'
 import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
 
 describe('LoadSkills IPC payload', () => {
   it('serializes every bundled skill agent for IPC', async () => {
-    const skills = await loadSkillsFromDirectory(resolveBundledSkillsDirectory())
+    const globalTools = await loadToolSetTools()
+    const { buildBundledSkillDefinitions } = await import('./bundled-skills')
+    const skills = await buildBundledSkillDefinitions(globalTools)
     expect(skills.length).toBeGreaterThan(2)
 
     const agents = skills.map((skill) => skillToAgent(skill))

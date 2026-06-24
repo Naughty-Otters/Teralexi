@@ -1,8 +1,7 @@
 import { join } from 'node:path'
 import { getMcpServerManager } from '@main/services/mcp-server-manager'
 import { getConversationStore } from '@main/services/conversation-store'
-import { loadSkillActions, loadToolSetTools } from '@main/skills/skills'
-import { resolveSkillFolder } from '@main/skills/skill-path'
+import { loadSkillActionsForSkillId, loadToolSetTools } from '@main/skills/skills'
 import type { AgentStepContext } from '../context'
 import type { RuntimeToolMeta } from '../types'
 import { createLogger } from '@main/logger'
@@ -325,14 +324,10 @@ export async function callSkillToolDirect(
     },
     toolInput,
     async () => {
-      const skillFolder = resolveSkillFolder(skillId)
-
       let tool: Awaited<ReturnType<typeof loadToolSetTools>>[number] | undefined
 
-      if (skillFolder) {
-        const skillTools = await loadSkillActions(skillFolder, [toolName])
-        tool = skillTools.find((t) => t.name === toolName)
-      }
+      const skillTools = await loadSkillActionsForSkillId(skillId, [toolName])
+      tool = skillTools.find((t) => t.name === toolName)
 
       if (!tool) {
         const toolSetTools = await loadToolSetTools()

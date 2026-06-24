@@ -14,11 +14,9 @@ vi.mock('@config/openfde-home', () => ({
   getopenfdeSandboxDir: vi.fn(() => '/mock/sandbox-root'),
 }))
 
-vi.mock('@main/skills/skills', () => ({
-  getSkillsDir: vi.fn(() => '/skills'),
-}))
-
 vi.mock('@main/skills/skill-path', () => ({
+  resolveUserSkillsDirectory: vi.fn(() => '/skills'),
+  resolveUserToolSetDirectory: vi.fn(() => '/user/toolSet'),
   resolveToolSetSourceRoots: vi.fn(() => ['/bundled/toolSet', '/user/toolSet']),
   resolveSkillFolder: vi.fn((skillId: string) => join('/src-skills', skillId)),
 }))
