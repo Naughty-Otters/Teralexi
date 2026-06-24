@@ -64,6 +64,7 @@ export const lang: AppLocaleBundle = {
     },
     sections: {
       language: '语言',
+      appearance: '外观',
       font: '字体',
       chatUi: '聊天界面',
       developer: '开发者',
@@ -108,6 +109,15 @@ export const lang: AppLocaleBundle = {
         'system-mono': '系统等宽字体',
         'system-sans': 'Helvetica / 无衬线',
       },
+    },
+    appearance: {
+      intro: '选择实心表面主题或 Mac Glass 毛玻璃风格——半透明面板，在 macOS 上可透出桌面模糊。',
+      modeLabel: '表面风格',
+      modeHint: 'Glass 使用半透明面板与背景模糊；代码和终端区域保持可读。',
+      solid: '实心',
+      glass: 'Mac Glass',
+      macNativeHint: '在 macOS 上，窗口使用原生 vibrancy，桌面会透过磨砂面板显示。',
+      nonMacHint: '在当前平台上，Glass 使用 CSS 磨砂效果（无原生桌面模糊）。',
     },
     panels: settingsPanelsZhCn,
   },

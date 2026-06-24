@@ -35,6 +35,10 @@ export class IpcChannelMainClass {
     boolean
   > = null
   IsUseSysTitle: IpcMainEventListener<void, boolean> = null
+  SetAppWindowAppearance: IpcMainEventListener<
+    { appearance: 'solid' | 'glass' },
+    void
+  > = null
   /**
    * Exit application
    */

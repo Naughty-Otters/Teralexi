@@ -204,7 +204,7 @@ function formatTime(date: Date): string {
 
 <style scoped>
 .sidebar-actions {
-  padding: 8px 8px 4px;
+  padding: 12px 12px 6px;
 }
 .new-session-btn {
   display: flex;
@@ -229,7 +229,7 @@ function formatTime(date: Date): string {
 .new-session-btn--collapsed {
   width: 36px;
   height: 36px;
-  margin: 0 auto 8px;
+  margin: 10px auto 8px;
   padding: 0;
   border-style: solid;
 }

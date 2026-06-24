@@ -50,6 +50,7 @@ const DEFAULT_SYSTEM_PROPERTIES: Record<string, string> = {
   'app.support.uploadUrl': '',
   'app.support.maxMegabytes': '100',
   'app.ui.locale': 'en',
+  'app.ui.appearance': 'solid',
 }
 
 function getSystemPropPath(): string {

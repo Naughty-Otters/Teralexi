@@ -34,6 +34,7 @@
     <div class="sp-panel-frame">
       <div v-if="settingsTab === 'general'" class="sp-general-panel">
         <LanguageSetting />
+        <AppearanceSetting />
         <FontSetting />
         <EditorSetting />
         <GoogleOAuthSetting />
@@ -169,6 +170,7 @@ import {
   llmProviderSettingsLabel,
 } from '@shared/agent/llm-provider-registry'
 import FontSetting from './settings/FontSetting.vue'
+import AppearanceSetting from './settings/AppearanceSetting.vue'
 import EditorSetting from './settings/EditorSetting.vue'
 import GoogleOAuthSetting from './settings/GoogleOAuthSetting.vue'
 import LanguageSetting from './settings/LanguageSetting.vue'

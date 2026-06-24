@@ -63,6 +63,7 @@ export type AppLabels = {
     }
     sections: {
       language: string
+      appearance: string
       font: string
       chatUi: string
       developer: string
@@ -107,6 +108,15 @@ export type AppLabels = {
         'system-mono': string
         'system-sans': string
       }
+    }
+    appearance: {
+      intro: string
+      modeLabel: string
+      modeHint: string
+      solid: string
+      glass: string
+      macNativeHint: string
+      nonMacHint: string
     }
     panels: SettingsPanelLabels
   }

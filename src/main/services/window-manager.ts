@@ -1,4 +1,13 @@
 import config from '@config/index'
+import { getSystemPropValue } from '@config/system-prop'
+import {
+  parseAppAppearance,
+  APP_UI_APPEARANCE_KEY,
+} from '@shared/ui/appearance-settings'
+import {
+  applyWindowGlassEffect,
+  glassBrowserWindowOptions,
+} from './window-glass'
 import { app, BrowserWindow, dialog } from 'electron'
 import { getLoadingURL, getPreloadFile, getWinURL } from '../config/static-path'
 import { APP_DISPLAY_NAME, loadWindowIcon } from '../config/app-icons'
@@ -30,6 +39,9 @@ class MainInit {
   createMainWindow() {
     log.info('Creating main application window')
     const windowIcon = loadWindowIcon()
+    const appearance = parseAppAppearance(
+      getSystemPropValue(APP_UI_APPEARANCE_KEY),
+    )
 
     this.mainWindow = new BrowserWindow({
       title: APP_DISPLAY_NAME,
@@ -44,6 +56,7 @@ class MainInit {
       show: false,
       frame: config.IsUseSysTitle,
       icon: windowIcon,
+      ...glassBrowserWindowOptions(appearance),
       webPreferences: {
         sandbox: false,
         webSecurity: false,

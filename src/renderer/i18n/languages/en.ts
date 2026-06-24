@@ -64,6 +64,7 @@ export const lang: AppLocaleBundle = {
     },
     sections: {
       language: 'Language',
+      appearance: 'Appearance',
       font: 'Font',
       chatUi: 'Chat UI',
       developer: 'Developer',
@@ -111,6 +112,18 @@ export const lang: AppLocaleBundle = {
         'system-mono': 'System monospace',
         'system-sans': 'Helvetica / Sans-serif',
       },
+    },
+    appearance: {
+      intro:
+        'Choose a solid surface theme or Mac Glass — frosted translucent panels with native desktop blur on macOS.',
+      modeLabel: 'Surface style',
+      modeHint: 'Glass uses semi-transparent panels and backdrop blur. Code and terminal areas stay readable.',
+      solid: 'Solid',
+      glass: 'Mac Glass',
+      macNativeHint:
+        'On macOS, the window uses native vibrancy so the desktop shows through behind frosted panels.',
+      nonMacHint:
+        'On this platform, Glass uses CSS frosted panels (no native desktop blur).',
     },
     panels: settingsPanelsEn,
   },
