@@ -133,7 +133,7 @@ export const lang: AppLocaleBundle = {
     showAgenticRunDesc:
       'Display Agentic Run step bubbles and tool-loop panels during agent execution. Form and approval steps are always shown.',
     defaultsFootnote:
-      'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars.',
+      'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars, Agentic Run bubbles on.',
   },
   chat: {
     thoughtBubbleTitle: 'Thought briefly',

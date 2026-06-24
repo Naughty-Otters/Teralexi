@@ -3,10 +3,13 @@ import {
   CHAT_UI_BUBBLE_COMPACT_LINES_KEY,
   CHAT_UI_BUBBLE_TEXT_KEEP_CHARS_KEY,
   CHAT_UI_CONTEXT_WINDOW_MESSAGES_KEY,
+  CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY,
+  CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_MIGRATION_KEY,
   clampChatUiBubbleCompactLines,
   clampChatUiBubbleTextKeepChars,
   clampChatUiContextWindowMessages,
   parseChatUiSettings,
+  applyShowAgenticRunBubblesDefaultMigration,
 } from './chat-ui-settings'
 
 describe('chat-ui-settings', () => {
@@ -52,5 +55,19 @@ describe('chat-ui-settings', () => {
       reasoningMaxChars: 2000,
       showAgenticRunBubbles: true,
     })
+  })
+
+  it('migrates persisted false to true once', () => {
+    expect(
+      applyShowAgenticRunBubblesDefaultMigration({
+        [CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY]: 'false',
+      }).showAgenticRunBubbles,
+    ).toBe(true)
+    expect(
+      applyShowAgenticRunBubblesDefaultMigration({
+        [CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY]: 'false',
+        [CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_MIGRATION_KEY]: 'true',
+      }).showAgenticRunBubbles,
+    ).toBe(false)
   })
 })

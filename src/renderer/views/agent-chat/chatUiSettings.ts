@@ -5,13 +5,15 @@ import {
   CHAT_UI_CONTEXT_WINDOW_MESSAGES_KEY,
   CHAT_UI_REASONING_MAX_CHARS_KEY,
   CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY,
+  CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_MIGRATION_KEY,
   CHAT_UI_SETTINGS_PROP_KEYS,
   DEFAULT_CHAT_UI_SETTINGS,
+  applyShowAgenticRunBubblesDefaultMigration,
+  shouldPersistShowAgenticRunBubblesMigration,
   clampChatUiBubbleCompactLines,
   clampChatUiBubbleTextKeepChars,
   clampChatUiContextWindowMessages,
   clampChatUiReasoningMaxChars,
-  parseChatUiSettings,
   type ChatUiSettings,
 } from '@shared/agent/chat-ui-settings'
 import {
@@ -67,8 +69,20 @@ export function applyChatUiSettings(settings: ChatUiSettings): void {
 }
 
 export async function loadChatUiSettings(): Promise<ChatUiSettings> {
-  const values = await getSystemConfigValues([...CHAT_UI_SETTINGS_PROP_KEYS])
-  const parsed = parseChatUiSettings(values)
+  const values = await getSystemConfigValues([
+    ...CHAT_UI_SETTINGS_PROP_KEYS,
+    CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_MIGRATION_KEY,
+  ])
+  const parsed = applyShowAgenticRunBubblesDefaultMigration(values)
+  if (shouldPersistShowAgenticRunBubblesMigration(values)) {
+    if (values[CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY] === 'false') {
+      await setSystemConfigValue(CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY, 'true')
+    }
+    await setSystemConfigValue(
+      CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_MIGRATION_KEY,
+      'true',
+    )
+  }
   applyChatUiSettings(parsed)
   return parsed
 }

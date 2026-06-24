@@ -129,7 +129,7 @@ export const lang: AppLocaleBundle = {
     showAgenticRunDesc:
       '在 Agent 执行过程中显示 Agentic Run 步骤气泡与工具循环面板。表单与审批步骤始终显示。',
     defaultsFootnote:
-      '默认值：每端 {keepChars} 字符，{compactLines} 行紧凑高度，{contextMessages} 条上下文消息，推理 {reasoningMax} 字符。',
+      '默认值：每端 {keepChars} 字符，{compactLines} 行紧凑高度，{contextMessages} 条上下文消息，推理 {reasoningMax} 字符，默认开启 Agentic Run 气泡。',
   },
   chat: {
     thoughtBubbleTitle: '稍作思考',
