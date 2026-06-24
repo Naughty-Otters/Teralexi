@@ -1,5 +1,6 @@
 import type { AppLocaleBundle } from '../types'
 import { settingsPanelsEn } from './panels-en'
+import { providerSetupEn } from './provider-setup-en'
 
 export const lang: AppLocaleBundle = {
   common: {
@@ -261,4 +262,5 @@ export const lang: AppLocaleBundle = {
     updateAvailableDescription:
       'OpenFDE v{version} is ready to download. Open Settings → About.',
   },
+  providerSetup: providerSetupEn,
 }

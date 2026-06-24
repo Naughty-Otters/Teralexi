@@ -47,6 +47,13 @@ async function requireModule(
       warnMissingModule(filepath, 'typescript source missing on disk')
       return undefined
     }
+    try {
+      if (statSync(onDiskPath).isDirectory()) {
+        return undefined
+      }
+    } catch {
+      return undefined
+    }
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -88,6 +95,13 @@ async function requireModule(
   try {
     if (!existsSync(filepath)) {
       warnMissingModule(filepath, 'javascript module missing on disk')
+      return undefined
+    }
+    try {
+      if (statSync(filepath).isDirectory()) {
+        return undefined
+      }
+    } catch {
       return undefined
     }
     return loadCachedCommonJsModule(filepath)
@@ -154,8 +168,6 @@ async function loadSkillActionsFromDirectory(
   }
 
   const indexCandidates = [
-    actionsDir,
-    join(actionsDir, 'index'),
     join(actionsDir, 'index.ts'),
     join(actionsDir, 'index.js'),
     join(actionsDir, 'index.mjs'),
@@ -186,6 +198,7 @@ async function loadSkillActionsFromDirectory(
       continue
     }
     if (!entry.isFile()) continue
+    if (entry.name.endsWith('.test.ts') || entry.name.endsWith('.test.js')) continue
     if (ACTION_INDEX_RE.test(entry.name)) continue
     if (!ACTION_MODULE_EXT_RE.test(entry.name)) continue
 

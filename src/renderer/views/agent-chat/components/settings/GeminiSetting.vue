@@ -1,73 +1,16 @@
 <template>
   <section class="sp-section">
     <div class="sp-section-title">{{ t.settings.sections.gemini }}</div>
-    <div class="sp-card">
-      <div class="sp-field">
-        <label class="sp-label">{{ p.fields.apiKey }}</label>
-        <input
-          class="sp-input sp-key-input"
-          type="password"
-          :value="agentStore.geminiApiKey"
-          placeholder="AIza…"
-          @blur="
-            (e) => {
-              agentStore.updateGeminiApiKey(
-                (e.target as HTMLInputElement).value,
-              )
-              agentStore.fetchModelsForProvider('gemini')
-            }
-          "
-        />
-      </div>
-      <div class="sp-field">
-        <label class="sp-label">
-          {{ p.fields.baseUrl }}
-          <span class="sp-label-hint">{{ p.llm.hints.geminiBaseUrl }}</span>
-        </label>
-        <input
-          class="sp-input"
-          :value="agentStore.geminiBaseURL"
-          placeholder="https://generativelanguage.googleapis.com/v1beta"
-          @blur="
-            (e) => {
-              agentStore.updateGeminiBaseURL(
-                (e.target as HTMLInputElement).value,
-              )
-              agentStore.fetchModelsForProvider('gemini')
-            }
-          "
-        />
-      </div>
-      <div class="sp-status-row">
-        <span
-          class="connection-dot"
-          :class="
-            agentStore.geminiApiKey
-              ? 'connection-dot--ok'
-              : 'connection-dot--idle'
-          "
-        />
-        <span class="sp-status-label">{{ apiKeyStatus }}</span>
-      </div>
-    </div>
+    <LlmProviderSetupCard provider="gemini" />
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
-import { useAgentStore } from '@store/agent'
+import LlmProviderSetupCard from './LlmProviderSetupCard.vue'
 import './sp-shared.css'
 
 const { t } = useI18n()
-const p = computed(() => t.value.settings.panels)
-const agentStore = useAgentStore()
-
-const apiKeyStatus = computed(() =>
-  agentStore.geminiApiKey
-    ? p.value.status.apiKeyConfigured
-    : p.value.status.noApiKey,
-)
 </script>
 
 <style scoped>

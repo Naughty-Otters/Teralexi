@@ -43,6 +43,10 @@ import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
 import { randomShortUuid } from '@shared/utils/short-uuid'
 import { normalizeLlamaCppBaseURL } from '@shared/agent/llamacpp-url'
 import {
+  hasAnyLlmProviderConfigured,
+  type LlmProviderCredentialsSnapshot,
+} from '@shared/agent/provider-setup-status'
+import {
   isOpenAiCompatibleProvider,
   LLM_PROVIDER_IDS,
   OPENAI_COMPATIBLE_LLM_PROVIDERS,
@@ -57,6 +61,7 @@ import {
   DEEPSEEK_MODELS,
   ZHIPU_MODELS,
   SYSTEM_PROP_KEYS,
+  PROVIDER_SETUP_DISMISSED_KEY,
   normalizeBaseURL,
   setSystemConfigValue,
   getSystemConfigValues,
@@ -158,6 +163,12 @@ type PersistedAgentConfiguration = {
   updatedAt: string
 }
 
+export type ProviderConnectionTestResult = {
+  ok: boolean
+  modelCount?: number
+  error?: string
+}
+
 export const useAgentStore = defineStore('agent', () => {
   const agents = ref<Agent[]>([])
   const inFlightConversations = new Set<string>()
@@ -185,6 +196,7 @@ export const useAgentStore = defineStore('agent', () => {
     abortController: AbortController
   } | null>(null)
   const hasLoadedSettings = ref(false)
+  const providerSetupDismissed = ref(false)
   const mcpServers = ref<McpServerDefinition[]>([])
   const mcpToolsByServer = ref<Record<string, McpToolDefinition[]>>({})
   /** conversationId → sandbox runs (for report panel + disk cleanup on delete). */
@@ -587,6 +599,7 @@ export const useAgentStore = defineStore('agent', () => {
       SYSTEM_PROP_KEYS.deepseekApiUrl,
       SYSTEM_PROP_KEYS.zhipuApiKey,
       SYSTEM_PROP_KEYS.zhipuBaseURL,
+      PROVIDER_SETUP_DISMISSED_KEY,
       ...openAiCompatibleProviderConfigKeys(),
     ])
 
@@ -629,6 +642,9 @@ export const useAgentStore = defineStore('agent', () => {
       values[SYSTEM_PROP_KEYS.zhipuBaseURL] ?? zhipuBaseURL.value,
       'https://open.bigmodel.cn/api/paas/v4',
     )
+    providerSetupDismissed.value =
+      values[PROVIDER_SETUP_DISMISSED_KEY] === 'true' ||
+      values[PROVIDER_SETUP_DISMISSED_KEY] === '1'
 
     if (!values[SYSTEM_PROP_KEYS.ollamaBaseURL]) {
       void setSystemConfigValue(
@@ -1695,6 +1711,154 @@ export const useAgentStore = defineStore('agent', () => {
     }
   }
 
+  function buildLlmCredentialsSnapshot(): LlmProviderCredentialsSnapshot {
+    const compatible = {} as LlmProviderCredentialsSnapshot['openAiCompatible']
+    for (const id of OPENAI_COMPATIBLE_PROVIDER_IDS) {
+      compatible[id] = { apiKey: openAiCompatibleApiKeys.value[id] ?? '' }
+    }
+    return {
+      ollamaReachable: connectionStatus.value === 'connected',
+      llamacppReachable: llamacppConnectionStatus.value === 'connected',
+      openaiApiKey: openaiApiKey.value,
+      anthropicApiKey: anthropicApiKey.value,
+      geminiApiKey: geminiApiKey.value,
+      deepseekApiKey: deepseekApiKey.value,
+      zhipuApiKey: zhipuApiKey.value,
+      openAiCompatible: compatible,
+    }
+  }
+
+  const hasLlmProviderReady = computed(() =>
+    hasAnyLlmProviderConfigured(buildLlmCredentialsSnapshot()),
+  )
+
+  const shouldShowProviderSetupWizard = computed(
+    () => !providerSetupDismissed.value && !hasLlmProviderReady.value,
+  )
+
+  async function dismissProviderSetupWizard(): Promise<void> {
+    providerSetupDismissed.value = true
+    await setSystemConfigValue(PROVIDER_SETUP_DISMISSED_KEY, 'true')
+  }
+
+  async function testProviderConnection(
+    provider: ProviderType,
+  ): Promise<ProviderConnectionTestResult> {
+    try {
+      if (provider === 'ollama') {
+        await checkConnection()
+        if (connectionStatus.value !== 'connected') {
+          return { ok: false, error: 'Cannot reach Ollama server' }
+        }
+        await fetchModelsForProvider('ollama')
+        const modelCount = availableModelsByProvider.value.ollama?.length ?? 0
+        return { ok: true, modelCount }
+      }
+
+      if (provider === 'llamacpp') {
+        await checkLlamaCppConnection()
+        if (llamacppConnectionStatus.value !== 'connected') {
+          return { ok: false, error: 'Cannot reach llama.cpp server' }
+        }
+        await fetchModelsForProvider('llamacpp')
+        const modelCount = availableModelsByProvider.value.llamacpp?.length ?? 0
+        return { ok: true, modelCount }
+      }
+
+      if (provider === 'openai') {
+        const key = openaiApiKey.value.trim()
+        if (!key) return { ok: false, error: 'API key is required' }
+        const res = await fetch(`${openaiBaseURL.value}/models`, {
+          headers: { Authorization: `Bearer ${key}` },
+          signal: AbortSignal.timeout(8000),
+        })
+        if (!res.ok) {
+          return { ok: false, error: `OpenAI API returned ${res.status}` }
+        }
+        await fetchModelsForProvider('openai')
+        const modelCount = availableModelsByProvider.value.openai?.length ?? 0
+        return { ok: true, modelCount }
+      }
+
+      if (provider === 'gemini') {
+        const key = geminiApiKey.value.trim()
+        if (!key) return { ok: false, error: 'API key is required' }
+        const res = await fetch(
+          `${geminiBaseURL.value}/models?key=${encodeURIComponent(key)}`,
+          { signal: AbortSignal.timeout(8000) },
+        )
+        if (!res.ok) {
+          return { ok: false, error: `Gemini API returned ${res.status}` }
+        }
+        await fetchModelsForProvider('gemini')
+        const modelCount = availableModelsByProvider.value.gemini?.length ?? 0
+        return { ok: true, modelCount }
+      }
+
+      if (provider === 'anthropic') {
+        const key = anthropicApiKey.value.trim()
+        if (key.length < 8) return { ok: false, error: 'API key is required' }
+        updateAnthropicApiKey(key)
+        await fetchModelsForProvider('anthropic')
+        const modelCount = availableModelsByProvider.value.anthropic?.length ?? 0
+        return { ok: true, modelCount }
+      }
+
+      if (provider === 'deepseek') {
+        const key = deepseekApiKey.value.trim()
+        if (key.length < 8) return { ok: false, error: 'API key is required' }
+        const res = await fetch(`${deepseekApiUrl.value}/models`, {
+          headers: { Authorization: `Bearer ${key}` },
+          signal: AbortSignal.timeout(8000),
+        })
+        if (!res.ok) {
+          updateDeepSeekApiKey(key)
+          await fetchModelsForProvider('deepseek')
+          const modelCount = availableModelsByProvider.value.deepseek?.length ?? 0
+          return modelCount > 0
+            ? { ok: true, modelCount }
+            : { ok: false, error: `DeepSeek API returned ${res.status}` }
+        }
+        await fetchModelsForProvider('deepseek')
+        const modelCount = availableModelsByProvider.value.deepseek?.length ?? 0
+        return { ok: true, modelCount }
+      }
+
+      if (provider === 'zhipu') {
+        const key = zhipuApiKey.value.trim()
+        if (key.length < 8) return { ok: false, error: 'API key is required' }
+        updateZhipuApiKey(key)
+        await fetchModelsForProvider('zhipu')
+        const modelCount = availableModelsByProvider.value.zhipu?.length ?? 0
+        return { ok: true, modelCount }
+      }
+
+      if (isOpenAiCompatibleProvider(provider)) {
+        const key = openAiCompatibleApiKeys.value[provider]?.trim() ?? ''
+        if (!key) return { ok: false, error: 'API key is required' }
+        const baseUrl = openAiCompatibleBaseUrls.value[provider]
+        const res = await fetch(`${baseUrl}/models`, {
+          headers: { Authorization: `Bearer ${key}` },
+          signal: AbortSignal.timeout(8000),
+        })
+        if (!res.ok) {
+          return { ok: false, error: `${provider} API returned ${res.status}` }
+        }
+        await fetchModelsForProvider(provider)
+        const modelCount =
+          availableModelsByProvider.value[provider]?.length ?? 0
+        return { ok: true, modelCount }
+      }
+
+      return { ok: false, error: 'Unknown provider' }
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : 'Connection failed',
+      }
+    }
+  }
+
   async function fetchModelsForProvider(provider: ProviderType) {
     try {
       if (provider === 'ollama') {
@@ -2603,6 +2767,11 @@ export const useAgentStore = defineStore('agent', () => {
 
   return {
     hasLoadedSettings,
+    providerSetupDismissed,
+    hasLlmProviderReady,
+    shouldShowProviderSetupWizard,
+    dismissProviderSetupWizard,
+    testProviderConnection,
     agents,
     conversations,
     selectedAgentId,

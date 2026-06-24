@@ -9,42 +9,26 @@
         <system-information></system-information>
       </div>
 
-      <!--  -->
       <div class="right-side">
-        <div class="doc">
-          <div class="title alt">
-            {{ i18nt.landing.buttonTips }}
-          </div>
-          <button class="btu" @click="open()">
-            {{ i18nt.landing.buttons.console }}
+        <section class="setup-hero">
+          <h2 class="setup-hero-title">{{ i18nt.providerSetup.landing.title }}</h2>
+          <p class="setup-hero-subtitle">{{ i18nt.providerSetup.landing.subtitle }}</p>
+          <button type="button" class="setup-hero-cta" @click="startSetup">
+            {{ i18nt.providerSetup.landing.cta }}
           </button>
-          <button class="btu" @click="CheckUpdate('one')">
-            {{ i18nt.landing.buttons.checkUpdate }}
+          <p class="setup-hero-note">
+            {{ i18nt.providerSetup.wizard.subtitle }}
+          </p>
+        </section>
+
+        <div class="doc doc--secondary">
+          <div class="title alt">{{ i18nt.landing.buttonTips }}</div>
+          <button class="btu" @click="goHome">
+            {{ i18nt.providerSetup.wizard.continue }}
           </button>
-          <button class="btu" @click="CheckUpdate('two')">
-            {{ i18nt.landing.buttons.checkUpdate2 }}
-          </button>
-          <button class="btu" @click="CheckUpdate('three')">
-            {{ i18nt.landing.buttons.checkUpdateInc }}
-          </button>
-          <!-- <button class="btu" @click="CheckUpdate('four')">
-            {{ i18nt.landing.buttons.forcedUpdate }}
-          </button> -->
-          <button class="btu" @click="getMessage">
-            {{ i18nt.landing.buttons.viewMessage }}
-          </button>
-          <button class="btu" @click="startCrash">
-            {{ i18nt.landing.buttons.simulatedCrash }}
-          </button>
-          <button class="btu" @click="openNewWin">
-            {{ i18nt.landing.buttons.openNewWindow }}
-          </button>
-          <button class="btu" @click="changeLanguage">
+          <button class="btu btu--muted" @click="changeLanguage">
             {{ i18nt.landing.buttons.changeLanguage }}
           </button>
-        </div>
-        <div class="doc">
-          <testComp />
         </div>
       </div>
     </main>
@@ -54,37 +38,11 @@
 <script setup lang="ts">
 import SystemInformation from './components/system-info-mation.vue'
 import { openfdeLogo } from '@renderer/assets/icons'
-import { ref } from 'vue'
 import { i18nt, setLanguage, globalLang, getSupportedLocales } from '@renderer/i18n'
-import { useStoreTemplate } from '@renderer/store/modules/template'
-import testComp from '@renderer/components/test-comp.vue'
+import { useRouter } from 'vue-router'
+import { requestProviderSetupWizardOnNextChatLoad } from '@renderer/lib/provider-setup-session'
 
-const { ipcRendererChannel, crash } = window
-
-const percentage = ref(0)
-const colors = ref([
-  { color: '#f56c6c', percentage: 20 },
-  { color: '#e6a23c', percentage: 40 },
-  { color: '#6f7ad3', percentage: 60 },
-  { color: '#1989fa', percentage: 80 },
-  { color: '#5cb87a', percentage: 100 },
-] as string | ColorInfo[])
-const dialogVisible = ref(false)
-const progressStaus = ref<string | null>(null)
-const filePath = ref('')
-const updateStatus = ref('')
-const showForcedUpdate = ref(false)
-
-const storeTemplate = useStoreTemplate()
-
-console.log(`storeTemplate`, storeTemplate.getTest)
-console.log(`storeTemplate`, storeTemplate.getTest1)
-console.log(`storeTemplate`, storeTemplate.$state.testData)
-
-setTimeout(() => {
-  storeTemplate.TEST_ACTION('654321')
-  console.log(`storeTemplate`, storeTemplate.getTest1)
-}, 1000)
+const router = useRouter()
 
 function changeLanguage() {
   const ids = getSupportedLocales().map((entry) => entry.id)
@@ -92,136 +50,14 @@ function changeLanguage() {
   setLanguage(ids[(index + 1) % ids.length] ?? 'en')
 }
 
-function startCrash() {
-  crash.start()
+function goHome() {
+  void router.push('/')
 }
 
-function openNewWin() {
-  const data = {
-    url: '/form/index',
-  }
-  ipcRendererChannel.OpenWin.invoke(data)
+function startSetup() {
+  requestProviderSetupWizardOnNextChatLoad()
+  void router.push('/')
 }
-function getMessage() {
-  console.log('API is obsolete')
-}
-function StopServer() {
-  ipcRendererChannel.StopServer.invoke()
-}
-function StartServer() {
-  ipcRendererChannel.StartServer.invoke()
-}
-// Get electron methods
-function open() {}
-function CheckUpdate(data: string) {
-  switch (data) {
-    case 'one':
-      ipcRendererChannel.CheckUpdate.invoke()
-      console.log('Startup check')
-      break
-    case 'two':
-      ipcRendererChannel.StartDownload.invoke('https://xxx').then(() => {
-        dialogVisible.value = true
-      })
-      break
-    case 'three':
-      ipcRendererChannel.HotUpdate.invoke()
-      break
-    case 'four':
-      showForcedUpdate.value = true
-      break
-
-    default:
-      break
-  }
-}
-function handleClose() {
-  dialogVisible.value = false
-}
-
-ipcRendererChannel.DownloadProgress.on((event, arg) => {
-  percentage.value = Number(arg)
-})
-ipcRendererChannel.DownloadError.on((event, arg) => {
-  if (arg) {
-    progressStaus.value = 'exception'
-    percentage.value = 40
-    colors.value = '#d81e06'
-  }
-})
-ipcRendererChannel.DownloadPaused.on((event, arg) => {
-  if (arg) {
-    progressStaus.value = 'warning'
-    // ElMessageBox.alert("Download interrupted due to unknown reason!", "Hint", {
-    //   confirmButtonText: "Retry",
-    //   callback: (action) => {
-    //     ipcRenderer.invoke("start-download");
-    //   },
-    // });
-  }
-})
-ipcRendererChannel.DownloadDone.on((event, age) => {
-  filePath.value = age.filePath
-  progressStaus.value = 'success'
-  // ElMessageBox.alert("Update download complete!", "Hint", {
-  //   confirmButtonText: "Confirm",
-  //   callback: (action) => {
-  //     shell.shell.openPath(filePath.value);
-  //   },
-  // });
-})
-// electron-updater upload
-ipcRendererChannel.updateMsg.on((event, message) => {
-  switch (message.phase) {
-    case 'error':
-      dialogVisible.value = false
-      ipcRendererChannel.OpenErrorbox.invoke({
-        title: 'Error occurred',
-        message: message.error ?? 'Update failed',
-      })
-      break
-    case 'checking':
-      console.log('check-update')
-      break
-    case 'available':
-      dialogVisible.value = true
-      console.log('has update')
-      break
-    case 'not-available':
-      console.log('not new version')
-      break
-    case 'downloading':
-      percentage.value = Number(message.percent ?? 0)
-      break
-    case 'downloaded':
-      progressStaus.value = 'success'
-      ipcRendererChannel.ConfirmUpdate.invoke()
-      break
-    default:
-      break
-  }
-})
-ipcRendererChannel.UpdateProcessStatus.on((event, msg) => {
-  switch (msg.status) {
-    case 'downloading':
-      console.log('Downloading')
-      break
-    case 'moving':
-      console.log('Moving files')
-      break
-    case 'finished':
-      console.log('Success, please restart')
-      break
-    case 'failed':
-      console.log('msg.message.message')
-      break
-
-    default:
-      break
-  }
-  console.log(msg)
-  updateStatus.value = msg.status
-})
 </script>
 
 <style scoped lang="scss">
@@ -229,10 +65,6 @@ ipcRendererChannel.UpdateProcessStatus.on((event, msg) => {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-}
-
-body {
-  font-family: 'Source Sans Pro', sans-serif;
 }
 
 #wrapper {
@@ -249,6 +81,7 @@ body {
 main {
   display: flex;
   justify-content: space-between;
+  gap: 48px;
 }
 
 main > div {
@@ -258,12 +91,6 @@ main > div {
 .left-side {
   display: flex;
   flex-direction: column;
-}
-
-.welcome {
-  color: #555;
-  font-size: 23px;
-  margin-bottom: 10px;
 }
 
 .title {
@@ -278,16 +105,54 @@ main > div {
   margin-bottom: 10px;
 }
 
-.doc {
-  margin-bottom: 10px;
+.setup-hero {
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #dbe2ea;
+  background: #fff;
+  margin-bottom: 20px;
 }
 
-.doc p {
-  color: black;
-  margin-bottom: 10px;
+.setup-hero-title {
+  margin: 0 0 10px;
+  font-size: 22px;
+  font-weight: 650;
+  color: #0f172a;
+}
+
+.setup-hero-subtitle {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #475569;
+}
+
+.setup-hero-cta {
+  display: inline-block;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fff;
+  background: #409eff;
+}
+
+.setup-hero-cta:hover {
+  background: #3a8ee6;
+}
+
+.setup-hero-note {
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
 }
 
 .doc {
+  margin-bottom: 10px;
+
   button {
     margin-top: 10px;
     margin-right: 10px;
@@ -302,27 +167,21 @@ main > div {
     background-color: #409eff;
     border: 1px solid #409eff;
     text-align: center;
-    box-sizing: border-box;
     outline: none;
-    transition: 0.1s;
     font-weight: 500;
     padding: 12px 20px;
     font-size: 14px;
     border-radius: 4px;
   }
 
+  .btu--muted {
+    background: #64748b;
+    border-color: #64748b;
+  }
+
   .btu:focus,
   .btu:hover {
-    background: #3a8ee6;
-    border-color: #3a8ee6;
+    filter: brightness(1.05);
   }
-}
-
-.doc .button + .button {
-  margin-left: 0;
-}
-
-.conten {
-  text-align: center;
 }
 </style>

@@ -1,5 +1,6 @@
 import type { AppLocaleBundle } from '../types'
 import { settingsPanelsZhCn } from './panels-zh-cn'
+import { providerSetupZhCn } from './provider-setup-zh-cn'
 
 export const lang: AppLocaleBundle = {
   common: {
@@ -257,4 +258,5 @@ export const lang: AppLocaleBundle = {
     updateAvailableDescription:
       'OpenFDE v{version} 已可下载。请打开 设置 → 关于。',
   },
+  providerSetup: providerSetupZhCn,
 }

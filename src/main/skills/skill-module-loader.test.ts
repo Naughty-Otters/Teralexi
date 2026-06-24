@@ -77,6 +77,23 @@ describe('skill-module-loader', () => {
     expect(tools.map((t) => t.name)).toEqual(['nested_sheet_tool'])
   })
 
+  it('loadSkillActions loads tools from actions/index.ts without treating the directory as a module', async () => {
+    const actionsDir = join(skillRoot, 'actions')
+    await mkdir(actionsDir, { recursive: true })
+    await writeFile(
+      join(actionsDir, 'index.ts'),
+      `export const tools = [{
+        name: 'gw_tool',
+        description: 'google workspace',
+        execute: async () => 'ok'
+      }]`,
+      'utf8',
+    )
+
+    const tools = await loadSkillActions(skillRoot, ['gw_tool'])
+    expect(tools.map((t) => t.name)).toEqual(['gw_tool'])
+  })
+
   it('loadSkillActions loads tools from actions/*.js', async () => {
     const actionsDir = join(skillRoot, 'actions')
     await mkdir(actionsDir, { recursive: true })
