@@ -9,6 +9,11 @@ import {
   resolveRuntimeMcpServer,
   type McpServerRuntimeContext,
 } from './mcp-server-runtime'
+import {
+  buildStdioMcpEnv,
+  resolveCommandOnPath,
+  resolveStdioMcpCommand,
+} from './mcp-runtime-check'
 
 export interface McpToolDefinition {
   name: string
@@ -41,11 +46,31 @@ class McpServerManager {
         throw new Error(`MCP server ${server.name} is missing command`)
       }
 
+      const { command, path } = resolveStdioMcpCommand(server.command)
+      const resolved = resolveCommandOnPath(server.command, path)
+      if (!resolved) {
+        log.warn('MCP command not found on augmented PATH', {
+          serverId: server.id,
+          serverName: server.name,
+          command: server.command,
+          pathPreview: path.split(process.platform === 'win32' ? ';' : ':').slice(0, 10),
+        })
+      }
+      log.info('Starting MCP stdio server', {
+        serverId: server.id,
+        serverName: server.name,
+        command,
+        resolvedCommand: resolved,
+        args: server.args,
+        pathPreview: path.split(process.platform === 'win32' ? ';' : ':').slice(0, 10),
+      })
+
       return createMCPClient({
         transport: new Experimental_StdioMCPTransport({
-          command: server.command,
+          command,
           args: server.args,
-          env: Object.keys(server.env).length > 0 ? server.env : undefined,
+          env: buildStdioMcpEnv(server.env),
+          stderr: 'pipe',
         }),
       })
     }

@@ -207,6 +207,7 @@ export const useAgentStore = defineStore('agent', () => {
   const onboardingCompleted = ref(false)
   const mcpServers = ref<McpServerDefinition[]>([])
   const mcpToolsByServer = ref<Record<string, McpToolDefinition[]>>({})
+  const mcpToolsLoadErrorByServer = ref<Record<string, string>>({})
   /** conversationId → sandbox runs (for report panel + disk cleanup on delete). */
   const conversationSandboxRuns = ref<Record<string, ConversationSandboxRun[]>>(
     {},
@@ -2053,11 +2054,51 @@ export const useAgentStore = defineStore('agent', () => {
     return Array.isArray(tools) ? tools : []
   }
 
+  function formatMcpToolLoadError(error: unknown): string {
+    if (error instanceof Error && error.message.trim()) return error.message.trim()
+    if (typeof error === 'string' && error.trim()) return error.trim()
+    return 'Failed to load MCP server tools.'
+  }
+
+  function clearMcpToolsLoadError(serverId: string): void {
+    if (!(serverId in mcpToolsLoadErrorByServer.value)) return
+    const next = { ...mcpToolsLoadErrorByServer.value }
+    delete next[serverId]
+    mcpToolsLoadErrorByServer.value = next
+  }
+
+  async function refreshMcpServerTools(serverId: string): Promise<void> {
+    const server = mcpServers.value.find((entry) => entry.id === serverId)
+    try {
+      const tools = await fetchMcpServerTools(serverId)
+      mcpToolsByServer.value = {
+        ...mcpToolsByServer.value,
+        [serverId]: tools,
+      }
+      clearMcpToolsLoadError(serverId)
+    } catch (error) {
+      mcpToolsByServer.value = {
+        ...mcpToolsByServer.value,
+        [serverId]: [],
+      }
+      mcpToolsLoadErrorByServer.value = {
+        ...mcpToolsLoadErrorByServer.value,
+        [serverId]: formatMcpToolLoadError(error),
+      }
+      log.warn('Failed to load MCP server tools', {
+        serverId,
+        serverName: server?.name,
+        err: error,
+      })
+    }
+  }
+
   async function loadMcpServers(): Promise<void> {
     const channel = window.ipcRendererChannel?.ListMcpServers
     if (!channel?.invoke) {
       mcpServers.value = []
       mcpToolsByServer.value = {}
+      mcpToolsLoadErrorByServer.value = {}
       return
     }
 
@@ -2068,16 +2109,24 @@ export const useAgentStore = defineStore('agent', () => {
     mcpServers.value = Array.isArray(servers) ? servers : []
 
     const nextToolsMap: Record<string, McpToolDefinition[]> = {}
+    const nextErrors: Record<string, string> = {}
     for (const server of mcpServers.value) {
       if (!server.enabled) continue
       try {
         nextToolsMap[server.id] = await fetchMcpServerTools(server.id)
-      } catch {
+      } catch (error) {
+        log.warn('Failed to load MCP server tools', {
+          serverId: server.id,
+          serverName: server.name,
+          err: error,
+        })
         nextToolsMap[server.id] = []
+        nextErrors[server.id] = formatMcpToolLoadError(error)
       }
     }
 
     mcpToolsByServer.value = nextToolsMap
+    mcpToolsLoadErrorByServer.value = nextErrors
   }
 
   async function addMcpServer(input: {
@@ -2126,15 +2175,12 @@ export const useAgentStore = defineStore('agent', () => {
     target.enabled = enabled
 
     if (enabled) {
-      try {
-        mcpToolsByServer.value[serverId] = await fetchMcpServerTools(serverId)
-      } catch {
-        mcpToolsByServer.value[serverId] = []
-      }
+      await refreshMcpServerTools(serverId)
       return
     }
 
     delete mcpToolsByServer.value[serverId]
+    clearMcpToolsLoadError(serverId)
   }
 
   async function deleteMcpServer(serverId: string): Promise<void> {
@@ -2150,6 +2196,7 @@ export const useAgentStore = defineStore('agent', () => {
       (server) => server.id !== serverId,
     )
     delete mcpToolsByServer.value[serverId]
+    clearMcpToolsLoadError(serverId)
   }
 
   // ── Config updaters ───────────────────────────────────────────────────────
@@ -2865,6 +2912,7 @@ export const useAgentStore = defineStore('agent', () => {
     availableModelsByProvider,
     mcpServers,
     mcpToolsByServer,
+    mcpToolsLoadErrorByServer,
     enabledMcpTools,
     selectAgent,
     initializeSettingsFromConfig,
