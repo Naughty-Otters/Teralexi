@@ -184,7 +184,7 @@ function onComposerSubmit() {
   bottom: 10px;
   z-index: 1;
 }
-.chat-composer:has(.rich-composer--agent-picker-open) {
+.chat-composer:has(.rich-composer--picker-open) {
   position: relative;
   z-index: 30;
 }
