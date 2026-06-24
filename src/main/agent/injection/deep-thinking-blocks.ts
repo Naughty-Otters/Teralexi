@@ -4,19 +4,19 @@ import { getLastDeepThinkingInjection } from './deep-thinking-injection-state'
 import { readUserMessageText } from './injection-message-content'
 
 export const DEEP_THINKING_BEFORE_ANSWER_TEXT =
-  'Before answering, write a comprehensive breakdown of the problem. Outline few potential solutions, evaluate the pros and cons of each, and only then provide the final solution, do not list the hypotheses items in the final answer.'
+  'Before answering, think a comprehensive breakdown of the problem. Outline few potential solutions, evaluate the pros and cons of each, and **only write down the final solution**.'
 
 export const DEEP_THINKING_AFTER_ANSWER_TEXT =
   'After drafting your response, review it. Point out any logical flaws or missing details, and rewrite the answer to fix them.'
 
 export const DEEP_THINKING_BEFORE_MARKER =
-  'Before answering, write a comprehensive breakdown of the problem'
+  'Before answering, think a comprehensive breakdown of the problem.'
 
 export const DEEP_THINKING_AFTER_MARKER =
   'After drafting your response, review it'
 
 export const MULTIPLE_BRANCH_THINKING_TEXT =
-  'Evaluate multiple branches of logic and explore different reasoning paths before committing to one.'
+  'Evaluate multiple branches of logic and explore different reasoning paths before committing to one, write the final commit message.'
 
 export const MULTIPLE_BRANCH_THINKING_MARKER =
   'Evaluate multiple branches of logic and explore different reasoning paths'
