@@ -129,11 +129,14 @@ export const lang: AppLocaleBundle = {
     reasoningMaxTitle: 'Reasoning preview length',
     reasoningMaxDesc:
       'While the model is reasoning, keep at most this many recent characters visible per reasoning block. Older reasoning is omitted from the UI and is not saved.',
-    showAgenticRunTitle: 'Show Agentic Run bubbles',
+    showAgenticRunTitle: 'Tool call bubbles',
     showAgenticRunDesc:
-      'Display Agentic Run step bubbles and tool-loop panels during agent execution. Form and approval steps are always shown.',
+      'Controls tool call bubbles during agent runs. “Show all” lists every tool invocation; “Show latest only” keeps the most recent call visible. Form and approval steps are always shown.',
+    toolCallListNone: 'Hide tool calls',
+    toolCallListAll: 'Show all tool calls',
+    toolCallListLatest: 'Show latest tool call only',
     defaultsFootnote:
-      'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars, Agentic Run bubbles on.',
+      'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars, tool calls hidden.',
   },
   chat: {
     thoughtBubbleTitle: 'Thought briefly',

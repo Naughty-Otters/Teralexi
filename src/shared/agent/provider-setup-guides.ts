@@ -111,7 +111,7 @@ export const PROVIDER_SETUP_META: Record<ProviderType, ProviderSetupMeta> = {
     id: 'zhipu',
     category: 'cloud',
     requiresApiKey: true,
-    defaultBaseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    defaultBaseUrl: 'https://api.z.ai/api/paas/v4',
     ...CLOUD_DEFAULTS.zhipu,
   },
   moonshot: metaForOpenAiCompatible('moonshot')!,

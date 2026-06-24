@@ -136,7 +136,7 @@ describe('filterVisibleConversationBubbles', () => {
   it('hides thinking and agentic run once final text started', () => {
     const visible = filterVisibleConversationBubbles(sections, {
       finalTextStarted: true,
-      showAgenticRunBubbles: true,
+      toolCallListDisplay: 'all',
     })
     expect(visible.some((s) => THINKING_CONVERSATION_SECTION_IDS.has(s.id))).toBe(
       false,
@@ -147,9 +147,9 @@ describe('filterVisibleConversationBubbles', () => {
     expect(visible.some((s) => s.id === 'SummaryStep')).toBe(true)
   })
 
-  it('hides agentic run sections when disabled', () => {
+  it('hides agentic run sections when tool calls hidden', () => {
     const visible = filterVisibleConversationBubbles(sections, {
-      showAgenticRunBubbles: false,
+      toolCallListDisplay: 'none',
     })
     expect(
       visible.some((s) => AGENTIC_RUN_CONVERSATION_SECTION_IDS.has(s.id)),
@@ -173,7 +173,7 @@ describe('filterVisibleConversationBubbles', () => {
     ]
     const visible = filterVisibleConversationBubbles(onlyThinking, {
       finalTextStarted: true,
-      showAgenticRunBubbles: false,
+      toolCallListDisplay: 'none',
     })
     expect(visible).toHaveLength(1)
     expect(visible[0]?.id).toBe('ThinkingStep')

@@ -134,11 +134,11 @@ describe('ProviderAdapter', () => {
   it('ZhipuAdapter passes api key and base URL', () => {
     const model = new ZhipuAdapter().createModel('glm-4.6', {
       zhipuApiKey: 'zp-key',
-      zhipuBaseURL: 'https://open.bigmodel.cn/api/paas/v4',
+      zhipuBaseURL: 'https://api.z.ai/api/paas/v4',
     } as never)
     expect(createZhipu).toHaveBeenCalledWith({
       apiKey: 'zp-key',
-      baseURL: 'https://open.bigmodel.cn/api/paas/v4',
+      baseURL: 'https://api.z.ai/api/paas/v4',
     })
     expect(model).toEqual({ provider: 'zhipu' })
   })
@@ -148,13 +148,13 @@ describe('ProviderAdapter', () => {
       openAiCompatible: {
         moonshot: {
           apiKey: 'moon-key',
-          baseURL: 'https://api.moonshot.cn/v1',
+          baseURL: 'https://api.moonshot.ai/v1',
         },
       },
     } as never)
     expect(createMoonshotAI).toHaveBeenCalledWith({
       apiKey: 'moon-key',
-      baseURL: 'https://api.moonshot.cn/v1',
+      baseURL: 'https://api.moonshot.ai/v1',
     })
   })
 

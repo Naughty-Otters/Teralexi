@@ -15,6 +15,7 @@ import {
   clampChatUiContextWindowMessages,
   clampChatUiReasoningMaxChars,
   type ChatUiSettings,
+  type ChatUiToolCallListDisplay,
 } from '@shared/agent/chat-ui-settings'
 import {
   getSystemConfigValues,
@@ -34,8 +35,8 @@ export const chatUiContextWindowMessages = ref(
 export const chatUiReasoningMaxChars = ref(
   DEFAULT_CHAT_UI_SETTINGS.reasoningMaxChars,
 )
-export const chatUiShowAgenticRunBubbles = ref(
-  DEFAULT_CHAT_UI_SETTINGS.showAgenticRunBubbles,
+export const chatUiToolCallListDisplay = ref<ChatUiToolCallListDisplay>(
+  DEFAULT_CHAT_UI_SETTINGS.toolCallListDisplay,
 )
 
 /** Head/tail cap for sub-agent streaming bubbles only (main assistant text is full). */
@@ -65,7 +66,7 @@ export function applyChatUiSettings(settings: ChatUiSettings): void {
   chatUiReasoningMaxChars.value = clampChatUiReasoningMaxChars(
     settings.reasoningMaxChars,
   )
-  chatUiShowAgenticRunBubbles.value = settings.showAgenticRunBubbles
+  chatUiToolCallListDisplay.value = settings.toolCallListDisplay
 }
 
 export async function loadChatUiSettings(): Promise<ChatUiSettings> {
@@ -75,8 +76,12 @@ export async function loadChatUiSettings(): Promise<ChatUiSettings> {
   ])
   const parsed = applyShowAgenticRunBubblesDefaultMigration(values)
   if (shouldPersistShowAgenticRunBubblesMigration(values)) {
-    if (values[CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY] === 'false') {
-      await setSystemConfigValue(CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY, 'true')
+    const legacy = values[CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY]
+    if (legacy === 'false' || legacy === 'true') {
+      await setSystemConfigValue(
+        CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY,
+        legacy === 'true' ? 'all' : 'none',
+      )
     }
     await setSystemConfigValue(
       CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_MIGRATION_KEY,
@@ -101,7 +106,7 @@ export async function saveChatUiSettings(
       settings.contextWindowMessages,
     ),
     reasoningMaxChars: clampChatUiReasoningMaxChars(settings.reasoningMaxChars),
-    showAgenticRunBubbles: settings.showAgenticRunBubbles,
+    toolCallListDisplay: settings.toolCallListDisplay,
   }
   await Promise.all([
     setSystemConfigValue(
@@ -122,7 +127,7 @@ export async function saveChatUiSettings(
     ),
     setSystemConfigValue(
       CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY,
-      String(next.showAgenticRunBubbles),
+      next.toolCallListDisplay,
     ),
   ])
   applyChatUiSettings(next)

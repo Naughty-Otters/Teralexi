@@ -103,6 +103,7 @@
           v-else-if="bubble.kind === 'tool-group'"
           :items="toolGroupItems(bubble)"
           :active="toolGroupIsActive(bubble)"
+          :list-display="chatUiToolCallListDisplay"
         />
         <ChatToolInvocationRow
           v-else-if="bubble.kind === 'diff' || bubble.kind === 'tool'"
@@ -214,8 +215,10 @@ import {
   messageFinalTextStarted,
 } from '../conversationBubbleDisplay'
 import {
-  chatUiShowAgenticRunBubbles,
-} from '../chatUiSettings'
+  filterAssistantToolGroupBubbles,
+  shouldShowToolCallLists,
+} from '@shared/agent/tool-call-list-display'
+import { chatUiToolCallListDisplay } from '../chatUiSettings'
 
 const { t } = useI18n()
 
@@ -288,9 +291,10 @@ const briefModeBubbles = computed(() => {
       (bubble) => bubble.kind !== 'reasoning' && bubble.kind !== 'tool-group',
     )
   }
-  if (!chatUiShowAgenticRunBubbles.value) {
-    bubbles = bubbles.filter((bubble) => bubble.kind !== 'tool-group')
-  }
+  bubbles = filterAssistantToolGroupBubbles(
+    bubbles,
+    chatUiToolCallListDisplay.value,
+  )
   return bubbles
 })
 
@@ -424,7 +428,10 @@ function shouldShowAgentStepProgressPart(
   part: unknown,
 ): boolean {
   if (!isAgentStepProgressPart(part)) return false
-  if (!chatUiShowAgenticRunBubbles.value && isAgenticRunStepProgressPart(part)) {
+  if (
+    !shouldShowToolCallLists(chatUiToolCallListDisplay.value) &&
+    isAgenticRunStepProgressPart(part)
+  ) {
     return false
   }
   if (hasCompletedAssistantText(message)) return false

@@ -66,7 +66,7 @@ describe('llm-provider-registry', () => {
     expect(keys).toContain('settings.nvidiaNim.baseUrl')
 
     const empty = emptyOpenAiCompatibleCredentials()
-    expect(empty.moonshot.baseURL).toBe('https://api.moonshot.cn/v1')
+    expect(empty.moonshot.baseURL).toBe('https://api.moonshot.ai/v1')
     expect(empty.qwen.apiKey).toBe('')
   })
 })

@@ -37,4 +37,12 @@ next-env.d.ts
 
 .electron-vite/skill-module-cache/*
 .electron-vite/skill-module-cache-test/*
+
+dist/
 dist/**
+build/*
+!build/icons/
+!build/icons/**
+coverage/
+storage/
+skill-module-cache/*

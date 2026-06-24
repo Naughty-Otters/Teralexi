@@ -1,4 +1,7 @@
 import type { UIMessage } from '@openfde-ai'
+import {
+  shouldHideAgenticRunConversationSections,
+} from '@shared/agent/tool-call-list-display'
 import { userFacingTextFromStructuredOuter } from '@shared/agent/assistant-external-reply'
 import { parseAssistantStructuredContent } from '@store/agent/context'
 import {
@@ -93,7 +96,7 @@ export function isAgenticRunStepProgressPart(part: unknown): boolean {
 
 export type ConversationBubbleDisplayOptions = {
   finalTextStarted?: boolean
-  showAgenticRunBubbles?: boolean
+  toolCallListDisplay?: import('@shared/agent/tool-call-list-display').ChatUiToolCallListDisplay
 }
 
 export function filterVisibleConversationBubbles<
@@ -111,7 +114,10 @@ export function filterVisibleConversationBubbles<
     )
   }
 
-  if (options.showAgenticRunBubbles === false) {
+  if (
+    options.toolCallListDisplay &&
+    shouldHideAgenticRunConversationSections(options.toolCallListDisplay)
+  ) {
     result = result.filter(
       (section) => !AGENTIC_RUN_CONVERSATION_SECTION_IDS.has(section.id),
     )

@@ -1,4 +1,21 @@
 import { HEAD_TAIL_KEEP_CHARS } from '@shared/text/truncate-head-tail'
+import {
+  DEFAULT_CHAT_UI_TOOL_CALL_LIST_DISPLAY,
+  parseChatUiToolCallListDisplay,
+  type ChatUiToolCallListDisplay,
+} from './tool-call-list-display'
+
+export type { ChatUiToolCallListDisplay } from './tool-call-list-display'
+export {
+  CHAT_UI_TOOL_CALL_LIST_DISPLAY_VALUES,
+  DEFAULT_CHAT_UI_TOOL_CALL_LIST_DISPLAY,
+  filterAssistantToolGroupBubbles,
+  filterConversationToolResponseBubbles,
+  filterToolLoopPanelSlots,
+  parseChatUiToolCallListDisplay,
+  shouldHideAgenticRunConversationSections,
+  shouldShowToolCallLists,
+} from './tool-call-list-display'
 
 export const CHAT_UI_BUBBLE_TEXT_KEEP_CHARS_KEY = 'chat.ui.bubbleTextKeepChars'
 export const CHAT_UI_BUBBLE_COMPACT_LINES_KEY = 'chat.ui.bubbleCompactLines'
@@ -36,8 +53,8 @@ export type ChatUiSettings = {
   contextWindowMessages: number
   /** Max visible characters kept per reasoning block (most recent tail). */
   reasoningMaxChars: number
-  /** Show Agentic Run step bubbles and tool-loop panels in chat. */
-  showAgenticRunBubbles: boolean
+  /** Tool call list bubbles in chat: hide, show all batches, or latest only. */
+  toolCallListDisplay: ChatUiToolCallListDisplay
 }
 
 export const DEFAULT_CHAT_UI_SETTINGS: ChatUiSettings = {
@@ -45,7 +62,7 @@ export const DEFAULT_CHAT_UI_SETTINGS: ChatUiSettings = {
   bubbleCompactLines: 10,
   contextWindowMessages: 200,
   reasoningMaxChars: DEFAULT_CHAT_UI_REASONING_MAX_CHARS,
-  showAgenticRunBubbles: true,
+  toolCallListDisplay: DEFAULT_CHAT_UI_TOOL_CALL_LIST_DISPLAY,
 }
 
 export function clampChatUiBubbleTextKeepChars(value: number): number {
@@ -130,25 +147,18 @@ export function parseChatUiSettings(
       DEFAULT_CHAT_UI_SETTINGS.reasoningMaxChars,
       clampChatUiReasoningMaxChars,
     ),
-    showAgenticRunBubbles: parseChatUiBoolean(
+    toolCallListDisplay: parseChatUiToolCallListDisplay(
       values[CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY],
-      DEFAULT_CHAT_UI_SETTINGS.showAgenticRunBubbles,
+      DEFAULT_CHAT_UI_SETTINGS.toolCallListDisplay,
     ),
   }
 }
 
-/** Upgrade installs that persisted the old default (false) to the current default (true). */
+/** Normalize legacy boolean storage once (`true`/`false` → `all`/`none`). */
 export function applyShowAgenticRunBubblesDefaultMigration(
   values: Record<string, string | undefined>,
 ): ChatUiSettings {
-  const parsed = parseChatUiSettings(values)
-  if (values[CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_MIGRATION_KEY] === 'true') {
-    return parsed
-  }
-  if (values[CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY] === 'false') {
-    return { ...parsed, showAgenticRunBubbles: true }
-  }
-  return parsed
+  return parseChatUiSettings(values)
 }
 
 export function shouldPersistShowAgenticRunBubblesMigration(
