@@ -100,7 +100,7 @@
             </div>
 
             <div
-              v-if="messageQueue.length > 0"
+              v-if="queuedMessageCount > 0"
               class="message-queue"
               role="region"
               aria-label="Queued messages"
@@ -297,18 +297,14 @@ import { lastAssistantMessageIsCompleteWithCollectFormResponses } from './chat/c
 
 import { useHorizontalPanelResize } from '@renderer/composables/useHorizontalPanelResize'
 import PanelResizeHandle from '@renderer/components/PanelResizeHandle.vue'
-<<<<<<< HEAD
-import { handleSandboxPreviewLinkClick } from '../sandboxPreview'
-import { sandboxPreviewRequest } from '../sandboxPreviewBridge'
-=======
 import { handleChatPanelLinkClick } from '../sandboxPreview'
+import { bindSandboxPreviewRequest } from '../sandboxPreviewBridge'
 import {
   closePreviewLinkTab,
   openPreviewLinkTab,
   type PreviewLinkTab,
 } from '../report-preview-tabs'
 import type { ReportPanelPreviewSource } from './ReportPanel.vue'
->>>>>>> 4fa93a1 (update the themes)
 import ReportPanel from './ReportPanel.vue'
 import ChatPanelHeader from './ChatPanelHeader.vue'
 import ChatUserMessage from './ChatUserMessage.vue'
@@ -571,10 +567,11 @@ function onChatPanelClick(event: MouseEvent) {
 }
 
 function onChatBodySandboxPreviewClick(event: MouseEvent) {
-  handleSandboxPreviewLinkClick(event, openSandboxPreview)
+  handleChatPanelLinkClick(event, openSandboxPreview)
 }
 
 const messageQueue = ref<QueuedUserMessage[]>([])
+const queuedMessageCount = computed(() => messageQueue.value?.length ?? 0)
 
 /** Last conversation rendered in this panel (may differ from store during async select). */
 const lastViewedConversationId = ref<string | null>(null)
@@ -1307,12 +1304,9 @@ function onPlanModeStateChanged(
 
 let unregisterConversationStoreUiSync: (() => void) | null = null
 let stopContentAutoScroll: (() => void) | null = null
+let stopSandboxPreviewRequestWatch: (() => void) | null = null
 
-watch(sandboxPreviewRequest, (url) => {
-  if (!url) return
-  openSandboxPreview(url)
-  sandboxPreviewRequest.value = null
-})
+stopSandboxPreviewRequestWatch = bindSandboxPreviewRequest(openSandboxPreview)
 
 onMounted(() => {
   chatBodyEl.value?.addEventListener(
@@ -1375,6 +1369,8 @@ onUnmounted(() => {
   )
   stopContentAutoScroll?.()
   stopContentAutoScroll = null
+  stopSandboxPreviewRequestWatch?.()
+  stopSandboxPreviewRequestWatch = null
   unregisterConversationStoreUiSync?.()
   unregisterConversationStoreUiSync = null
   stopBackgroundTaskPolling()
