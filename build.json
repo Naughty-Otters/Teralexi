@@ -12,7 +12,7 @@
     "en-US"
   ],
   "afterPack": "scripts/electron-after-pack.cjs",
-  "extraFiles": [
+  "extraResources": [
     {
       "from": "build/icons",
       "to": "build/icons",

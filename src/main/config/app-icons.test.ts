@@ -33,6 +33,7 @@ describe('app-icons', () => {
   beforeEach(() => {
     vi.resetModules()
     mockApp.isPackaged = false
+    mockApp.getAppPath.mockReturnValue('/app')
   })
 
   it('configureAppBranding sets the product name', async () => {
@@ -46,5 +47,35 @@ describe('app-icons', () => {
     const { loadTrayIcon } = await import('./app-icons')
     const icon = loadTrayIcon()
     expect(icon.isEmpty()).toBe(false)
+  })
+
+  it('resolveBuildIconsDir prefers Resources/build/icons when packaged', async () => {
+    mockApp.isPackaged = true
+    mockApp.getAppPath.mockReturnValue('/OpenFDE.app/Contents/Resources/app.asar')
+    const existsSync = vi.fn((path: string) =>
+      String(path).endsWith('/Resources/build/icons/tray-icon.png'),
+    )
+    vi.doMock('fs', () => ({ existsSync }))
+    const { resolveBuildIconsDir } = await import('./app-icons')
+    expect(resolveBuildIconsDir()).toBe(
+      '/OpenFDE.app/Contents/Resources/build/icons',
+    )
+  })
+
+  it('getTrayIconPngPath prefers packaged tray icon before dev source paths', async () => {
+    mockApp.isPackaged = true
+    mockApp.getAppPath.mockReturnValue('/OpenFDE.app/Contents/Resources/app.asar')
+    const existsSync = vi.fn((path: string) => {
+      const normalized = String(path).replace(/\\/g, '/')
+      return (
+        normalized.endsWith('/Resources/build/icons/tray-icon.png') ||
+        normalized.endsWith('/Resources/build/icons/icon.icns')
+      )
+    })
+    vi.doMock('fs', () => ({ existsSync }))
+    const { getTrayIconPngPath } = await import('./app-icons')
+    expect(getTrayIconPngPath()).toBe(
+      '/OpenFDE.app/Contents/Resources/build/icons/tray-icon.png',
+    )
   })
 })

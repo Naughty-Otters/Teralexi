@@ -2,6 +2,7 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import { app, nativeImage, type NativeImage } from 'electron'
 import { createLogger } from '@main/logger'
+import { toOnDiskAppPath } from './app-paths'
 
 const log = createLogger('config.app-icons')
 
@@ -21,14 +22,22 @@ function projectRoot(): string {
     : join(__dirname, '..', '..', '..')
 }
 
-/** Packaged apps may store icons beside app.asar (asar) or under the app dir (no asar). */
+/** Packaged apps store icons under Resources/build/icons (extraResources). */
 export function resolveBuildIconsDir(): string {
   if (!app.isPackaged) {
     return join(__dirname, '..', '..', '..', 'build', 'icons')
   }
-  const inApp = join(app.getAppPath(), 'build', 'icons')
-  if (existsSync(inApp)) return inApp
-  return join(app.getAppPath(), '..', 'build', 'icons')
+
+  const appPath = app.getAppPath()
+  const resolved = firstExistingPath([
+    join(appPath, '..', 'build', 'icons'),
+    join(appPath, '..', '..', 'build', 'icons'),
+    join(appPath, 'build', 'icons'),
+  ])
+  if (resolved) return resolved
+
+  log.warn('Build icons directory not found in packaged app', { appPath })
+  return join(appPath, '..', 'build', 'icons')
 }
 
 function firstExistingPath(candidates: string[]): string | null {
@@ -56,11 +65,20 @@ export function getAppIconPngPath(): string {
 /** Bold template PNG for the macOS menu bar / system tray. */
 export function getTrayIconPngPath(): string {
   const root = projectRoot()
-  const resolved = firstExistingPath([
-    join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-tray-icon.png'),
-    join(resolveBuildIconsDir(), 'tray-icon.png'),
-    join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-logo.png'),
-  ])
+  const buildIcons = resolveBuildIconsDir()
+  const candidates = app.isPackaged
+    ? [
+        join(buildIcons, 'tray-icon.png'),
+        join(buildIcons, 'tray-icon@2x.png'),
+        join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-tray-icon.png'),
+        join(buildIcons, 'icon.png'),
+      ]
+    : [
+        join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-tray-icon.png'),
+        join(buildIcons, 'tray-icon.png'),
+        join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-logo.png'),
+      ]
+  const resolved = firstExistingPath(candidates)
   if (!resolved) {
     throw new Error('tray icon PNG not found')
   }
@@ -82,9 +100,10 @@ export function getFaviconSvgPath(): string {
 }
 
 function loadNativeImageFromPath(path: string): NativeImage {
-  const image = nativeImage.createFromPath(path)
+  const diskPath = toOnDiskAppPath(path)
+  const image = nativeImage.createFromPath(diskPath)
   if (image.isEmpty()) {
-    log.warn('Native image failed to load', { path })
+    log.warn('Native image failed to load', { path, diskPath })
   }
   return image
 }
@@ -115,6 +134,13 @@ export function loadTrayIcon(): NativeImage {
     isTrayTemplateIconPath(fallback)
   ) {
     fallbackImage.setTemplateImage(true)
+  }
+  if (fallbackImage.isEmpty()) {
+    log.error('Tray icon PNG could not be loaded', {
+      pngPath,
+      fallback,
+      buildIconsDir: resolveBuildIconsDir(),
+    })
   }
   return fallbackImage
 }
