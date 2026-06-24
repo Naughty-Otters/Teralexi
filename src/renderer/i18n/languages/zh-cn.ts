@@ -131,8 +131,14 @@ export const lang: AppLocaleBundle = {
     toolCallListNone: '不显示工具调用',
     toolCallListAll: '显示全部工具调用',
     toolCallListLatest: '仅显示最新工具调用',
+    thinkingBubbleTitle: '思考气泡',
+    thinkingBubbleDesc:
+      '控制聊天中的推理与 Thinking 步骤气泡。「显示全部」列出每个思考块；「仅最新」只保留最近一个。',
+    thinkingBubbleNone: '隐藏思考气泡',
+    thinkingBubbleAll: '显示全部思考气泡',
+    thinkingBubbleLatest: '仅显示最新思考气泡',
     defaultsFootnote:
-      '默认值：每端 {keepChars} 字符，{compactLines} 行紧凑高度，{contextMessages} 条上下文消息，推理 {reasoningMax} 字符，默认隐藏工具调用。',
+      '默认值：每端 {keepChars} 字符，{compactLines} 行紧凑高度，{contextMessages} 条上下文消息，推理 {reasoningMax} 字符，默认仅显示最新思考气泡、隐藏工具调用。',
   },
   chat: {
     thoughtBubbleTitle: '稍作思考',

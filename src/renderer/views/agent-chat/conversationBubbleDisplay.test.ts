@@ -157,6 +157,34 @@ describe('filterVisibleConversationBubbles', () => {
     expect(visible.some((s) => s.id === 'ThinkingStep')).toBe(true)
   })
 
+  it('hides thinking sections when thinking bubbles hidden', () => {
+    const visible = filterVisibleConversationBubbles(sections, {
+      thinkingBubbleDisplay: 'none',
+    })
+    expect(
+      visible.some((s) => THINKING_CONVERSATION_SECTION_IDS.has(s.id)),
+    ).toBe(false)
+    expect(visible.some((s) => s.id === 'SkillsToolExecutionStep')).toBe(true)
+  })
+
+  it('keeps only the latest thinking section when configured', () => {
+    const visible = filterVisibleConversationBubbles(
+      [
+        ...sections,
+        {
+          id: 'thinking',
+          title: 'Thinking again',
+          bodyHtml: '<p>more</p>',
+          status: 'done',
+        },
+      ],
+      { thinkingBubbleDisplay: 'latest' },
+    )
+    expect(visible.filter((s) => THINKING_CONVERSATION_SECTION_IDS.has(s.id))).toEqual([
+      expect.objectContaining({ id: 'thinking' }),
+    ])
+  })
+
   it('still omits report deliverables', () => {
     const visible = filterVisibleConversationBubbles(sections)
     expect(visible.some((s) => s.id === 'finalResult')).toBe(false)

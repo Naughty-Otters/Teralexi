@@ -4,6 +4,21 @@ import {
   parseChatUiToolCallListDisplay,
   type ChatUiToolCallListDisplay,
 } from './tool-call-list-display'
+import {
+  DEFAULT_CHAT_UI_THINKING_BUBBLE_DISPLAY,
+  parseChatUiThinkingBubbleDisplay,
+  type ChatUiThinkingBubbleDisplay,
+} from './thinking-bubble-display'
+
+export type { ChatUiThinkingBubbleDisplay } from './thinking-bubble-display'
+export {
+  CHAT_UI_THINKING_BUBBLE_DISPLAY_VALUES,
+  DEFAULT_CHAT_UI_THINKING_BUBBLE_DISPLAY,
+  filterAssistantReasoningBubbles,
+  filterThinkingConversationSections,
+  parseChatUiThinkingBubbleDisplay,
+  shouldShowThinkingBubbles,
+} from './thinking-bubble-display'
 
 export type { ChatUiToolCallListDisplay } from './tool-call-list-display'
 export {
@@ -26,12 +41,15 @@ export const CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY = 'chat.ui.showAgenticRunBubbl
 export const CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_MIGRATION_KEY =
   'chat.ui.showAgenticRunBubbles.migratedDefaultTrue'
 
+export const CHAT_UI_THINKING_BUBBLE_DISPLAY_KEY = 'chat.ui.thinkingBubbleDisplay'
+
 export const CHAT_UI_SETTINGS_PROP_KEYS = [
   CHAT_UI_BUBBLE_TEXT_KEEP_CHARS_KEY,
   CHAT_UI_BUBBLE_COMPACT_LINES_KEY,
   CHAT_UI_CONTEXT_WINDOW_MESSAGES_KEY,
   CHAT_UI_REASONING_MAX_CHARS_KEY,
   CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY,
+  CHAT_UI_THINKING_BUBBLE_DISPLAY_KEY,
 ] as const
 
 export const MIN_CHAT_UI_BUBBLE_TEXT_KEEP_CHARS = 50
@@ -55,6 +73,8 @@ export type ChatUiSettings = {
   reasoningMaxChars: number
   /** Tool call list bubbles in chat: hide, show all batches, or latest only. */
   toolCallListDisplay: ChatUiToolCallListDisplay
+  /** Thinking / reasoning bubbles in chat: hide, show all, or latest only. */
+  thinkingBubbleDisplay: ChatUiThinkingBubbleDisplay
 }
 
 export const DEFAULT_CHAT_UI_SETTINGS: ChatUiSettings = {
@@ -63,6 +83,7 @@ export const DEFAULT_CHAT_UI_SETTINGS: ChatUiSettings = {
   contextWindowMessages: 200,
   reasoningMaxChars: DEFAULT_CHAT_UI_REASONING_MAX_CHARS,
   toolCallListDisplay: DEFAULT_CHAT_UI_TOOL_CALL_LIST_DISPLAY,
+  thinkingBubbleDisplay: DEFAULT_CHAT_UI_THINKING_BUBBLE_DISPLAY,
 }
 
 export function clampChatUiBubbleTextKeepChars(value: number): number {
@@ -150,6 +171,10 @@ export function parseChatUiSettings(
     toolCallListDisplay: parseChatUiToolCallListDisplay(
       values[CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY],
       DEFAULT_CHAT_UI_SETTINGS.toolCallListDisplay,
+    ),
+    thinkingBubbleDisplay: parseChatUiThinkingBubbleDisplay(
+      values[CHAT_UI_THINKING_BUBBLE_DISPLAY_KEY],
+      DEFAULT_CHAT_UI_SETTINGS.thinkingBubbleDisplay,
     ),
   }
 }

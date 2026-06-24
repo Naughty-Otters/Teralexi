@@ -38,6 +38,7 @@ describe('chat-ui-settings', () => {
       contextWindowMessages: 200,
       reasoningMaxChars: 2000,
       toolCallListDisplay: 'none',
+      thinkingBubbleDisplay: 'latest',
     })
   })
 
@@ -54,6 +55,7 @@ describe('chat-ui-settings', () => {
       contextWindowMessages: 32,
       reasoningMaxChars: 2000,
       toolCallListDisplay: 'none',
+      thinkingBubbleDisplay: 'latest',
     })
   })
 

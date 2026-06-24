@@ -135,8 +135,14 @@ export const lang: AppLocaleBundle = {
     toolCallListNone: 'Hide tool calls',
     toolCallListAll: 'Show all tool calls',
     toolCallListLatest: 'Show latest tool call only',
+    thinkingBubbleTitle: 'Thinking bubbles',
+    thinkingBubbleDesc:
+      'Controls reasoning and Thinking-step bubbles in chat. “Show all” lists every thinking block; “Show latest only” keeps the most recent one.',
+    thinkingBubbleNone: 'Hide thinking bubbles',
+    thinkingBubbleAll: 'Show all thinking bubbles',
+    thinkingBubbleLatest: 'Show latest thinking bubble only',
     defaultsFootnote:
-      'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars, tool calls hidden.',
+      'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars, latest thinking bubble only, tool calls hidden.',
   },
   chat: {
     thoughtBubbleTitle: 'Thought briefly',
