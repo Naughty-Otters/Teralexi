@@ -62,6 +62,22 @@ const JUNK_DIR_NAMES = new Set([
 const JUNK_FILE_RE = /\.(?:map|md|markdown|ts|mts|cts|flow|yml|yaml)$/i
 const KEEP_FILE_RE = /^(?:license|readme|changelog)(?:\..*)?$/i
 
+/** Test and dev-only sources that must not ship in the packaged app. */
+const SHIPPED_SOURCE_TEST_FILE_RE =
+  /\.(?:test|integration\.test|mocked\.test|spec)\.(?:ts|tsx|js|jsx|mjs|cjs)$/i
+const SHIPPED_SOURCE_TEST_DIR_NAMES = new Set([
+  'test',
+  'tests',
+  '__tests__',
+])
+const SHIPPED_SOURCE_PRUNE_ROOTS = [
+  'src',
+  'toolSet',
+  'skills',
+  'config',
+  'dist/electron',
+]
+
 function shouldRemovePackage(name) {
   if (RUNTIME_PACKAGE_REMOVALS.has(name)) return true
   return RUNTIME_SCOPE_PREFIX_REMOVALS.some((prefix) => name.startsWith(prefix))
@@ -72,6 +88,51 @@ function removePackageDir(nodeModulesDir, name) {
   if (!existsSync(target)) return false
   rmSync(target, { recursive: true, force: true })
   return true
+}
+
+function shouldRemoveShippedSourceTestFile(fileName) {
+  if (fileName === 'vitest.setup.ts' || fileName === 'vitest.setup.js') {
+    return true
+  }
+  if (fileName === 'migration-test-db.test.ts') return true
+  return SHIPPED_SOURCE_TEST_FILE_RE.test(fileName)
+}
+
+function pruneShippedSourceTestsInDir(dir, stats) {
+  let entries
+  try {
+    entries = readdirSync(dir, { withFileTypes: true })
+  } catch {
+    return
+  }
+
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      if (SHIPPED_SOURCE_TEST_DIR_NAMES.has(entry.name)) {
+        rmSync(fullPath, { recursive: true, force: true })
+        stats.sourceTestDirs += 1
+        continue
+      }
+      pruneShippedSourceTestsInDir(fullPath, stats)
+      continue
+    }
+
+    if (!entry.isFile()) continue
+    if (!shouldRemoveShippedSourceTestFile(entry.name)) continue
+    rmSync(fullPath, { force: true })
+    stats.sourceTestFiles += 1
+  }
+}
+
+function pruneShippedSourceTests(appDir) {
+  const stats = { sourceTestDirs: 0, sourceTestFiles: 0 }
+  for (const relRoot of SHIPPED_SOURCE_PRUNE_ROOTS) {
+    const root = join(appDir, relRoot)
+    if (!existsSync(root)) continue
+    pruneShippedSourceTestsInDir(root, stats)
+  }
+  return stats
 }
 
 function pruneJunkInDir(dir, stats) {
@@ -165,15 +226,24 @@ function pruneDirectory(dir) {
     removedPackages: pruneRuntimeExcludedPackages(dir),
     junkDirs: 0,
     junkFiles: 0,
+    sourceTestDirs: 0,
+    sourceTestFiles: 0,
   }
   const junk = pruneJunkInNodeModules(dir)
   stats.junkDirs = junk.junkDirs
   stats.junkFiles = junk.junkFiles
+  const sourceTests = pruneShippedSourceTests(dir)
+  stats.sourceTestDirs = sourceTests.sourceTestDirs
+  stats.sourceTestFiles = sourceTests.sourceTestFiles
   return stats
 }
 
 function formatPruneStats(stats) {
-  return `removed ${stats.removedPackages} packages; deleted ${stats.junkDirs} junk dirs and ${stats.junkFiles} junk files`
+  return [
+    `removed ${stats.removedPackages} packages`,
+    `deleted ${stats.junkDirs} junk dirs and ${stats.junkFiles} junk files`,
+    `deleted ${stats.sourceTestDirs} test dirs and ${stats.sourceTestFiles} test files from shipped sources`,
+  ].join('; ')
 }
 
 function resourcesDir(context) {
@@ -200,3 +270,5 @@ module.exports = afterPack
 module.exports.RUNTIME_PACKAGE_REMOVALS = RUNTIME_PACKAGE_REMOVALS
 module.exports.RUNTIME_SCOPE_PREFIX_REMOVALS = RUNTIME_SCOPE_PREFIX_REMOVALS
 module.exports.shouldRemovePackage = shouldRemovePackage
+module.exports.shouldRemoveShippedSourceTestFile = shouldRemoveShippedSourceTestFile
+module.exports.pruneShippedSourceTests = pruneShippedSourceTests
