@@ -83,9 +83,45 @@
       >
         <UIcon name="i-lucide-link" />
       </button>
+      <button
+        type="button"
+        class="rich-composer-tool"
+        title="Attach files"
+        :disabled="disabled || !canAddAttachments"
+        @mousedown.prevent
+        @click="emit('pick-attachments')"
+      >
+        <UIcon name="i-lucide-paperclip" />
+      </button>
       </template>
     </div>
-    <div class="rich-composer-editor-wrap">
+    <div
+      v-if="stagedAttachments.length > 0"
+      class="rich-composer-attachments"
+      aria-label="Pending attachments"
+    >
+      <div
+        v-for="item in stagedAttachments"
+        :key="item.id"
+        class="rich-composer-attachment-chip"
+      >
+        <UIcon name="i-lucide-file" class="rich-composer-attachment-icon" />
+        <span class="rich-composer-attachment-name">{{ item.name }}</span>
+        <button
+          type="button"
+          class="rich-composer-attachment-remove"
+          aria-label="Remove attachment"
+          @click="emit('remove-attachment', item.id)"
+        >
+          <UIcon name="i-lucide-x" />
+        </button>
+      </div>
+    </div>
+    <div
+      class="rich-composer-editor-wrap"
+      @dragover.prevent="onDragOver"
+      @drop.prevent="onDrop"
+    >
       <ComposerSlashCommandMenu
         ref="slashMenuRef"
         :open="slashOpen"
@@ -146,6 +182,7 @@ import {
   type ComposerSlashCommand,
 } from './composer-slash-commands'
 import type { QueueDeliveryMode } from '../conversation-chat-session'
+import type { StagedChatAttachment } from '@renderer/composables/useChatAttachments'
 
 const props = withDefaults(
   defineProps<{
@@ -162,6 +199,8 @@ const props = withDefaults(
     /** When true, hides agent picker and workspace selector in the toolbar. */
     hideContextSelectors?: boolean
     disabled?: boolean
+    stagedAttachments?: StagedChatAttachment[]
+    canAddAttachments?: boolean
   }>(),
   {
     placeholder: 'Message…',
@@ -173,13 +212,18 @@ const props = withDefaults(
     subAgentMentionEnabled: false,
     hideContextSelectors: false,
     disabled: false,
+    stagedAttachments: () => [],
+    canAddAttachments: true,
   },
 )
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
-  submit: []
   'select-agent': [agentId: string]
+  submit: []
+  'pick-attachments': []
+  'remove-attachment': [id: string]
+  'add-attachment-paths': [paths: string[]]
 }>()
 
 let syncingFromParent = false
@@ -428,17 +472,35 @@ async function refreshMentionMenu(ed: Editor) {
   mentionLoading.value = true
   try {
     const ch = window.ipcRendererChannel?.SearchWorkspaceFiles
-    if (!ch) {
-      mentionItems.value = []
-      return
-    }
-    const result = await ch.invoke({
-      conversationId: props.conversationId,
-      query: hit.query,
-      limit: 20,
-    })
+    const uploadCh = window.ipcRendererChannel?.SearchChatAttachments
+    const uploadsPromise = uploadCh
+      ? uploadCh.invoke({
+          conversationId: props.conversationId,
+          query: hit.query,
+          limit: 10,
+        })
+      : Promise.resolve({ ok: true, paths: [] as string[] })
+    const workspacePromise = ch
+      ? ch.invoke({
+          conversationId: props.conversationId,
+          query: hit.query,
+          limit: 20,
+        })
+      : Promise.resolve({ ok: true, paths: [] as string[] })
+
+    const [uploadResult, workspaceResult] = await Promise.all([
+      uploadsPromise,
+      workspacePromise,
+    ])
     if (token !== mentionSearchToken) return
-    mentionItems.value = result.ok ? result.paths : []
+    const uploadPaths = uploadResult.ok ? uploadResult.paths : []
+    const workspacePaths = workspaceResult.ok ? workspaceResult.paths : []
+    const seen = new Set<string>()
+    mentionItems.value = [...uploadPaths, ...workspacePaths].filter((path) => {
+      if (seen.has(path)) return false
+      seen.add(path)
+      return true
+    })
   } finally {
     if (token === mentionSearchToken) mentionLoading.value = false
   }
@@ -454,6 +516,25 @@ function onMentionSelect(path: string) {
     .insertContentAt({ from: range.from, to: range.to }, insert)
     .run()
   closeMentionMenu()
+}
+
+function onDragOver(event: DragEvent) {
+  if (props.disabled || !props.canAddAttachments) return
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+}
+
+function onDrop(event: DragEvent) {
+  if (props.disabled || !props.canAddAttachments) return
+  const files = event.dataTransfer?.files
+  if (!files || files.length === 0) return
+  const paths: string[] = []
+  for (const file of files) {
+    const withPath = file as File & { path?: string }
+    if (typeof withPath.path === 'string' && withPath.path.trim()) {
+      paths.push(withPath.path.trim())
+    }
+  }
+  if (paths.length > 0) emit('add-attachment-paths', paths)
 }
 
 watch(
@@ -731,6 +812,58 @@ function onLinkClick() {
   min-height: 0;
   position: relative;
   z-index: 2;
+}
+
+.rich-composer-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 10px 8px;
+}
+
+.rich-composer-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--ui-border);
+  background: color-mix(in srgb, var(--ui-text) 4%, var(--ui-bg-elevated));
+  font-size: 12px;
+  color: var(--ui-text);
+}
+
+.rich-composer-attachment-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--ui-text-muted);
+}
+
+.rich-composer-attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+.rich-composer-attachment-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ui-text-muted);
+  cursor: pointer;
+}
+
+.rich-composer-attachment-remove:hover {
+  background: color-mix(in srgb, var(--ui-text) 10%, transparent);
+  color: var(--ui-text);
 }
 
 .rich-composer-editor {

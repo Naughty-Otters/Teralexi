@@ -60,17 +60,20 @@ const TOOL_LOOP_DEFAULT_USER_MESSAGES = [
   'deep-thinking-before-answer',
   'multiple-branch-thinking',
   'current-datetime',
+  'user-uploads',
   'plan-mode',
 ] as const
 const TOOL_LOOP_CODING_ROOT_USER_MESSAGES = [
   'deep-thinking-before-answer',
   'multiple-branch-thinking',
   'current-datetime',
+  'user-uploads',
 ] as const
 const TOOL_LOOP_CODING_CHILD_USER_MESSAGES = [
   'deep-thinking-before-answer',
   'multiple-branch-thinking',
   'current-datetime',
+  'user-uploads',
   'plan-mode',
 ] as const
 

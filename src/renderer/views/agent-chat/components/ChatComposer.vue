@@ -29,9 +29,14 @@
         :coding-agent="codingAgent"
         :sub-agent-targets="subAgentTargets"
         :sub-agent-mention-enabled="subAgentMentionEnabled"
+        :staged-attachments="stagedAttachments"
+        :can-add-attachments="canAddAttachments"
         placeholder="Message…"
         @update:model-value="emit('update:modelValue', $event)"
         @select-agent="emit('select-agent', $event)"
+        @pick-attachments="emit('pick-attachments')"
+        @remove-attachment="emit('remove-attachment', $event)"
+        @add-attachment-paths="emit('add-attachment-paths', $event)"
         @submit="onComposerSubmit"
       />
       <button
@@ -76,6 +81,7 @@ import WorkspacePathBanner from './WorkspacePathBanner.vue'
 import BackgroundTaskPanel, {
   type BackgroundTaskView,
 } from './BackgroundTaskPanel.vue'
+import type { StagedChatAttachment } from '@renderer/composables/useChatAttachments'
 
 const props = defineProps<{
   modelValue: string
@@ -95,6 +101,8 @@ const props = defineProps<{
   backgroundTasks?: BackgroundTaskView[]
   subAgentTargets?: SubAgentTarget[]
   subAgentMentionEnabled?: boolean
+  stagedAttachments?: StagedChatAttachment[]
+  canAddAttachments?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -102,6 +110,9 @@ const emit = defineEmits<{
   'update:codingMode': [mode: CodingMode]
   'select-agent': [agentId: string]
   'cancel-background-task': [taskId: string]
+  'pick-attachments': []
+  'remove-attachment': [id: string]
+  'add-attachment-paths': [paths: string[]]
   submit: []
 }>()
 
@@ -111,6 +122,8 @@ const backgroundTasks = computed(() => props.backgroundTasks ?? [])
 const showCodingModeBar = computed(() => props.showCodingModeBar === true)
 const subAgentTargets = computed(() => props.subAgentTargets ?? [])
 const subAgentMentionEnabled = computed(() => props.subAgentMentionEnabled === true)
+const stagedAttachments = computed(() => props.stagedAttachments ?? [])
+const canAddAttachments = computed(() => props.canAddAttachments !== false)
 
 const planStatusHint = computed(() =>
   planModeComposerHint(props.planDisplayStatus ?? 'tool_execute'),

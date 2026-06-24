@@ -1,5 +1,5 @@
 <template>
-  <div ref="rootEl" class="llm-provider-select">
+  <div ref="rootEl" class="llm-provider-select" :class="{ 'llm-provider-select--open': menuOpen }">
     <button
       ref="triggerRef"
       type="button"
@@ -259,6 +259,10 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
+.llm-provider-select--open {
+  z-index: 120;
+}
+
 .llm-provider-select__trigger {
   display: flex;
   align-items: center;
@@ -313,7 +317,7 @@ onBeforeUnmount(() => {
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  z-index: 30;
+  z-index: 130;
   max-height: 260px;
   overflow-y: auto;
   padding: 4px;

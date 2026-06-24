@@ -22,11 +22,13 @@ import { deepThinkingBeforeAnswerInjector } from './injectors/deep-thinking-befo
 import { multipleBranchThinkingInjector } from './injectors/multiple-branch-thinking'
 import { deepThinkingAfterAnswerInjector } from './injectors/deep-thinking-after-answer'
 import { diagramOutputInjector } from './injectors/diagram-output'
+import { userUploadsInjector } from './injectors/user-uploads'
 
 const ALL_INJECTORS: AgentInjector[] = [
   deepThinkingBeforeAnswerInjector,
   multipleBranchThinkingInjector,
   currentDatetimeInjector,
+  userUploadsInjector,
   deepThinkingAfterAnswerInjector,
   baseToolLoopInjector,
   skillsInjector,

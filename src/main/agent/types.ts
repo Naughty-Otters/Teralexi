@@ -108,6 +108,8 @@ export type AgentResponseOpts = {
   conversationId?: string
   /** Fires once per run after the sandbox directory is ready */
   onSandboxReady?: (payload: AgentSandboxReadyPayload) => void
+  /** User-uploaded files for the current turn (copied under input/uploads/). */
+  userAttachments?: import('@shared/chat/attachments').ChatAttachmentMeta[]
   /** After the run finishes, when `result-snapshot.pdf` is written under output/results */
   onSandboxResultWritten?: (payload: AgentSandboxReadyPayload) => void
   /** Same assistant row id as renderer Chat / IPC stream (used for pending execution resume). */

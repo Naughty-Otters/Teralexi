@@ -15,8 +15,8 @@ function renderLinkCard(link: StepOutputLinkView): string {
   const url = escHtml(link.url)
   const label = escHtml(link.label)
   return `<li class="step-output-link-card">
-<a href="${url}" class="sandbox-preview-link step-output-link-card__label">${label}</a>
-<a href="${url}" class="sandbox-preview-link step-output-link-preview step-output-link-preview--loading" data-step-output-preview-url="${url}" aria-label="Open ${label}">
+<a href="#" class="sandbox-preview-link step-output-link-card__label" data-sandbox-preview-url="${url}">${label}</a>
+<a href="#" class="sandbox-preview-link step-output-link-preview step-output-link-preview--loading" data-sandbox-preview-url="${url}" aria-label="Open ${label}">
 <span class="step-output-link-preview__status">Loading preview…</span>
 </a>
 </li>`

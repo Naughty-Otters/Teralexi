@@ -87,6 +87,28 @@ html.glass {
 html.glass .slash-command-menu,
 html.glass .agent-picker-menu,
 html.glass .sub-agent-mention-menu,
-html.glass .file-mention-menu {
+html.glass .file-mention-menu,
+html.glass .llm-provider-select__menu,
+html.glass .llm-model-select__menu {
   @include glass-backdrop;
+}
+
+html.glass .llm-provider-select--open,
+html.glass .llm-model-select--open {
+  z-index: 120;
+}
+
+html.glass .llm-provider-select__menu,
+html.glass .llm-model-select__menu {
+  z-index: 130;
+}
+
+html.glass .onboarding-agents-bulk:has(.llm-provider-select--open),
+html.glass .onboarding-agents-bulk:has(.llm-model-select--open),
+html.glass .onboarding-agents-row:has(.llm-provider-select--open),
+html.glass .onboarding-agents-row:has(.llm-model-select--open),
+html.glass .provider-setup-body--configure:has(.llm-provider-select--open),
+html.glass .provider-setup-body--configure:has(.llm-model-select--open) {
+  z-index: 50;
+  position: relative;
 }

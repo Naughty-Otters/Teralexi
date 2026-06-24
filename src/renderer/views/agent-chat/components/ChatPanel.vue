@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-panel" @click="onChatPanelClick">
+  <div class="chat-panel" @click.capture="onChatPanelClick">
     <ChatPanelHeader
       :active-agent-name="activeAgentName"
       :active-agent-model="activeAgentModel"
@@ -159,11 +159,19 @@
           :background-tasks="backgroundTasks"
           :sub-agent-targets="delegatableSubAgentTargets"
           :sub-agent-mention-enabled="subAgentMentionEnabled"
+          :staged-attachments="stagedAttachments"
+          :can-add-attachments="canAddAttachments"
           @select-agent="onSelectAgent"
           @update:coding-mode="onCodingModeChange"
           @cancel-background-task="onCancelBackgroundTask"
+          @pick-attachments="pickAttachments"
+          @remove-attachment="removeStaged"
+          @add-attachment-paths="addSourcePaths"
           @submit="onSubmit"
         />
+        <p v-if="attachmentError" class="chat-attachment-error" role="alert">
+          {{ attachmentError }}
+        </p>
       </section>
 
       <PanelResizeHandle
@@ -193,6 +201,7 @@ import {
   nextTick,
   onMounted,
   onUnmounted,
+  provide,
   ref,
   shallowRef,
   watch,
@@ -230,6 +239,9 @@ import { collectConversationWorkspaceAttachments } from '@shared/agent/conversat
 import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { DEFAULT_USER_ID } from '@store/agent/config'
 import { setTitleBarChatControls } from '@renderer/composables/useTitleBarChatControls'
+import { useChatAttachments } from '@renderer/composables/useChatAttachments'
+import type { ChatAttachmentMeta } from '@shared/chat/attachments'
+import { CHAT_MESSAGE_ATTACHMENTS_KEY } from './chatAttachmentContext'
 
 import {
   createRendererChatGenerateId,
@@ -281,6 +293,7 @@ import { lastAssistantMessageIsCompleteWithCollectFormResponses } from './chat/c
 import { useHorizontalPanelResize } from '@renderer/composables/useHorizontalPanelResize'
 import PanelResizeHandle from '@renderer/components/PanelResizeHandle.vue'
 import { handleSandboxPreviewLinkClick } from '../sandboxPreview'
+import { sandboxPreviewRequest } from '../sandboxPreviewBridge'
 import ReportPanel from './ReportPanel.vue'
 import ChatPanelHeader from './ChatPanelHeader.vue'
 import ChatUserMessage from './ChatUserMessage.vue'
@@ -357,6 +370,50 @@ const backgroundTasks = ref<BackgroundTaskView[]>([])
 let backgroundTaskPollTimer: ReturnType<typeof setInterval> | null = null
 
 const draft = ref('')
+const messageAttachmentsById = ref<Record<string, ChatAttachmentMeta[]>>({})
+const {
+  staged: stagedAttachments,
+  attachmentSourcePaths,
+  pickAttachments,
+  addSourcePaths,
+  removeStaged,
+  clearStaging,
+  canAddMore: canAddAttachments,
+  error: attachmentError,
+} = useChatAttachments({
+  conversationId: computed(() => agentStore.currentConversationId),
+})
+
+provide(CHAT_MESSAGE_ATTACHMENTS_KEY, messageAttachmentsById)
+provide(
+  'chatConversationId',
+  computed(() => agentStore.currentConversationId),
+)
+
+async function loadConversationAttachments(conversationId: string | null | undefined) {
+  const cid = conversationId?.trim()
+  if (!cid) {
+    messageAttachmentsById.value = {}
+    return
+  }
+  const ch = window.ipcRendererChannel?.GetConversationAttachments
+  if (!ch) return
+  const result = await ch.invoke({ conversationId: cid })
+  if (!result.ok) return
+  const grouped: Record<string, ChatAttachmentMeta[]> = {}
+  for (const item of result.attachments ?? []) {
+    const messageId = item.messageId?.trim()
+    if (!messageId) continue
+    grouped[messageId] = [...(grouped[messageId] ?? []), item]
+  }
+  messageAttachmentsById.value = grouped
+}
+
+function sendTextForAttachments(sourcePaths: readonly string[]): string {
+  if (sourcePaths.length === 0) return ''
+  return `Attached ${sourcePaths.length} file${sourcePaths.length === 1 ? '' : 's'}`
+}
+
 const showReportPanel = ref(false)
 const showWorkspaceSplitPanel = ref(false)
 const reportPreviewUrlOverride = ref<string | null>(null)
@@ -415,6 +472,10 @@ function openSandboxPreview(url: string) {
 }
 
 function onChatPanelClick(event: MouseEvent) {
+  handleSandboxPreviewLinkClick(event, openSandboxPreview)
+}
+
+function onChatBodySandboxPreviewClick(event: MouseEvent) {
   handleSandboxPreviewLinkClick(event, openSandboxPreview)
 }
 
@@ -686,11 +747,13 @@ watch(selectedAgentIsGoogleWorkspace, (active) => {
 
 const canSend = computed(() => {
   const text = draft.value.trim()
-  if (!text) return false
-  if (isSkillSwitchCommand(text)) return true
-  if (isAgentSlashCommand(text)) return true
-  if (isWorkspaceSlashCommand(text)) return true
+  const hasAttachments = attachmentSourcePaths.value.length > 0
+  if (!text && !hasAttachments) return false
+  if (text && isSkillSwitchCommand(text)) return true
+  if (text && isAgentSlashCommand(text)) return true
+  if (text && isWorkspaceSlashCommand(text)) return true
   if (
+    text &&
     isSubAgentSlashCommand(text) &&
     subAgentMentionEnabled.value &&
     parseSubAgentSlashCommand(text, delegatableSubAgentTargets.value)
@@ -969,7 +1032,20 @@ async function dequeueAndSendNext(): Promise<void> {
   const next = messageQueue.value[0]
   messageQueue.value = messageQueue.value.slice(1)
   try {
-    await chat.sendMessage({ text: next.text })
+    const sendText =
+      next.text.trim() ||
+      (next.attachmentSourcePaths?.length
+        ? `Attached ${next.attachmentSourcePaths.length} file${
+            next.attachmentSourcePaths.length === 1 ? '' : 's'
+          }`
+        : '')
+    await chat.sendMessage(
+      { text: sendText },
+      next.attachmentSourcePaths?.length
+        ? { body: { attachmentSourcePaths: next.attachmentSourcePaths } }
+        : undefined,
+    )
+    void loadConversationAttachments(chat.id)
   } catch {
     messageQueue.value = [next, ...messageQueue.value]
   }
@@ -1137,7 +1213,18 @@ function onPlanModeStateChanged(
 let unregisterConversationStoreUiSync: (() => void) | null = null
 let stopContentAutoScroll: (() => void) | null = null
 
+watch(sandboxPreviewRequest, (url) => {
+  if (!url) return
+  openSandboxPreview(url)
+  sandboxPreviewRequest.value = null
+})
+
 onMounted(() => {
+  chatBodyEl.value?.addEventListener(
+    'click',
+    onChatBodySandboxPreviewClick,
+    true,
+  )
   setVisibleConversationForUiFlush(agentStore.currentConversationId)
   stopContentAutoScroll = startContentAutoScroll()
   unregisterConversationStoreUiSync = registerConversationStoreUiSync(
@@ -1148,6 +1235,7 @@ onMounted(() => {
   if (cid) {
     void loadCodingMode(cid)
     void loadPlanModeState(cid)
+    void loadConversationAttachments(cid)
     if (selectedAgentIsCoding.value) startBackgroundTaskPolling()
   }
   window.ipcRendererChannel?.PlanModeStateChanged?.on?.(onPlanModeStateChanged)
@@ -1175,7 +1263,21 @@ watch(
   },
 )
 
+watch(
+  () => agentStore.currentConversationId,
+  (conversationId) => {
+    setVisibleConversationForUiFlush(conversationId)
+    clearStaging()
+    void loadConversationAttachments(conversationId)
+  },
+)
+
 onUnmounted(() => {
+  chatBodyEl.value?.removeEventListener(
+    'click',
+    onChatBodySandboxPreviewClick,
+    true,
+  )
   stopContentAutoScroll?.()
   stopContentAutoScroll = null
   unregisterConversationStoreUiSync?.()
@@ -1716,9 +1818,10 @@ async function runCompactCommand(conversationId: string, hint: string) {
 
 async function onSubmit() {
   const text = draft.value.trim()
-  if (!text) return
+  const sourcePaths = [...attachmentSourcePaths.value]
+  if (!text && sourcePaths.length === 0) return
 
-  const skillSwitchTarget = parseSkillSwitchCommand(text)
+  const skillSwitchTarget = text ? parseSkillSwitchCommand(text) : null
   if (skillSwitchTarget) {
     draft.value = ''
     await runSkillSwitchCommand(skillSwitchTarget)
@@ -1860,30 +1963,47 @@ async function onSubmit() {
   if (isBusy.value || pendingHitl) {
     messageQueue.value = [
       ...messageQueue.value,
-      { id: crypto.randomUUID(), text },
+      {
+        id: crypto.randomUUID(),
+        text: text || sendTextForAttachments(sourcePaths),
+        attachmentSourcePaths: sourcePaths.length > 0 ? sourcePaths : undefined,
+      },
     ]
     draft.value = ''
+    clearStaging()
     armStickToBottom()
     scheduleScrollToBottom('auto')
     return
   }
 
   draft.value = ''
+  clearStaging()
   armStickToBottom()
   scheduleScrollToBottom('auto')
+  const sendText = text || sendTextForAttachments(sourcePaths)
   if (subAgentMention) {
-    await chatInst.value!.sendMessage({
-      text,
-      body: {
-        subAgentMention: {
-          targetAgentId: subAgentMention.agentId,
-          task: subAgentMention.task,
+    await chatInst.value!.sendMessage(
+      { text: sendText },
+      {
+        body: {
+          subAgentMention: {
+            targetAgentId: subAgentMention.agentId,
+            task: subAgentMention.task,
+          },
+          attachmentSourcePaths: sourcePaths,
         },
       },
-    })
+    )
+    void loadConversationAttachments(conversationId)
     return
   }
-  await chatInst.value!.sendMessage({ text })
+  await chatInst.value!.sendMessage(
+    { text: sendText },
+    sourcePaths.length > 0
+      ? { body: { attachmentSourcePaths: sourcePaths } }
+      : undefined,
+  )
+  void loadConversationAttachments(conversationId)
 }
 
 function onSelectAgent(agentId: string) {
@@ -2134,5 +2254,11 @@ watchEffect(() => {
 .message-queue__remove-icon {
   width: 16px;
   height: 16px;
+}
+.chat-attachment-error {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--color-warning-600, #d97706);
+  line-height: 1.4;
 }
 </style>

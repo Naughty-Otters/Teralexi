@@ -1,5 +1,6 @@
 import type { WebContents } from 'electron'
 import { getConversationStore } from '@main/services/conversation-store'
+import { resolveUserAttachmentsForTurn } from '@main/services/chat-attachments'
 import { notifyConversationStoreChanged } from '@main/services/conversation-store-notify'
 import { webContentSend } from '@main/services/web-content-send'
 import { createLogger } from '@main/logger'
@@ -239,6 +240,8 @@ export type RunAgentForConversationArgs = {
     content: string
     createdAt: string
   }
+  userAttachments?: import('@shared/chat/attachments').ChatAttachmentMeta[]
+  attachmentSourcePaths?: string[]
   webContents?: WebContents
 }
 
@@ -273,6 +276,7 @@ export async function runAgentForConversation(
         userId,
         uiMessages,
         pendingUserMessage,
+        userAttachments: args.userAttachments,
         webContents,
       }),
   )
@@ -340,6 +344,21 @@ async function executeAgentForConversation(
   const mcpTools = await loadMcpToolsForAgent(userId, agent)
   const enabledSkillTools = resolveEnabledSkillToolNames(agent)
 
+  const attachmentResult = await resolveUserAttachmentsForTurn({
+    conversationId,
+    messageId: pendingUserMessage?.id,
+    userAttachments: args.userAttachments,
+    attachmentSourcePaths: args.attachmentSourcePaths,
+  })
+  if (attachmentResult.error) {
+    return {
+      finalContent: '',
+      hasError: true,
+      errorMessage: attachmentResult.error,
+    }
+  }
+  const userAttachments = attachmentResult.attachments
+
   log.info(ConfigContext.ENGINE_LOG.PREPARED_CONTEXT, {
     conversationId,
     agentId,
@@ -404,6 +423,7 @@ async function executeAgentForConversation(
       onSubAgentRunEvent: streamBridge.onSubAgentRunEvent,
       onSandboxReady: streamBridge.onSandboxReady,
       onSandboxResultWritten: streamBridge.onSandboxResultWritten,
+      userAttachments,
       eventBus,
     }
 
@@ -527,6 +547,8 @@ export type RunSubAgentMentionArgs = {
     content: string
     createdAt: string
   }
+  userAttachments?: import('@shared/chat/attachments').ChatAttachmentMeta[]
+  attachmentSourcePaths?: string[]
   webContents?: WebContents
 }
 
@@ -591,6 +613,21 @@ async function executeSubAgentMentionDelegation(
     uiMessages,
     pendingUserMessage,
   })
+
+  const attachmentResult = await resolveUserAttachmentsForTurn({
+    conversationId,
+    messageId: pendingUserMessage?.id,
+    userAttachments: args.userAttachments,
+    attachmentSourcePaths: args.attachmentSourcePaths,
+  })
+  if (attachmentResult.error) {
+    return {
+      finalContent: '',
+      hasError: true,
+      errorMessage: attachmentResult.error,
+    }
+  }
+  const userAttachments = attachmentResult.attachments
 
   await maybeAutoCompactConversationHistory({ conversationId, userId })
 
@@ -697,6 +734,7 @@ async function executeSubAgentMentionDelegation(
       onSubAgentRunEvent: streamBridge.onSubAgentRunEvent,
       onSandboxReady: streamBridge.onSandboxReady,
       onSandboxResultWritten: streamBridge.onSandboxResultWritten,
+      userAttachments,
       eventBus,
     }
 

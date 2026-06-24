@@ -29,6 +29,26 @@ export function runMigrations(db: Database.Database): void {
   migrateAgentStageLlmColumns(db)
   migrateWorkflowsSchema(db)
   migrateSchedulersRunWorkflow(db)
+  migrateMessageAttachments(db)
+}
+
+function migrateMessageAttachments(db: Database.Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS message_attachments (
+      id              TEXT PRIMARY KEY,
+      message_id      TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+      conversation_id TEXT NOT NULL,
+      original_name   TEXT NOT NULL,
+      mime_type       TEXT,
+      size_bytes      INTEGER NOT NULL,
+      sandbox_path    TEXT NOT NULL,
+      created_at      TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_message_attachments_message
+      ON message_attachments (message_id);
+    CREATE INDEX IF NOT EXISTS idx_message_attachments_conversation
+      ON message_attachments (conversation_id, created_at);
+  `)
 }
 
 function migrateAgentStageLlmColumns(db: Database.Database): void {

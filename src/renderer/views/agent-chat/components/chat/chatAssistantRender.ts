@@ -1,6 +1,7 @@
 import type { UIMessage, TextUIPart } from '@openfde-ai'
 import type MarkdownIt from 'markdown-it'
 import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
+import { rewriteSandboxPreviewLinksInHtml } from '@shared/markdown/sandbox-preview-links'
 import { renderAssistantMessageHtml } from '../../assistantStructuredRender'
 import {
   getCachedAssistantHtml,
@@ -42,7 +43,7 @@ export function createAssistantTextPartHtmlRenderer(opts: {
       structuredDebug: opts.getStructuredDebug(),
     })
     if (!streaming) {
-      html = resolveDiagramBlocksInHtml(html)
+      html = rewriteSandboxPreviewLinksInHtml(resolveDiagramBlocksInHtml(html))
     }
     chatUiPerfMarkEnd('markdown')
 

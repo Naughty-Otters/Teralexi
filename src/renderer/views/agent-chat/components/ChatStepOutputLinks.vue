@@ -37,16 +37,18 @@
         <!-- Standard preview card (image / HTML / PDF) -->
         <template v-else>
           <a
-            :href="link.url"
+            href="#"
             class="sandbox-preview-link step-output-link-card__label"
+            :data-sandbox-preview-url="link.url"
             @click.prevent="emit('open', link.url)"
           >
             {{ link.label }}
           </a>
           <a
             v-if="!stateFor(link.url)?.error"
-            :href="link.url"
+            href="#"
             class="sandbox-preview-link step-output-link-preview"
+            :data-sandbox-preview-url="link.url"
             :class="{
               'step-output-link-preview--loading': stateFor(link.url)?.loading,
             }"

@@ -179,6 +179,7 @@ import { contentHash } from './chat/assistantHtmlCache'
 import { injectCodeCopyButtons } from './chat/streamingMarkdown'
 import { useAgentStore } from '@store/agent'
 import { createStandardMarkdownIt, resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
+import { rewriteSandboxPreviewLinksInHtml } from '@shared/markdown/sandbox-preview-links'
 import { prepareMarkdownSource } from '@shared/markdown/prepare-markdown-source'
 import {
   computed,
@@ -508,7 +509,7 @@ function renderStepProgressBodyHtml(
   const prepared = prepareMarkdownSource(raw)
   if (!prepared) return ''
   const html = applyStatusBadges(stepProgressMarkdown.render(prepared))
-  return resolveDiagramBlocksInHtml(html)
+  return rewriteSandboxPreviewLinksInHtml(resolveDiagramBlocksInHtml(html))
 }
 
 async function refreshOutputLinkPreviews(): Promise<void> {

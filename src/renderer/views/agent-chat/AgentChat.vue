@@ -114,6 +114,7 @@ import { useI18n } from '@renderer/composables/useI18n'
 import { runConversationStoreUiSync } from './conversationStoreUiSync'
 import ProviderSetupWizard from './components/ProviderSetupWizard.vue'
 import { PROVIDER_SETUP_SESSION_KEY } from '@renderer/lib/provider-setup-session'
+import { requestSandboxPreview } from './sandboxPreviewBridge'
 
 const { t } = useI18n()
 
@@ -429,6 +430,15 @@ onMounted(async () => {
     },
   )
 
+  window.ipcRendererChannel?.OpenSandboxPreview?.on?.(
+    (_event, payload: { fileUrl: string }) => {
+      const fileUrl = payload?.fileUrl?.trim()
+      if (!fileUrl) return
+      rightPanelView.value = 'chat'
+      requestSandboxPreview(fileUrl)
+    },
+  )
+
   await workspaceStore.loadForConversation(agentStore.currentConversationId)
   watch(
     () => agentStore.currentConversationId,
@@ -460,6 +470,7 @@ onUnmounted(() => {
   window.ipcRendererChannel?.AgentStreamChunk?.removeAllListeners?.()
   window.ipcRendererChannel?.AgentUIMessageChunk?.removeAllListeners?.()
   window.ipcRendererChannel?.AgentStreamFinished?.removeAllListeners?.()
+  window.ipcRendererChannel?.OpenSandboxPreview?.removeAllListeners?.()
 })
 </script>
 

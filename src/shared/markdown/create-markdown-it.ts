@@ -1,6 +1,7 @@
 import MarkdownIt from 'markdown-it'
 import { tryRenderDiagramSpecJsonToSvg } from '@shared/diagram/render-diagram-spec'
 import { escapeAttr } from '@shared/diagram/svg-utils'
+import { applySandboxPreviewLinkPlugin } from './sandbox-preview-links'
 
 const DIAGRAM_BLOCK_PENDING_RE =
   /<div class="diagram-block diagram-block--pending" data-diagram-spec="([^"]*)"[^>]*><\/div>/g
@@ -66,6 +67,12 @@ export function createStandardMarkdownIt(): MarkdownIt {
     breaks: true,
     linkify: true,
   })
+  const defaultValidateLink = md.validateLink.bind(md)
+  md.validateLink = (url: string) => {
+    if (url.trim().toLowerCase().startsWith('file://')) return true
+    return defaultValidateLink(url)
+  }
   applyDiagramFencePlugin(md)
+  applySandboxPreviewLinkPlugin(md)
   return md
 }
