@@ -27,6 +27,23 @@ export const providerSetupZhCn: ProviderSetupLabels = {
     setupGuide: '设置步骤',
     getStarted: '开始配置',
     openSettings: '打开 LLM 设置',
+    stepLlm: 'LLM 提供商',
+    stepAgents: 'Agent 模型',
+    agentsTitle: '为 Agent 指定可用的模型',
+    agentsSubtitle:
+      '每个 Agent 都需要可用的提供商和模型。之后可在设置中单独调整。',
+    applyToAll: '应用到全部 Agent',
+    allAgentsReady: '所有 Agent 已配置完成。',
+    agentsIncomplete: '请先为每个 Agent 完成配置。',
+    finishSetup: '完成设置',
+    continueToAgents: '下一步：配置 Agent',
+    rampUpTitle: '欢迎使用 OpenFDE',
+    rampUpSubtitle: '连接 LLM 并为 Agent 指定模型后即可开始使用。',
+    configuredProvidersHint:
+      '以下提供商已配置完成。选择一个用于 Agent，或继续添加新的提供商。',
+    addAnotherProvider: '添加其他提供商',
+    alreadyConfigured: '已配置',
+    next: '下一步',
   },
   landing: {
     title: '连接你的第一个模型',

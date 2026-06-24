@@ -29,6 +29,21 @@ export type ProviderSetupLabels = {
     setupGuide: string
     getStarted: string
     openSettings: string
+    stepLlm: string
+    stepAgents: string
+    agentsTitle: string
+    agentsSubtitle: string
+    applyToAll: string
+    allAgentsReady: string
+    agentsIncomplete: string
+    finishSetup: string
+    continueToAgents: string
+    rampUpTitle: string
+    rampUpSubtitle: string
+    configuredProvidersHint: string
+    addAnotherProvider: string
+    alreadyConfigured: string
+    next: string
   }
   landing: {
     title: string

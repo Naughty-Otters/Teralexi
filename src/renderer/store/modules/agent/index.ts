@@ -44,8 +44,13 @@ import { randomShortUuid } from '@shared/utils/short-uuid'
 import { normalizeLlamaCppBaseURL } from '@shared/agent/llamacpp-url'
 import {
   hasAnyLlmProviderConfigured,
+  isLlmProviderConfigured,
   type LlmProviderCredentialsSnapshot,
 } from '@shared/agent/provider-setup-status'
+import {
+  areAllAgentsReadyForOnboarding,
+  type OnboardingAgentSnapshot,
+} from '@shared/agent/onboarding-status'
 import {
   isOpenAiCompatibleProvider,
   LLM_PROVIDER_IDS,
@@ -62,11 +67,13 @@ import {
   ZHIPU_MODELS,
   SYSTEM_PROP_KEYS,
   PROVIDER_SETUP_DISMISSED_KEY,
+  ONBOARDING_COMPLETED_KEY,
   normalizeBaseURL,
   setSystemConfigValue,
   getSystemConfigValues,
   DEFAULT_USER_ID,
 } from './config'
+import { markOnboardingCompleteInRouteCache } from '@renderer/lib/onboarding-route-state'
 import {
   resolveUiChatBoxDisplayMode,
   type ChatBoxDisplayMode,
@@ -197,6 +204,7 @@ export const useAgentStore = defineStore('agent', () => {
   } | null>(null)
   const hasLoadedSettings = ref(false)
   const providerSetupDismissed = ref(false)
+  const onboardingCompleted = ref(false)
   const mcpServers = ref<McpServerDefinition[]>([])
   const mcpToolsByServer = ref<Record<string, McpToolDefinition[]>>({})
   /** conversationId → sandbox runs (for report panel + disk cleanup on delete). */
@@ -600,6 +608,7 @@ export const useAgentStore = defineStore('agent', () => {
       SYSTEM_PROP_KEYS.zhipuApiKey,
       SYSTEM_PROP_KEYS.zhipuBaseURL,
       PROVIDER_SETUP_DISMISSED_KEY,
+      ONBOARDING_COMPLETED_KEY,
       ...openAiCompatibleProviderConfigKeys(),
     ])
 
@@ -645,6 +654,9 @@ export const useAgentStore = defineStore('agent', () => {
     providerSetupDismissed.value =
       values[PROVIDER_SETUP_DISMISSED_KEY] === 'true' ||
       values[PROVIDER_SETUP_DISMISSED_KEY] === '1'
+    onboardingCompleted.value =
+      values[ONBOARDING_COMPLETED_KEY] === 'true' ||
+      values[ONBOARDING_COMPLETED_KEY] === '1'
 
     if (!values[SYSTEM_PROP_KEYS.ollamaBaseURL]) {
       void setSystemConfigValue(
@@ -1732,13 +1744,60 @@ export const useAgentStore = defineStore('agent', () => {
     hasAnyLlmProviderConfigured(buildLlmCredentialsSnapshot()),
   )
 
-  const shouldShowProviderSetupWizard = computed(
-    () => !providerSetupDismissed.value && !hasLlmProviderReady.value,
+  const configuredLlmProviderIds = computed(() =>
+    (LLM_PROVIDER_IDS as readonly ProviderType[]).filter((id) =>
+      isLlmProviderConfigured(id, buildLlmCredentialsSnapshot()),
+    ),
   )
+
+  const onboardingAgentSnapshots = computed((): OnboardingAgentSnapshot[] =>
+    agents.value.map((agent) => ({
+      provider: agent.provider,
+      model: agent.model,
+      llmRoutingMode: agent.llmRoutingMode,
+      stageLlm: agent.stageLlm,
+    })),
+  )
+
+  const areAllAgentsLlmReady = computed(() =>
+    areAllAgentsReadyForOnboarding(
+      onboardingAgentSnapshots.value,
+      buildLlmCredentialsSnapshot(),
+    ),
+  )
+
+  const shouldShowProviderSetupWizard = computed(
+    () =>
+      onboardingCompleted.value &&
+      !providerSetupDismissed.value &&
+      !hasLlmProviderReady.value,
+  )
+
+  const shouldRequireFirstTimeRampUp = computed(() => !onboardingCompleted.value)
 
   async function dismissProviderSetupWizard(): Promise<void> {
     providerSetupDismissed.value = true
     await setSystemConfigValue(PROVIDER_SETUP_DISMISSED_KEY, 'true')
+  }
+
+  async function completeOnboarding(): Promise<void> {
+    onboardingCompleted.value = true
+    providerSetupDismissed.value = true
+    await setSystemConfigValue(ONBOARDING_COMPLETED_KEY, 'true')
+    await setSystemConfigValue(PROVIDER_SETUP_DISMISSED_KEY, 'true')
+    markOnboardingCompleteInRouteCache()
+  }
+
+  function applyLlmDefaultsToAllAgents(
+    provider: ProviderType,
+    model: string,
+  ): void {
+    const normalizedModel = model.trim()
+    if (!normalizedModel) return
+    for (const agent of agents.value) {
+      updateAgentProvider(agent.id, provider)
+      updateAgentModel(agent.id, normalizedModel)
+    }
   }
 
   async function testProviderConnection(
@@ -2768,9 +2827,15 @@ export const useAgentStore = defineStore('agent', () => {
   return {
     hasLoadedSettings,
     providerSetupDismissed,
+    onboardingCompleted,
     hasLlmProviderReady,
+    configuredLlmProviderIds,
+    areAllAgentsLlmReady,
     shouldShowProviderSetupWizard,
+    shouldRequireFirstTimeRampUp,
     dismissProviderSetupWizard,
+    completeOnboarding,
+    applyLlmDefaultsToAllAgents,
     testProviderConnection,
     agents,
     conversations,

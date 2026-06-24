@@ -6,6 +6,11 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@renderer/views/404.vue'),
   },
   {
+    path: '/onboarding',
+    name: 'FirstTimeOnboarding',
+    component: () => import('@renderer/views/onboarding/FirstTimeOnboarding.vue'),
+  },
+  {
     path: '/',
     name: 'AgentChat',
     component: () => import('@renderer/views/agent-chat/AgentChat.vue'),

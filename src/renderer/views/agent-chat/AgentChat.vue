@@ -28,6 +28,7 @@
           @open-workspace="
             rightPanelView = rightPanelView === 'workspace' ? 'chat' : 'workspace'
           "
+          @open-setup-wizard="providerSetupOpen = true"
         />
       </aside>
 
@@ -444,11 +445,10 @@ onMounted(async () => {
   )
   await agentStore.checkConnection()
   await agentStore.fetchModelsForProvider('ollama')
-  if (
-    agentStore.shouldShowProviderSetupWizard ||
-    sessionStorage.getItem(PROVIDER_SETUP_SESSION_KEY) === '1'
-  ) {
+  if (sessionStorage.getItem(PROVIDER_SETUP_SESSION_KEY) === '1') {
     sessionStorage.removeItem(PROVIDER_SETUP_SESSION_KEY)
+    providerSetupOpen.value = true
+  } else if (agentStore.shouldShowProviderSetupWizard) {
     providerSetupOpen.value = true
   }
 })

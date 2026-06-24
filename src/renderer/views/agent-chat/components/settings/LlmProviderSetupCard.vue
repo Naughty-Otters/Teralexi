@@ -163,6 +163,7 @@ import {
   type ProviderType,
 } from '@shared/agent/llm-provider-registry'
 import { useAgentStore } from '@store/agent'
+import { isLlmProviderConfigured } from '@shared/agent/provider-setup-status'
 import './sp-shared.css'
 
 const props = defineProps<{
@@ -265,6 +266,35 @@ function syncDraftFromStore() {
 }
 
 watch(() => props.provider, syncDraftFromStore, { immediate: true })
+
+function buildCredentialsSnapshot() {
+  return {
+    ollamaReachable: agentStore.connectionStatus === 'connected',
+    llamacppReachable: agentStore.llamacppConnectionStatus === 'connected',
+    openaiApiKey: agentStore.openaiApiKey,
+    anthropicApiKey: agentStore.anthropicApiKey,
+    geminiApiKey: agentStore.geminiApiKey,
+    deepseekApiKey: agentStore.deepseekApiKey,
+    zhipuApiKey: agentStore.zhipuApiKey,
+    openAiCompatible: agentStore.openAiCompatibleApiKeys,
+  }
+}
+
+function markAlreadyConfigured() {
+  testOk.value = true
+  testMessage.value = ps.value.wizard.testSuccess
+  emit('tested', { ok: true })
+}
+
+watch(
+  () => props.provider,
+  (id) => {
+    if (isLlmProviderConfigured(id, buildCredentialsSnapshot())) {
+      markAlreadyConfigured()
+    }
+  },
+  { immediate: true },
+)
 
 function persistDraftCredentials() {
   const id = props.provider

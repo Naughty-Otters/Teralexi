@@ -29,6 +29,8 @@ export const lang: AppLocaleBundle = {
     chatDisplay: '聊天显示',
     workflows: '工作流',
     openWorkflows: '打开工作流工作室',
+    setupWizard: '设置向导',
+    openSetupWizard: '打开设置向导',
   },
   settings: {
     title: '设置',

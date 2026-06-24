@@ -27,6 +27,23 @@ export const providerSetupEn: ProviderSetupLabels = {
     setupGuide: 'Setup steps',
     getStarted: 'Get started',
     openSettings: 'Open LLM settings',
+    stepLlm: 'LLM provider',
+    stepAgents: 'Agent models',
+    agentsTitle: 'Point your agents at a working model',
+    agentsSubtitle:
+      'Each agent needs a provider and model that match your setup. You can fine-tune per agent in Settings later.',
+    applyToAll: 'Apply to all agents',
+    allAgentsReady: 'All agents are configured.',
+    agentsIncomplete: 'Configure every agent before continuing.',
+    finishSetup: 'Finish setup',
+    continueToAgents: 'Next: configure agents',
+    rampUpTitle: 'Welcome to OpenFDE',
+    rampUpSubtitle: 'Connect an LLM and assign models to your agents to get started.',
+    configuredProvidersHint:
+      'These providers are already set up. Pick one to use for your agents, or add another below.',
+    addAnotherProvider: 'Add another provider',
+    alreadyConfigured: 'Configured',
+    next: 'Next',
   },
   landing: {
     title: 'Connect your first model',

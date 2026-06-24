@@ -81,6 +81,9 @@ export const SYSTEM_PROP_KEYS = {
 /** When true, first-run LLM setup wizard is hidden even if no provider is configured. */
 export const PROVIDER_SETUP_DISMISSED_KEY = 'settings.onboarding.llmDismissed'
 
+/** When true, the user finished first-time ramp-up (LLM + agents + landing). */
+export const ONBOARDING_COMPLETED_KEY = 'settings.onboarding.completed'
+
 export function normalizeBaseURL(url: string, fallback: string): string {
   const value = url.trim()
   if (!value) return fallback
