@@ -125,6 +125,11 @@ export type AppLabels = {
     toolCallListNone: string
     toolCallListAll: string
     toolCallListLatest: string
+    thinkingBubbleTitle: string
+    thinkingBubbleDesc: string
+    thinkingBubbleNone: string
+    thinkingBubbleAll: string
+    thinkingBubbleLatest: string
     defaultsFootnote: string
   }
   chat: {

@@ -6,6 +6,7 @@ import {
   CHAT_UI_REASONING_MAX_CHARS_KEY,
   CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY,
   CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_MIGRATION_KEY,
+  CHAT_UI_THINKING_BUBBLE_DISPLAY_KEY,
   CHAT_UI_SETTINGS_PROP_KEYS,
   DEFAULT_CHAT_UI_SETTINGS,
   applyShowAgenticRunBubblesDefaultMigration,
@@ -15,6 +16,7 @@ import {
   clampChatUiContextWindowMessages,
   clampChatUiReasoningMaxChars,
   type ChatUiSettings,
+  type ChatUiThinkingBubbleDisplay,
   type ChatUiToolCallListDisplay,
 } from '@shared/agent/chat-ui-settings'
 import {
@@ -37,6 +39,9 @@ export const chatUiReasoningMaxChars = ref(
 )
 export const chatUiToolCallListDisplay = ref<ChatUiToolCallListDisplay>(
   DEFAULT_CHAT_UI_SETTINGS.toolCallListDisplay,
+)
+export const chatUiThinkingBubbleDisplay = ref<ChatUiThinkingBubbleDisplay>(
+  DEFAULT_CHAT_UI_SETTINGS.thinkingBubbleDisplay,
 )
 
 /** Head/tail cap for sub-agent streaming bubbles only (main assistant text is full). */
@@ -67,6 +72,7 @@ export function applyChatUiSettings(settings: ChatUiSettings): void {
     settings.reasoningMaxChars,
   )
   chatUiToolCallListDisplay.value = settings.toolCallListDisplay
+  chatUiThinkingBubbleDisplay.value = settings.thinkingBubbleDisplay
 }
 
 export async function loadChatUiSettings(): Promise<ChatUiSettings> {
@@ -107,6 +113,7 @@ export async function saveChatUiSettings(
     ),
     reasoningMaxChars: clampChatUiReasoningMaxChars(settings.reasoningMaxChars),
     toolCallListDisplay: settings.toolCallListDisplay,
+    thinkingBubbleDisplay: settings.thinkingBubbleDisplay,
   }
   await Promise.all([
     setSystemConfigValue(
@@ -128,6 +135,10 @@ export async function saveChatUiSettings(
     setSystemConfigValue(
       CHAT_UI_SHOW_AGENTIC_RUN_BUBBLES_KEY,
       next.toolCallListDisplay,
+    ),
+    setSystemConfigValue(
+      CHAT_UI_THINKING_BUBBLE_DISPLAY_KEY,
+      next.thinkingBubbleDisplay,
     ),
   ])
   applyChatUiSettings(next)

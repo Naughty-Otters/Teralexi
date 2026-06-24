@@ -314,7 +314,7 @@ import {
   filterToolLoopPanelSlots,
   shouldShowToolCallLists,
 } from '@shared/agent/tool-call-list-display'
-import { chatUiToolCallListDisplay } from '../chatUiSettings'
+import { chatUiThinkingBubbleDisplay, chatUiToolCallListDisplay } from '../chatUiSettings'
 import type { StructuredDebugSection } from '../structuredDebugViewModel'
 import type { StepOutputLinkView } from '../stepOutputLinksRender'
 
@@ -393,6 +393,7 @@ const conversationSections = computed(() =>
   filterVisibleConversationBubbles(sections.value, {
     finalTextStarted: messageFinalTextStarted(props.message),
     toolCallListDisplay: chatUiToolCallListDisplay.value,
+    thinkingBubbleDisplay: chatUiThinkingBubbleDisplay.value,
   }),
 )
 

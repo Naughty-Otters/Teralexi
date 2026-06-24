@@ -84,6 +84,23 @@
 
       <div class="chat-ui-row chat-ui-row--select">
         <div class="chat-ui-row-text">
+          <span class="chat-ui-row-title">{{ t.chatUi.thinkingBubbleTitle }}</span>
+          <span class="chat-ui-row-desc">{{ t.chatUi.thinkingBubbleDesc }}</span>
+        </div>
+        <select
+          class="sp-input sp-select chat-ui-select"
+          :value="draft.thinkingBubbleDisplay"
+          :disabled="saving === 'thinkingBubbleDisplay'"
+          @change="onThinkingBubbleDisplayChange"
+        >
+          <option value="none">{{ t.chatUi.thinkingBubbleNone }}</option>
+          <option value="all">{{ t.chatUi.thinkingBubbleAll }}</option>
+          <option value="latest">{{ t.chatUi.thinkingBubbleLatest }}</option>
+        </select>
+      </div>
+
+      <div class="chat-ui-row chat-ui-row--select">
+        <div class="chat-ui-row-text">
           <span class="chat-ui-row-title">{{ t.chatUi.showAgenticRunTitle }}</span>
           <span class="chat-ui-row-desc">{{ t.chatUi.showAgenticRunDesc }}</span>
         </div>
@@ -122,7 +139,9 @@ import {
   clampChatUiContextWindowMessages,
   clampChatUiReasoningMaxChars,
   type ChatUiSettings,
+  type ChatUiThinkingBubbleDisplay,
   type ChatUiToolCallListDisplay,
+  parseChatUiThinkingBubbleDisplay,
   parseChatUiToolCallListDisplay,
 } from '@shared/agent/chat-ui-settings'
 import { loadChatUiSettings, saveChatUiSettings } from '../../chatUiSettings'
@@ -156,6 +175,7 @@ async function loadSettings(): Promise<void> {
     draft.bubbleCompactLines = settings.bubbleCompactLines
     draft.contextWindowMessages = settings.contextWindowMessages
     draft.reasoningMaxChars = settings.reasoningMaxChars
+    draft.thinkingBubbleDisplay = settings.thinkingBubbleDisplay
     draft.toolCallListDisplay = settings.toolCallListDisplay
   } finally {
     loading.value = false
@@ -172,6 +192,7 @@ async function persist(partial: Partial<ChatUiSettings>): Promise<void> {
       bubbleCompactLines: draft.bubbleCompactLines,
       contextWindowMessages: draft.contextWindowMessages,
       reasoningMaxChars: draft.reasoningMaxChars,
+      thinkingBubbleDisplay: draft.thinkingBubbleDisplay,
       toolCallListDisplay: draft.toolCallListDisplay,
       ...partial,
     })
@@ -179,6 +200,7 @@ async function persist(partial: Partial<ChatUiSettings>): Promise<void> {
     draft.bubbleCompactLines = next.bubbleCompactLines
     draft.contextWindowMessages = next.contextWindowMessages
     draft.reasoningMaxChars = next.reasoningMaxChars
+    draft.thinkingBubbleDisplay = next.thinkingBubbleDisplay
     draft.toolCallListDisplay = next.toolCallListDisplay
   } finally {
     saving.value = null
@@ -223,6 +245,15 @@ function onReasoningMaxChange(event: Event): void {
   const next = clampChatUiReasoningMaxChars(raw)
   draft.reasoningMaxChars = next
   void persist({ reasoningMaxChars: next })
+}
+
+function onThinkingBubbleDisplayChange(event: Event): void {
+  const next = parseChatUiThinkingBubbleDisplay(
+    (event.target as HTMLSelectElement).value,
+    draft.thinkingBubbleDisplay,
+  )
+  draft.thinkingBubbleDisplay = next
+  void persist({ thinkingBubbleDisplay: next })
 }
 
 function onToolCallListDisplayChange(event: Event): void {

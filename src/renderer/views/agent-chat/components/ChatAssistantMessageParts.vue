@@ -13,7 +13,7 @@
       role="alert"
       v-html="renderAgentErrorMarkdown(errorText)"
     />
-    <template v-for="bubble in reasoningBubbles" :key="bubble.key">
+    <template v-for="bubble in visibleReasoningBubbles" :key="bubble.key">
       <details class="reasoning-bubble" open>
         <summary class="reasoning-bubble__summary">
           <UIcon
@@ -214,11 +214,9 @@ import {
   isAgenticRunStepProgressPart,
   messageFinalTextStarted,
 } from '../conversationBubbleDisplay'
-import {
-  filterAssistantToolGroupBubbles,
-  shouldShowToolCallLists,
-} from '@shared/agent/tool-call-list-display'
-import { chatUiToolCallListDisplay } from '../chatUiSettings'
+import { filterAssistantToolGroupBubbles, shouldShowToolCallLists } from '@shared/agent/tool-call-list-display'
+import { filterAssistantReasoningBubbles } from '@shared/agent/thinking-bubble-display'
+import { chatUiThinkingBubbleDisplay, chatUiToolCallListDisplay } from '../chatUiSettings'
 
 const { t } = useI18n()
 
@@ -281,6 +279,13 @@ const reasoningBubbles = computed(() => {
   }).filter((bubble) => bubble.kind === 'reasoning')
 })
 
+const visibleReasoningBubbles = computed(() =>
+  filterAssistantReasoningBubbles(
+    reasoningBubbles.value,
+    chatUiThinkingBubbleDisplay.value,
+  ),
+)
+
 /** Brief mode: all part types including forms. */
 const briefModeBubbles = computed(() => {
   let bubbles = usesStructuredAssistantLayoutForMessage.value
@@ -291,6 +296,10 @@ const briefModeBubbles = computed(() => {
       (bubble) => bubble.kind !== 'reasoning' && bubble.kind !== 'tool-group',
     )
   }
+  bubbles = filterAssistantReasoningBubbles(
+    bubbles,
+    chatUiThinkingBubbleDisplay.value,
+  )
   bubbles = filterAssistantToolGroupBubbles(
     bubbles,
     chatUiToolCallListDisplay.value,
