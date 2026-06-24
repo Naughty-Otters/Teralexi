@@ -52,7 +52,7 @@ export function handleChatPanelLinkClick(
   if (!isChatPreviewHref(href)) return
   event.preventDefault()
   event.stopPropagation()
-  onOpen(previewUrl)
+  onOpen(href)
 }
 
 /** @deprecated Use {@link handleChatPanelLinkClick}. */
