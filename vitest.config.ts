@@ -26,6 +26,7 @@ export default defineConfig({
       '@openfde-ai': resolve(rootDir, 'src/openfde-ai/index.ts'),
       '@toolSet': resolve(rootDir, 'toolSet'),
       '@skills': resolve(rootDir, 'skills'),
+      '@openfde/skill-sdk': resolve(rootDir, 'skill-sdk'),
     },
   },
   test: {
@@ -38,6 +39,7 @@ export default defineConfig({
     include: [
       'src/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts}',
       'skills/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts}',
+      'skill-sdk/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts}',
       'toolSet/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts}',
       'config/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts}',
       '.electron-vite/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts}',

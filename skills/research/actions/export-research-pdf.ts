@@ -5,13 +5,13 @@
 import fs from 'fs'
 import path from 'path'
 import { z } from 'zod'
-import type { SkillTool } from '../../../src/main/skills/types'
+import type { SkillTool } from '@openfde/skill-sdk'
 import {
+  exportMarkdownBodyToPdf,
   getOutputResultsRelPrefix,
   requireActiveSandbox,
   resolveSandboxRelativePath,
-} from '../../../toolSet/sandbox-paths'
-import { exportMarkdownBodyToPdf } from '../../../src/main/agent/sandbox/markdown-to-pdf'
+} from '@openfde/skill-sdk'
 
 const pathField = (label: string) =>
   z.preprocess((val) => {

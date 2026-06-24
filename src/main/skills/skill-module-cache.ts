@@ -6,7 +6,7 @@ import {
   statSync,
   writeFileSync,
 } from 'fs'
-import { dirname, join, resolve } from 'path'
+import { dirname, join } from 'path'
 import type { Metafile } from 'esbuild'
 import {
   isPackagedApp,
@@ -129,33 +129,6 @@ export function clearSkillModuleCache(): void {
   rmSync(cacheDir, { recursive: true, force: true })
 }
 
-export function skillCompileRuntimeRoot(): string {
-  return join(resolveAppRoot(), SKILL_MODULE.COMPILE_RUNTIME_DIR)
-}
-
-export function esbuildPathAliases(): Record<string, string> {
-  const root = resolveAppRoot()
-  if (isPackagedApp()) {
-    const runtime = skillCompileRuntimeRoot()
-    return {
-      '@main': join(runtime, 'src/main'),
-      '@config': join(runtime, 'config'),
-      '@shared': join(runtime, 'src/shared'),
-      '@toolSet': join(runtime, 'toolSet'),
-      '@logging': join(runtime, 'src/logging'),
-      '@openfde-ai': join(runtime, 'src/openfde-ai'),
-    }
-  }
-  return {
-    '@main': resolve(root, 'src/main'),
-    '@config': resolve(root, 'config'),
-    '@shared': resolve(root, 'src/shared'),
-    '@toolSet': resolve(root, 'toolSet'),
-    '@logging': resolve(root, 'src/logging'),
-    '@openfde-ai': resolve(root, 'src/openfde-ai'),
-  }
-}
-
 /** Load esbuild from the unpacked app bundle so the native binary can spawn. */
 export function resolveEsbuildForSkillCompile(): typeof import('esbuild') {
   if (!isPackagedApp()) {
@@ -204,6 +177,7 @@ export function resolveEsbuildForSkillCompile(): typeof import('esbuild') {
  */
 export function loadCachedCommonJsModule(
   filepath: string,
+  requireFn: NodeRequire = require,
 ): Record<string, unknown> {
   const code = readFileSync(filepath, 'utf8')
   const cjsModule: { exports: Record<string, unknown> } = { exports: {} }
@@ -221,6 +195,6 @@ export function loadCachedCommonJsModule(
     filename: string,
     dirname: string,
   ) => void
-  runner(require, cjsModule, cjsModule.exports, filepath, dirname(filepath))
+  runner(requireFn, cjsModule, cjsModule.exports, filepath, dirname(filepath))
   return cjsModule.exports
 }

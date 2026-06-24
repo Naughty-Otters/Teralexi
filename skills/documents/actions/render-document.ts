@@ -6,13 +6,13 @@
 import Mustache from 'mustache'
 import fs from 'fs'
 import path from 'path'
-import type { SkillTool } from '../../../src/main/skills/types'
+import type { SkillTool } from '@openfde/skill-sdk'
 import {
-  requireActiveSandbox,
+  exportHtmlFileToPdf,
   getOutputResultsRelPrefix,
-} from '../../../toolSet/sandbox-paths'
-import { readSkillAttachment } from '../../../src/main/skills/skill-attachments'
-import { exportHtmlFileToPdf } from '../../../src/main/agent/sandbox/html-to-pdf'
+  readSkillAttachment,
+  requireActiveSandbox,
+} from '@openfde/skill-sdk'
 import { createSpreadsheet } from './create-spreadsheet'
 import { createPresentation } from './create-presentation'
 import { createWordDoc } from './create-word-doc'

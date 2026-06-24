@@ -19,7 +19,6 @@ import {
 import { createLogger } from '@main/logger'
 import {
   entryCacheKey,
-  esbuildPathAliases,
   fingerprintFromMetafile,
   loadCachedCommonJsModule,
   resolveEsbuildForSkillCompile,
@@ -28,6 +27,9 @@ import {
   toOnDiskAppPath,
   writeSkillModuleBundleFingerprint,
 } from './skill-module-cache'
+import { createSkillModuleRequire } from './skill-sdk-require'
+
+const SKILL_SDK_MODULE_ID = '@openfde/skill-sdk'
 
 const log = createLogger('skills.module-loader')
 
@@ -79,10 +81,10 @@ async function requireModule(
           format: 'cjs',
           platform: 'node',
           packages: 'external',
+          external: [SKILL_SDK_MODULE_ID],
           sourcemap: true,
           sourcesContent: true,
           metafile: true,
-          alias: esbuildPathAliases(),
         })
         if (result.metafile) {
           writeSkillModuleBundleFingerprint(
@@ -92,7 +94,7 @@ async function requireModule(
         }
       }
 
-      return loadCachedCommonJsModule(outJs)
+      return loadCachedCommonJsModule(outJs, createSkillModuleRequire(outJs))
     } catch (err) {
       log.warn('Failed to compile skill/toolSet module', { filepath, err })
       return undefined
@@ -111,7 +113,7 @@ async function requireModule(
     } catch {
       return undefined
     }
-    return loadCachedCommonJsModule(filepath)
+    return loadCachedCommonJsModule(filepath, createSkillModuleRequire(filepath))
   } catch (err) {
     log.warn('Failed to load skill/toolSet module', { filepath, err })
     return undefined

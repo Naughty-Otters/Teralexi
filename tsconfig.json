@@ -29,10 +29,11 @@
       "@openfde-ai/llm-adapter": ["src/openfde-ai/llm-adapter.ts"],
       "@openfde-ai": ["src/openfde-ai/index.ts"],
       "@toolSet/*": ["toolSet/*"],
+      "@openfde/skill-sdk": ["skill-sdk/index.ts"],
     },
     "typeRoots": ["node_modules/@types"],
     "lib": ["es2018", "dom"]
   },
-  "include": ["src/**/*", "customTypes/*", "skills/**/*", "toolSet/**/*"],
+  "include": ["src/**/*", "customTypes/*", "skills/**/*", "toolSet/**/*", "skill-sdk/**/*"],
   "exclude": ["node_modules"]
 }

@@ -41,6 +41,7 @@ const SOURCE_SCAN_ROOTS = [
   'src/logging',
   'src/openfde-ai',
   'src/ipc',
+  'skill-sdk',
 ]
 
 const SOURCE_SCAN_SKIP = /\.(test|integration\.test|mocked\.test)\.ts$/
