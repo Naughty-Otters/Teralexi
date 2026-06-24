@@ -16,6 +16,7 @@ vi.mock('@main/services/conversation-store', () => ({
   getConversationStore: vi.fn(() => ({
     saveMessage: vi.fn(),
     upsertConversationSandboxRun: vi.fn(),
+    getMessageAttachmentsForMessage: vi.fn(() => []),
   })),
 }))
 
@@ -256,6 +257,7 @@ describe('agent engine', () => {
         throw new Error('db down')
       }),
       upsertConversationSandboxRun: vi.fn(),
+      getMessageAttachmentsForMessage: vi.fn(() => []),
     } as never)
 
     const result = await runAgentForConversation({

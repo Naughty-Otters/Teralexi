@@ -10,7 +10,11 @@ function makeWindow() {
     show: vi.fn(),
     hide: vi.fn(),
     setAlwaysOnTop: vi.fn(),
-    webContents: { openDevTools: vi.fn() },
+    webContents: {
+      openDevTools: vi.fn(),
+      on: vi.fn(),
+      setWindowOpenHandler: vi.fn(),
+    },
   }
 }
 

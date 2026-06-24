@@ -25,6 +25,7 @@ export default defineConfig({
       ),
       '@openfde-ai': resolve(rootDir, 'src/openfde-ai/index.ts'),
       '@toolSet': resolve(rootDir, 'toolSet'),
+      '@skills': resolve(rootDir, 'skills'),
     },
   },
   test: {

@@ -71,12 +71,12 @@ const SHIPPED_SOURCE_TEST_DIR_NAMES = new Set([
   '__tests__',
 ])
 const SHIPPED_SOURCE_PRUNE_ROOTS = [
-  'src',
-  'toolSet',
-  'skills',
   'config',
   'dist/electron',
 ]
+
+/** Legacy shipped trees that must never appear in the packaged app. */
+const SHIPPED_SOURCE_TREE_REMOVALS = ['src']
 
 function shouldRemovePackage(name) {
   if (RUNTIME_PACKAGE_REMOVALS.has(name)) return true
@@ -221,9 +221,21 @@ function pruneJunkInNodeModules(appDir) {
   return stats
 }
 
+function removeShippedSourceTrees(appDir) {
+  let removedTrees = 0
+  for (const relRoot of SHIPPED_SOURCE_TREE_REMOVALS) {
+    const root = join(appDir, relRoot)
+    if (!existsSync(root)) continue
+    rmSync(root, { recursive: true, force: true })
+    removedTrees += 1
+  }
+  return removedTrees
+}
+
 function pruneDirectory(dir) {
   const stats = {
     removedPackages: pruneRuntimeExcludedPackages(dir),
+    removedSourceTrees: removeShippedSourceTrees(dir),
     junkDirs: 0,
     junkFiles: 0,
     sourceTestDirs: 0,
@@ -241,6 +253,7 @@ function pruneDirectory(dir) {
 function formatPruneStats(stats) {
   return [
     `removed ${stats.removedPackages} packages`,
+    `removed ${stats.removedSourceTrees} source trees`,
     `deleted ${stats.junkDirs} junk dirs and ${stats.junkFiles} junk files`,
     `deleted ${stats.sourceTestDirs} test dirs and ${stats.sourceTestFiles} test files from shipped sources`,
   ].join('; ')
@@ -272,3 +285,4 @@ module.exports.RUNTIME_SCOPE_PREFIX_REMOVALS = RUNTIME_SCOPE_PREFIX_REMOVALS
 module.exports.shouldRemovePackage = shouldRemovePackage
 module.exports.shouldRemoveShippedSourceTestFile = shouldRemoveShippedSourceTestFile
 module.exports.pruneShippedSourceTests = pruneShippedSourceTests
+module.exports.pruneShippedSourceTrees = removeShippedSourceTrees

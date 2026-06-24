@@ -16,11 +16,23 @@ vi.mock('fs', async (importOriginal) => {
 })
 
 import { existsSync } from 'fs'
-vi.mock('./skill-path', () => ({
-  resolveToolSetSourceRoots: vi.fn(() => []),
+
+vi.mock('./bundled-toolset', () => ({
+  getBundledToolSetTools: vi.fn(() => [
+    {
+      name: 'bundled_tool',
+      description: 'bundled',
+      execute: async () => null,
+    },
+  ]),
 }))
 
-import { resolveToolSetSourceRoots } from './skill-path'
+vi.mock('./skill-path', () => ({
+  resolveUserToolSetDirectory: vi.fn(() => '/nonexistent/user/toolSet'),
+}))
+
+import { getBundledToolSetTools } from './bundled-toolset'
+import { resolveUserToolSetDirectory } from './skill-path'
 import {
   loadSkillActions,
   loadToolSetTools,
@@ -33,6 +45,16 @@ describe('skill-module-loader', () => {
   beforeEach(async () => {
     vi.mocked(existsSync).mockImplementation(
       (await vi.importActual<typeof import('fs')>('fs')).existsSync,
+    )
+    vi.mocked(getBundledToolSetTools).mockReturnValue([
+      {
+        name: 'bundled_tool',
+        description: 'bundled',
+        execute: async () => null,
+      },
+    ])
+    vi.mocked(resolveUserToolSetDirectory).mockReturnValue(
+      '/nonexistent/user/toolSet',
     )
     skillRoot = await mkdtemp(join(tmpdir(), 'skill-loader-'))
   })
@@ -128,10 +150,45 @@ describe('skill-module-loader', () => {
     expect(tools[0].tags).toEqual(['misc'])
   })
 
-  it('loadToolSetTools throws when no tools load from any source', async () => {
-    vi.mocked(resolveToolSetSourceRoots).mockReturnValue([
-      join(skillRoot, 'missing-toolSet'),
-    ])
+  it('loadToolSetTools merges bundled tools with user overrides', async () => {
+    const userToolSetDir = join(skillRoot, 'user-toolSet')
+    await mkdir(userToolSetDir, { recursive: true })
+    await writeFile(
+      join(userToolSetDir, 'override.js'),
+      `exports.tools = [{
+        name: 'user_tool',
+        description: 'user',
+        execute: async () => null
+      }]`,
+      'utf8',
+    )
+    vi.mocked(resolveUserToolSetDirectory).mockReturnValue(userToolSetDir)
+
+    const tools = await loadToolSetTools()
+    expect(tools.map((t) => t.name)).toEqual(['bundled_tool', 'user_tool'])
+  })
+
+  it('loadToolSetTools lets user tools override bundled tools by name', async () => {
+    const userToolSetDir = join(skillRoot, 'user-toolSet')
+    await mkdir(userToolSetDir, { recursive: true })
+    await writeFile(
+      join(userToolSetDir, 'override.js'),
+      `exports.tools = [{
+        name: 'bundled_tool',
+        description: 'user override',
+        execute: async () => 'override'
+      }]`,
+      'utf8',
+    )
+    vi.mocked(resolveUserToolSetDirectory).mockReturnValue(userToolSetDir)
+
+    const tools = await loadToolSetTools()
+    expect(tools).toHaveLength(1)
+    expect(tools[0]?.description).toBe('user override')
+  })
+
+  it('loadToolSetTools throws when bundled catalog is empty', async () => {
+    vi.mocked(getBundledToolSetTools).mockReturnValue([])
     await expect(loadToolSetTools()).rejects.toThrow(/toolSet failed to load: 0 tools/)
   })
 })

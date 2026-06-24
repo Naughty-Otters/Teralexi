@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -47,18 +47,28 @@ describe('electron-after-pack', () => {
 
   it('prunes shipped source test files and directories', () => {
     const appDir = mkdtempSync(join(tmpdir(), 'openfde-after-pack-'))
-    const srcMain = join(appDir, 'src', 'main')
-    mkdirSync(srcMain, { recursive: true })
-    writeFileSync(join(srcMain, 'index.ts'), 'export {}')
-    writeFileSync(join(srcMain, 'index.test.ts'), 'test')
-    mkdirSync(join(appDir, 'toolSet', '__tests__'), { recursive: true })
-    writeFileSync(join(appDir, 'toolSet', '__tests__', 'case.ts'), 'test')
+    const distMain = join(appDir, 'dist', 'electron', 'main')
+    mkdirSync(distMain, { recursive: true })
+    writeFileSync(join(distMain, 'main.js'), 'export {}')
+    writeFileSync(join(distMain, 'main.test.ts'), 'test')
+    mkdirSync(join(appDir, 'config', '__tests__'), { recursive: true })
+    writeFileSync(join(appDir, 'config', '__tests__', 'case.ts'), 'test')
 
     const stats = pruneShippedSourceTests(appDir)
     expect(stats.sourceTestFiles).toBe(1)
     expect(stats.sourceTestDirs).toBe(1)
-    expect(existsSync(join(srcMain, 'index.ts'))).toBe(true)
-    expect(existsSync(join(srcMain, 'index.test.ts'))).toBe(false)
-    expect(readdirSync(join(appDir, 'toolSet'))).toEqual([])
+    expect(existsSync(join(distMain, 'main.js'))).toBe(true)
+    expect(existsSync(join(distMain, 'main.test.ts'))).toBe(false)
+    expect(readdirSync(join(appDir, 'config'))).toEqual([])
+  })
+
+  it('removes legacy shipped src trees', () => {
+    const { pruneShippedSourceTrees } = require('../scripts/electron-after-pack.cjs')
+    const appDir = mkdtempSync(join(tmpdir(), 'openfde-after-pack-src-'))
+    mkdirSync(join(appDir, 'src', 'main'), { recursive: true })
+    writeFileSync(join(appDir, 'src', 'main', 'index.ts'), 'export {}')
+
+    expect(pruneShippedSourceTrees(appDir)).toBe(1)
+    expect(existsSync(join(appDir, 'src'))).toBe(false)
   })
 })

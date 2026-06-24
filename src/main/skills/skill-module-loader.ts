@@ -8,7 +8,14 @@ import {
 import { basename, extname, join } from 'path'
 import type { SkillTool } from './types'
 import { SKILL_FILES, SKILL_MODULE } from './constants'
-import { resolveToolSetSourceRoots } from './skill-path'
+import { getBundledToolSetTools } from './bundled-toolset'
+import { getBundledSkillActionTools } from './bundled-skill-actions'
+import { isBundledSkillId } from './bundled-skills-manifest'
+import {
+  isLoadableSkillFolder,
+  resolveUserToolSetDirectory,
+  resolveUserSkillsDirectory,
+} from './skill-path'
 import { createLogger } from '@main/logger'
 import {
   entryCacheKey,
@@ -242,6 +249,21 @@ export async function loadSkillActions(
   return filtered
 }
 
+/** Load skill-owned tools from user disk or statically bundled catalog. */
+export async function loadSkillActionsForSkillId(
+  skillId: string,
+  declaredToolNames: string[],
+): Promise<SkillTool[]> {
+  const userSkillsDir = resolveUserSkillsDirectory()
+  if (isLoadableSkillFolder(userSkillsDir, skillId)) {
+    return loadSkillActions(join(userSkillsDir, skillId), declaredToolNames)
+  }
+  if (isBundledSkillId(skillId)) {
+    return getBundledSkillActionTools(skillId, declaredToolNames)
+  }
+  return []
+}
+
 export async function loadToolSetToolsFromDirectory(
   toolSetDir: string,
 ): Promise<SkillTool[]> {
@@ -330,55 +352,59 @@ export async function loadToolSetToolsFromDirectory(
   return []
 }
 
-/** Merges bundled then user `toolSet/`; user tools win on name conflicts. */
+/** Merges statically bundled tools with user `~/.openfde/toolSet`; user wins on name conflicts. */
 export async function loadToolSetTools(): Promise<SkillTool[]> {
-  const roots = resolveToolSetSourceRoots()
   const merged = new Map<string, SkillTool>()
-  const perRoot: Array<{ dir: string; count: number; exists: boolean }> = []
+  const sources: Array<{ dir: string; count: number; exists: boolean }> = []
 
-  for (const toolSetDir of roots) {
-    const exists = existsSync(toolSetDir)
-    if (!exists) {
-      log.warn('toolSet source directory missing', { toolSetDir })
-      perRoot.push({ dir: toolSetDir, count: 0, exists: false })
-      continue
-    }
+  const bundledTools = getBundledToolSetTools()
+  sources.push({ dir: 'bundled:main.js', count: bundledTools.length, exists: true })
+  for (const tool of bundledTools) {
+    merged.set(tool.name, tool)
+  }
 
-    const tools = await loadToolSetToolsFromDirectory(toolSetDir)
-    perRoot.push({ dir: toolSetDir, count: tools.length, exists: true })
+  const userToolSetDir = resolveUserToolSetDirectory()
+  const userDirExists = existsSync(userToolSetDir)
+  if (userDirExists) {
+    const userTools = await loadToolSetToolsFromDirectory(userToolSetDir)
+    sources.push({
+      dir: userToolSetDir,
+      count: userTools.length,
+      exists: true,
+    })
 
-    if (tools.length > 0) {
-      log.info('Loaded toolSet tools from directory', {
-        toolSetDir,
-        count: tools.length,
-        sample: tools.slice(0, 10).map((t) => t.name),
+    if (userTools.length > 0) {
+      log.info('Loaded user toolSet tools from directory', {
+        toolSetDir: userToolSetDir,
+        count: userTools.length,
+        sample: userTools.slice(0, 10).map((t) => t.name),
       })
     } else {
-      log.warn('toolSet directory exists but produced no tools', { toolSetDir })
+      log.warn('User toolSet directory exists but produced no tools', {
+        toolSetDir: userToolSetDir,
+      })
     }
 
-    for (const tool of tools) {
+    for (const tool of userTools) {
       merged.set(tool.name, tool)
     }
+  } else {
+    sources.push({ dir: userToolSetDir, count: 0, exists: false })
   }
 
   const tools = Array.from(merged.values())
   if (tools.length === 0) {
-    const detail = perRoot
+    const detail = sources
       .map((r) => `${r.dir}${r.exists ? '' : ' (missing)'}: ${r.count} tools`)
       .join('; ')
-    const message = `toolSet failed to load: 0 tools from ${roots.length} source(s) — ${detail}`
+    const message = `toolSet failed to load: 0 tools — ${detail}`
     log.error(message)
     throw new Error(message)
   }
 
   log.info('toolSet catalog ready', {
     toolCount: tools.length,
-    sources: perRoot.map(({ dir, count, exists }) => ({
-      dir,
-      count,
-      exists,
-    })),
+    sources,
     sample: tools.slice(0, 12).map((t) => t.name),
   })
 

@@ -4,9 +4,8 @@
  * A per-run scratch directory that isolates an agent flow execution.
  *
  * Note: `skills/` holds a filesystem mirror for introspection / prompt context.
- * TypeScript skill actions are executed from `getSkillsDir()` in-repo, not by
- * bundling copied files here (isolated copies would break `@main/...` resolution
- * in `requireModule`/esbuild).
+ * TypeScript skill actions are executed from the user skills directory
+ * (`~/.openfde/skills`) in-repo, not by bundling copied files here (isolated
  *
  * Layout:
  *   <root>/
@@ -20,14 +19,18 @@
  * confined to a known directory the user can inspect afterwards.
  */
 
+import {
+  isBundledSkillId,
+  materializeBundledSkillToDirectory,
+} from '@main/skills/bundled-skills-manifest'
 import { existsSync } from 'fs'
 import { mkdir, cp, copyFile, rm } from 'fs/promises'
 import { basename, extname, isAbsolute, join, normalize, sep } from 'path'
 import { getopenfdeSandboxDir } from '@config/openfde-home'
-import { getSkillsDir } from '@main/skills/skills'
+import { resolveUserSkillsDirectory } from '@main/skills/skill-path'
 import {
   resolveSkillFolder,
-  resolveToolSetSourceRoots,
+  resolveUserToolSetDirectory,
 } from '@main/skills/skill-path'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
 import { ReferenceContext } from '../resources/context'
@@ -112,7 +115,7 @@ export class Sandbox implements SandboxPlanningAccess {
     this.references = references
     instrumentInstanceMethods(this, log)
     const root = options.root?.trim() || uniqueSandboxRoot()
-    this.sourceSkillsDir = options.sourceSkillsDir ?? getSkillsDir()
+    this.sourceSkillsDir = options.sourceSkillsDir ?? resolveUserSkillsDirectory()
     this.layout = {
       root,
       skillsDir: join(root, 'skills'),
@@ -167,21 +170,21 @@ export class Sandbox implements SandboxPlanningAccess {
    */
   async copySkillAssets(skillId?: string): Promise<void> {
     await this.init()
-    const srcRoot = this.sourceSkillsDir
-    if (!srcRoot || !existsSync(srcRoot)) return
 
-    const destToolSet = join(this.layout.skillsDir, 'toolSet')
-    for (const srcToolSet of resolveToolSetSourceRoots()) {
-      if (!existsSync(srcToolSet)) continue
-      await cp(srcToolSet, destToolSet, { recursive: true })
+    const userToolSet = resolveUserToolSetDirectory()
+    if (existsSync(userToolSet)) {
+      await cp(userToolSet, join(this.layout.skillsDir, 'toolSet'), {
+        recursive: true,
+      })
     }
 
     if (skillId) {
+      const destSkill = join(this.layout.skillsDir, skillId)
       const srcSkill = resolveSkillFolder(skillId)
-      if (srcSkill) {
-        await cp(srcSkill, join(this.layout.skillsDir, skillId), {
-          recursive: true,
-        })
+      if (srcSkill && existsSync(srcSkill)) {
+        await cp(srcSkill, destSkill, { recursive: true })
+      } else if (isBundledSkillId(skillId)) {
+        materializeBundledSkillToDirectory(destSkill, skillId)
       }
     }
   }

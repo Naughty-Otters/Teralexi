@@ -28,6 +28,7 @@ describe('injector selector', () => {
       'deep-thinking-before-answer',
       'multiple-branch-thinking',
       'current-datetime',
+      'user-uploads',
       'plan-mode',
     ])
   })
@@ -47,6 +48,7 @@ describe('injector selector', () => {
       'deep-thinking-before-answer',
       'multiple-branch-thinking',
       'current-datetime',
+      'user-uploads',
     ])
   })
 
@@ -64,6 +66,7 @@ describe('injector selector', () => {
       'deep-thinking-before-answer',
       'multiple-branch-thinking',
       'current-datetime',
+      'user-uploads',
       'plan-mode',
     ])
   })

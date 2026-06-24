@@ -34,5 +34,7 @@ export const SKILL_MODULE = {
   CACHE_DIR: '.electron-vite/skill-module-cache',
   /** Shipped prewarm output under {@link resolveAppRoot} when packaged. */
   PACKAGED_CACHE_DIR: 'dist/electron/skill-module-cache',
+  /** Compiled JS aliases for user skill esbuild when packaged (no shipped `src/`). */
+  COMPILE_RUNTIME_DIR: 'dist/electron/skill-compile-runtime',
   DEFAULT_TOOL_SET_TAG: 'toolSet',
 } as const

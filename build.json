@@ -6,14 +6,8 @@
     "**/node_modules/node-pty/**",
     "**/node_modules/esbuild/**",
     "**/node_modules/@esbuild/**",
-    "dist/electron/skill-module-cache/**",
-    "skills/**",
-    "toolSet/**",
     "config/**",
-    "src/main/**",
-    "src/shared/**",
-    "src/logging/**",
-    "src/openfde-ai/**"
+    "dist/electron/skill-compile-runtime/**"
   ],
   "electronLanguages": [
     "en-US"
@@ -43,13 +37,7 @@
   },
   "files": [
     "dist/electron/**/*",
-    "skills/**/*",
-    "toolSet/**/*",
     "config/**/*",
-    "src/main/**/*",
-    "src/shared/**/*",
-    "src/logging/**/*",
-    "src/openfde-ai/**/*",
     "!**/*.{map,tsbuildinfo}",
     "!**/*.test.{ts,tsx,js,jsx,mjs,cjs}",
     "!**/*.integration.test.{ts,tsx,js,jsx,mjs,cjs}",
@@ -58,8 +46,6 @@
     "!**/vitest.setup.{ts,js}",
     "!**/migration-test-db.test.ts",
     "!src/{test,tests,__tests__}/**/*",
-    "!toolSet/{test,tests,__tests__}/**/*",
-    "!skills/{test,tests,__tests__}/**/*",
     "!config/{test,tests,__tests__}/**/*",
     "!node_modules/monaco-editor/**",
     "!node_modules/mermaid/**",

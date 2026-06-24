@@ -1,7 +1,15 @@
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { SKILL_FILES, SKILLS_RESERVED_DIR_NAMES } from './constants'
-import { resolveSkillFolder } from './skill-path'
+import {
+  getBundledSkillSource,
+  isBundledSkillId,
+} from './bundled-skills-manifest'
+import {
+  isLoadableSkillFolder,
+  resolveSkillFolder,
+  resolveUserSkillsDirectory,
+} from './skill-path'
 
 export type SkillAttachmentCategory = 'ref' | 'script' | 'form'
 
@@ -125,15 +133,39 @@ export function resolveSkillAttachmentDirs(
   }
 }
 
+function resolveBundledSkillAttachmentDirs(skillId: string): SkillAttachmentDirs {
+  const source = getBundledSkillSource(skillId)
+  if (!source?.propertiesMd.trim()) {
+    return {
+      ref: [...DEFAULT_SKILL_ATTACHMENT_DIRS.ref],
+      script: [...DEFAULT_SKILL_ATTACHMENT_DIRS.script],
+      form: [...DEFAULT_SKILL_ATTACHMENT_DIRS.form],
+    }
+  }
+  return parseAttachmentDirsFromProperties(source.propertiesMd)
+}
+
 export function resolveFormAttachmentDirsForSkill(
   skillId: string | undefined,
 ): string[] {
   const id = skillId?.trim()
   if (!id) return [...DEFAULT_SKILL_ATTACHMENT_DIRS.form]
 
+  const userDir = resolveUserSkillsDirectory()
+  if (isLoadableSkillFolder(userDir, id)) {
+    return resolveSkillAttachmentDirs(join(userDir, id)).form
+  }
+
   const folder = resolveSkillFolder(id)
-  if (!folder) return [...DEFAULT_SKILL_ATTACHMENT_DIRS.form]
-  return resolveSkillAttachmentDirs(folder).form
+  if (folder && existsSync(join(folder, SKILL_FILES.SKILL_MD))) {
+    return resolveSkillAttachmentDirs(folder).form
+  }
+
+  if (isBundledSkillId(id)) {
+    return resolveBundledSkillAttachmentDirs(id).form
+  }
+
+  return [...DEFAULT_SKILL_ATTACHMENT_DIRS.form]
 }
 
 /** @deprecated Use {@link resolveFormAttachmentDirsForSkill}. */

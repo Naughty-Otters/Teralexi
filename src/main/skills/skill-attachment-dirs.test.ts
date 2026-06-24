@@ -3,6 +3,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SKILL_FILES } from './constants'
+
+vi.mock('./bundled-skills-manifest', () => ({
+  isBundledSkillId: vi.fn(() => false),
+  getBundledSkillSource: vi.fn(() => null),
+}))
+
 import {
   DEFAULT_SKILL_ATTACHMENT_DIRS,
   normalizeAttachmentDir,
@@ -26,6 +32,11 @@ vi.mock('./skill-path', () => ({
     if (existsSync(join(user, SKILL_FILES.SKILL_MD))) return user
     if (existsSync(join(bundled, SKILL_FILES.SKILL_MD))) return bundled
     return null
+  }),
+  resolveUserSkillsDirectory: vi.fn(() => userRoot),
+  isLoadableSkillFolder: vi.fn((skillsDir: string, skillId: string) => {
+    const { existsSync } = require('node:fs') as typeof import('node:fs')
+    return existsSync(join(skillsDir, skillId, SKILL_FILES.SKILL_MD))
   }),
 }))
 

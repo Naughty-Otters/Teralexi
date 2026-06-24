@@ -1,7 +1,7 @@
 import type { SkillTool } from './types'
 import { MANDATORY_TOOL_NAMES } from '@shared/agent/mandatory-tools'
-import { PLAN_MODE_ALWAYS_IN_CATALOG_TOOL_NAMES, PLAN_MODE_TOOL_NAMES } from '@toolSet/planning'
-import { UNIVERSAL_SUB_AGENT_TOOL_NAMES } from '@toolSet/sub-agents'
+import { PLAN_MODE_ALWAYS_IN_CATALOG_TOOL_NAMES, PLAN_MODE_TOOL_NAMES } from '@toolSet/planning/constants'
+import { UNIVERSAL_SUB_AGENT_TOOL_NAMES } from '@toolSet/sub-agents/constants'
 
 const UNIVERSAL_GLOBAL_TOOL_NAMES = new Set<string>([
   ...MANDATORY_TOOL_NAMES,

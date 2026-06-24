@@ -62,6 +62,10 @@ const pathAliases = {
       replacement: path.join(__dirname, '..', 'toolSet'),
     },
     {
+      find: '@skills',
+      replacement: path.join(__dirname, '..', 'skills'),
+    },
+    {
       find: '@config',
       replacement: path.join(__dirname, '..', 'config'),
     },

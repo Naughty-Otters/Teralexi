@@ -9,9 +9,10 @@ import {
   isLoadableSkillFolder,
   normalizeSkillFileText,
   resolvePropertiesRaw,
-  resolveSkillsSourceRoots,
+  resolveUserSkillsDirectory,
   stripYamlFrontmatter,
 } from './skill-path'
+import { buildBundledSkillDefinitions } from './bundled-skills'
 import { parseSkillMarkdown } from './skill-markdown'
 import { loadSkillActions, loadToolSetTools } from './skill-module-loader'
 import {
@@ -161,18 +162,20 @@ export async function loadSkillsFromDirectory(
 }
 
 /**
- * Loads skills from bundled defaults and `~/.openfde/skills`, merged by id.
+ * Loads skills from statically bundled defaults and `~/.openfde/skills`, merged by id.
  * User skills overwrite bundled skills with the same folder name.
  */
 export async function loadSkills(): Promise<SkillDefinition[]> {
   const globalTools = await loadToolSetTools()
   const byId = new Map<string, SkillDefinition>()
+  for (const skill of await buildBundledSkillDefinitions(globalTools)) {
+    byId.set(skill.id, skill)
+  }
 
-  for (const skillsDir of resolveSkillsSourceRoots()) {
-    const skills = await loadSkillsFromDirectory(skillsDir, { globalTools })
-    for (const skill of skills) {
-      byId.set(skill.id, skill)
-    }
+  const userSkillsDir = resolveUserSkillsDirectory()
+  const userSkills = await loadSkillsFromDirectory(userSkillsDir, { globalTools })
+  for (const skill of userSkills) {
+    byId.set(skill.id, skill)
   }
 
   const merged = Array.from(byId.values())
@@ -183,7 +186,7 @@ export async function loadSkills(): Promise<SkillDefinition[]> {
   }
 
   log.info(SKILL_LOADER_LOG.LOADED, {
-    sources: resolveSkillsSourceRoots(),
+    sources: ['bundled:main.js', userSkillsDir],
     count: merged.length,
     skillIds: merged.map((s) => s.id),
   })

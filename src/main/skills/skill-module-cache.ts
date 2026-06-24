@@ -129,8 +129,23 @@ export function clearSkillModuleCache(): void {
   rmSync(cacheDir, { recursive: true, force: true })
 }
 
+export function skillCompileRuntimeRoot(): string {
+  return join(resolveAppRoot(), SKILL_MODULE.COMPILE_RUNTIME_DIR)
+}
+
 export function esbuildPathAliases(): Record<string, string> {
   const root = resolveAppRoot()
+  if (isPackagedApp()) {
+    const runtime = skillCompileRuntimeRoot()
+    return {
+      '@main': join(runtime, 'src/main'),
+      '@config': join(runtime, 'config'),
+      '@shared': join(runtime, 'src/shared'),
+      '@toolSet': join(runtime, 'toolSet'),
+      '@logging': join(runtime, 'src/logging'),
+      '@openfde-ai': join(runtime, 'src/openfde-ai'),
+    }
+  }
   return {
     '@main': resolve(root, 'src/main'),
     '@config': resolve(root, 'config'),

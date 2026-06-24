@@ -6,9 +6,13 @@ import { PIPELINE_CONTEXT_LLM } from '../constants'
 import { SEARCH_STEP_ID, SEARCH_STEP_TITLE } from '../constants/step-ids'
 import type { SearchStepData } from './step-io'
 
-vi.mock('@toolSet/web', () => ({
-  cascadeWebSearch: vi.fn(),
-}))
+vi.mock('@toolSet/web', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@toolSet/web')>()
+  return {
+    ...actual,
+    cascadeWebSearch: vi.fn(),
+  }
+})
 
 vi.mock('../expr/run-expression-llm', () => ({
   runExpressionLlmText: vi.fn(),
