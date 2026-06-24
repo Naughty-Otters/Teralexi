@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEEP_THINKING_BEFORE_MARKER,
+  MULTIPLE_BRANCH_THINKING_MARKER,
+} from './deep-thinking-blocks'
+import {
   injectMessages,
   wrapSystemReminder,
   createPrepareStepFromInjectors,
@@ -59,10 +63,8 @@ describe('injection framework', () => {
       0,
     )
     expect(messages).toHaveLength(4)
-    expect(String(messages[1].content)).toContain('Before answering, write a comprehensive breakdown')
-    expect(String(messages[2].content)).toContain(
-      'Evaluate multiple branches of logic and explore different reasoning paths',
-    )
+    expect(String(messages[1].content)).toContain(DEEP_THINKING_BEFORE_MARKER)
+    expect(String(messages[2].content)).toContain(MULTIPLE_BRANCH_THINKING_MARKER)
     expect(String(messages[3].content)).toContain('## Current date and time')
   })
 
@@ -73,10 +75,8 @@ describe('injection framework', () => {
       0,
     )
     expect(messages).toHaveLength(4)
-    expect(String(messages[1].content)).toContain('Before answering, write a comprehensive breakdown')
-    expect(String(messages[2].content)).toContain(
-      'Evaluate multiple branches of logic and explore different reasoning paths',
-    )
+    expect(String(messages[1].content)).toContain(DEEP_THINKING_BEFORE_MARKER)
+    expect(String(messages[2].content)).toContain(MULTIPLE_BRANCH_THINKING_MARKER)
     expect(String(messages[3].content)).toContain('## Current date and time')
   })
 

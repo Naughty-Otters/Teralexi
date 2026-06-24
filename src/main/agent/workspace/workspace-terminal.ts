@@ -59,7 +59,7 @@ export async function runWorkspaceTerminalCommandWithControl(options: {
   const shellArgs =
     process.platform === 'win32'
       ? ['/d', '/s', '/c', command]
-      : ['-ilc', command]
+      : ['-lc', command]
 
   return await new Promise<WorkspaceTerminalRunResult>((resolve) => {
     let stdout = ''
