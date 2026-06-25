@@ -1,8 +1,17 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname } from 'path'
+import {
+  getEnvOverrides,
+  initializeEnvOverrides,
+} from './env-overrides'
 import { getopenfdeConfigDir, getopenfdeSystemPropPath } from './openfde-home'
+import {
+  CONFIG_PROPERTIES_FILENAME,
+  isValidSystemPropKey,
+} from './system-prop-keys'
 
-export const CONFIG_PROPERTIES_FILENAME = 'config.properties'
+export { isValidSystemPropKey, CONFIG_PROPERTIES_FILENAME } from './system-prop-keys'
+
 /** @deprecated Use {@link CONFIG_PROPERTIES_FILENAME} */
 export const SYSTEM_PROP_FILENAME = CONFIG_PROPERTIES_FILENAME
 export const LEGACY_SYSTEM_PROP_FILENAME = 'system.prop'
@@ -49,8 +58,18 @@ const DEFAULT_SYSTEM_PROPERTIES: Record<string, string> = {
   'editor.settings.eslintDebounceMs': '500',
   'app.support.uploadUrl': '',
   'app.support.maxMegabytes': '100',
+  'app.client.id': '',
+  'app.metrics.graphqlUrl': '',
   'app.ui.locale': 'en',
   'app.ui.appearance': 'solid',
+}
+
+export const SYSTEM_PROPERTY_KEYS = Object.keys(
+  DEFAULT_SYSTEM_PROPERTIES,
+) as (keyof typeof DEFAULT_SYSTEM_PROPERTIES & string)[]
+
+function ensureEnvOverridesLoaded(): void {
+  initializeEnvOverrides(SYSTEM_PROPERTY_KEYS)
 }
 
 function getSystemPropPath(): string {
@@ -78,7 +97,7 @@ function stringifySystemProp(entries: Map<string, string>): string {
   return sorted.map(([key, value]) => `${key}=${value}`).join('\n') + '\n'
 }
 
-function readAllProps(): Map<string, string> {
+function readConfigProperties(): Map<string, string> {
   const filePath = getSystemPropPath()
   if (!existsSync(filePath)) {
     return new Map(Object.entries(DEFAULT_SYSTEM_PROPERTIES))
@@ -91,6 +110,16 @@ function readAllProps(): Map<string, string> {
   return parsed
 }
 
+function resolveAllProps(): Map<string, string> {
+  ensureEnvOverridesLoaded()
+  const merged = readConfigProperties()
+  for (const [key, value] of getEnvOverrides()) {
+    if (!isValidSystemPropKey(key)) continue
+    if (value !== '') merged.set(key, value)
+  }
+  return merged
+}
+
 function writeAllProps(entries: Map<string, string>): void {
   const filePath = getSystemPropPath()
   mkdirSync(getopenfdeConfigDir(), { recursive: true })
@@ -98,23 +127,19 @@ function writeAllProps(entries: Map<string, string>): void {
   writeFileSync(filePath, stringifySystemProp(entries), 'utf-8')
 }
 
-export function isValidSystemPropKey(key: string): boolean {
-  return /^\w+\.\w+\.\w+$/.test(key)
-}
-
 export function ensureSystemPropFile(): string {
-  const merged = readAllProps()
+  const merged = readConfigProperties()
   writeAllProps(merged)
   return getSystemPropPath()
 }
 
 export function getSystemPropValue(key: string, defaultValue = ''): string {
-  const merged = readAllProps()
+  const merged = resolveAllProps()
   return merged.get(key) ?? defaultValue
 }
 
 export function getSystemPropValues(keys?: string[]): Record<string, string> {
-  const merged = readAllProps()
+  const merged = resolveAllProps()
   if (!keys || keys.length === 0) {
     return Object.fromEntries(merged.entries())
   }
@@ -134,7 +159,7 @@ export function setSystemPropValue(
     throw new Error(`Invalid config.properties key format: ${key}`)
   }
 
-  const merged = readAllProps()
+  const merged = readConfigProperties()
   merged.set(key, String(value))
   writeAllProps(merged)
 }

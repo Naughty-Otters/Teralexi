@@ -7,7 +7,6 @@ vi.mock('@main/services/conversation-store', () => ({
 }))
 
 import { loadToolSetTools } from './skill-module-loader'
-import { loadSkills } from './skills-directory-loader'
 
 describe('bundled skills (integration)', () => {
   it('scopes google_* tools to google-workspace skill only', async () => {

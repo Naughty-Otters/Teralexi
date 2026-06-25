@@ -7,10 +7,17 @@ import {
   usageToCounts,
 } from './usage'
 
-const insertTokenUsage = vi.fn()
+const { insertTokenUsage, reportProviderMetricAsync } = vi.hoisted(() => ({
+  insertTokenUsage: vi.fn(),
+  reportProviderMetricAsync: vi.fn(),
+}))
 
 vi.mock('@main/services/conversation-store', () => ({
   getConversationStore: () => ({ insertTokenUsage }),
+}))
+
+vi.mock('@main/services/provider-metrics-reporter', () => ({
+  reportProviderMetricAsync,
 }))
 
 describe('usageToCounts', () => {
@@ -32,7 +39,10 @@ describe('usageToCounts', () => {
 })
 
 describe('recordLlmTokenUsage', () => {
-  beforeEach(() => insertTokenUsage.mockClear())
+  beforeEach(() => {
+    insertTokenUsage.mockClear()
+    reportProviderMetricAsync.mockClear()
+  })
 
   it('skips insert when all counts zero', () => {
     recordLlmTokenUsage({
@@ -46,6 +56,10 @@ describe('recordLlmTokenUsage', () => {
   it('persists non-zero usage', () => {
     recordLlmTokenUsage({
       userId: 'u1',
+      conversationId: 'conv-1',
+      assistantMessageId: 'msg-1',
+      provider: 'openai',
+      model: 'gpt',
       source: 'streamText',
       usage: { inputTokens: 3, outputTokens: 7, totalTokens: 10 },
     })
@@ -55,6 +69,15 @@ describe('recordLlmTokenUsage', () => {
         inputTokens: 3,
         outputTokens: 7,
         totalTokens: 10,
+      }),
+    )
+    expect(reportProviderMetricAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'openai',
+        modelType: 'gpt',
+        sessionId: 'conv-1',
+        messageId: 'msg-1',
+        usage: { inputTokens: 3, outputTokens: 7, totalTokens: 10 },
       }),
     )
   })

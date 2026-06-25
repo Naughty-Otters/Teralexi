@@ -58,4 +58,10 @@ export default {
       100,
     ),
   },
+  client: {
+    id: getSystemPropValue('app.client.id', '').trim(),
+  },
+  metrics: {
+    graphqlUrl: getSystemPropValue('app.metrics.graphqlUrl', '').trim(),
+  },
 }

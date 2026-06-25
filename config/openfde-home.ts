@@ -2,7 +2,7 @@ import { createRequire } from 'module'
 import { existsSync, mkdirSync, renameSync } from 'fs'
 import { homedir } from 'os'
 import { dirname, join, resolve, sep } from 'path'
-import { CONFIG_PROPERTIES_FILENAME } from './system-prop'
+import { CONFIG_PROPERTIES_FILENAME } from './system-prop-keys'
 
 export const openfde_HOME_DIRNAME = '.openfde'
 export const openfde_DB_FILENAME = 'openfde.db'
