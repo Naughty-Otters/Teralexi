@@ -17,14 +17,44 @@ describe('copyBubbleMarkdownContent', () => {
     await expect(copyBubbleMarkdownContent('   ')).resolves.toBe(false)
   })
 
-  it('writes trimmed markdown to the clipboard', async () => {
+  it('writes plain text without markdown decorators to the clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', { clipboard: { writeText } })
+    Object.defineProperty(globalThis, 'ClipboardItem', {
+      configurable: true,
+      value: undefined,
+    })
 
-    await expect(copyBubbleMarkdownContent('  hello\nworld  ')).resolves.toBe(
-      true,
+    await expect(
+      copyBubbleMarkdownContent('## Hello **world**'),
+    ).resolves.toBe(true)
+    expect(writeText).toHaveBeenCalledWith('Hello world')
+  })
+
+  it('writes plain and html clipboard payloads when supported', async () => {
+    const write = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clipboard: { write, writeText: vi.fn() } })
+    vi.stubGlobal(
+      'ClipboardItem',
+      class ClipboardItem {
+        constructor(public items: Record<string, Blob>) {}
+      },
     )
-    expect(writeText).toHaveBeenCalledWith('hello\nworld')
+    vi.stubGlobal(
+      'Blob',
+      class Blob {
+        constructor(
+          public parts: string[],
+          public options: { type: string },
+        ) {}
+      },
+    )
+
+    await expect(copyBubbleMarkdownContent('**Bold** text')).resolves.toBe(true)
+    expect(write).toHaveBeenCalledTimes(1)
+    const payload = write.mock.calls[0]?.[0] as Array<{ items: Record<string, Blob> }>
+    expect(payload[0]?.items['text/plain']?.parts[0]).toBe('Bold text')
+    expect(payload[0]?.items['text/html']?.parts[0]).toContain('<strong>Bold</strong>')
   })
 })
 
