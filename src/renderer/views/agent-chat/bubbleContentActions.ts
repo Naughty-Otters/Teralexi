@@ -1,4 +1,5 @@
 import MarkdownIt from 'markdown-it'
+import { markdownToPlainText } from '@shared/markdown/markdown-to-plain-text'
 
 const printMarkdown = new MarkdownIt({
   html: false,
@@ -9,9 +10,30 @@ const printMarkdown = new MarkdownIt({
 export async function copyBubbleMarkdownContent(
   markdown: string,
 ): Promise<boolean> {
-  const text = markdown.trim()
-  if (!text || !navigator.clipboard?.writeText) return false
-  await navigator.clipboard.writeText(text)
+  const source = markdown.trim()
+  if (!source || !navigator.clipboard) return false
+
+  const plainText = markdownToPlainText(source)
+  if (!plainText) return false
+
+  const html = printMarkdown.render(source)
+
+  if (typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/plain': new Blob([plainText], { type: 'text/plain' }),
+          'text/html': new Blob([html], { type: 'text/html' }),
+        }),
+      ])
+      return true
+    } catch {
+      // Fall back to plain text only.
+    }
+  }
+
+  if (!navigator.clipboard.writeText) return false
+  await navigator.clipboard.writeText(plainText)
   return true
 }
 
