@@ -70,27 +70,106 @@ export async function createLightBackgroundLogo(sourcePath, outputPath) {
 }
 
 /**
- * Bold black template icon for macOS menu bar / system tray.
- * Stroke thickening runs at menu-bar pixel size so lines stay visible after downscale.
+ * Black template icon for macOS menu bar / system tray, derived from openfde-logo.png.
+ * No stroke dilation — keeps the logo's natural line weight at menu-bar size.
  */
 export async function createTrayTemplateIcon(
   sourcePath,
   outputPath,
-  { canvasSize = 128, dilateRadius = 3 } = {},
+  { canvasSize = 16, dilateRadius = 0, contentScale = 1 } = {},
 ) {
+  const contentSize = Math.max(1, Math.round(canvasSize * contentScale))
+  const pad = Math.round((canvasSize - contentSize) / 2)
+
   const { data, info } = await sharp(sourcePath)
     .ensureAlpha()
-    .resize(canvasSize, canvasSize, { kernel: sharp.kernel.lanczos3 })
+    .resize(contentSize, contentSize, {
+      fit: 'contain',
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+      kernel: sharp.kernel.lanczos3,
+    })
+    .extend({
+      top: pad,
+      bottom: canvasSize - contentSize - pad,
+      left: pad,
+      right: canvasSize - contentSize - pad,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
     .raw()
     .toBuffer({ resolveWithObject: true })
 
   const { width, height, channels } = info
-  const alpha = dilateAlpha(
-    strokeMaskFromSource(data, width, height, channels),
-    width,
-    height,
-    dilateRadius,
-  )
+  let alpha = strokeMaskFromSource(data, width, height, channels)
+  if (dilateRadius > 0) {
+    alpha = dilateAlpha(alpha, width, height, dilateRadius)
+  }
   const rgba = rgbaFromAlphaMask(alpha, width, height, { r: 0, g: 0, b: 0, a: 255 })
   await writePng(rgba, width, height, outputPath)
+}
+
+/** @1x and @2x menu-bar PNGs for Electron Tray. */
+export async function createMenuBarTrayIcons(sourcePath, outDir) {
+  const { join } = await import('node:path')
+  await createTrayTemplateIcon(sourcePath, join(outDir, 'tray-icon.png'), {
+    canvasSize: 22,
+  })
+  await createTrayTemplateIcon(sourcePath, join(outDir, 'tray-icon@2x.png'), {
+    canvasSize: 44,
+  })
+}
+
+/** Dark base under the semi-transparent gradient stops. */
+const APP_ICON_BASE = '#0a0e17'
+
+/**
+ * Electron dock / taskbar icon — rounded square, gradient background, cyan glow, logo centered.
+ * Matches: linear-gradient(135deg, rgba(0,212,255,0.4), rgba(124,58,237,0.4))
+ *          box-shadow: 0 0 20px rgba(0,212,255,0.25)
+ */
+export async function createAppIconPng(sourcePath, outputPath, { size = 1024 } = {}) {
+  const glowBlur = Math.round((20 * size) / 512)
+  const logoSize = Math.round(size * 0.66)
+  const offset = Math.round((size - logoSize) / 2)
+  const inset = Math.round(size * 0.06)
+  const inner = size - inset * 2
+  const cornerRadius = Math.round(inner * 0.223)
+  const borderWidth = Math.max(1, Math.round(size / 256))
+
+  const bgSvg = Buffer.from(
+    `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="rgb(0,212,255)" stop-opacity="0.4"/>
+          <stop offset="100%" stop-color="rgb(124,58,237)" stop-opacity="0.4"/>
+        </linearGradient>
+        <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+          <feDropShadow dx="0" dy="0" stdDeviation="${glowBlur}"
+            flood-color="rgb(0,212,255)" flood-opacity="0.25"/>
+        </filter>
+      </defs>
+      <rect x="${inset}" y="${inset}" width="${inner}" height="${inner}" rx="${cornerRadius}"
+        fill="${APP_ICON_BASE}"/>
+      <rect x="${inset}" y="${inset}" width="${inner}" height="${inner}" rx="${cornerRadius}"
+        fill="url(#bg)" filter="url(#glow)"/>
+      <rect x="${inset + borderWidth / 2}" y="${inset + borderWidth / 2}"
+        width="${inner - borderWidth}" height="${inner - borderWidth}" rx="${cornerRadius - borderWidth / 2}"
+        fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="${borderWidth}"/>
+      <rect x="${inset + borderWidth * 1.5}" y="${inset + borderWidth * 1.5}"
+        width="${inner - borderWidth * 3}" height="${inner - borderWidth * 3}" rx="${Math.max(1, cornerRadius - borderWidth * 1.5)}"
+        fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="${Math.max(1, borderWidth / 2)}"/>
+    </svg>`,
+  )
+
+  const logo = await sharp(sourcePath)
+    .resize(logoSize, logoSize, {
+      fit: 'contain',
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .png()
+    .toBuffer()
+
+  await sharp(bgSvg)
+    .composite([{ input: logo, top: offset, left: offset }])
+    .png()
+    .toFile(outputPath)
 }
