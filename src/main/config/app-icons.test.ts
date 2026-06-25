@@ -8,12 +8,16 @@ const mockApp = {
 
 vi.mock('electron', () => ({
   app: mockApp,
+  screen: {
+    getPrimaryDisplay: vi.fn(() => ({ scaleFactor: 2 })),
+  },
   nativeImage: {
     createFromPath: vi.fn(() => ({
       isEmpty: () => false,
+      getSize: () => ({ width: 44, height: 44 }),
       setTemplateImage: vi.fn(),
       resize: vi.fn(function resize() {
-        return { isEmpty: () => false, setTemplateImage: vi.fn() }
+        return { isEmpty: () => false, getSize: () => ({ width: 22, height: 22 }), setTemplateImage: vi.fn() }
       }),
     })),
   },
@@ -62,20 +66,17 @@ describe('app-icons', () => {
     )
   })
 
-  it('getTrayIconPngPath prefers packaged tray icon before dev source paths', async () => {
-    mockApp.isPackaged = true
-    mockApp.getAppPath.mockReturnValue('/OpenFDE.app/Contents/Resources/app.asar')
+  it('getTrayIconPngPath prefers build tray icons before dev source paths', async () => {
+    mockApp.isPackaged = false
     const existsSync = vi.fn((path: string) => {
       const normalized = String(path).replace(/\\/g, '/')
       return (
-        normalized.endsWith('/Resources/build/icons/tray-icon.png') ||
-        normalized.endsWith('/Resources/build/icons/icon.icns')
+        normalized.endsWith('/build/icons/tray-icon@2x.png') ||
+        normalized.endsWith('/build/icons/tray-icon.png')
       )
     })
     vi.doMock('fs', () => ({ existsSync }))
     const { getTrayIconPngPath } = await import('./app-icons')
-    expect(getTrayIconPngPath()).toBe(
-      '/OpenFDE.app/Contents/Resources/build/icons/tray-icon.png',
-    )
+    expect(getTrayIconPngPath()).toMatch(/\/build\/icons\/tray-icon@2x\.png$/)
   })
 })

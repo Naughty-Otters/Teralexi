@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * Generates Electron app icons in build/icons/ from openfde-logo.png.
+ * App icon PNGs use a branded gradient background; favicon and in-app logos are unchanged.
  */
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { existsSync } from 'node:fs'
@@ -58,16 +59,14 @@ async function generateDerivedLogosIfNeeded() {
     return
   }
 
-  const { createLightBackgroundLogo, createTrayTemplateIcon } = await import(
-    './logo-variants.mjs'
-  )
+  const { createLightBackgroundLogo, createTrayTemplateIcon } =
+    await import('./logo-variants.mjs')
   if (needBright) {
     await createLightBackgroundLogo(logoPng, brightLogoPng)
   }
   if (needTray) {
     await createTrayTemplateIcon(logoPng, trayLogoPng, {
-      canvasSize: 128,
-      dilateRadius: 4,
+      canvasSize: 32,
     })
   }
 }
@@ -79,14 +78,11 @@ try {
 
   await generateDerivedLogosIfNeeded()
 
-  if (!existsSync(trayLogoPng)) {
-    throw new Error(`Tray template PNG not found: ${trayLogoPng}`)
-  }
+  const { createAppIconPng, createMenuBarTrayIcons } = await import('./logo-variants.mjs')
 
-  copyLogo(join(out, '256x256.png'))
-  copyLogo(join(out, 'icon.png'))
-  copyLogo(join(out, 'tray-icon.png'), trayLogoPng)
-  copyLogo(join(out, 'tray-icon@2x.png'), trayLogoPng)
+  await createAppIconPng(logoPng, join(out, 'icon.png'), { size: 1024 })
+  await createAppIconPng(logoPng, join(out, '256x256.png'), { size: 256 })
+  await createMenuBarTrayIcons(logoPng, out)
 
   writeIcoFromPng(join(out, '256x256.png'), join(out, 'icon.ico'))
   writeIcnsFromPng(join(out, 'icon.png'), join(out, 'icon.icns'))

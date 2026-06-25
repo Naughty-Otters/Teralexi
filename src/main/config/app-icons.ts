@@ -1,6 +1,6 @@
 import { existsSync } from 'fs'
 import { join } from 'path'
-import { app, nativeImage, type NativeImage } from 'electron'
+import { app, nativeImage, screen, type NativeImage } from 'electron'
 import { createLogger } from '@main/logger'
 import { toOnDiskAppPath } from './app-paths'
 
@@ -17,15 +17,16 @@ export function configureAppBranding(): void {
 }
 
 function projectRoot(): string {
-  return app.isPackaged
-    ? app.getAppPath()
-    : join(__dirname, '..', '..', '..')
+  if (app.isPackaged) {
+    return app.getAppPath()
+  }
+  return process.cwd()
 }
 
 /** Packaged apps store icons under Resources/build/icons (extraResources). */
 export function resolveBuildIconsDir(): string {
   if (!app.isPackaged) {
-    return join(__dirname, '..', '..', '..', 'build', 'icons')
+    return join(process.cwd(), 'build', 'icons')
   }
 
   const appPath = app.getAppPath()
@@ -62,22 +63,28 @@ export function getAppIconPngPath(): string {
   return resolved
 }
 
+/** macOS menu bar slot — 22pt matches common menu bar icon size. */
+const MENU_BAR_TRAY_PX = 22
+
+function menuBarTrayPixelSize(): number {
+  if (process.platform !== 'darwin') return 38
+  return MENU_BAR_TRAY_PX
+}
+
 /** Bold template PNG for the macOS menu bar / system tray. */
 export function getTrayIconPngPath(): string {
   const root = projectRoot()
   const buildIcons = resolveBuildIconsDir()
-  const candidates = app.isPackaged
-    ? [
-        join(buildIcons, 'tray-icon.png'),
-        join(buildIcons, 'tray-icon@2x.png'),
-        join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-tray-icon.png'),
-        join(buildIcons, 'icon.png'),
-      ]
-    : [
-        join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-tray-icon.png'),
-        join(buildIcons, 'tray-icon.png'),
-        join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-logo.png'),
-      ]
+  const use2x = process.platform === 'darwin' && screen.getPrimaryDisplay().scaleFactor >= 2
+  const buildTrayCandidates = use2x
+    ? [join(buildIcons, 'tray-icon@2x.png'), join(buildIcons, 'tray-icon.png')]
+    : [join(buildIcons, 'tray-icon.png'), join(buildIcons, 'tray-icon@2x.png')]
+  const candidates = [
+    ...buildTrayCandidates,
+    join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-tray-icon.png'),
+    join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-logo.png'),
+    join(buildIcons, 'icon.png'),
+  ]
   const resolved = firstExistingPath(candidates)
   if (!resolved) {
     throw new Error('tray icon PNG not found')
@@ -113,28 +120,34 @@ function resizeSquare(image: NativeImage, size: number): NativeImage {
   return image.resize({ width: size, height: size, quality: 'best' })
 }
 
+function finalizeTrayIcon(image: NativeImage, pngPath: string): NativeImage {
+  if (image.isEmpty()) return image
+  if (process.platform === 'darwin' && isTrayTemplateIconPath(pngPath)) {
+    image.setTemplateImage(true)
+  }
+  return image
+}
+
 /** macOS menu bar / system tray — bold template PNG at menu-bar size. */
 export function loadTrayIcon(): NativeImage {
   const pngPath = getTrayIconPngPath()
-  const logicalSize = process.platform === 'darwin' ? 22 : 38
-  const image = resizeSquare(loadNativeImageFromPath(pngPath), logicalSize)
+  const targetSize = menuBarTrayPixelSize()
+  const loaded = loadNativeImageFromPath(pngPath)
+  const { width, height } = loaded.getSize()
+  const image =
+    width === targetSize && height === targetSize
+      ? loaded
+      : resizeSquare(loaded, targetSize)
   if (!image.isEmpty()) {
-    if (process.platform === 'darwin' && isTrayTemplateIconPath(pngPath)) {
-      image.setTemplateImage(true)
-    }
-    return image
+    return finalizeTrayIcon(image, pngPath)
   }
 
   const fallback = join(resolveBuildIconsDir(), 'tray-icon.png')
   log.warn('Falling back to tray PNG', { fallback })
-  const fallbackImage = resizeSquare(loadNativeImageFromPath(fallback), logicalSize)
-  if (
-    process.platform === 'darwin' &&
-    !fallbackImage.isEmpty() &&
-    isTrayTemplateIconPath(fallback)
-  ) {
-    fallbackImage.setTemplateImage(true)
-  }
+  const fallbackImage = finalizeTrayIcon(
+    resizeSquare(loadNativeImageFromPath(fallback), targetSize),
+    fallback,
+  )
   if (fallbackImage.isEmpty()) {
     log.error('Tray icon PNG could not be loaded', {
       pngPath,
