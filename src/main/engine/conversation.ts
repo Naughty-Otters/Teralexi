@@ -1,6 +1,6 @@
 import type { WebContents } from 'electron'
 import { getConversationStore } from '@main/services/conversation-store'
-import { resolveUserAttachmentsForTurn } from '@main/services/chat-attachments'
+import { ensureUserAttachmentsUploadedBeforeAgentRun } from '@main/services/chat-attachments'
 import { notifyConversationStoreChanged } from '@main/services/conversation-store-notify'
 import { webContentSend } from '@main/services/web-content-send'
 import { createLogger } from '@main/logger'
@@ -132,7 +132,7 @@ function persistIncomingUserMessage(args: {
     content: string
     createdAt: string
   }
-}): void {
+}): string | null {
   const fromUi = extractTrailingUserForPersistence(
     parseClientUiMessages(args.uiMessages),
   )
@@ -154,7 +154,7 @@ function persistIncomingUserMessage(args: {
           createdAt: pending.createdAt,
         }
       : null
-  if (!row) return
+  if (!row) return null
 
   clearPlanExecutionCompleted(args.conversationId)
 
@@ -176,12 +176,43 @@ function persistIncomingUserMessage(args: {
       messageId: row.id,
       source: fromUi ? 'uiMessages' : 'pendingUserMessage',
     })
+    return row.id
   } catch (err) {
     log.warn(ConfigContext.ENGINE_LOG.PERSIST_USER_FAIL, {
       conversationId: args.conversationId,
       err,
     })
+    return null
   }
+}
+
+async function uploadUserAttachmentsBeforeAgentRun(
+  args: {
+    conversationId: string
+    uiMessages?: unknown[]
+    pendingUserMessage?: { id: string; content: string; createdAt: string }
+    userAttachments?: import('@shared/chat/attachments').ChatAttachmentMeta[]
+    attachmentSourcePaths?: string[]
+  },
+  persistedUserMessageId: string | null,
+): Promise<{ attachments: import('@shared/chat/attachments').ChatAttachmentMeta[]; error?: string }> {
+  const stagedPaths = (args.attachmentSourcePaths ?? [])
+    .map((p) => p.trim())
+    .filter(Boolean)
+  if (stagedPaths.length > 0 && !persistedUserMessageId && !args.pendingUserMessage?.id?.trim()) {
+    return {
+      attachments: [],
+      error: 'Could not save the user message before uploading attachments.',
+    }
+  }
+
+  return ensureUserAttachmentsUploadedBeforeAgentRun({
+    conversationId: args.conversationId,
+    messageId: persistedUserMessageId ?? args.pendingUserMessage?.id,
+    uiMessages: args.uiMessages,
+    userAttachments: args.userAttachments,
+    attachmentSourcePaths: args.attachmentSourcePaths,
+  })
 }
 
 function persistConversationSandboxRun(payload: AgentSandboxReadyPayload): void {
@@ -256,29 +287,13 @@ export type RunAgentForConversationResult = {
 export async function runAgentForConversation(
   args: RunAgentForConversationArgs,
 ): Promise<RunAgentForConversationResult> {
-  const {
-    conversationId,
-    agentId,
-    assistantMessageId,
-    userId,
-    uiMessages,
-    pendingUserMessage,
-    webContents,
-  } = args
-
   return runWithAgentRunLog(
-    { agentId, conversationId, assistantMessageId },
-    () =>
-      executeAgentForConversation({
-        conversationId,
-        agentId,
-        assistantMessageId,
-        userId,
-        uiMessages,
-        pendingUserMessage,
-        userAttachments: args.userAttachments,
-        webContents,
-      }),
+    {
+      agentId: args.agentId,
+      conversationId: args.conversationId,
+      assistantMessageId: args.assistantMessageId,
+    },
+    () => executeAgentForConversation(args),
   )
 }
 
@@ -311,12 +326,25 @@ async function executeAgentForConversation(
     // Hooks are optional; do not block agent runs when misconfigured.
   }
 
-  persistIncomingUserMessage({
+  const persistedUserMessageId = persistIncomingUserMessage({
     conversationId,
     agentId,
     uiMessages,
     pendingUserMessage,
   })
+
+  const attachmentResult = await uploadUserAttachmentsBeforeAgentRun(
+    args,
+    persistedUserMessageId,
+  )
+  if (attachmentResult.error) {
+    return {
+      finalContent: '',
+      hasError: true,
+      errorMessage: attachmentResult.error,
+    }
+  }
+  const userAttachments = attachmentResult.attachments
 
   await maybeAutoCompactConversationHistory({ conversationId, userId })
 
@@ -343,21 +371,6 @@ async function executeAgentForConversation(
   })
   const mcpTools = await loadMcpToolsForAgent(userId, agent)
   const enabledSkillTools = resolveEnabledSkillToolNames(agent)
-
-  const attachmentResult = await resolveUserAttachmentsForTurn({
-    conversationId,
-    messageId: pendingUserMessage?.id,
-    userAttachments: args.userAttachments,
-    attachmentSourcePaths: args.attachmentSourcePaths,
-  })
-  if (attachmentResult.error) {
-    return {
-      finalContent: '',
-      hasError: true,
-      errorMessage: attachmentResult.error,
-    }
-  }
-  const userAttachments = attachmentResult.attachments
 
   log.info(ConfigContext.ENGINE_LOG.PREPARED_CONTEXT, {
     conversationId,
@@ -555,32 +568,13 @@ export type RunSubAgentMentionArgs = {
 export async function runSubAgentMentionDelegation(
   args: RunSubAgentMentionArgs,
 ): Promise<RunAgentForConversationResult> {
-  const {
-    conversationId,
-    agentId,
-    assistantMessageId,
-    userId,
-    targetAgentId,
-    task,
-    uiMessages,
-    pendingUserMessage,
-    webContents,
-  } = args
-
   return runWithAgentRunLog(
-    { agentId, conversationId, assistantMessageId },
-    () =>
-      executeSubAgentMentionDelegation({
-        conversationId,
-        agentId,
-        assistantMessageId,
-        userId,
-        targetAgentId,
-        task,
-        uiMessages,
-        pendingUserMessage,
-        webContents,
-      }),
+    {
+      agentId: args.agentId,
+      conversationId: args.conversationId,
+      assistantMessageId: args.assistantMessageId,
+    },
+    () => executeSubAgentMentionDelegation(args),
   )
 }
 
@@ -607,19 +601,17 @@ async function executeSubAgentMentionDelegation(
     }
   }
 
-  persistIncomingUserMessage({
+  const persistedUserMessageId = persistIncomingUserMessage({
     conversationId,
     agentId,
     uiMessages,
     pendingUserMessage,
   })
 
-  const attachmentResult = await resolveUserAttachmentsForTurn({
-    conversationId,
-    messageId: pendingUserMessage?.id,
-    userAttachments: args.userAttachments,
-    attachmentSourcePaths: args.attachmentSourcePaths,
-  })
+  const attachmentResult = await uploadUserAttachmentsBeforeAgentRun(
+    args,
+    persistedUserMessageId,
+  )
   if (attachmentResult.error) {
     return {
       finalContent: '',

@@ -3,6 +3,7 @@ import {
   chatUploadsDirForMessage,
   formatChatAttachmentSize,
   isAllowedChatAttachmentName,
+  isTextBasedChatAttachment,
   mimeTypeForChatAttachmentName,
   sanitizeChatAttachmentFilename,
 } from './attachments'
@@ -29,5 +30,44 @@ describe('chat attachments helpers', () => {
     expect(formatChatAttachmentSize(512)).toBe('512 B')
     expect(formatChatAttachmentSize(2048)).toBe('2.0 KB')
     expect(chatUploadsDirForMessage('msg-1')).toBe('input/uploads/msg-1')
+  })
+
+  it('classifies text-based vs binary attachments', () => {
+    expect(
+      isTextBasedChatAttachment({
+        originalName: 'notes.txt',
+        mimeType: 'text/plain',
+      }),
+    ).toBe(true)
+    expect(
+      isTextBasedChatAttachment({
+        originalName: 'data.json',
+        mimeType: 'application/json',
+      }),
+    ).toBe(true)
+    expect(
+      isTextBasedChatAttachment({
+        originalName: 'diagram.svg',
+        mimeType: 'image/svg+xml',
+      }),
+    ).toBe(true)
+    expect(
+      isTextBasedChatAttachment({
+        originalName: 'photo.png',
+        mimeType: 'image/png',
+      }),
+    ).toBe(false)
+    expect(
+      isTextBasedChatAttachment({
+        originalName: 'report.pdf',
+        mimeType: 'application/pdf',
+      }),
+    ).toBe(false)
+    expect(
+      isTextBasedChatAttachment({
+        originalName: 'script.py',
+        mimeType: null,
+      }),
+    ).toBe(true)
   })
 })

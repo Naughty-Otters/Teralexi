@@ -69,6 +69,10 @@ export interface AgentInjector {
   injectUserMessage?(
     context: InjectionRunContext,
   ): ModelMessage | null | Promise<ModelMessage | null>
+  /** Append text to the trailing user message before other injector rows. */
+  augmentTrailingUserMessage?(
+    context: InjectionRunContext,
+  ): string | null | Promise<string | null>
   onPrepareStep?(
     context: InjectionRunContext,
     step: PrepareStepContext,

@@ -71,7 +71,7 @@ describe('injector selector', () => {
     ])
   })
 
-  it('resolves todoExecution profile without user-message injectors', () => {
+  it('resolves todoExecution profile with user-upload injectors', () => {
     const profile = resolveInjectionProfile(makeCtx() as never, 'todoExecution')
     expect(profile.key).toBe('todoExecution')
     const ids = selectInjectors(profile).map((i) => i.id)
@@ -80,6 +80,11 @@ describe('injector selector', () => {
     expect(ids).not.toContain('base-tool-loop')
     expect(ids).not.toContain('current-datetime')
     expect(ids).not.toContain('deep-thinking-after-answer')
-    expect(selectUserMessageInjectors(profile)).toEqual([])
+    expect(selectUserMessageInjectors(profile).map((i) => i.id)).toEqual([
+      'deep-thinking-before-answer',
+      'multiple-branch-thinking',
+      'current-datetime',
+      'user-uploads',
+    ])
   })
 })
