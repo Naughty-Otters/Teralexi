@@ -1,0 +1,100 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('node:fs', () => ({
+  existsSync: vi.fn(),
+  readFileSync: vi.fn(),
+}))
+
+vi.mock('node:os', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:os')>()
+  return {
+    ...actual,
+    homedir: vi.fn(() => '/Users/tester'),
+  }
+})
+
+import { existsSync, readFileSync } from 'node:fs'
+import {
+  envNameToSystemPropKey,
+  loadEnvOverrides,
+  parseEnvFile,
+  resetEnvOverridesForTests,
+  stripEnvValue,
+  systemPropKeyToEnvName,
+} from './env-overrides'
+
+const KNOWN_KEYS = [
+  'app.metrics.graphqlUrl',
+  'app.dev.port',
+  'settings.telegram.botToken',
+]
+
+describe('env-overrides', () => {
+  beforeEach(() => {
+    resetEnvOverridesForTests()
+    vi.mocked(existsSync).mockReset()
+    vi.mocked(readFileSync).mockReset()
+  })
+
+  it('maps system prop keys to env var names', () => {
+    expect(systemPropKeyToEnvName('app.metrics.graphqlUrl')).toBe(
+      'APP_METRICS_GRAPHQLURL',
+    )
+  })
+
+  it('maps env var names back to system prop keys', () => {
+    expect(envNameToSystemPropKey('APP_METRICS_GRAPHQLURL', KNOWN_KEYS)).toBe(
+      'app.metrics.graphqlUrl',
+    )
+    expect(
+      envNameToSystemPropKey('OPENFDE_APP_METRICS_GRAPHQLURL', KNOWN_KEYS),
+    ).toBe('app.metrics.graphqlUrl')
+    expect(
+      envNameToSystemPropKey('app.metrics.graphqlUrl', KNOWN_KEYS),
+    ).toBe('app.metrics.graphqlUrl')
+  })
+
+  it('parses quoted env values and dotted keys', () => {
+    const parsed = parseEnvFile(
+      `
+# comment
+app.metrics.graphqlUrl = 'http://127.0.0.1:8000/graphql'
+APP_DEV_PORT=3000
+`,
+      KNOWN_KEYS,
+    )
+
+    expect(parsed.get('app.metrics.graphqlUrl')).toBe(
+      'http://127.0.0.1:8000/graphql',
+    )
+    expect(parsed.get('app.dev.port')).toBe('3000')
+  })
+
+  it('strips surrounding quotes', () => {
+    expect(stripEnvValue("'value'")).toBe('value')
+    expect(stripEnvValue('"value"')).toBe('value')
+  })
+
+  it('loads overrides from env files and process env', () => {
+    vi.mocked(existsSync).mockImplementation((target) =>
+      String(target).endsWith('/env/.prod.env'),
+    )
+    vi.mocked(readFileSync).mockReturnValue(
+      "app.metrics.graphqlUrl = 'http://metrics.example/graphql'\n",
+    )
+
+    const overrides = loadEnvOverrides({
+      knownKeys: KNOWN_KEYS,
+      searchRoots: ['/app'],
+      processEnv: {
+        NODE_ENV: 'production',
+        APP_DEV_PORT: '4000',
+      },
+    })
+
+    expect(overrides.get('app.metrics.graphqlUrl')).toBe(
+      'http://metrics.example/graphql',
+    )
+    expect(overrides.get('app.dev.port')).toBe('4000')
+  })
+})

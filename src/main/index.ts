@@ -11,8 +11,10 @@ initStaticPaths()
 import { initializeopenfdeHome } from '@config/openfde-home'
 import { isPackagedApp } from './config/app-paths'
 import { clearSkillModuleCache, loadToolSetTools } from '@main/skills/skill-module-loader'
+import { ensureClientId } from '@main/services/client-identity'
 
 initializeopenfdeHome(app)
+ensureClientId()
 // Dev-only: drop stale esbuild bundles when source changes frequently.
 if (!isPackagedApp()) {
   clearSkillModuleCache()

@@ -1,5 +1,6 @@
 import type { LanguageModelUsage } from '@openfde-ai'
 import { getConversationStore } from '@main/services/conversation-store'
+import { reportProviderMetricAsync } from '@main/services/provider-metrics-reporter'
 import { randomShortUuid } from '@shared/utils/short-uuid'
 import type { AgentResponseOpts, AgentStepId } from '../types'
 
@@ -51,6 +52,15 @@ export function recordLlmTokenUsage(params: {
     inputTokens: counts.inputTokens,
     outputTokens: counts.outputTokens,
     totalTokens: counts.totalTokens,
+  })
+
+  reportProviderMetricAsync({
+    datetime: new Date().toISOString(),
+    provider: params.provider,
+    modelType: params.model,
+    sessionId: params.conversationId,
+    messageId: params.assistantMessageId,
+    usage: params.usage,
   })
 }
 

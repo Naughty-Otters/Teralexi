@@ -37,6 +37,7 @@
   "files": [
     "dist/electron/**/*",
     "config/**/*",
+    "env/**/*",
     "!**/*.{map,tsbuildinfo}",
     "!**/*.test.{ts,tsx,js,jsx,mjs,cjs}",
     "!**/*.integration.test.{ts,tsx,js,jsx,mjs,cjs}",

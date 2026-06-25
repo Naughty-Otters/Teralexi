@@ -12,7 +12,13 @@ vi.mock('@config/openfde-home', () => ({
   getopenfdeSystemPropPath: vi.fn(() => '/mock/.openfde/config/config.properties'),
 }))
 
+vi.mock('./env-overrides', () => ({
+  initializeEnvOverrides: vi.fn(),
+  getEnvOverrides: vi.fn(() => new Map<string, string>()),
+}))
+
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { getEnvOverrides } from './env-overrides'
 import {
   CONFIG_PROPERTIES_FILENAME,
   ensureSystemPropFile,
@@ -48,6 +54,17 @@ describe('system-prop', () => {
     vi.mocked(existsSync).mockReturnValue(true)
     vi.mocked(readFileSync).mockReturnValue('app.dev.port=3000\n# comment\n')
     expect(getSystemPropValue('app.dev.port')).toBe('3000')
+  })
+
+  it('applies env overrides over config.properties and defaults', () => {
+    vi.mocked(existsSync).mockReturnValue(false)
+    vi.mocked(getEnvOverrides).mockReturnValue(
+      new Map([['app.metrics.graphqlUrl', 'http://metrics.example/graphql']]),
+    )
+
+    expect(getSystemPropValue('app.metrics.graphqlUrl')).toBe(
+      'http://metrics.example/graphql',
+    )
   })
 
   it('getSystemPropValues returns all or picked keys', () => {
