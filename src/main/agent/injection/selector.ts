@@ -56,6 +56,13 @@ const TODO_EXECUTION_INSTRUCTIONS = [
   'language',
 ] as const
 
+const TODO_EXECUTION_USER_MESSAGES = [
+  'deep-thinking-before-answer',
+  'multiple-branch-thinking',
+  'current-datetime',
+  'user-uploads',
+] as const
+
 const TOOL_LOOP_DEFAULT_USER_MESSAGES = [
   'deep-thinking-before-answer',
   'multiple-branch-thinking',
@@ -63,6 +70,7 @@ const TOOL_LOOP_DEFAULT_USER_MESSAGES = [
   'user-uploads',
   'plan-mode',
 ] as const
+
 const TOOL_LOOP_CODING_ROOT_USER_MESSAGES = [
   'deep-thinking-before-answer',
   'multiple-branch-thinking',
@@ -93,6 +101,7 @@ const PROFILE_USER_MESSAGE_INJECTOR_IDS: Partial<
   'toolLoop.default': TOOL_LOOP_DEFAULT_USER_MESSAGES,
   'toolLoop.coding.root': TOOL_LOOP_CODING_ROOT_USER_MESSAGES,
   'toolLoop.coding.child': TOOL_LOOP_CODING_CHILD_USER_MESSAGES,
+  todoExecution: TODO_EXECUTION_USER_MESSAGES,
 }
 
 function resolveRunDepth(ctx: AgentStepContext): number {

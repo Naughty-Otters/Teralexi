@@ -15,6 +15,10 @@ import type {
   TodoExecutionParams,
 } from './types'
 import { isInstructionInjector, isUserMessageInjector } from './types'
+import {
+  appendSuffixToTrailingUserMessage,
+  USER_UPLOADS_INJECTOR_MARKER,
+} from './injection-message-content'
 
 function buildRunContext(
   ctx: AgentStepContext,
@@ -105,6 +109,23 @@ export async function injectUserMessages(
   for (const injector of userMessageInjectors(profile)) {
     const runCtx = buildRunContext(ctx, profile, loopStep, nextMessages)
     if (!injector.applies(runCtx)) continue
+
+    if (typeof injector.augmentTrailingUserMessage === 'function') {
+      const suffix = await injector.augmentTrailingUserMessage(runCtx)
+      if (suffix?.trim()) {
+        const augmented = appendSuffixToTrailingUserMessage(nextMessages, suffix, {
+          dedupeMarker: USER_UPLOADS_INJECTOR_MARKER,
+        })
+        if (augmented !== nextMessages) {
+          nextMessages = augmented
+          continue
+        }
+        const fallback = await injector.injectUserMessage?.(runCtx)
+        if (fallback) nextMessages = [...nextMessages, fallback]
+      }
+      continue
+    }
+
     const msg = await injector.injectUserMessage!(runCtx)
     if (msg) nextMessages = [...nextMessages, msg]
   }

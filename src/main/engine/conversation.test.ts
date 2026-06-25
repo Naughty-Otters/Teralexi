@@ -39,6 +39,7 @@ const {
   notifyFinishedMock,
   conversationStoreChangedMock,
   notifyConversationStoreChangedMock,
+  ensureUserAttachmentsUploadedBeforeAgentRunMock,
 } =
   vi.hoisted(() => ({
     streamAgentResponseMock: vi.fn(async () => ({
@@ -49,7 +50,16 @@ const {
     notifyFinishedMock: vi.fn(),
     conversationStoreChangedMock: vi.fn(),
     notifyConversationStoreChangedMock: vi.fn(),
+    ensureUserAttachmentsUploadedBeforeAgentRunMock: vi.fn(async () => ({
+      attachments: [],
+    })),
   }))
+
+vi.mock('@main/services/chat-attachments', () => ({
+  ensureUserAttachmentsUploadedBeforeAgentRun:
+    ensureUserAttachmentsUploadedBeforeAgentRunMock,
+  resolveUserAttachmentsForTurn: ensureUserAttachmentsUploadedBeforeAgentRunMock,
+}))
 
 vi.mock('@main/agent/flow', () => ({
   streamAgentResponse: streamAgentResponseMock,
@@ -143,6 +153,34 @@ describe('agent engine', () => {
     expect(result.finalContent).toBe('done')
     expect(result.hasError).toBe(false)
     expect(enqueueAgentMemoryExchange).toHaveBeenCalled()
+  })
+
+  it('forwards attachment source paths to attachment ingest', async () => {
+    ensureUserAttachmentsUploadedBeforeAgentRunMock.mockClear()
+    await runAgentForConversation({
+      conversationId: 'c1',
+      agentId: 'skill:demo',
+      assistantMessageId: 'a1',
+      userId: 'default',
+      pendingUserMessage: {
+        id: 'u1',
+        content: 'Attached 1 file',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+      attachmentSourcePaths: ['/tmp/report.pdf'],
+    })
+    expect(ensureUserAttachmentsUploadedBeforeAgentRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 'c1',
+        messageId: 'u1',
+        attachmentSourcePaths: ['/tmp/report.pdf'],
+      }),
+    )
+    expect(streamAgentResponseMock).toHaveBeenCalled()
+    const uploadOrder =
+      ensureUserAttachmentsUploadedBeforeAgentRunMock.mock.invocationCallOrder[0]
+    const agentOrder = streamAgentResponseMock.mock.invocationCallOrder[0]
+    expect(uploadOrder).toBeLessThan(agentOrder)
   })
 
   it('does not notify stream finished when pipeline paused for HITL', async () => {

@@ -10,6 +10,8 @@ export type ChatAttachmentMeta = {
 
 export const CHAT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024
 export const CHAT_ATTACHMENT_MAX_FILES = 5
+/** Max size for inlining attachment text into the user-message injector. */
+export const CHAT_ATTACHMENT_INLINE_TEXT_MAX_BYTES = 512 * 1024
 
 export const CHAT_ATTACHMENT_ALLOWED_EXTENSIONS = [
   'txt',
@@ -98,6 +100,41 @@ const EXTENSION_MIME: Record<string, string> = {
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 }
 
+const CHAT_ATTACHMENT_BINARY_EXTENSIONS = new Set([
+  'pdf',
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
+])
+
+const CHAT_ATTACHMENT_TEXT_MIME_PREFIXES = ['text/'] as const
+
+const CHAT_ATTACHMENT_TEXT_MIME_TYPES = new Set([
+  'application/json',
+  'application/xml',
+  'image/svg+xml',
+])
+
+const CHAT_ATTACHMENT_BINARY_MIME_PREFIXES = ['image/', 'audio/', 'video/'] as const
+
+const CHAT_ATTACHMENT_BINARY_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.ms-excel',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+])
+
 export function chatAttachmentExtension(name: string): string {
   const base = name.trim().split(/[/\\]/).pop() ?? name
   const dot = base.lastIndexOf('.')
@@ -115,6 +152,29 @@ export function mimeTypeForChatAttachmentName(name: string): string | null {
   const ext = chatAttachmentExtension(name)
   if (!ext) return null
   return EXTENSION_MIME[ext] ?? null
+}
+
+export function isTextBasedChatAttachment(
+  meta: Pick<ChatAttachmentMeta, 'originalName' | 'mimeType'>,
+): boolean {
+  const mime = meta.mimeType?.trim().toLowerCase()
+  if (mime) {
+    if (CHAT_ATTACHMENT_TEXT_MIME_TYPES.has(mime)) return true
+    if (CHAT_ATTACHMENT_BINARY_MIME_TYPES.has(mime)) return false
+    if (CHAT_ATTACHMENT_TEXT_MIME_PREFIXES.some((prefix) => mime.startsWith(prefix))) {
+      return true
+    }
+    if (
+      CHAT_ATTACHMENT_BINARY_MIME_PREFIXES.some((prefix) => mime.startsWith(prefix)) &&
+      mime !== 'image/svg+xml'
+    ) {
+      return false
+    }
+  }
+
+  const ext = chatAttachmentExtension(meta.originalName)
+  if (!ext || !isAllowedChatAttachmentName(meta.originalName)) return false
+  return !CHAT_ATTACHMENT_BINARY_EXTENSIONS.has(ext)
 }
 
 export function formatChatAttachmentSize(bytes: number): string {

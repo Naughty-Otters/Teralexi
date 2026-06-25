@@ -1,11 +1,13 @@
-import { lstat, mkdir, copyFile, access } from 'fs/promises'
+import { access, copyFile, lstat, mkdir, readFile } from 'fs/promises'
 import { basename, join, resolve } from 'path'
 import { randomUUID } from 'crypto'
 import {
   CHAT_ATTACHMENT_MAX_BYTES,
   CHAT_ATTACHMENT_MAX_FILES,
+  CHAT_ATTACHMENT_INLINE_TEXT_MAX_BYTES,
   chatUploadsDirForMessage,
   isAllowedChatAttachmentName,
+  isTextBasedChatAttachment,
   mimeTypeForChatAttachmentName,
   sanitizeChatAttachmentFilename,
   type ChatAttachmentMeta,
@@ -16,6 +18,10 @@ import {
 import { resolveSandboxRootForConversation } from '@main/agent/sandbox/registry'
 import { getConversationStore } from '@main/services/conversation-store'
 import { storedAttachmentToMeta } from '@main/services/conversation-store/message-attachments-repository'
+import {
+  extractLastUserForPersistence,
+  parseClientUiMessages,
+} from '@main/agent/utils'
 
 async function assertRegularFile(path: string): Promise<{ size: number; name: string }> {
   const stat = await lstat(path)
@@ -166,40 +172,75 @@ export async function ingestChatAttachments(args: {
   return { ok: true, attachments: metas }
 }
 
-/** Ingest staged paths or load persisted rows for the current user turn. */
-export async function resolveUserAttachmentsForTurn(args: {
+function resolveAttachmentMessageId(args: {
+  messageId?: string
+  uiMessages?: unknown[]
+}): string {
+  const explicit = args.messageId?.trim()
+  if (explicit) return explicit
+  return (
+    extractLastUserForPersistence(parseClientUiMessages(args.uiMessages))?.id?.trim() ??
+    ''
+  )
+}
+
+export type EnsureUserAttachmentsArgs = {
   conversationId: string
   messageId?: string
+  uiMessages?: unknown[]
   userAttachments?: ChatAttachmentMeta[]
   attachmentSourcePaths?: string[]
-}): Promise<{ attachments: ChatAttachmentMeta[]; error?: string }> {
+}
+
+/**
+ * Copy staged user files into sandbox `input/uploads/<messageId>/` before the
+ * agent run starts. Must run after the user message row is persisted.
+ */
+export async function ensureUserAttachmentsUploadedBeforeAgentRun(
+  args: EnsureUserAttachmentsArgs,
+): Promise<{ attachments: ChatAttachmentMeta[]; error?: string }> {
   if (args.userAttachments?.length) {
     return { attachments: args.userAttachments }
   }
 
-  const messageId = args.messageId?.trim()
-  if (!messageId) return { attachments: [] }
-
   const sourcePaths = (args.attachmentSourcePaths ?? [])
     .map((p) => p.trim())
     .filter(Boolean)
+  const messageId = resolveAttachmentMessageId(args)
+
   if (sourcePaths.length > 0) {
+    if (!messageId) {
+      return {
+        attachments: [],
+        error:
+          'User message must be saved before attachments can be uploaded to the sandbox.',
+      }
+    }
     const result = await ingestChatAttachments({
       conversationId: args.conversationId,
       messageId,
       sourcePaths,
     })
     if (!result.ok) {
-      return { attachments: [], error: result.error ?? 'Attachment ingest failed.' }
+      return { attachments: [], error: result.error ?? 'Attachment upload failed.' }
     }
     return { attachments: result.attachments }
   }
+
+  if (!messageId) return { attachments: [] }
 
   return {
     attachments: getConversationStore()
       .getMessageAttachmentsForMessage(messageId)
       .map(storedAttachmentToMeta),
   }
+}
+
+/** @deprecated Prefer {@link ensureUserAttachmentsUploadedBeforeAgentRun}. */
+export async function resolveUserAttachmentsForTurn(
+  args: EnsureUserAttachmentsArgs,
+): Promise<{ attachments: ChatAttachmentMeta[]; error?: string }> {
+  return ensureUserAttachmentsUploadedBeforeAgentRun(args)
 }
 
 export function searchChatAttachments(
@@ -230,6 +271,54 @@ export function resolveChatAttachmentAbsolutePath(args: {
   const root = resolveSandboxRootForConversation(args.conversationId.trim())
   const rel = args.sandboxPath.replace(/^[/\\]+/, '')
   return resolve(root, rel)
+}
+
+export async function readTextChatAttachmentContent(args: {
+  conversationId: string
+  attachment: ChatAttachmentMeta
+  maxBytes?: number
+}): Promise<string | null> {
+  const conversationId = args.conversationId?.trim()
+  if (!conversationId) return null
+  if (!isTextBasedChatAttachment(args.attachment)) return null
+
+  const maxBytes = args.maxBytes ?? CHAT_ATTACHMENT_INLINE_TEXT_MAX_BYTES
+  if (args.attachment.sizeBytes > maxBytes) return null
+
+  const absPath = resolveChatAttachmentAbsolutePath({
+    conversationId,
+    sandboxPath: args.attachment.sandboxPath,
+  })
+  try {
+    const buffer = await readFile(absPath)
+    if (buffer.byteLength > maxBytes) return null
+    if (buffer.includes(0)) return null
+    return buffer.toString('utf8')
+  } catch {
+    return null
+  }
+}
+
+export async function loadUserUploadsInlineText(
+  conversationId: string,
+  attachments: readonly ChatAttachmentMeta[],
+): Promise<Map<string, string>> {
+  const inline = new Map<string, string>()
+  const trimmedConversationId = conversationId?.trim()
+  if (!trimmedConversationId) return inline
+
+  await Promise.all(
+    attachments.map(async (attachment) => {
+      const text = await readTextChatAttachmentContent({
+        conversationId: trimmedConversationId,
+        attachment,
+      })
+      if (text === null) return
+      inline.set(attachment.sandboxPath, text)
+    }),
+  )
+
+  return inline
 }
 
 export function buildPickChatAttachmentDialogFilters(): Electron.FileFilter[] {
