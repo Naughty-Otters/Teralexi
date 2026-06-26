@@ -106,7 +106,7 @@ export function mapProviderMetricFieldsFromUsage(
   usage: LanguageModelUsage | undefined | null,
 ): Omit<
   AddProviderMetricInput,
-  'userId' | 'datetime' | 'provider' | 'sessionId' | 'messageId'
+  'datetime' | 'provider' | 'sessionId' | 'messageId'
 > {
   if (!usage) return {}
 

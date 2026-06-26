@@ -1,16 +1,17 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
-export type GoogleAccountSummary = {
+export type GoogleWorkspaceAccountSummary = {
   email: string
   name: string
   picture: string
+  workspaceAccess: boolean
 }
 
-export function useGoogleAccount() {
-  const account = ref<GoogleAccountSummary | null>(null)
+export function useGoogleWorkspaceAccount() {
+  const account = ref<GoogleWorkspaceAccountSummary | null>(null)
 
   async function refresh(): Promise<void> {
-    const channel = window.ipcRendererChannel?.GetGoogleAccount
+    const channel = window.ipcRendererChannel?.GetGoogleWorkspaceAccount
     if (!channel?.invoke) {
       account.value = null
       return
@@ -26,20 +27,24 @@ export function useGoogleAccount() {
     void refresh()
   }
 
-  function onGoogleAccountChanged(payload: { account: GoogleAccountSummary | null }) {
+  function onGoogleWorkspaceAccountChanged(payload: {
+    account: GoogleWorkspaceAccountSummary | null
+  }) {
     account.value = payload.account
   }
 
   onMounted(() => {
     void refresh()
     window.addEventListener('focus', onWindowFocus)
-    window.ipcRendererChannel?.GoogleAccountChanged?.on?.(onGoogleAccountChanged)
+    window.ipcRendererChannel?.GoogleWorkspaceAccountChanged?.on?.(
+      onGoogleWorkspaceAccountChanged,
+    )
   })
 
   onUnmounted(() => {
     window.removeEventListener('focus', onWindowFocus)
-    window.ipcRendererChannel?.GoogleAccountChanged?.removeListener?.(
-      onGoogleAccountChanged,
+    window.ipcRendererChannel?.GoogleWorkspaceAccountChanged?.removeListener?.(
+      onGoogleWorkspaceAccountChanged,
     )
   })
 
@@ -47,5 +52,8 @@ export function useGoogleAccount() {
     account,
     refresh,
     isSignedIn: computed(() => account.value != null),
+    hasWorkspaceAccess: computed(
+      () => account.value?.workspaceAccess === true,
+    ),
   }
 }

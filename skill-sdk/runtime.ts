@@ -12,7 +12,7 @@ import {
 import {
   getValidAccessToken,
   loadStoredAccount,
-} from '@main/services/google-oauth'
+} from '@main/services/google-workspace-oauth'
 
 export type {
   MarkdownPdfDocumentKind,

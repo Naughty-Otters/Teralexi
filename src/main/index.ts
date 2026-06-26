@@ -34,9 +34,22 @@ import { getSchedulerManager } from './services/scheduler-manager'
 import { registerMainProcessSupportHandlers } from './services/support-event-store'
 import { getLspManager, initBundledLspBin } from './agent/lsp'
 import { createLogger } from './logger'
+import {
+  registerOpenFdeProtocolClient,
+  registerOpenFdeProtocolHandlers,
+  requestOpenFdeSingleInstanceLock,
+  setOpenFdeProtocolHandlerReady,
+} from './services/openfde-protocol-handler'
 
 let isQuiting = false
 const log = createLogger('app')
+
+if (!requestOpenFdeSingleInstanceLock()) {
+  app.quit()
+} else {
+  registerOpenFdeProtocolClient()
+  registerOpenFdeProtocolHandlers()
+}
 
 async function onAppReady() {
   log.info('App ready; initializing desktop services')
@@ -119,6 +132,8 @@ async function onAppReady() {
     })
     log.info('Installed vue-devtools extension')
   }
+
+  setOpenFdeProtocolHandlerReady()
 }
 
 app.whenReady().then(onAppReady)
@@ -144,11 +159,3 @@ app.on('window-all-closed', () => {
 app.on('browser-window-created', () => {
   log.info('Browser window created')
 })
-
-if (process.defaultApp) {
-  if (process.argv.length >= 2) {
-    app.removeAsDefaultProtocolClient('electron-vue-template')
-  }
-} else {
-  app.setAsDefaultProtocolClient('electron-vue-template')
-}

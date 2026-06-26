@@ -40,8 +40,9 @@ describe('system-prop', () => {
     expect(CONFIG_PROPERTIES_FILENAME).toBe('config.properties')
   })
 
-  it('validates three-part keys', () => {
+  it('validates dotted config keys', () => {
     expect(isValidSystemPropKey('app.dev.port')).toBe(true)
+    expect(isValidSystemPropKey('app.google.workspace.clientId')).toBe(true)
     expect(isValidSystemPropKey('bad')).toBe(false)
   })
 

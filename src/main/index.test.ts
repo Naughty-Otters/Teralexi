@@ -18,6 +18,7 @@ vi.mock('electron', () => ({
     dock: { setIcon: vi.fn() },
     removeAsDefaultProtocolClient: vi.fn(),
     setAsDefaultProtocolClient: vi.fn(),
+    requestSingleInstanceLock: vi.fn(() => true),
     isPackaged: false,
     getAppPath: vi.fn(() => '/app'),
   },
@@ -35,6 +36,10 @@ vi.mock('electron', () => ({
 vi.mock('@config/openfde-home', () => ({
   initializeopenfdeHome: vi.fn(),
   pruneStaleChannelDataDirs: vi.fn(),
+}))
+
+vi.mock('@main/services/client-identity', () => ({
+  ensureClientId: vi.fn(),
 }))
 
 vi.mock('@main/skills/skill-module-loader', () => ({
@@ -99,6 +104,13 @@ vi.mock('./channels/slack/manager', () => ({
 
 vi.mock('./services/scheduler-manager', () => ({
   getSchedulerManager: () => ({ ensureStarted: vi.fn() }),
+}))
+
+vi.mock('./services/openfde-protocol-handler', () => ({
+  registerOpenFdeProtocolClient: vi.fn(),
+  registerOpenFdeProtocolHandlers: vi.fn(),
+  requestOpenFdeSingleInstanceLock: vi.fn(() => true),
+  setOpenFdeProtocolHandlerReady: vi.fn(),
 }))
 
 describe('main index', () => {

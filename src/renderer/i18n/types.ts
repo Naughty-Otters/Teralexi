@@ -85,7 +85,7 @@ export type AppLabels = {
       slack: string
       githubAccount: string
       googleAccount: string
-      googleOAuth: string
+      googleWorkspace: string
       reportProblem: string
     }
     language: {
