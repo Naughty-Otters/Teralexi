@@ -23,6 +23,8 @@ const DEFAULT_SYSTEM_PROPERTIES: Record<string, string> = {
   'app.dev.removeElectronJunk': 'true',
   'app.dev.chineseLog': 'false',
   'app.dev.port': '9080',
+  'app.google.workspace.clientId': '',
+  'app.google.workspace.clientSecret': '',
   'app.google.clientId': '',
   'app.google.clientSecret': '',
   'app.github.clientId': '',
@@ -64,9 +66,15 @@ const DEFAULT_SYSTEM_PROPERTIES: Record<string, string> = {
   'app.ui.appearance': 'solid',
 }
 
-export const SYSTEM_PROPERTY_KEYS = Object.keys(
-  DEFAULT_SYSTEM_PROPERTIES,
-) as (keyof typeof DEFAULT_SYSTEM_PROPERTIES & string)[]
+/** Loaded from env files only — not written to user config.properties. */
+export const ENV_ONLY_PROPERTY_KEYS = [
+  'app.openfde.googleAuthLoginUrl',
+] as const
+
+export const SYSTEM_PROPERTY_KEYS = [
+  ...Object.keys(DEFAULT_SYSTEM_PROPERTIES),
+  ...ENV_ONLY_PROPERTY_KEYS,
+] as string[]
 
 function ensureEnvOverridesLoaded(): void {
   initializeEnvOverrides(SYSTEM_PROPERTY_KEYS)

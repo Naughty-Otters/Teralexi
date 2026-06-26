@@ -24,7 +24,7 @@ export type GoogleWorkspaceApiResult = {
 
 function formatAuthHint(error?: string): string {
   const base =
-    'Ask the user to sign in via Settings → Google Account. If they already signed in before Workspace was enabled, sign out and sign in again.'
+    'Ask the user to sign in via Settings → General → Google Workspace. If they already signed in before Workspace was enabled, sign out and sign in again.'
   return error ? `${error} ${base}` : base
 }
 

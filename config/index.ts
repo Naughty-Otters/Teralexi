@@ -44,6 +44,10 @@ export default {
     false,
   ),
   google: {
+    workspace: {
+      clientId: getSystemPropValue('app.google.workspace.clientId', ''),
+      clientSecret: getSystemPropValue('app.google.workspace.clientSecret', ''),
+    },
     clientId: getSystemPropValue('app.google.clientId', ''),
     clientSecret: getSystemPropValue('app.google.clientSecret', ''),
   },

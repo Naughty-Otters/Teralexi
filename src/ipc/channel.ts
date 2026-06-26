@@ -916,17 +916,37 @@ export class IpcChannelMainClass {
       email: string
       name: string
       picture: string
-      workspaceAccess: boolean
     }
   > = null
   /**
-   * Sign out and clear stored Google account tokens
+   * Sign out and clear stored OpenFDE Google account tokens
    */
   GoogleSignOut: IpcMainEventListener<void, void> = null
   /**
-   * Return the currently stored Google account info, or null if not signed in
+   * Return the currently stored OpenFDE Google account info, or null if not signed in
    */
   GetGoogleAccount: IpcMainEventListener<
+    void,
+    {
+      email: string
+      name: string
+      picture: string
+    } | null
+  > = null
+  /**
+   * Start Google Workspace OAuth2 sign-in flow (Gmail, Calendar, Drive)
+   */
+  GoogleWorkspaceSignIn: IpcMainEventListener<
+    void,
+    {
+      email: string
+      name: string
+      picture: string
+      workspaceAccess: boolean
+    }
+  > = null
+  GoogleWorkspaceSignOut: IpcMainEventListener<void, void> = null
+  GetGoogleWorkspaceAccount: IpcMainEventListener<
     void,
     {
       email: string
@@ -2018,5 +2038,22 @@ export class IpcChannelRendererClass {
     relativePath: string
     method: string
     params: unknown
+  }> = null
+  /** OpenFDE Google account linked or cleared (browser OAuth callback). */
+  GoogleAccountChanged: IpcRendererEventListener<{
+    account: {
+      email: string
+      name: string
+      picture: string
+    } | null
+  }> = null
+  /** Google Workspace account linked or cleared. */
+  GoogleWorkspaceAccountChanged: IpcRendererEventListener<{
+    account: {
+      email: string
+      name: string
+      picture: string
+      workspaceAccess: boolean
+    } | null
   }> = null
 }

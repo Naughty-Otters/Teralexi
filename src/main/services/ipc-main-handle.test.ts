@@ -56,10 +56,18 @@ vi.mock('./conversation-store', () => ({
   })),
 }))
 
-vi.mock('./google-oauth', () => ({
-  startGoogleSignIn: vi.fn(),
+vi.mock('./google-account-oauth', () => ({
+  startGoogleAccountSignIn: vi.fn(),
   loadStoredAccount: vi.fn(),
   clearStoredAccount: vi.fn(),
+  googleAccountInfoForUi: vi.fn(),
+}))
+
+vi.mock('./google-workspace-oauth', () => ({
+  startGoogleWorkspaceSignIn: vi.fn(),
+  loadStoredAccount: vi.fn(),
+  clearStoredAccount: vi.fn(),
+  googleWorkspaceAccountInfoForUi: vi.fn(),
 }))
 
 vi.mock('./github-oauth', () => ({

@@ -130,7 +130,7 @@ export type SettingsPanelLabels = {
     enableLlmDebug: string
     disableLlmDebug: string
   }
-  googleOAuth: {
+  googleWorkspace: {
     intro: string
     clientIdLabel: string
     clientIdPlaceholder: string
@@ -139,6 +139,11 @@ export type SettingsPanelLabels = {
     clientSecretPlaceholder: string
     clientSecretHint: string
     redirectUriHint: string
+    signInHint: string
+    signInWithGoogle: string
+    signedInHint: string
+    missingScopes: string
+    oauthNotConfigured: string
   }
   about: {
     intro: string
@@ -158,11 +163,8 @@ export type SettingsPanelLabels = {
     tabs: { google: string; github: string }
     google: {
       signedInHint: string
-      missingScopes: string
       signInHint: string
       signInWithGoogle: string
-      customClientHint: string
-      oauthNotConfigured: string
     }
     github: {
       signedInHint: string

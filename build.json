@@ -31,6 +31,12 @@
   ],
   "productName": "OpenFDE",
   "appId": "app.openfde.desktop",
+  "protocols": [
+    {
+      "name": "OpenFDE",
+      "schemes": ["openfde"]
+    }
+  ],
   "directories": {
     "output": "build"
   },

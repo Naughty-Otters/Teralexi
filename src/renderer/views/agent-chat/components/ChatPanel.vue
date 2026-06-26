@@ -241,7 +241,7 @@ import {
 import { agentRequiresWorkspace } from '@shared/agent/workspace-required-skills'
 import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
 import { collectConversationWorkspaceAttachments } from '@shared/agent/conversation-workspace-attachments'
-import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
+import { useGoogleWorkspaceAccount } from '@renderer/composables/useGoogleWorkspaceAccount'
 import { DEFAULT_USER_ID } from '@store/agent/config'
 import { setTitleBarChatControls } from '@renderer/composables/useTitleBarChatControls'
 import { useChatAttachments } from '@renderer/composables/useChatAttachments'
@@ -359,10 +359,10 @@ const agentStore = useAgentStore()
 const workspaceStore = useWorkspaceStore()
 const workspaceNavStore = useWorkspaceNavigationStore()
 const {
-  isSignedIn: googleAccountSignedIn,
-  hasWorkspaceAccess: googleAccountHasWorkspaceAccess,
-  refresh: refreshGoogleAccount,
-} = useGoogleAccount()
+  isSignedIn: googleWorkspaceSignedIn,
+  hasWorkspaceAccess: googleWorkspaceHasAccess,
+  refresh: refreshGoogleWorkspaceAccount,
+} = useGoogleWorkspaceAccount()
 const toast = useToast()
 
 const COMPACT_CMD_RE = /^\/compact(?:\s+([\s\S]*))?$/i
@@ -828,13 +828,13 @@ const workspaceComposerHint = computed(() => {
 const googleWorkspaceComposerHint = computed(() =>
   buildGoogleWorkspaceComposerHint({
     agentIsGoogleWorkspace: selectedAgentIsGoogleWorkspace.value,
-    isSignedIn: googleAccountSignedIn.value,
-    hasWorkspaceAccess: googleAccountHasWorkspaceAccess.value,
+    isSignedIn: googleWorkspaceSignedIn.value,
+    hasWorkspaceAccess: googleWorkspaceHasAccess.value,
   }),
 )
 
 watch(selectedAgentIsGoogleWorkspace, (active) => {
-  if (active) void refreshGoogleAccount()
+  if (active) void refreshGoogleWorkspaceAccount()
 })
 
 const canSend = computed(() => {

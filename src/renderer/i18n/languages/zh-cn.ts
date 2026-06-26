@@ -86,7 +86,7 @@ export const lang: AppLocaleBundle = {
       slack: 'Slack 机器人频道',
       githubAccount: 'GitHub 账户',
       googleAccount: 'Google 账户',
-      googleOAuth: 'Google 属性',
+      googleWorkspace: 'Google Workspace',
       reportProblem: '报告问题',
     },
     language: {

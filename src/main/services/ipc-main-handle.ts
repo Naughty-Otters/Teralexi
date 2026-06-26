@@ -94,11 +94,20 @@ import { defaultPlanModeView } from '@shared/agent/plan-mode-phase'
 import { previewPlanApproval } from '../agent/coding/preview-plan-approval'
 import { getConversationStore } from './conversation-store'
 import {
-  startGoogleSignIn,
+  startGoogleAccountSignIn,
   loadStoredAccount,
   clearStoredAccount,
   googleAccountInfoForUi,
-} from './google-oauth'
+} from './google-account-oauth'
+import { notifyGoogleAccountChanged } from './google-account-notify'
+import {
+  startGoogleWorkspaceSignIn,
+  loadStoredAccount as loadStoredGoogleWorkspaceAccount,
+  clearStoredAccount as clearStoredGoogleWorkspaceAccount,
+  googleWorkspaceAccountInfoForUi,
+} from './google-workspace-oauth'
+import { notifyGoogleWorkspaceAccountChanged } from './google-workspace-account-notify'
+import { clearOpenFdeServerAuthCache } from './openfde-server-auth'
 import {
   startGitHubSignIn,
   loadStoredAccount as loadStoredGitHubAccount,
@@ -1357,25 +1366,53 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     email: string
     name: string
     picture: string
-    workspaceAccess: boolean
   }> = async () => {
-    const account = await startGoogleSignIn()
+    clearOpenFdeServerAuthCache()
+    const account = await startGoogleAccountSignIn()
+    clearOpenFdeServerAuthCache()
     return googleAccountInfoForUi(account)
   }
 
   GoogleSignOut: (_event: Electron.IpcMainInvokeEvent) => void = () => {
     clearStoredAccount()
+    clearOpenFdeServerAuthCache()
+    notifyGoogleAccountChanged(null)
   }
 
   GetGoogleAccount: (_event: Electron.IpcMainInvokeEvent) => {
     email: string
     name: string
     picture: string
-    workspaceAccess: boolean
   } | null = () => {
     const account = loadStoredAccount()
     if (!account) return null
     return googleAccountInfoForUi(account)
+  }
+
+  GoogleWorkspaceSignIn: (_event: Electron.IpcMainInvokeEvent) => Promise<{
+    email: string
+    name: string
+    picture: string
+    workspaceAccess: boolean
+  }> = async () => {
+    const account = await startGoogleWorkspaceSignIn()
+    return googleWorkspaceAccountInfoForUi(account)
+  }
+
+  GoogleWorkspaceSignOut: (_event: Electron.IpcMainInvokeEvent) => void = () => {
+    clearStoredGoogleWorkspaceAccount()
+    notifyGoogleWorkspaceAccountChanged(null)
+  }
+
+  GetGoogleWorkspaceAccount: (_event: Electron.IpcMainInvokeEvent) => {
+    email: string
+    name: string
+    picture: string
+    workspaceAccess: boolean
+  } | null = () => {
+    const account = loadStoredGoogleWorkspaceAccount()
+    if (!account) return null
+    return googleWorkspaceAccountInfoForUi(account)
   }
 
   GitHubSignIn: (_event: Electron.IpcMainInvokeEvent) => Promise<{

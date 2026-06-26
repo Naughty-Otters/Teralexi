@@ -69,7 +69,8 @@ export default defineConfig({
         // Electron / DB / channel integration (covered manually or in E2E)
         'src/main/services/conversation-store.ts',
         'src/main/services/ipc-main-handle.ts',
-        'src/main/services/google-oauth.ts',
+        'src/main/services/google-account-oauth.ts',
+        'src/main/services/google-workspace-oauth.ts',
         'src/main/services/scheduler-manager.ts',
         'src/main/services/mcp-server-manager.ts',
         'src/main/services/hot-updater.ts',

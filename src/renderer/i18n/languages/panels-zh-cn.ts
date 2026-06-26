@@ -162,18 +162,26 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     enableLlmDebug: '启用 LLM 调试日志',
     disableLlmDebug: '禁用 LLM 调试日志',
   },
-  googleOAuth: {
+  googleWorkspace: {
     intro:
-      'Google 登录（设置 → 账户 → Google）使用的 OAuth 客户端。登录前请在此填写 Google Cloud 桌面客户端 ID 与密钥。',
+      '为 Google Workspace 技能连接 Gmail、Calendar 与 Drive。使用您自己的 Google Cloud OAuth 应用（桌面客户端），并在下方登录。',
     clientIdLabel: 'OAuth 客户端 ID',
     clientIdPlaceholder: 'Google Cloud OAuth 2.0 桌面客户端 ID',
-    clientIdHint:
-      'Google 登录必填。请在 Google Cloud Console 创建桌面 OAuth 客户端。',
+    clientIdHint: '请在 Google Cloud Console 创建桌面 OAuth 客户端，登录前必填。',
     clientSecretLabel: 'OAuth 客户端密钥',
     clientSecretPlaceholder: 'Google Cloud Console 中的对应客户端密钥',
     clientSecretHint: 'Google Cloud Console 中对应的客户端密钥，请妥善保管。',
     redirectUriHint:
-      '若创建自有 OAuth 应用，请在 Google Cloud Console 中添加授权重定向 URI：http://127.0.0.1:7779。',
+      '请在 Google Cloud OAuth 应用中添加授权重定向 URI：http://127.0.0.1:7779。',
+    signInHint:
+      '登录以授权 Agent 通过 Google Workspace 技能使用 Gmail、Calendar 与 Drive。',
+    signInWithGoogle: '使用 Google Workspace 登录',
+    signedInHint:
+      'Agent 可通过 Google Workspace 技能使用 Gmail、Calendar 与 Drive。',
+    missingScopes:
+      '缺少 Workspace 权限。请退出后重新登录以授权 Gmail、Calendar 与 Drive。',
+    oauthNotConfigured:
+      '尚未配置 Google Workspace。请先在上方填写 OAuth 客户端 ID 与密钥后再试。',
   },
   about: {
     intro: 'OpenFDE 桌面应用。已安装版本可检查 GitHub Releases 更新。',
@@ -195,16 +203,10 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     tabs: { google: 'Google', github: 'GitHub' },
     google: {
       signedInHint:
-        'Agent 可通过 Google Workspace 技能使用 Gmail、Calendar 与 Drive。',
-      missingScopes:
-        '缺少 Workspace 权限。请退出后重新登录以授权 Gmail、Calendar 与 Drive。',
+        '您的 OpenFDE Google 账户已关联。这与 Google Workspace（Gmail、Calendar、Drive）是分开的。',
       signInHint:
-        '使用 Google 登录以连接 Gmail、Calendar 与 Drive（Google Workspace 技能）。',
+        '关联 OpenFDE Google 账户。将在系统浏览器中完成认证，并通过 openfde:// 返回应用。',
       signInWithGoogle: '使用 Google 登录',
-      customClientHint:
-        '登录前请在 设置 → 通用 → Google 属性 中填写 OAuth 客户端 ID 与密钥。',
-      oauthNotConfigured:
-        '尚未配置 Google 登录。请打开 设置 → 通用 → Google 属性，填写 OAuth 客户端 ID 与密钥后再试。',
     },
     github: {
       signedInHint:

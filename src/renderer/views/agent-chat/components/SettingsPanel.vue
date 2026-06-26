@@ -37,7 +37,7 @@
         <AppearanceSetting />
         <FontSetting />
         <EditorSetting />
-        <GoogleOAuthSetting />
+        <GoogleWorkspaceSetting />
       </div>
       <section v-else-if="settingsTab === 'llm'" class="sp-section sp-panel-view">
         <div class="sp-tabs sp-tabs--nested">
@@ -172,7 +172,7 @@ import {
 import FontSetting from './settings/FontSetting.vue'
 import AppearanceSetting from './settings/AppearanceSetting.vue'
 import EditorSetting from './settings/EditorSetting.vue'
-import GoogleOAuthSetting from './settings/GoogleOAuthSetting.vue'
+import GoogleWorkspaceSetting from './settings/GoogleWorkspaceSetting.vue'
 import LanguageSetting from './settings/LanguageSetting.vue'
 import OllamaSetting from './settings/OllamaSetting.vue'
 import LlamaCppSetting from './settings/LlamaCppSetting.vue'

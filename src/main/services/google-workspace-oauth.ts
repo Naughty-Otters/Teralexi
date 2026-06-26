@@ -1,19 +1,12 @@
 /**
- * Google OAuth 2.0 – Installed-App / Loopback flow
+ * Google Workspace OAuth – loopback flow for Gmail, Calendar, and Drive.
  *
- * Opens a Chromium window to the Google consent screen, listens on a
- * temporary localhost port for the redirect callback, exchanges the
- * auth code for tokens, and persists them under ~/.openfde/accounts/.
- *
- * Uses the built-in Desktop OAuth client by default. Optional overrides:
- *   app.google.clientId / app.google.clientSecret in config.properties
- *   GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in the environment
- *
- * Scopes requested: profile, email, Custom Search, and Google Workspace
- * (Gmail read + compose/send, Calendar read + events, Drive read + file write).
+ * End users configure their own Google Cloud OAuth app under
+ * Settings → General → Google Workspace (client ID + secret).
+ * Tokens are stored in ~/.openfde/accounts/google-workspace-account.json.
  */
 
-import { BrowserWindow, app } from 'electron'
+import { BrowserWindow } from 'electron'
 import { createServer, type Server } from 'http'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
@@ -21,23 +14,20 @@ import { request as httpsRequest } from 'node:https'
 import { parse as parseUrl } from 'url'
 import { randomBytes, createHash } from 'crypto'
 import { getSystemPropValue } from '@config/system-prop'
-import {
-  BUNDLED_GOOGLE_OAUTH_CLIENT_ID,
-  BUNDLED_GOOGLE_OAUTH_CLIENT_SECRET,
-} from '@config/google-oauth-defaults'
 import { getopenfdeAccountsDir } from '@config/openfde-home'
 import {
-  GoogleOAuthNotConfiguredError,
-  isGoogleOAuthConfigured,
-} from '@shared/google-oauth-settings'
+  GoogleWorkspaceOAuthNotConfiguredError,
+  GOOGLE_WORKSPACE_PROP_KEYS,
+  LEGACY_GOOGLE_WORKSPACE_PROP_KEYS,
+  isGoogleWorkspaceOAuthConfigured,
+} from '@shared/google-workspace-settings'
 import { createLogger, traceFunction } from '@main/logger'
-
-// ── Types ─────────────────────────────────────────────────────────────────
+import { notifyGoogleWorkspaceAccountChanged } from '@main/services/google-workspace-account-notify'
 
 export interface GoogleTokens {
   access_token: string
   refresh_token?: string
-  expires_at: number   // epoch ms
+  expires_at: number
   token_type: string
   scope: string
 }
@@ -49,12 +39,17 @@ export interface GoogleUserInfo {
   picture: string
 }
 
-export interface GoogleAccount {
+export interface GoogleWorkspaceAccount {
   tokens: GoogleTokens
   userInfo: GoogleUserInfo
 }
 
-// ── Config ────────────────────────────────────────────────────────────────
+export type GoogleWorkspaceAccountUiInfo = {
+  email: string
+  name: string
+  picture: string
+  workspaceAccess: boolean
+}
 
 /** OAuth scopes for Gmail, Calendar, and Drive (Google Workspace skill). */
 export const GOOGLE_WORKSPACE_SCOPES = [
@@ -66,41 +61,42 @@ export const GOOGLE_WORKSPACE_SCOPES = [
   'https://www.googleapis.com/auth/drive.file',
 ] as const
 
-const SCOPES = [
-  'openid',
-  'email',
-  'profile',
-  'https://www.googleapis.com/auth/cse',
-  ...GOOGLE_WORKSPACE_SCOPES,
-].join(' ')
+const SCOPES = ['openid', 'email', 'profile', ...GOOGLE_WORKSPACE_SCOPES].join(
+  ' ',
+)
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
-const log = createLogger('services.google-oauth')
+const GOOGLE_OAUTH_LOOPBACK_PORT = 7779
+const log = createLogger('services.google-workspace-oauth')
 
-export function resolveGoogleOAuthCredentials(): {
+export function resolveGoogleWorkspaceOAuthCredentials(): {
   clientId: string
   clientSecret?: string
 } {
   const clientId =
-    getSystemPropValue('app.google.clientId', '').trim() ||
-    process.env.GOOGLE_CLIENT_ID?.trim() ||
-    BUNDLED_GOOGLE_OAUTH_CLIENT_ID
+    getSystemPropValue(GOOGLE_WORKSPACE_PROP_KEYS.clientId, '').trim() ||
+    getSystemPropValue(LEGACY_GOOGLE_WORKSPACE_PROP_KEYS.clientId, '').trim()
   const clientSecret =
-    getSystemPropValue('app.google.clientSecret', '').trim() ||
-    process.env.GOOGLE_CLIENT_SECRET?.trim() ||
-    BUNDLED_GOOGLE_OAUTH_CLIENT_SECRET
-  return { clientId, clientSecret }
+    getSystemPropValue(GOOGLE_WORKSPACE_PROP_KEYS.clientSecret, '').trim() ||
+    getSystemPropValue(LEGACY_GOOGLE_WORKSPACE_PROP_KEYS.clientSecret, '').trim()
+
+  return {
+    clientId,
+    clientSecret: clientSecret || undefined,
+  }
 }
 
-export function googleOAuthIsConfigured(): boolean {
-  return isGoogleOAuthConfigured(resolveGoogleOAuthCredentials())
+export function googleWorkspaceOAuthIsConfigured(): boolean {
+  return isGoogleWorkspaceOAuthConfigured(
+    resolveGoogleWorkspaceOAuthCredentials(),
+  )
 }
 
-function assertGoogleOAuthConfigured(): void {
-  if (!googleOAuthIsConfigured()) {
-    throw new GoogleOAuthNotConfiguredError()
+function assertGoogleWorkspaceOAuthConfigured(): void {
+  if (!googleWorkspaceOAuthIsConfigured()) {
+    throw new GoogleWorkspaceOAuthNotConfiguredError()
   }
 }
 
@@ -109,9 +105,9 @@ export function googleAccountHasWorkspaceAccess(scope: string | undefined): bool
   return GOOGLE_WORKSPACE_SCOPES.every((required) => granted.has(required))
 }
 
-export function googleAccountInfoForUi(
-  account: GoogleAccount,
-): GoogleAccountUiInfo {
+export function googleWorkspaceAccountInfoForUi(
+  account: GoogleWorkspaceAccount,
+): GoogleWorkspaceAccountUiInfo {
   return {
     email: account.userInfo.email,
     name: account.userInfo.name,
@@ -120,15 +116,8 @@ export function googleAccountInfoForUi(
   }
 }
 
-export type GoogleAccountUiInfo = {
-  email: string
-  name: string
-  picture: string
-  workspaceAccess: boolean
-}
-
 function getCredentials(): { clientId: string; clientSecret?: string } {
-  return resolveGoogleOAuthCredentials()
+  return resolveGoogleWorkspaceOAuthCredentials()
 }
 
 function base64Url(input: Buffer): string {
@@ -139,26 +128,25 @@ function base64Url(input: Buffer): string {
     .replace(/=+$/g, '')
 }
 
-// ── Token persistence ─────────────────────────────────────────────────────
-
 function getTokenFilePath(): string {
   const dir = getopenfdeAccountsDir()
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-  return join(dir, 'google-account.json')
+  return join(dir, 'google-workspace-account.json')
 }
 
-function loadStoredAccountImpl(): GoogleAccount | null {
+function loadStoredAccountImpl(): GoogleWorkspaceAccount | null {
   try {
     const filePath = getTokenFilePath()
     if (!existsSync(filePath)) return null
-    const raw = readFileSync(filePath, 'utf-8')
-    return JSON.parse(raw) as GoogleAccount
+    const raw = readFileSync(filePath, 'utf-8').trim()
+    if (!raw) return null
+    return JSON.parse(raw) as GoogleWorkspaceAccount
   } catch {
     return null
   }
 }
 
-function persistAccount(account: GoogleAccount): void {
+function persistAccount(account: GoogleWorkspaceAccount): void {
   const filePath = getTokenFilePath()
   const dir = dirname(filePath)
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
@@ -175,8 +163,6 @@ function clearStoredAccountImpl(): void {
     // ignore
   }
 }
-
-// ── HTTP helpers ──────────────────────────────────────────────────────────
 
 function httpsPost(
   url: string,
@@ -237,15 +223,13 @@ function httpsGet(
   })
 }
 
-const GOOGLE_OAUTH_LOOPBACK_PORT = 7779
-
 type GoogleSignInSession = {
   cancel: (error: Error) => void
   browserWindow: BrowserWindow | null
 }
 
 let activeGoogleSignInSession: GoogleSignInSession | null = null
-let inFlightGoogleSignIn: Promise<GoogleAccount> | null = null
+let inFlightGoogleSignIn: Promise<GoogleWorkspaceAccount> | null = null
 
 function cancelActiveGoogleSignIn(reason: string): void {
   const session = activeGoogleSignInSession
@@ -259,10 +243,9 @@ function delay(ms: number): Promise<void> {
 }
 
 async function waitForLoopbackPortRelease(): Promise<void> {
-  // Give the OS a moment to release the loopback port after server.close().
   await delay(150)
 }
-/** Listen on loopback, wait for the OAuth redirect, return the auth code or error. */
+
 function waitForOAuthCallback(
   port: number,
   state: string,
@@ -314,7 +297,10 @@ function waitForOAuthCallback(
       if (!code || returnedState !== state) {
         res.writeHead(400, { 'Content-Type': 'text/html' })
         res.end(html('Invalid callback.'))
-        settle('reject', new Error('Invalid OAuth callback: state mismatch or missing code.'))
+        settle(
+          'reject',
+          new Error('Invalid OAuth callback: state mismatch or missing code.'),
+        )
         return
       }
 
@@ -328,7 +314,7 @@ function waitForOAuthCallback(
         settle(
           'reject',
           new Error(
-            'Google sign-in is already in progress. Close the sign-in window and try again.',
+            'Google Workspace sign-in is already in progress. Close the sign-in window and try again.',
           ),
         )
         return
@@ -350,11 +336,9 @@ function waitForOAuthCallback(
   }
 }
 
-// ── Main OAuth flow ───────────────────────────────────────────────────────
-
-async function startGoogleSignInImpl(): Promise<GoogleAccount> {
+async function startGoogleWorkspaceSignInImpl(): Promise<GoogleWorkspaceAccount> {
   if (inFlightGoogleSignIn) {
-    cancelActiveGoogleSignIn('Restarting Google sign-in')
+    cancelActiveGoogleSignIn('Restarting Google Workspace sign-in')
     try {
       await inFlightGoogleSignIn
     } catch {
@@ -363,7 +347,7 @@ async function startGoogleSignInImpl(): Promise<GoogleAccount> {
     await waitForLoopbackPortRelease()
   }
 
-  const flow = runGoogleSignInFlow()
+  const flow = runGoogleWorkspaceSignInFlow()
   inFlightGoogleSignIn = flow
   try {
     return await flow
@@ -374,13 +358,11 @@ async function startGoogleSignInImpl(): Promise<GoogleAccount> {
   }
 }
 
-async function runGoogleSignInFlow(): Promise<GoogleAccount> {
-  assertGoogleOAuthConfigured()
-  log.info('Starting Google sign-in flow')
+async function runGoogleWorkspaceSignInFlow(): Promise<GoogleWorkspaceAccount> {
+  assertGoogleWorkspaceOAuthConfigured()
+  log.info('Starting Google Workspace sign-in flow')
   const { clientId, clientSecret } = getCredentials()
 
-  // Use a fixed loopback port (7779) for the redirect URI; must match what's
-  // registered in the Google Cloud console as an authorised redirect URI.
   const port = GOOGLE_OAUTH_LOOPBACK_PORT
   const redirectUri = `http://127.0.0.1:${port}`
   const state = randomBytes(16).toString('hex')
@@ -403,7 +385,7 @@ async function runGoogleSignInFlow(): Promise<GoogleAccount> {
       code_challenge_method: 'S256',
     }).toString()
 
-  cancelActiveGoogleSignIn('Starting a new Google sign-in')
+  cancelActiveGoogleSignIn('Starting a new Google Workspace sign-in')
   await waitForLoopbackPortRelease()
 
   const callback = waitForOAuthCallback(port, state)
@@ -412,7 +394,7 @@ async function runGoogleSignInFlow(): Promise<GoogleAccount> {
   const win = new BrowserWindow({
     width: 520,
     height: 680,
-    title: 'Sign in with Google',
+    title: 'Sign in with Google Workspace',
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -436,7 +418,6 @@ async function runGoogleSignInFlow(): Promise<GoogleAccount> {
     if (!win.isDestroyed()) win.close()
   }
 
-  // Exchange the code for tokens
   const tokenParams: Record<string, string> = {
     code,
     client_id: clientId,
@@ -449,18 +430,19 @@ async function runGoogleSignInFlow(): Promise<GoogleAccount> {
   const tokenResponse = await httpsPost(GOOGLE_TOKEN_URL, tokenParams)
 
   if (typeof tokenResponse.error === 'string') {
-    throw new Error(`Token exchange failed: ${tokenResponse.error} – ${tokenResponse.error_description ?? ''}`)
+    throw new Error(
+      `Token exchange failed: ${tokenResponse.error} – ${tokenResponse.error_description ?? ''}`,
+    )
   }
 
   const tokens: GoogleTokens = {
     access_token: tokenResponse.access_token as string,
-    refresh_token: (tokenResponse.refresh_token as string | undefined),
+    refresh_token: tokenResponse.refresh_token as string | undefined,
     expires_at: Date.now() + Number(tokenResponse.expires_in ?? 3600) * 1000,
     token_type: (tokenResponse.token_type as string) ?? 'Bearer',
     scope: (tokenResponse.scope as string) ?? SCOPES,
   }
 
-  // Fetch user info
   const userInfoRaw = await httpsGet(GOOGLE_USERINFO_URL, tokens.access_token)
   const userInfo: GoogleUserInfo = {
     sub: userInfoRaw.sub as string,
@@ -469,17 +451,16 @@ async function runGoogleSignInFlow(): Promise<GoogleAccount> {
     picture: (userInfoRaw.picture as string) ?? '',
   }
 
-  const account: GoogleAccount = { tokens, userInfo }
+  const account: GoogleWorkspaceAccount = { tokens, userInfo }
   persistAccount(account)
+  notifyGoogleWorkspaceAccountChanged(googleWorkspaceAccountInfoForUi(account))
   return account
 }
 
-// ── Token refresh ─────────────────────────────────────────────────────────
-
 async function refreshGoogleTokenImpl(
-  account: GoogleAccount,
-): Promise<GoogleAccount> {
-  log.info('Refreshing Google access token')
+  account: GoogleWorkspaceAccount,
+): Promise<GoogleWorkspaceAccount> {
+  log.info('Refreshing Google Workspace access token')
   const { clientId, clientSecret } = getCredentials()
   if (!account.tokens.refresh_token) {
     throw new Error('No refresh token available; user must sign in again.')
@@ -509,10 +490,9 @@ async function refreshGoogleTokenImpl(
   return account
 }
 
-/** Returns a valid access token, refreshing if necessary */
 async function getValidAccessTokenImpl(): Promise<string> {
   let account = loadStoredAccount()
-  if (!account) throw new Error('Not signed in with Google.')
+  if (!account) throw new Error('Not signed in with Google Workspace.')
   if (Date.now() >= account.tokens.expires_at - 60_000) {
     account = await refreshGoogleToken(account)
   }
@@ -531,10 +511,10 @@ export const clearStoredAccount = traceFunction(
   clearStoredAccountImpl,
 )
 
-export const startGoogleSignIn = traceFunction(
+export const startGoogleWorkspaceSignIn = traceFunction(
   log,
-  'startGoogleSignIn',
-  startGoogleSignInImpl,
+  'startGoogleWorkspaceSignIn',
+  startGoogleWorkspaceSignInImpl,
 )
 
 export const refreshGoogleToken = traceFunction(

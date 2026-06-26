@@ -168,19 +168,28 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     enableLlmDebug: 'Enable LLM debug logging',
     disableLlmDebug: 'Disable LLM debug logging',
   },
-  googleOAuth: {
+  googleWorkspace: {
     intro:
-      'OAuth client used for Google sign-in (Settings → Accounts → Google). Set a Google Cloud Desktop client ID and secret here before signing in.',
+      'Connect Gmail, Calendar, and Drive for the Google Workspace skill. Use your own Google Cloud OAuth app (Desktop client) and sign in below.',
     clientIdLabel: 'OAuth client ID',
     clientIdPlaceholder: 'Google Cloud OAuth 2.0 Desktop client ID',
     clientIdHint:
-      'Required for Google sign-in. Create a Desktop OAuth client in Google Cloud Console.',
+      'Create a Desktop OAuth client in Google Cloud Console. Required before signing in.',
     clientSecretLabel: 'OAuth client secret',
     clientSecretPlaceholder: 'Matching client secret from Google Cloud Console',
     clientSecretHint:
       'Matching client secret from Google Cloud Console. Keep this private.',
     redirectUriHint:
-      'If you create your own OAuth app, add authorized redirect URI http://127.0.0.1:7779 in Google Cloud Console.',
+      'Add authorized redirect URI http://127.0.0.1:7779 in your Google Cloud OAuth app.',
+    signInHint:
+      'Sign in to grant Gmail, Calendar, and Drive access for agents using the Google Workspace skill.',
+    signInWithGoogle: 'Sign in with Google Workspace',
+    signedInHint:
+      'Gmail, Calendar, and Drive are available to agents through the Google Workspace skill.',
+    missingScopes:
+      'Workspace permissions are missing. Sign out and sign in again to grant Gmail, Calendar, and Drive access.',
+    oauthNotConfigured:
+      'Google Workspace is not configured. Enter your OAuth client ID and secret above, then try again.',
   },
   about: {
     intro:
@@ -205,16 +214,10 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     tabs: { google: 'Google', github: 'GitHub' },
     google: {
       signedInHint:
-        'Gmail, Calendar, and Drive are available to agents through the Google Workspace skill.',
-      missingScopes:
-        'Workspace permissions are missing. Sign out and sign in again to grant Gmail, Calendar, and Drive access.',
+        'Your OpenFDE Google account is linked. This is separate from Google Workspace (Gmail, Calendar, Drive).',
       signInHint:
-        'Sign in with Google to connect Gmail, Calendar, and Drive for the Google Workspace skill.',
+        'Link your OpenFDE Google account. Your browser will open for authentication and return to the app via openfde://.',
       signInWithGoogle: 'Sign in with Google',
-      customClientHint:
-        'Set the OAuth client ID and secret under Settings → General → Google properties before signing in.',
-      oauthNotConfigured:
-        'Google sign-in is not configured. Open Settings → General → Google properties and enter your OAuth client ID and secret, then try again.',
     },
     github: {
       signedInHint:

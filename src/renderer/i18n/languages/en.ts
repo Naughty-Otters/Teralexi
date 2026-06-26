@@ -86,7 +86,7 @@ export const lang: AppLocaleBundle = {
       slack: 'Slack Bot Channel',
       githubAccount: 'GitHub Account',
       googleAccount: 'Google Account',
-      googleOAuth: 'Google properties',
+      googleWorkspace: 'Google Workspace',
       reportProblem: 'Report a problem',
     },
     language: {

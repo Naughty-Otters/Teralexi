@@ -10,7 +10,6 @@ export type OutputTokenDetailsInput = {
 }
 
 export type AddProviderMetricInput = {
-  userId: string
   datetime: string
   provider: string
   modelType?: string | null
@@ -32,6 +31,7 @@ export type AddProviderMetricInput = {
 
 export type ProviderMetricType = AddProviderMetricInput & {
   id: number
+  userId: string
   inputTokenDetails: InputTokenDetailsInput
   outputTokenDetails: OutputTokenDetailsInput
 }

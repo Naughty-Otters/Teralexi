@@ -1,5 +1,10 @@
 import { getSystemPropValue } from '@config/system-prop'
 import { createLogger } from '@main/logger'
+import { getOpenFdeAccountGoogleIdToken } from '@main/services/google-account-oauth'
+import {
+  getOpenFdeServerAccessToken,
+  resolveMetricsApiBaseUrl,
+} from '@main/services/openfde-server-auth'
 import type {
   AddProviderMetricInput,
   ProviderMetricType,
@@ -9,7 +14,6 @@ import {
   mapProviderMetricFieldsFromUsage,
 } from '@shared/provider-metrics/usage-mapper'
 import type { LanguageModelUsage } from '@openfde-ai'
-import { getClientId } from './client-identity'
 
 const log = createLogger('services.provider-metrics-reporter')
 
@@ -57,6 +61,10 @@ export function getProviderMetricsGraphqlUrl(): string {
   return getSystemPropValue(PROVIDER_METRICS_GRAPHQL_URL_KEY, '').trim()
 }
 
+export function getProviderMetricsApiBaseUrl(): string {
+  return resolveMetricsApiBaseUrl(getProviderMetricsGraphqlUrl())
+}
+
 export function buildAddProviderMetricInput(args: {
   datetime: string
   provider: string | null | undefined
@@ -65,17 +73,15 @@ export function buildAddProviderMetricInput(args: {
   messageId: string | null | undefined
   usage: LanguageModelUsage | undefined | null
 }): AddProviderMetricInput | null {
-  const userId = getClientId().trim()
   const sessionId = args.sessionId?.trim() ?? ''
   const messageId = args.messageId?.trim() ?? ''
   const provider = args.provider?.trim() ?? ''
   const modelType = args.modelType?.trim() ?? ''
 
-  if (!userId || !sessionId || !messageId) return null
+  if (!sessionId || !messageId) return null
   if (!hasProviderMetricUsageData(args.usage)) return null
 
   return {
-    userId,
     datetime: args.datetime,
     provider: provider || 'unknown',
     ...(modelType ? { modelType } : {}),
@@ -87,10 +93,19 @@ export function buildAddProviderMetricInput(args: {
 
 export async function reportProviderMetric(
   input: AddProviderMetricInput,
+  serverAccessToken?: string | null,
 ): Promise<ProviderMetricType> {
   const graphqlUrl = getProviderMetricsGraphqlUrl()
   if (!graphqlUrl) {
     throw new Error('Provider metrics GraphQL URL is not configured')
+  }
+
+  const apiBaseUrl = resolveMetricsApiBaseUrl(graphqlUrl)
+  const bearerToken =
+    serverAccessToken?.trim() ||
+    (await getOpenFdeServerAccessToken(apiBaseUrl))
+  if (!bearerToken) {
+    throw new Error('OpenFDE server access token is not available')
   }
 
   const response = await fetch(graphqlUrl, {
@@ -98,6 +113,7 @@ export async function reportProviderMetric(
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      Authorization: `Bearer ${bearerToken}`,
     },
     body: JSON.stringify({
       query: ADD_PROVIDER_METRIC_MUTATION,
@@ -138,7 +154,9 @@ export function reportProviderMetricAsync(args: {
   messageId: string | null | undefined
   usage: LanguageModelUsage | undefined | null
 }): void {
-  if (!getProviderMetricsGraphqlUrl()) return
+  const graphqlUrl = getProviderMetricsGraphqlUrl()
+  if (!graphqlUrl) return
+  if (!getOpenFdeAccountGoogleIdToken()) return
 
   const input = buildAddProviderMetricInput(args)
   if (!input) return
