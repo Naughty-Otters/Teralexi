@@ -29,6 +29,10 @@ mutation AddProviderMetric($input: AddProviderMetricInput!) {
     modelType
     sessionId
     messageId
+    runId
+    agentId
+    parentRunId
+    source
     inputTokens
     inputTokenDetails {
       cacheReadTokens
@@ -71,12 +75,20 @@ export function buildAddProviderMetricInput(args: {
   modelType?: string | null | undefined
   sessionId: string | null | undefined
   messageId: string | null | undefined
+  agentId: string | null | undefined
+  runId?: string | null | undefined
+  parentRunId?: string | null | undefined
+  source?: string | null | undefined
   usage: LanguageModelUsage | undefined | null
 }): AddProviderMetricInput | null {
   const sessionId = args.sessionId?.trim() ?? ''
   const messageId = args.messageId?.trim() ?? ''
   const provider = args.provider?.trim() ?? ''
   const modelType = args.modelType?.trim() ?? ''
+  const agentId = args.agentId?.trim() || 'unknown'
+  const runId = args.runId?.trim() ?? ''
+  const parentRunId = args.parentRunId?.trim() ?? ''
+  const source = args.source?.trim() ?? ''
 
   if (!sessionId || !messageId) return null
   if (!hasProviderMetricUsageData(args.usage)) return null
@@ -87,6 +99,10 @@ export function buildAddProviderMetricInput(args: {
     ...(modelType ? { modelType } : {}),
     sessionId,
     messageId,
+    agentId,
+    ...(runId ? { runId } : {}),
+    ...(parentRunId ? { parentRunId } : {}),
+    ...(source ? { source } : {}),
     ...mapProviderMetricFieldsFromUsage(args.usage),
   }
 }
@@ -152,6 +168,10 @@ export function reportProviderMetricAsync(args: {
   modelType?: string | null | undefined
   sessionId: string | null | undefined
   messageId: string | null | undefined
+  agentId: string | null | undefined
+  runId?: string | null | undefined
+  parentRunId?: string | null | undefined
+  source?: string | null | undefined
   usage: LanguageModelUsage | undefined | null
 }): void {
   const graphqlUrl = getProviderMetricsGraphqlUrl()
@@ -167,6 +187,10 @@ export function reportProviderMetricAsync(args: {
       modelType: input.modelType,
       sessionId: input.sessionId,
       messageId: input.messageId,
+      runId: input.runId,
+      agentId: input.agentId,
+      parentRunId: input.parentRunId,
+      source: input.source,
       inputTokens: input.inputTokens,
       outputTokens: input.outputTokens,
       err: error,

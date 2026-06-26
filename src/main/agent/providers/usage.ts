@@ -3,6 +3,7 @@ import { getConversationStore } from '@main/services/conversation-store'
 import { reportProviderMetricAsync } from '@main/services/provider-metrics-reporter'
 import { randomShortUuid } from '@shared/utils/short-uuid'
 import type { AgentResponseOpts, AgentStepId } from '../types'
+import { getCurrentAgentRunScope } from '../run/run-scope'
 
 export function usageToCounts(usage: LanguageModelUsage | undefined | null): {
   inputTokens: number
@@ -18,11 +19,26 @@ export function usageToCounts(usage: LanguageModelUsage | undefined | null): {
   return { inputTokens, outputTokens, totalTokens }
 }
 
+function resolveMetricRunContext(overrides?: {
+  runId?: string | null
+  parentRunId?: string | null
+}): { runId?: string; parentRunId?: string } {
+  const scope = getCurrentAgentRunScope()
+  const runId = overrides?.runId?.trim() || scope?.runId?.trim()
+  const parentRunId = overrides?.parentRunId?.trim() || scope?.parentRunId?.trim()
+  return {
+    ...(runId ? { runId } : {}),
+    ...(parentRunId ? { parentRunId } : {}),
+  }
+}
+
 export function recordLlmTokenUsage(params: {
   userId: string
   conversationId?: string | null
   agentId?: string | null
   assistantMessageId?: string | null
+  runId?: string | null
+  parentRunId?: string | null
   stepId?: string | null
   source: string
   provider?: string | null
@@ -60,6 +76,12 @@ export function recordLlmTokenUsage(params: {
     modelType: params.model,
     sessionId: params.conversationId,
     messageId: params.assistantMessageId,
+    agentId: params.agentId,
+    source: params.source,
+    ...resolveMetricRunContext({
+      runId: params.runId,
+      parentRunId: params.parentRunId,
+    }),
     usage: params.usage,
   })
 }

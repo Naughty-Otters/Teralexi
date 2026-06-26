@@ -20,6 +20,7 @@ vi.mock('@main/agent/coding/plan-mode-state', () => ({
 }))
 
 vi.mock('@main/agent/utils', () => ({
+  extractLastUserForPersistence: vi.fn(() => null),
   extractTrailingUserForPersistence: vi.fn(() => null),
   loadAgentRunCredentials: vi.fn(() => ({})),
   loadConversationHistory: vi.fn(() => []),
