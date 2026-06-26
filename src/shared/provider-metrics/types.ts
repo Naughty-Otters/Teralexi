@@ -15,6 +15,10 @@ export type AddProviderMetricInput = {
   modelType?: string | null
   sessionId: string
   messageId: string
+  runId?: string | null
+  agentId: string
+  parentRunId?: string | null
+  source?: string | null
   inputTokens?: number | null
   inputTokenDetails?: InputTokenDetailsInput | null
   outputTokens?: number | null

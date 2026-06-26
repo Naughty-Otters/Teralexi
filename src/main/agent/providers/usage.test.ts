@@ -6,10 +6,15 @@ import {
   recordLlmTokenUsageFromOpts,
   usageToCounts,
 } from './usage'
+import { getCurrentAgentRunScope } from '../run/run-scope'
 
 const { insertTokenUsage, reportProviderMetricAsync } = vi.hoisted(() => ({
   insertTokenUsage: vi.fn(),
   reportProviderMetricAsync: vi.fn(),
+}))
+
+vi.mock('../run/run-scope', () => ({
+  getCurrentAgentRunScope: vi.fn(() => undefined),
 }))
 
 vi.mock('@main/services/conversation-store', () => ({
@@ -42,6 +47,7 @@ describe('recordLlmTokenUsage', () => {
   beforeEach(() => {
     insertTokenUsage.mockClear()
     reportProviderMetricAsync.mockClear()
+    vi.mocked(getCurrentAgentRunScope).mockReturnValue(undefined)
   })
 
   it('skips insert when all counts zero', () => {
@@ -58,9 +64,10 @@ describe('recordLlmTokenUsage', () => {
       userId: 'u1',
       conversationId: 'conv-1',
       assistantMessageId: 'msg-1',
+      agentId: 'agent-1',
+      source: 'streamText',
       provider: 'openai',
       model: 'gpt',
-      source: 'streamText',
       usage: { inputTokens: 3, outputTokens: 7, totalTokens: 10 },
     })
     expect(insertTokenUsage).toHaveBeenCalledWith(
@@ -77,7 +84,35 @@ describe('recordLlmTokenUsage', () => {
         modelType: 'gpt',
         sessionId: 'conv-1',
         messageId: 'msg-1',
+        agentId: 'agent-1',
+        source: 'streamText',
         usage: { inputTokens: 3, outputTokens: 7, totalTokens: 10 },
+      }),
+    )
+  })
+
+  it('forwards run scope fields to provider metrics publish', () => {
+    vi.mocked(getCurrentAgentRunScope).mockReturnValue({
+      runId: 'child-run',
+      parentRunId: 'root-run',
+      depth: 1,
+    })
+
+    recordLlmTokenUsage({
+      userId: 'u1',
+      conversationId: 'conv-1',
+      assistantMessageId: 'msg-1',
+      agentId: 'sub-agent',
+      source: 'toolLoop',
+      usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
+    })
+
+    expect(reportProviderMetricAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'child-run',
+        parentRunId: 'root-run',
+        agentId: 'sub-agent',
+        source: 'toolLoop',
       }),
     )
   })
