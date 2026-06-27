@@ -1922,6 +1922,17 @@ export class IpcChannelMainClass {
       error?: string
     }
   > = null
+  /** FIM-based inline AI completion for the workspace editor. */
+  EditorAiComplete: IpcMainEventListener<
+    {
+      conversationId: string
+      prefix: string
+      suffix: string
+      languageId: string
+      relativePath: string
+    },
+    { ok: boolean; completion?: string; error?: string }
+  > = null
 }
 export class IpcChannelRendererClass {
   // ipcRenderer

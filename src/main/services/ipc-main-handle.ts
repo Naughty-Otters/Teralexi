@@ -203,6 +203,7 @@ import {
 import { getLspManager } from '@main/agent/lsp'
 import { getEditorLspBridge } from '@main/agent/lsp/editor-lsp-bridge'
 import { formatWorkspaceFile } from '@main/agent/editor/format-service'
+import { completeEditorAi } from '@main/services/editor-ai-completion'
 import { lintWorkspaceFile } from '@main/agent/editor/eslint-service'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2878,6 +2879,24 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       args?.relativePath ?? '',
       args?.content ?? '',
     )
+
+  EditorAiComplete: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: {
+      conversationId: string
+      prefix: string
+      suffix: string
+      languageId: string
+      relativePath: string
+    },
+  ) => ReturnType<typeof completeEditorAi> = (_event, args) =>
+    completeEditorAi({
+      conversationId: args?.conversationId ?? '',
+      prefix: args?.prefix ?? '',
+      suffix: args?.suffix ?? '',
+      languageId: args?.languageId ?? 'plaintext',
+      relativePath: args?.relativePath ?? '',
+    })
 
   PickWorkspaceEditorFile: (
     event: Electron.IpcMainInvokeEvent,

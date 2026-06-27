@@ -3,16 +3,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, toRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import type { editor as MonacoEditorNS } from 'monaco-editor'
 import { useWorkspaceStore } from '@store/workspace'
 import { useWorkspaceGitStore } from '@store/workspace-git'
 import { monacoLanguageFromPath } from '@shared/file-type/monaco-language'
 import { useEditorLspSession } from '@renderer/components/code/monaco-lsp/useEditorLsp'
+import { useEditorAiCompletion } from '@renderer/components/code/monaco-lsp/useEditorAiCompletion'
 
 const props = defineProps<{
   editor: MonacoEditorNS.IStandaloneCodeEditor
+  readOnly?: boolean
 }>()
 
 const gitStore = useWorkspaceGitStore()
@@ -42,6 +44,12 @@ const {
   },
 })
 
+const { attachAiCompletion } = useEditorAiCompletion({
+  conversationId,
+  editorPath,
+  readOnly: toRef(props, 'readOnly'),
+})
+
 defineExpose({
   lspStatus,
   formatActiveFile,
@@ -51,14 +59,22 @@ function languageForPath(): string {
   return editorPath.value ? monacoLanguageFromPath(editorPath.value) : 'plaintext'
 }
 
+async function attachEditorServices(
+  editor: MonacoEditorNS.IStandaloneCodeEditor,
+): Promise<void> {
+  const languageId = languageForPath()
+  await attachToEditor(editor)
+  await attachAiCompletion(editor, languageId)
+}
+
 onMounted(() => {
-  void attachToEditor(props.editor)
+  void attachEditorServices(props.editor)
 })
 
 watch(
   () => props.editor,
   (editor) => {
-    if (editor) void attachToEditor(editor)
+    if (editor) void attachEditorServices(editor)
   },
 )
 

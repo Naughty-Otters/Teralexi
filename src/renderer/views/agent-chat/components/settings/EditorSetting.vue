@@ -116,6 +116,14 @@
           @change="onEslintDebounceChange"
         />
       </div>
+
+      <div class="editor-divider" />
+
+      <EditorAiCompletionFields
+        :model-value="aiSettings"
+        :disabled="Boolean(savingAi)"
+        @update:model-value="onAiSettingsChange"
+      />
     </div>
   </section>
 </template>
@@ -130,6 +138,14 @@ import {
   type EditorSettings,
 } from '@shared/editor/editor-settings'
 import {
+  DEFAULT_EDITOR_AI_COMPLETION_SETTINGS,
+  EDITOR_AI_COMPLETION_PROP_KEYS,
+  parseEditorAiCompletionSettings,
+  type EditorAiCompletionSettings,
+} from '@shared/editor/editor-ai-completion-settings'
+import EditorAiCompletionFields from '@renderer/components/code/EditorAiCompletionFields.vue'
+import { persistEditorAiCompletionSettings } from '@renderer/components/code/editor-ai-completion-persist'
+import {
   getSystemConfigValues,
   setSystemConfigValue,
 } from '@store/agent/config'
@@ -138,17 +154,31 @@ import './sp-shared.css'
 const { t } = useI18n()
 const loading = ref(true)
 const saving = ref<keyof EditorSettings | null>(null)
+const savingAi = ref(false)
 const settings = reactive({ ...DEFAULT_EDITOR_SETTINGS })
+const aiSettings = reactive({ ...DEFAULT_EDITOR_AI_COMPLETION_SETTINGS })
 
 async function loadSettings(): Promise<void> {
   loading.value = true
   try {
-    const values = await getSystemConfigValues(
-      Object.values(EDITOR_SETTINGS_PROP_KEYS),
-    )
+    const values = await getSystemConfigValues([
+      ...Object.values(EDITOR_SETTINGS_PROP_KEYS),
+      ...Object.values(EDITOR_AI_COMPLETION_PROP_KEYS),
+    ])
     Object.assign(settings, parseEditorSettings(values))
+    Object.assign(aiSettings, parseEditorAiCompletionSettings(values))
   } finally {
     loading.value = false
+  }
+}
+
+async function onAiSettingsChange(next: EditorAiCompletionSettings): Promise<void> {
+  Object.assign(aiSettings, next)
+  savingAi.value = true
+  try {
+    await persistEditorAiCompletionSettings(next)
+  } finally {
+    savingAi.value = false
   }
 }
 
@@ -234,5 +264,10 @@ onMounted(() => {
 .editor-number {
   width: 5rem;
   flex-shrink: 0;
+}
+
+.editor-divider {
+  height: 1px;
+  background: var(--ui-border);
 }
 </style>

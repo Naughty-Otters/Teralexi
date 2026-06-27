@@ -184,6 +184,7 @@
         :key="`${editorPath}:${monacoEditorKey}`"
         ref="lspHostRef"
         :editor="monacoEditor"
+        :read-only="isMutationsDisabled"
       />
 
       <WorkspaceXtermConsole v-if="consoleOpen" class="file-editor-terminal" />

@@ -183,7 +183,7 @@ export function useEditorLspSession(options: {
     return result.content
   }
 
-  watch(editorPath, (newPath, oldPath) => {
+  watch(options.editorPath, (newPath, oldPath) => {
     const conversationId = options.conversationId.value
     if (oldPath && conversationId) {
       void window.ipcRendererChannel?.EditorLspCloseDocument?.invoke?.({

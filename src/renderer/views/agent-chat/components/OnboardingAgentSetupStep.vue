@@ -39,6 +39,17 @@
       </div>
     </div>
 
+    <div class="onboarding-editor-ai sp-card">
+      <div class="onboarding-agents-bulk-label">{{ ps.wizard.editorAiTitle }}</div>
+      <p class="onboarding-editor-ai-desc">{{ ps.wizard.editorAiSubtitle }}</p>
+      <EditorAiCompletionFields
+        v-model="editorAiSettings"
+        variant="wizard"
+        :provider-ids="editorAiProviderIds"
+        :labels="editorAiLabels"
+      />
+    </div>
+
     <div class="onboarding-agents-list">
       <div
         v-for="agent in agentStore.agents"
@@ -108,10 +119,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
 import { useAgentStore, type Agent, type ProviderType } from '@store/agent'
 import { isAgentReadyForOnboarding } from '@shared/agent/onboarding-status'
+import {
+  DEFAULT_EDITOR_AI_COMPLETION_SETTINGS,
+  EDITOR_AI_COMPLETION_SUPPORTED_PROVIDERS,
+  parseEditorAiCompletionProvider,
+  parseEditorAiCompletionSettings,
+  type EditorAiCompletionProvider,
+  type EditorAiCompletionSettings,
+} from '@shared/editor/editor-ai-completion-settings'
+import { getSystemConfigValues } from '@store/agent/config'
+import EditorAiCompletionFields from '@renderer/components/code/EditorAiCompletionFields.vue'
+import { persistEditorAiCompletionSettings } from '@renderer/components/code/editor-ai-completion-persist'
 import LlmProviderSelect from './settings/LlmProviderSelect.vue'
 import LlmModelSelect from './settings/LlmModelSelect.vue'
 
@@ -128,8 +150,27 @@ const bulkProvider = ref<ProviderType>(
   props.defaultProvider ?? agentStore.configuredLlmProviderIds[0] ?? 'openai',
 )
 const bulkModel = ref('')
+const editorAiSettings = ref<EditorAiCompletionSettings>({
+  ...DEFAULT_EDITOR_AI_COMPLETION_SETTINGS,
+})
 
 const configuredProviderIds = computed(() => agentStore.configuredLlmProviderIds)
+
+const editorAiProviderIds = computed((): readonly EditorAiCompletionProvider[] => {
+  const configured = new Set(configuredProviderIds.value)
+  const supported = EDITOR_AI_COMPLETION_SUPPORTED_PROVIDERS.filter((id) =>
+    configured.has(id),
+  )
+  return supported.length > 0 ? supported : [...EDITOR_AI_COMPLETION_SUPPORTED_PROVIDERS]
+})
+
+const editorAiLabels = computed(() => ({
+  enabledTitle: ps.value.wizard.editorAiEnabled,
+  enabledDesc: ps.value.wizard.editorAiEnabledDesc,
+  providerTitle: p.value.fields.provider,
+  modelTitle: p.value.fields.model,
+  modelDesc: ps.value.wizard.editorAiModelDesc,
+}))
 
 const bulkModels = computed(
   () => agentStore.availableModelsByProvider[bulkProvider.value] ?? [],
@@ -173,6 +214,50 @@ watch(bulkProvider, (provider) => {
   if (models.length > 0 && !models.includes(bulkModel.value)) {
     bulkModel.value = models[0] ?? ''
   }
+})
+
+function applyEditorAiDefaults(provider: ProviderType | null, model?: string): void {
+  if (!provider) return
+  const parsedProvider = parseEditorAiCompletionProvider(provider)
+  if (!editorAiProviderIds.value.includes(parsedProvider)) return
+
+  const models = agentStore.availableModelsByProvider[provider] ?? []
+  const nextModel = model?.trim() || models[0] || editorAiSettings.value.model
+  editorAiSettings.value = {
+    ...editorAiSettings.value,
+    enabled: true,
+    provider: parsedProvider,
+    model: nextModel,
+  }
+}
+
+watch(
+  () => [props.defaultProvider, props.defaultModel] as const,
+  ([provider, model]) => {
+    applyEditorAiDefaults(provider, model)
+  },
+)
+
+async function loadEditorAiSettings(): Promise<void> {
+  const values = await getSystemConfigValues([
+    'editor.settings.aiCompletionEnabled',
+    'editor.settings.aiCompletionProvider',
+    'editor.settings.aiCompletionModel',
+    'editor.settings.aiCompletionDebounceMs',
+    'editor.settings.aiCompletionMaxTokens',
+  ])
+  editorAiSettings.value = parseEditorAiCompletionSettings(values)
+  if (!editorAiSettings.value.model.trim()) {
+    applyEditorAiDefaults(props.defaultProvider, props.defaultModel)
+  }
+}
+
+async function saveEditorAiSettings(): Promise<void> {
+  await persistEditorAiCompletionSettings(editorAiSettings.value)
+}
+
+onMounted(() => {
+  void loadEditorAiSettings()
 })
 
 function buildCreds() {
@@ -224,6 +309,7 @@ function applyBulk() {
 
 defineExpose({
   allReady,
+  saveEditorAiSettings,
 })
 </script>
 
@@ -239,6 +325,24 @@ defineExpose({
   margin-bottom: 14px;
   padding: 14px;
   position: relative;
+}
+
+.onboarding-editor-ai {
+  margin-bottom: 14px;
+  padding: 14px;
+  position: relative;
+}
+
+.onboarding-editor-ai:has(.llm-provider-select--open),
+.onboarding-editor-ai:has(.llm-model-select--open) {
+  z-index: 40;
+}
+
+.onboarding-editor-ai-desc {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ui-text-muted);
 }
 
 .onboarding-agents-bulk:has(.llm-provider-select--open),
