@@ -44,6 +44,12 @@ export const providerSetupEn: ProviderSetupLabels = {
     addAnotherProvider: 'Add another provider',
     alreadyConfigured: 'Configured',
     next: 'Next',
+    editorAiTitle: 'Editor AI tab completion',
+    editorAiSubtitle:
+      'Optional inline code suggestions while editing files in the workspace. Uses the same provider credentials as agents.',
+    editorAiEnabled: 'Enable tab completion',
+    editorAiEnabledDesc: 'Show ghost-text suggestions in the file editor while typing.',
+    editorAiModelDesc: 'Coder models work best for fill-in-the-middle completion.',
   },
   landing: {
     title: 'Connect your first model',

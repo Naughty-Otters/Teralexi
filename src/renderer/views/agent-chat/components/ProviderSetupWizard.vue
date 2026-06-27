@@ -405,6 +405,7 @@ async function skip() {
 }
 
 async function finish() {
+  await agentsStepRef.value?.saveEditorAiSettings?.()
   if (props.firstRun) {
     await agentStore.completeOnboarding()
     emit('finished')

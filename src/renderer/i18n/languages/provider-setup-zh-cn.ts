@@ -44,6 +44,12 @@ export const providerSetupZhCn: ProviderSetupLabels = {
     addAnotherProvider: '添加其他提供商',
     alreadyConfigured: '已配置',
     next: '下一步',
+    editorAiTitle: '编辑器 AI 补全',
+    editorAiSubtitle:
+      '在工作区编辑文件时可选的 Tab 内联代码建议，使用与 Agent 相同的提供商凭据。',
+    editorAiEnabled: '启用 Tab 补全',
+    editorAiEnabledDesc: '在文件编辑器中输入时显示灰色内联建议。',
+    editorAiModelDesc: 'Coder 类模型最适合 fill-in-the-middle 补全。',
   },
   landing: {
     title: '连接你的第一个模型',

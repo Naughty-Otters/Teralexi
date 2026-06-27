@@ -65,3 +65,5 @@ export function parseEditorSettings(
 }
 
 export const EDITOR_SETTINGS_KEYS = Object.values(EDITOR_SETTINGS_PROP_KEYS)
+
+export { EDITOR_AI_COMPLETION_SETTINGS_KEYS } from './editor-ai-completion-settings'

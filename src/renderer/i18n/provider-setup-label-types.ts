@@ -44,6 +44,11 @@ export type ProviderSetupLabels = {
     addAnotherProvider: string
     alreadyConfigured: string
     next: string
+    editorAiTitle: string
+    editorAiSubtitle: string
+    editorAiEnabled: string
+    editorAiEnabledDesc: string
+    editorAiModelDesc: string
   }
   landing: {
     title: string
