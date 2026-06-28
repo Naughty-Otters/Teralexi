@@ -26,13 +26,26 @@
         :class="{ 'sp-tab--active': settingsTab === tab.id }"
         @click="switchTab(tab.id)"
       >
-        {{ tab.label }}
+        <span class="sp-tab-label">{{ tab.label }}</span>
+        <UIcon
+          v-if="tab.requiresSignIn && !isSignedIn"
+          name="i-lucide-lock"
+          class="sp-tab-lock"
+          aria-hidden="true"
+        />
       </button>
     </div>
 
     <!-- Top-level tab panels -->
     <div class="sp-panel-frame">
-      <div v-if="settingsTab === 'general'" class="sp-general-panel">
+      <SignInRequiredPanel
+        v-if="activeTabRequiresSignIn"
+        :description="signInGateDescription"
+        :hint="t.auth.localLlmHint"
+        :secondary-action-label="t.auth.openLocalLlmSettings"
+        @secondary-action="openLocalLlmSettings"
+      />
+      <div v-else-if="settingsTab === 'general'" class="sp-general-panel">
         <LanguageSetting />
         <AppearanceSetting />
         <FontSetting />
@@ -40,6 +53,7 @@
         <GoogleWorkspaceSetting />
       </div>
       <section v-else-if="settingsTab === 'llm'" class="sp-section sp-panel-view">
+        <p v-if="!isSignedIn" class="sp-sign-in-hint">{{ t.signInGate.llmCloud }}</p>
         <div class="sp-tabs sp-tabs--nested">
           <button
             v-for="vendor in llmVendorTabs"
@@ -160,8 +174,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
+import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { useAgentStore } from '@store/agent'
 import type { ProviderType } from '@store/agent'
 import {
@@ -169,6 +184,9 @@ import {
   LLM_PROVIDER_IDS,
   llmProviderSettingsLabel,
 } from '@shared/agent/llm-provider-registry'
+import { LOCAL_LLM_PROVIDER_IDS } from '@shared/agent/provider-setup-guides'
+import { isSignedInOnlySettingsTab } from '@shared/auth/signed-in-features'
+import SignInRequiredPanel from './SignInRequiredPanel.vue'
 import FontSetting from './settings/FontSetting.vue'
 import AppearanceSetting from './settings/AppearanceSetting.vue'
 import EditorSetting from './settings/EditorSetting.vue'
@@ -202,6 +220,7 @@ import AboutUpdatePanel from './settings/AboutUpdatePanel.vue'
 const emit = defineEmits<{ close: [] }>()
 
 const { t } = useI18n()
+const { isSignedIn } = useGoogleAccount()
 
 const agentStore = useAgentStore()
 type SettingsTab =
@@ -239,29 +258,49 @@ const skillTabs = computed(() => [
 ])
 
 const tabs = computed(() => [
-  { id: 'general' as SettingsTab, label: t.value.settings.tabs.general },
-  { id: 'accounts' as SettingsTab, label: t.value.settings.tabs.accounts },
-  { id: 'skills' as SettingsTab, label: t.value.settings.tabs.skills },
-  { id: 'agents' as SettingsTab, label: t.value.settings.tabs.agents },
-  { id: 'llm' as SettingsTab, label: t.value.settings.tabs.llm },
-  { id: 'channels' as SettingsTab, label: t.value.settings.tabs.channels },
-  { id: 'scheduler' as SettingsTab, label: t.value.settings.tabs.scheduler },
-  { id: 'memory' as SettingsTab, label: t.value.settings.tabs.memory },
-  { id: 'chat' as SettingsTab, label: t.value.settings.tabs.chat },
-  { id: 'toolset' as SettingsTab, label: t.value.settings.tabs.toolset },
-  { id: 'mcp' as SettingsTab, label: t.value.settings.tabs.mcp },
-  { id: 'developer' as SettingsTab, label: t.value.settings.tabs.developer },
-  { id: 'about' as SettingsTab, label: t.value.settings.tabs.about },
+  { id: 'general' as SettingsTab, label: t.value.settings.tabs.general, requiresSignIn: false },
+  { id: 'accounts' as SettingsTab, label: t.value.settings.tabs.accounts, requiresSignIn: false },
+  { id: 'skills' as SettingsTab, label: t.value.settings.tabs.skills, requiresSignIn: true },
+  { id: 'agents' as SettingsTab, label: t.value.settings.tabs.agents, requiresSignIn: true },
+  { id: 'llm' as SettingsTab, label: t.value.settings.tabs.llm, requiresSignIn: false },
+  { id: 'channels' as SettingsTab, label: t.value.settings.tabs.channels, requiresSignIn: true },
+  { id: 'scheduler' as SettingsTab, label: t.value.settings.tabs.scheduler, requiresSignIn: true },
+  { id: 'memory' as SettingsTab, label: t.value.settings.tabs.memory, requiresSignIn: true },
+  { id: 'chat' as SettingsTab, label: t.value.settings.tabs.chat, requiresSignIn: true },
+  { id: 'toolset' as SettingsTab, label: t.value.settings.tabs.toolset, requiresSignIn: false },
+  { id: 'mcp' as SettingsTab, label: t.value.settings.tabs.mcp, requiresSignIn: true },
+  { id: 'developer' as SettingsTab, label: t.value.settings.tabs.developer, requiresSignIn: true },
+  { id: 'about' as SettingsTab, label: t.value.settings.tabs.about, requiresSignIn: true },
 ])
 
-const llmVendorTabs = LLM_PROVIDER_IDS.map((id) => ({
-  id,
-  label: llmProviderSettingsLabel(id),
-}))
+const activeTabRequiresSignIn = computed(
+  () => !isSignedIn.value && isSignedInOnlySettingsTab(settingsTab.value),
+)
+
+const signInGateDescription = computed(() => t.value.signInGate.settings)
+
+const llmVendorTabs = computed(() => {
+  const ids = isSignedIn.value ? LLM_PROVIDER_IDS : LOCAL_LLM_PROVIDER_IDS
+  return ids.map((id) => ({
+    id,
+    label: llmProviderSettingsLabel(id),
+  }))
+})
+
+function openLocalLlmSettings() {
+  settingsTab.value = 'llm'
+  llmVendorTab.value = 'ollama'
+  agentStore.fetchModelsForProvider('ollama')
+}
 
 function switchTab(tab: SettingsTab) {
   settingsTab.value = tab
   if (tab === 'llm') {
+    const vendor = llmVendorTab.value
+    const allowed = llmVendorTabs.value.some((entry) => entry.id === vendor)
+    if (!allowed) {
+      llmVendorTab.value = llmVendorTabs.value[0]?.id ?? 'ollama'
+    }
     agentStore.fetchModelsForProvider(llmVendorTab.value)
   }
 }
@@ -270,6 +309,14 @@ function switchLlmVendor(tab: ProviderType) {
   llmVendorTab.value = tab
   agentStore.fetchModelsForProvider(tab)
 }
+
+onMounted(() => {
+  const pendingTab = sessionStorage.getItem('openfde.settingsTab')
+  if (pendingTab === 'llm') {
+    sessionStorage.removeItem('openfde.settingsTab')
+    switchTab('llm')
+  }
+})
 </script>
 
 <style scoped>
@@ -377,6 +424,29 @@ function switchLlmVendor(tab: ProviderType) {
   color: var(--color-primary-500);
   border-bottom-color: var(--color-primary-500);
   font-weight: 600;
+}
+
+.sp-tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sp-tab-lock {
+  width: 12px;
+  height: 12px;
+  opacity: 0.65;
+}
+
+.sp-sign-in-hint {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ui-text-muted);
+  background: color-mix(in srgb, var(--color-primary-500) 6%, var(--ui-bg));
+  border: 1px solid color-mix(in srgb, var(--color-primary-500) 18%, var(--ui-border));
 }
 
 .sp-section {

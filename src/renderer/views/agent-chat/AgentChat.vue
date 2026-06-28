@@ -21,14 +21,15 @@
         />
         <SidebarFooter
           :right-panel-view="rightPanelView"
+          :is-signed-in="isSignedIn"
           @toggle-settings="
             rightPanelView = rightPanelView === 'settings' ? 'chat' : 'settings'
           "
-          @open-monitor="rightPanelView = 'monitor'"
+          @open-monitor="onOpenMonitor"
           @open-workspace="
             rightPanelView = rightPanelView === 'workspace' ? 'chat' : 'workspace'
           "
-          @open-setup-wizard="providerSetupOpen = true"
+          @open-setup-wizard="onOpenSetupWizard"
         />
       </aside>
 
@@ -68,10 +69,37 @@
     </div>
 
     <ProviderSetupWizard
+      v-if="isSignedIn"
       :open="providerSetupOpen"
       @close="providerSetupOpen = false"
       @finished="onProviderSetupFinished"
     />
+
+    <div
+      v-if="signInGateOpen"
+      class="sign-in-gate-overlay"
+      role="dialog"
+      aria-modal="true"
+      @click.self="signInGateOpen = false"
+    >
+      <div class="sign-in-gate-modal">
+        <button
+          type="button"
+          class="sign-in-gate-close"
+          aria-label="Close"
+          @click="signInGateOpen = false"
+        >
+          ✕
+        </button>
+        <SignInRequiredPanel
+          :description="signInGateDescription"
+          :hint="t.auth.localLlmHint"
+          :secondary-action-label="t.auth.openLocalLlmSettings"
+          @signed-in="onSignInGateSuccess"
+          @secondary-action="onOpenLocalLlmFromGate"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -113,10 +141,13 @@ import { loadAppLocale } from '@renderer/i18n/appLocaleSettings'
 import { useI18n } from '@renderer/composables/useI18n'
 import { runConversationStoreUiSync } from './conversationStoreUiSync'
 import ProviderSetupWizard from './components/ProviderSetupWizard.vue'
+import SignInRequiredPanel from './components/SignInRequiredPanel.vue'
+import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { PROVIDER_SETUP_SESSION_KEY } from '@renderer/lib/provider-setup-session'
 import { requestSandboxPreview } from './sandboxPreviewBridge'
 
 const { t } = useI18n()
+const { isSignedIn } = useGoogleAccount()
 
 const toast = useToast()
 const { state: appUpdateState } = useAppUpdate()
@@ -131,7 +162,33 @@ const rightPanelView = ref<
 const sidebarCollapsed = ref(true)
 const layoutEl = ref<HTMLElement | null>(null)
 const providerSetupOpen = ref(false)
+const signInGateOpen = ref(false)
 let unbindAppUpdate: (() => void) | null = null
+
+const signInGateDescription = computed(() => t.value.signInGate.wizard)
+
+function onOpenSetupWizard() {
+  if (!isSignedIn.value) {
+    signInGateOpen.value = true
+    return
+  }
+  providerSetupOpen.value = true
+}
+
+function onOpenMonitor() {
+  rightPanelView.value = 'monitor'
+}
+
+function onSignInGateSuccess() {
+  signInGateOpen.value = false
+  providerSetupOpen.value = true
+}
+
+function onOpenLocalLlmFromGate() {
+  signInGateOpen.value = false
+  sessionStorage.setItem('openfde.settingsTab', 'llm')
+  rightPanelView.value = 'settings'
+}
 
 function onProviderSetupFinished() {
   providerSetupOpen.value = false
@@ -457,8 +514,10 @@ onMounted(async () => {
   await agentStore.fetchModelsForProvider('ollama')
   if (sessionStorage.getItem(PROVIDER_SETUP_SESSION_KEY) === '1') {
     sessionStorage.removeItem(PROVIDER_SETUP_SESSION_KEY)
-    providerSetupOpen.value = true
-  } else if (agentStore.shouldShowProviderSetupWizard) {
+    if (isSignedIn.value) {
+      providerSetupOpen.value = true
+    }
+  } else if (agentStore.shouldShowProviderSetupWizard && isSignedIn.value) {
     providerSetupOpen.value = true
   }
 })
@@ -547,5 +606,42 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: hidden;
   background: var(--ui-bg);
+}
+
+.sign-in-gate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.sign-in-gate-modal {
+  position: relative;
+  width: min(480px, 100%);
+}
+
+.sign-in-gate-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.sign-in-gate-close:hover {
+  background: var(--ui-bg-accented);
+  color: var(--ui-text);
 }
 </style>

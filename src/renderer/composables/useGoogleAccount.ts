@@ -43,9 +43,27 @@ export function useGoogleAccount() {
     )
   })
 
+  async function signIn(): Promise<GoogleAccountSummary | null> {
+    const channel = window.ipcRendererChannel?.GoogleSignIn
+    if (!channel?.invoke) return null
+    try {
+      account.value = (await channel.invoke()) ?? null
+      return account.value
+    } catch {
+      return null
+    }
+  }
+
+  async function signOut(): Promise<void> {
+    await window.ipcRendererChannel?.GoogleSignOut?.invoke?.()
+    account.value = null
+  }
+
   return {
     account,
     refresh,
+    signIn,
+    signOut,
     isSignedIn: computed(() => account.value != null),
   }
 }

@@ -262,6 +262,26 @@ export type AppLabels = {
     updateAvailableTitle: string
     updateAvailableDescription: string
   }
+  auth: {
+    signInWithGoogle: string
+    signingIn: string
+    signInFailed: string
+    signInRequiredTitle: string
+    signInRequiredDesc: string
+    localLlmHint: string
+    openLocalLlmSettings: string
+  }
+  agentGuide: {
+    title: string
+    subtitle: string
+    selected: string
+  }
+  signInGate: {
+    settings: string
+    monitor: string
+    wizard: string
+    llmCloud: string
+  }
   providerSetup: ProviderSetupLabels
 }
 

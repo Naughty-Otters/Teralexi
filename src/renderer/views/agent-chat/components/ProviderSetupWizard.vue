@@ -21,13 +21,15 @@
           >
             1. {{ ps.wizard.stepLlm }}
           </span>
-          <span class="provider-setup-step-sep">→</span>
-          <span
-            class="provider-setup-step"
-            :class="{ 'provider-setup-step--active': phase === 'agents' }"
-          >
-            2. {{ ps.wizard.stepAgents }}
-          </span>
+          <template v-if="!localOnly">
+            <span class="provider-setup-step-sep">→</span>
+            <span
+              class="provider-setup-step"
+              :class="{ 'provider-setup-step--active': phase === 'agents' }"
+            >
+              2. {{ ps.wizard.stepAgents }}
+            </span>
+          </template>
         </div>
       </header>
 
@@ -73,7 +75,12 @@
               <span class="provider-setup-mode-title">{{ ps.wizard.localTitle }}</span>
               <span class="provider-setup-mode-desc">{{ ps.wizard.localDesc }}</span>
             </button>
-            <button type="button" class="provider-setup-mode-card" @click="pickMode('cloud')">
+            <button
+              v-if="!localOnly"
+              type="button"
+              class="provider-setup-mode-card"
+              @click="pickMode('cloud')"
+            >
               <span class="provider-setup-mode-title">{{ ps.wizard.cloudTitle }}</span>
               <span class="provider-setup-mode-desc">{{ ps.wizard.cloudDesc }}</span>
             </button>
@@ -177,9 +184,12 @@ const props = withDefaults(
     open: boolean
     /** Full-screen first-run flow — no skip, finishes on landing page. */
     firstRun?: boolean
+    /** Restrict wizard to local LLM providers only (unsigned users). */
+    localOnly?: boolean
   }>(),
   {
     firstRun: false,
+    localOnly: false,
   },
 )
 
@@ -209,9 +219,10 @@ const agentsStepRef = ref<InstanceType<typeof OnboardingAgentSetupStep> | null>(
 
 const configuredProviderIds = computed(() => agentStore.configuredLlmProviderIds)
 
-const providerChoices = computed(() =>
-  mode.value === 'local' ? LOCAL_LLM_PROVIDER_IDS : CLOUD_LLM_PROVIDER_IDS,
-)
+const providerChoices = computed(() => {
+  if (props.localOnly) return LOCAL_LLM_PROVIDER_IDS
+  return mode.value === 'local' ? LOCAL_LLM_PROVIDER_IDS : CLOUD_LLM_PROVIDER_IDS
+})
 
 const canProceedFromLlm = computed(() => {
   if (phase.value !== 'llm') return false
@@ -250,6 +261,9 @@ const primaryLabel = computed(() => {
   if (phase.value === 'agents') {
     return props.firstRun ? ps.value.wizard.finishSetup : ps.value.wizard.continue
   }
+  if (props.localOnly) {
+    return props.firstRun ? ps.value.wizard.finishSetup : ps.value.wizard.continue
+  }
   return ps.value.wizard.next
 })
 
@@ -275,22 +289,26 @@ function markProviderReady(id: ProviderType) {
 
 async function resetWizard() {
   phase.value = 'llm'
-  mode.value = 'cloud'
+  mode.value = props.localOnly ? 'local' : 'cloud'
   selectedProvider.value = null
   setupVerified.value = false
   verifiedProvider.value = null
   verifiedModel.value = ''
 
   const configured = configuredProviderIds.value
-  if (configured.length > 0) {
+  const allowedConfigured = props.localOnly
+    ? configured.filter((id) => LOCAL_LLM_PROVIDER_IDS.includes(id))
+    : configured
+
+  if (allowedConfigured.length > 0) {
     llmStep.value = 'overview'
-    const first = configured[0]!
+    const first = allowedConfigured[0]!
     await agentStore.fetchModelsForProvider(first)
     markProviderReady(first)
     return
   }
 
-  llmStep.value = 'mode'
+  llmStep.value = props.localOnly ? 'provider' : 'mode'
 }
 
 function startAddProvider() {
@@ -375,6 +393,10 @@ function onTested(payload: { ok: boolean; provider?: ProviderType; model?: strin
 }
 
 async function enterAgentsPhase() {
+  if (props.localOnly) {
+    await finish()
+    return
+  }
   if (verifiedProvider.value) {
     void agentStore.fetchModelsForProvider(verifiedProvider.value)
   }
