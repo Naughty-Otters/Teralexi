@@ -117,6 +117,34 @@ describe('TelegramChannelManager', () => {
     expect(state.status).toBe('connected')
   })
 
+  it('setBotToken ignores masked token from UI and keeps stored secret', async () => {
+    vi.resetModules()
+    const { getTelegramChannelManager } = await import('./manager')
+    const manager = getTelegramChannelManager()
+    await manager.setBotToken('1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+    getMeMock.mockClear()
+    startMock.mockClear()
+
+    const state = await manager.setBotToken('1234••••WXYZ')
+
+    expect(state.status).toBe('connected')
+    expect(getMeMock).not.toHaveBeenCalled()
+    expect(startMock).not.toHaveBeenCalled()
+  })
+
+  it('setBotToken rejects invalid token format without calling Telegram API', async () => {
+    vi.resetModules()
+    const { getTelegramChannelManager } = await import('./manager')
+    const manager = getTelegramChannelManager()
+    getMeMock.mockClear()
+
+    const state = await manager.setBotToken('not-a-valid-token')
+
+    expect(state.status).toBe('error')
+    expect(state.lastError).toContain('Invalid bot token')
+    expect(getMeMock).not.toHaveBeenCalled()
+  })
+
   it('stop() disconnects the bot', async () => {
     vi.resetModules()
     const { getTelegramChannelManager } = await import('./manager')
