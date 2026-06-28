@@ -30,6 +30,11 @@
     </div>
 
     <div class="monitor-body">
+      <SignInRequiredPanel
+        v-if="!isSignedIn"
+        :description="t.signInGate.monitor"
+      />
+      <template v-else>
       <div v-if="loading && !hasData" class="monitor-empty">
         Loading token usage…
       </div>
@@ -252,12 +257,16 @@
           </div>
         </section>
       </div>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onActivated, onMounted, ref } from 'vue'
+import { useI18n } from '@renderer/composables/useI18n'
+import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
+import SignInRequiredPanel from './SignInRequiredPanel.vue'
 import {
   buildYearHeatmap,
   currentUtcYearRange,
@@ -334,6 +343,8 @@ const SERIES_COLORS = [
 ] as const
 
 const emit = defineEmits<{ close: [] }>()
+const { t } = useI18n()
+const { isSignedIn } = useGoogleAccount()
 
 const loading = ref(false)
 const loadError = ref('')

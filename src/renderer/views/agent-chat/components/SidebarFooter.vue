@@ -18,6 +18,12 @@
         @click="emit('open-setup-wizard')"
       >
         <UIcon name="i-lucide-wand-sparkles" class="footer-btn-icon" />
+        <UIcon
+          v-if="!props.isSignedIn"
+          name="i-lucide-lock"
+          class="footer-btn-lock"
+          aria-hidden="true"
+        />
       </button>
       <button
         v-if="showChatBoxDisplayModeToggle"
@@ -40,6 +46,12 @@
         @click="emit('open-monitor')"
       >
         <UIcon name="i-lucide-activity" class="footer-btn-icon" />
+        <UIcon
+          v-if="!props.isSignedIn"
+          name="i-lucide-lock"
+          class="footer-btn-lock"
+          aria-hidden="true"
+        />
       </button>
       <button
         class="footer-btn"
@@ -96,9 +108,15 @@ import {
 const { t } = useI18n()
 const showChatBoxDisplayModeToggle = isUiChatBoxDisplayModeToggleEnabled()
 
-const props = defineProps<{
-  rightPanelView: 'chat' | 'settings' | 'monitor' | 'workspace' | 'workflows'
-}>()
+const props = withDefaults(
+  defineProps<{
+    rightPanelView: 'chat' | 'settings' | 'monitor' | 'workspace' | 'workflows'
+    isSignedIn?: boolean
+  }>(),
+  {
+    isSignedIn: false,
+  },
+)
 const emit = defineEmits<{
   'toggle-settings': []
   'open-monitor': []
@@ -163,6 +181,7 @@ function cycleChatBoxMode() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   width: 34px;
   height: 34px;
   border: none;
@@ -183,6 +202,16 @@ function cycleChatBoxMode() {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+}
+
+.footer-btn-lock {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 10px;
+  height: 10px;
+  color: var(--ui-text-muted);
+  opacity: 0.85;
 }
 .footer-btn--active {
   background: color-mix(in srgb, var(--color-primary-500) 10%, transparent);

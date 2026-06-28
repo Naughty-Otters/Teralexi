@@ -48,6 +48,12 @@
             @wheel.passive="onMessagesWheel"
           >
             <div ref="messagesContentEl" class="chat-scroll__content">
+            <AgentGuidePanel
+              v-if="showAgentGuide"
+              :agents="agentStore.chatSelectableAgents"
+              :selected-agent-id="agentStore.selectedAgentId"
+              @select-agent="onSelectAgent"
+            />
             <div
               v-if="hasHiddenAbove || isLoadingOlderMessages"
               class="chat-scroll-edge chat-scroll-edge--top"
@@ -307,6 +313,7 @@ import {
 import type { ReportPanelPreviewSource } from './ReportPanel.vue'
 import ReportPanel from './ReportPanel.vue'
 import ChatPanelHeader from './ChatPanelHeader.vue'
+import AgentGuidePanel from './AgentGuidePanel.vue'
 import ChatUserMessage from './ChatUserMessage.vue'
 import ChatAssistantMessageParts from './ChatAssistantMessageParts.vue'
 import ChatComposer from './ChatComposer.vue'
@@ -863,6 +870,10 @@ const canSend = computed(() => {
 })
 
 const reactiveMessages = ref<UIMessage[]>([])
+
+const showAgentGuide = computed(
+  () => reactiveMessages.value.length === 0 && !isBusy.value,
+)
 
 const conversationWorkspaceAttachments = computed(() =>
   collectConversationWorkspaceAttachments(reactiveMessages.value),

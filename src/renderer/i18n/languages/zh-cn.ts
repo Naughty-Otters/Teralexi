@@ -279,5 +279,28 @@ export const lang: AppLocaleBundle = {
     updateAvailableDescription:
       'OpenFDE v{version} 已可下载。请打开 设置 → 关于。',
   },
+  auth: {
+    signInWithGoogle: '使用 Google 登录',
+    signingIn: '正在登录…',
+    signInFailed: '登录已取消或失败，请重试。',
+    signInRequiredTitle: '登录后继续',
+    signInRequiredDesc:
+      '注册免费的 OpenFDE 账户即可使用云端 LLM、Agent、技能、频道、记忆等功能。',
+    localLlmHint:
+      '未登录时仍可在 设置 → LLM 中配置本地模型（Ollama 或 llama.cpp）。',
+    openLocalLlmSettings: '改为配置本地 LLM',
+  },
+  agentGuide: {
+    title: '我想要',
+    subtitle: '选择一个 Agent 开始 — 之后可随时在输入框中切换。',
+    selected: '已选择',
+  },
+  signInGate: {
+    settings: '此设置项需要登录 OpenFDE 账户后使用。',
+    monitor: 'Token 用量统计仅对登录用户开放。',
+    wizard:
+      '完整设置向导需要登录。未登录时可在 设置 → LLM 中配置 Ollama 或 llama.cpp。',
+    llmCloud: '云端 LLM 提供商需要 OpenFDE 账户。下方仍可使用本地提供商（Ollama、llama.cpp）。',
+  },
   providerSetup: providerSetupZhCn,
 }

@@ -286,5 +286,30 @@ export const lang: AppLocaleBundle = {
     updateAvailableDescription:
       'OpenFDE v{version} is ready to download. Open Settings → About.',
   },
+  auth: {
+    signInWithGoogle: 'Sign in with Google',
+    signingIn: 'Signing in…',
+    signInFailed: 'Sign in was cancelled or failed. Please try again.',
+    signInRequiredTitle: 'Sign in to continue',
+    signInRequiredDesc:
+      'Create a free OpenFDE account to unlock cloud LLMs, agents, skills, channels, memory, and more.',
+    localLlmHint:
+      'Without an account you can still configure local models (Ollama or llama.cpp) under Settings → LLM.',
+    openLocalLlmSettings: 'Configure local LLM instead',
+  },
+  agentGuide: {
+    title: 'I want to',
+    subtitle: 'Pick an agent to get started — you can change it anytime from the message box.',
+    selected: 'Selected',
+  },
+  signInGate: {
+    settings:
+      'This settings section is available after you sign in with your OpenFDE account.',
+    monitor: 'Token usage tracking is available for signed-in users.',
+    wizard:
+      'The full setup wizard is available after sign-in. You can still configure Ollama or llama.cpp locally in Settings → LLM.',
+    llmCloud:
+      'Cloud LLM providers require an OpenFDE account. Local providers (Ollama, llama.cpp) are available below.',
+  },
   providerSetup: providerSetupEn,
 }

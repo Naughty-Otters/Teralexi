@@ -1,8 +1,17 @@
 <template>
   <div class="first-time-onboarding">
+    <SignInRequiredPanel
+      v-if="ready && !isSignedIn && !continuingLocal"
+      :description="t.signInGate.wizard"
+      :hint="t.auth.localLlmHint"
+      :secondary-action-label="t.auth.openLocalLlmSettings"
+      @signed-in="onSignedIn"
+      @secondary-action="continueWithLocal"
+    />
     <ProviderSetupWizard
-      v-if="ready"
+      v-else-if="ready"
       :open="showWizard"
+      :local-only="!isSignedIn"
       first-run
       @finished="onFinished"
     />
@@ -16,16 +25,20 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from '@renderer/composables/useI18n'
+import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { useAgentStore } from '@store/agent'
 import { markOnboardingCompleteInRouteCache } from '@renderer/lib/onboarding-route-state'
 import ProviderSetupWizard from '../agent-chat/components/ProviderSetupWizard.vue'
+import SignInRequiredPanel from '../agent-chat/components/SignInRequiredPanel.vue'
 
 const router = useRouter()
 const { t } = useI18n()
+const { isSignedIn } = useGoogleAccount()
 const agentStore = useAgentStore()
 
 const ready = ref(false)
 const showWizard = ref(true)
+const continuingLocal = ref(false)
 
 onMounted(async () => {
   await agentStore.initializeSettingsFromConfig()
@@ -43,6 +56,16 @@ onMounted(async () => {
     return
   }
 })
+
+function onSignedIn() {
+  continuingLocal.value = false
+  showWizard.value = true
+}
+
+function continueWithLocal() {
+  continuingLocal.value = true
+  showWizard.value = true
+}
 
 function onFinished() {
   showWizard.value = false
