@@ -71,6 +71,21 @@ class TelegramChannelManager {
 
   async setBotToken(botToken: string): Promise<TelegramState> {
     const normalized = botToken.trim()
+
+    if (this.isMaskedToken(normalized)) {
+      if (this.state.botToken && !this.isMaskedToken(this.state.botToken)) {
+        if (this.bot) {
+          return this.getState()
+        }
+        try {
+          await this.start()
+        } catch {
+          // start() already sets error state
+        }
+      }
+      return this.getState()
+    }
+
     setSystemPropValue(TELEGRAM_BOT_TOKEN_KEY, normalized)
     this.state.botToken = normalized
 
@@ -162,6 +177,13 @@ class TelegramChannelManager {
       return
     }
 
+    if (this.isMaskedToken(token) || !this.isValidBotToken(token)) {
+      this.state.status = 'error'
+      this.state.lastError =
+        'Invalid bot token. Paste a fresh token from @BotFather (format: 123456789:ABCdef…).'
+      return
+    }
+
     this.state.status = 'connecting'
     this.state.lastError = null
 
@@ -196,8 +218,7 @@ class TelegramChannelManager {
       this.bot = bot
     } catch (err) {
       this.state.status = 'error'
-      this.state.lastError =
-        err instanceof Error ? err.message : String(err)
+      this.state.lastError = this.formatStartError(err)
       log.error('Failed to start Telegram bot', { err })
       throw err
     }
@@ -250,6 +271,22 @@ class TelegramChannelManager {
   private maskToken(token: string): string {
     if (!token || token.length < 10) return token ? '••••••' : ''
     return `${token.slice(0, 4)}••••${token.slice(-4)}`
+  }
+
+  private isMaskedToken(token: string): boolean {
+    return token.includes('•')
+  }
+
+  private isValidBotToken(token: string): boolean {
+    return /^\d+:[A-Za-z0-9_-]+$/.test(token)
+  }
+
+  private formatStartError(err: unknown): string {
+    const message = err instanceof Error ? err.message : String(err)
+    if (message.includes('404') || message.includes('401')) {
+      return 'Invalid bot token. Check the token from @BotFather and try again.'
+    }
+    return message
   }
 
   private appendChatMessage(message: TelegramChatMessage): void {

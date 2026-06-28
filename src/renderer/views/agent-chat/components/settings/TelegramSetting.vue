@@ -23,7 +23,6 @@
             autocomplete="off"
             spellcheck="false"
             @input="onTokenInput"
-            @blur="saveToken"
             @keydown.enter.prevent="saveToken"
           />
           <button
@@ -60,6 +59,7 @@
 
       <button
         v-if="state.status !== 'connected'"
+        type="button"
         class="tg-connect-btn"
         :disabled="loading || !tokenInput.trim()"
         @click="saveToken"
@@ -69,6 +69,7 @@
 
       <button
         v-if="state.status === 'connected'"
+        type="button"
         class="tg-disconnect-btn"
         :disabled="loading"
         @click="stopBot"
@@ -388,7 +389,7 @@ onUnmounted(() => {
 }
 
 .tg-connect-btn {
-  background: var(--color-primary-500);
+  background: #229ed9;
   color: #fff;
 }
 
@@ -443,7 +444,7 @@ onUnmounted(() => {
 
 .tg-chat-item--me {
   align-self: flex-end;
-  background: var(--color-primary-500);
+  background: #229ed9;
   color: #fff;
 }
 
@@ -466,7 +467,7 @@ onUnmounted(() => {
   font-weight: 600;
   border: none;
   border-radius: 8px;
-  background: var(--color-primary-500);
+  background: #229ed9;
   color: #fff;
   cursor: pointer;
   flex-shrink: 0;
