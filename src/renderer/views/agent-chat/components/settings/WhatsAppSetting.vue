@@ -131,7 +131,12 @@
         </div>
       </div>
 
-      <div v-if="state.lastError" class="wa-error">{{ state.lastError }}</div>
+      <div
+        v-if="state.lastError"
+        :class="isSessionConflictNotice ? 'wa-notice' : 'wa-error'"
+      >
+        {{ state.lastError }}
+      </div>
     </div>
   </section>
 </template>
@@ -142,6 +147,11 @@ import { useI18n } from '@renderer/composables/useI18n'
 
 const { t } = useI18n()
 const p = computed(() => t.value.settings.panels)
+
+const isSessionConflictNotice = computed(() => {
+  const message = state.value.lastError?.toLowerCase() ?? ''
+  return message.includes('conflict') || message.includes('replaced')
+})
 
 type WhatsAppState = {
   botName: string
@@ -896,6 +906,21 @@ async function pollLatestState(timeoutMs = 12000, intervalMs = 500) {
   );
   border: 1px solid
     color-mix(in srgb, var(--color-error-500, #ef4444) 30%, transparent);
+  border-radius: 6px;
+  padding: 8px 10px;
+  word-break: break-word;
+}
+
+.wa-notice {
+  font-size: 12px;
+  color: var(--color-warning-600, #d97706);
+  background: color-mix(
+    in srgb,
+    var(--color-warning-500, #f59e0b) 10%,
+    transparent
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--color-warning-500, #f59e0b) 30%, transparent);
   border-radius: 6px;
   padding: 8px 10px;
   word-break: break-word;

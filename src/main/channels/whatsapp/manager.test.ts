@@ -31,7 +31,11 @@ vi.mock('@whiskeysockets/baileys', () => ({
   })),
 }))
 
-import { getWhatsAppChannelManager } from './manager'
+import {
+  getWhatsAppChannelManager,
+  getWhatsAppDisconnectStatusCode,
+  isWhatsAppConflictDisconnect,
+} from './manager'
 
 describe('whatsapp manager', () => {
   it('returns singleton with default state', () => {
@@ -40,5 +44,39 @@ describe('whatsapp manager', () => {
     const state = mgr.getState()
     expect(state.status).toBeDefined()
     expect(state.botName).toBeTruthy()
+  })
+
+  it('detects session conflict from status code 440', () => {
+    expect(
+      isWhatsAppConflictDisconnect({
+        output: { statusCode: 440 },
+      }),
+    ).toBe(true)
+    expect(getWhatsAppDisconnectStatusCode({ output: { statusCode: 440 } })).toBe(
+      440,
+    )
+  })
+
+  it('detects session conflict from baileys stream error payload', () => {
+    expect(
+      isWhatsAppConflictDisconnect({
+        message: 'Stream Errored',
+        data: {
+          tag: 'stream:error',
+          content: [{ tag: 'conflict', attrs: { type: 'replaced' } }],
+        },
+      }),
+    ).toBe(true)
+  })
+
+  it('does not treat unrelated disconnects as conflict', () => {
+    expect(
+      isWhatsAppConflictDisconnect({
+        output: { statusCode: 401 },
+      }),
+    ).toBe(false)
+    expect(
+      isWhatsAppConflictDisconnect(new Error('connection closed')),
+    ).toBe(false)
   })
 })
