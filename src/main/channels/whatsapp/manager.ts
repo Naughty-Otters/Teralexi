@@ -25,7 +25,7 @@ type RuntimeSocket = {
 
 type BaileysModule = {
   default: (args: Record<string, unknown>) => RuntimeSocket
-  DisconnectReason: { loggedOut: number }
+  DisconnectReason: { loggedOut: number; connectionReplaced?: number }
   fetchLatestBaileysVersion: () => Promise<{ version: number[] }>
   useMultiFileAuthState: (
     dir: string,
@@ -51,6 +51,27 @@ const baileysLog = createLogger('channels.whatsapp.baileys').raw.child({
 // Keep library logs quieter while preserving this app's own logger output.
 baileysLog.level = 'warn'
 
+function isBaileysConflictLogPayload(payload: unknown): boolean {
+  const blob = JSON.stringify(payload ?? '').toLowerCase()
+  return blob.includes('conflict') && blob.includes('replaced')
+}
+
+const baileysSocketLogger = Object.create(baileysLog) as typeof baileysLog
+baileysSocketLogger.error = ((...args: Parameters<typeof baileysLog.error>) => {
+  const [payload, message, ...rest] = args
+  if (isBaileysConflictLogPayload(payload ?? message)) {
+    baileysLog.warn(
+      payload,
+      typeof message === 'string'
+        ? 'WhatsApp session replaced by another connection'
+        : message,
+      ...rest,
+    )
+    return
+  }
+  baileysLog.error(...args)
+}) as typeof baileysLog.error
+
 export type WhatsAppConnectionStatus =
   | 'idle'
   | 'connecting'
@@ -73,9 +94,62 @@ export interface WhatsAppChatMessage {
   timestamp: number
 }
 
+const CONFLICT_STATUS_CODE = 440
+const SESSION_CONFLICT_MESSAGE =
+  'WhatsApp session was replaced by another WhatsApp Web connection. Scan the new QR code below. On your phone: WhatsApp → Linked devices → remove other sessions if needed.'
+
+export function getWhatsAppDisconnectStatusCode(error: unknown): number {
+  return (
+    (error as { output?: { statusCode?: number } } | undefined)?.output
+      ?.statusCode ?? 0
+  )
+}
+
+export function serializeWhatsAppErrorForMatch(error: unknown): string {
+  if (error == null) return ''
+  if (typeof error === 'string') return error.toLowerCase()
+  const parts: string[] = []
+  if (error instanceof Error) {
+    parts.push(error.message)
+    if ('data' in error) {
+      try {
+        parts.push(JSON.stringify((error as { data?: unknown }).data))
+      } catch {
+        // Ignore circular structures in error payloads.
+      }
+    }
+  }
+  try {
+    parts.push(JSON.stringify(error))
+  } catch {
+    parts.push(String(error))
+  }
+  return parts.join(' ').toLowerCase()
+}
+
+export function isWhatsAppConflictDisconnect(
+  error: unknown,
+  connectionReplacedCode?: number,
+): boolean {
+  const statusCode = getWhatsAppDisconnectStatusCode(error)
+  if (
+    statusCode === CONFLICT_STATUS_CODE ||
+    (connectionReplacedCode != null && statusCode === connectionReplacedCode)
+  ) {
+    return true
+  }
+
+  const blob = serializeWhatsAppErrorForMatch(error)
+  return (
+    blob.includes('conflict') &&
+    (blob.includes('replaced') || blob.includes('"type":"replaced"'))
+  )
+}
+
 class WhatsAppChannelManager {
   private socket: RuntimeSocket | null = null
   private bootPromise: Promise<void> | null = null
+  private conflictRecoveryPromise: Promise<void> | null = null
   private get authDir(): string {
     return getopenfdeWhatsAppAuthDir()
   }
@@ -127,6 +201,9 @@ class WhatsAppChannelManager {
   }
 
   async refreshQrCode(): Promise<WhatsAppState> {
+    if (this.isConflictMessage(this.state.lastError)) {
+      await this.clearStoredAuth()
+    }
     await this.restartSocket()
     await this.waitForSettledState()
     return this.getState()
@@ -367,7 +444,7 @@ class WhatsAppChannelManager {
     const socket = baileys.default({
       auth: state,
       version,
-      logger: baileysLog,
+      logger: baileysSocketLogger,
       printQRInTerminal: false,
       browser: [this.state.botName, 'Desktop', '1.0.0'],
       markOnlineOnConnect: false,
@@ -397,10 +474,11 @@ class WhatsAppChannelManager {
 
       if (connection === 'close') {
         const disconnectError = lastDisconnect?.error
-        const statusCode =
-          (disconnectError as { output?: { statusCode?: number } } | undefined)
-            ?.output?.statusCode ?? 0
-        const isConflict = this.isConflictDisconnect(disconnectError)
+        const statusCode = getWhatsAppDisconnectStatusCode(disconnectError)
+        const isConflict = isWhatsAppConflictDisconnect(
+          disconnectError,
+          baileys.DisconnectReason.connectionReplaced,
+        )
         const shouldReconnect =
           !this.suppressReconnectOnce &&
           statusCode !== baileys.DisconnectReason.loggedOut &&
@@ -409,11 +487,14 @@ class WhatsAppChannelManager {
         this.suppressReconnectOnce = false
         this.socket = null
 
-        this.state.status = 'disconnected'
         if (isConflict) {
-          this.state.lastError =
-            'WhatsApp session conflict detected. Close other active WhatsApp Web sessions and refresh QR code.'
+          this.state.status = 'connecting'
+          this.state.lastError = SESSION_CONFLICT_MESSAGE
+          void this.recoverFromSessionConflict()
+          return
         }
+
+        this.state.status = 'disconnected'
 
         if (shouldReconnect) {
           void this.restartSocket()
@@ -487,18 +568,53 @@ class WhatsAppChannelManager {
     }
   }
 
-  private isConflictDisconnect(error: unknown): boolean {
-    const message = this.getErrorMessage(error)
-    return message.toLowerCase().includes('conflict')
+  private async clearStoredAuth(): Promise<void> {
+    await rm(this.authDir, { recursive: true, force: true })
   }
 
-  private getErrorMessage(error: unknown): string {
-    if (typeof error === 'string') return error
-    if (error instanceof Error) return error.message
-    if (error && typeof error === 'object' && 'message' in error) {
-      return String((error as { message?: unknown }).message ?? '')
+  private async recoverFromSessionConflict(): Promise<void> {
+    if (this.conflictRecoveryPromise) {
+      await this.conflictRecoveryPromise
+      return
     }
-    return ''
+
+    this.conflictRecoveryPromise = (async () => {
+      log.warn(
+        'WhatsApp session conflict (replaced). Clearing stored auth and requesting a fresh QR code.',
+      )
+      this.suppressReconnectOnce = true
+      if (this.socket) {
+        try {
+          this.socket.end(new Error('Session conflict recovery'))
+        } catch {
+          // Ignore socket teardown errors during conflict recovery.
+        }
+        this.socket = null
+      }
+
+      await this.clearStoredAuth()
+      this.state.qrCodeDataUrl = null
+      this.state.status = 'connecting'
+      this.suppressReconnectOnce = false
+
+      try {
+        await this.createSocket()
+      } catch (error) {
+        this.state.status = 'error'
+        this.state.lastError =
+          error instanceof Error ? error.message : String(error)
+      }
+    })().finally(() => {
+      this.conflictRecoveryPromise = null
+    })
+
+    await this.conflictRecoveryPromise
+  }
+
+  private isConflictMessage(message: string | null): boolean {
+    if (!message) return false
+    const normalized = message.toLowerCase()
+    return normalized.includes('conflict') || normalized.includes('replaced')
   }
 }
 
