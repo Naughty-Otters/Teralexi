@@ -205,17 +205,25 @@ class TelegramChannelManager {
       const me = await bot.api.getMe()
       this.state.botUsername = me.username ?? null
 
-      bot.start({
-        onStart: () => {
-          log.info('Telegram bot started polling', {
-            username: this.state.botUsername,
-          })
-          this.state.status = 'connected'
-          this.state.lastError = null
-        },
-      })
-
       this.bot = bot
+
+      await new Promise<void>((resolve, reject) => {
+        void bot
+          .start({
+            onStart: () => {
+              log.info('Telegram bot started polling', {
+                username: this.state.botUsername,
+              })
+              this.state.status = 'connected'
+              this.state.lastError = null
+              resolve()
+            },
+          })
+          .catch((err) => {
+            this.bot = null
+            reject(err)
+          })
+      })
     } catch (err) {
       this.state.status = 'error'
       this.state.lastError = this.formatStartError(err)

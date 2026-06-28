@@ -35,8 +35,14 @@ vi.mock('@main/logger', () => ({
 const getMeMock = vi.fn().mockResolvedValue({ username: 'openfde_bot' })
 const sendMessageMock = vi.fn().mockResolvedValue({})
 const onMock = vi.fn()
-const startMock = vi.fn().mockImplementation(function (this: unknown, opts?: { onStart?: () => void }) {
+const startMock = vi.fn().mockImplementation(function (
+  this: unknown,
+  opts?: { onStart?: () => void },
+) {
   opts?.onStart?.()
+  return new Promise<void>(() => {
+    // Long polling loop — intentionally never resolves in tests
+  })
 })
 const stopMock = vi.fn()
 const catchMock = vi.fn()

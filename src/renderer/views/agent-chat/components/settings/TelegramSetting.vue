@@ -213,6 +213,10 @@ async function saveToken() {
     })) as TelegramState
     state.value = result
     tokenInput.value = result.botToken
+    if (result.status === 'connected') {
+      await pollChatMessages()
+      startPolling()
+    }
   } finally {
     loading.value = false
   }
