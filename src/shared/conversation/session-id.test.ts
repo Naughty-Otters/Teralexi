@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildChannelSessionId,
   buildSchedulerSessionId,
+  canDeleteConversationFromUi,
   classifyConversationSessionId,
   isBoundSessionId,
   resolveChannelSessionId,
@@ -23,6 +24,13 @@ describe('session-id', () => {
     expect(classifyConversationSessionId('uuid')).toBe('ui')
     expect(isBoundSessionId('scheduler:x')).toBe(true)
     expect(isBoundSessionId('uuid')).toBe(false)
+  })
+
+  it('canDeleteConversationFromUi allows ui and channel, blocks scheduler', () => {
+    expect(canDeleteConversationFromUi('uuid')).toBe(true)
+    expect(canDeleteConversationFromUi('channel:telegram:1')).toBe(true)
+    expect(canDeleteConversationFromUi('1555@s.whatsapp.net')).toBe(true)
+    expect(canDeleteConversationFromUi('scheduler:job-1')).toBe(false)
   })
 
   it('resolveChannelSessionId prefers canonical then legacy', () => {

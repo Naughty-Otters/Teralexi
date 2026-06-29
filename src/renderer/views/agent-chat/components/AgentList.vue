@@ -94,7 +94,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useAgentStore, type Conversation } from '@store/agent'
-import { isBoundSessionId } from '@shared/conversation/session-id'
+import { canDeleteConversationFromUi } from '@shared/conversation/session-id'
 import { clearConversationSession } from '../conversation-chat-session'
 
 const emit = defineEmits<{ 'navigate-chat': [] }>()
@@ -121,7 +121,7 @@ function setMenuRoot(el: unknown, conversationId: string) {
 }
 
 function canDelete(conversationId: string): boolean {
-  return !isBoundSessionId(conversationId)
+  return canDeleteConversationFromUi(conversationId)
 }
 
 function toggleMenu(conversationId: string) {
@@ -142,8 +142,11 @@ function onDocumentPointerDown(event: PointerEvent) {
 
 async function confirmDelete(conv: Conversation) {
   closeMenu()
+  const isChannel = conv.type === 'channel'
   const ok = window.confirm(
-    `Delete "${conv.title}"? This removes the conversation, all messages, and sandbox data. This cannot be undone.`,
+    isChannel
+      ? `Delete "${conv.title}"? Messages and sandbox data will be removed. The next message from this channel contact will start a fresh conversation.`
+      : `Delete "${conv.title}"? This removes the conversation, all messages, and sandbox data. This cannot be undone.`,
   )
   if (!ok) return
 

@@ -37,7 +37,7 @@ import { withMandatoryToolsInCatalog } from '@shared/agent/mandatory-tools'
 import { isAbortError } from '@shared/utils/abort-error'
 import {
   classifyConversationSessionId,
-  isBoundSessionId,
+  canDeleteConversationFromUi,
 } from '@shared/conversation/session-id'
 import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
 import { randomShortUuid } from '@shared/utils/short-uuid'
@@ -2568,8 +2568,8 @@ export const useAgentStore = defineStore('agent', () => {
   }
 
   async function deleteConversation(conversationId: string): Promise<void> {
-    if (isBoundSessionId(conversationId)) {
-      log.warn('Refusing to delete bound channel/scheduler session', {
+    if (!canDeleteConversationFromUi(conversationId)) {
+      log.warn('Refusing to delete scheduler session', {
         conversationId,
       })
       return
@@ -2595,6 +2595,11 @@ export const useAgentStore = defineStore('agent', () => {
     const meta = findConversationMeta(conversationId)
     const ownerAgentId = meta?.agentId
     delete conversations.value[conversationId]
+    if (channelConversationIds.value.has(conversationId)) {
+      const nextChannelIds = new Set(channelConversationIds.value)
+      nextChannelIds.delete(conversationId)
+      channelConversationIds.value = nextChannelIds
+    }
     if (ownerAgentId) {
       conversationList.value[ownerAgentId] = (
         conversationList.value[ownerAgentId] ?? []

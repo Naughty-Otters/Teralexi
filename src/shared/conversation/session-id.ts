@@ -40,6 +40,11 @@ export function isBoundSessionId(conversationId: string): boolean {
   return classifyConversationSessionId(conversationId) !== 'ui'
 }
 
+/** UI may delete chat and channel threads; scheduler sessions stay bound to jobs. */
+export function canDeleteConversationFromUi(conversationId: string): boolean {
+  return classifyConversationSessionId(conversationId) !== 'scheduler'
+}
+
 export function resolveChannelSessionId(args: {
   channelId: string
   senderId: string
