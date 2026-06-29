@@ -1,5 +1,3 @@
-process.env.NODE_ENV = 'production'
-
 import { join } from 'path'
 import { say } from 'cfonts'
 import { deleteAsync } from 'del'
@@ -11,7 +9,9 @@ import { verifyMainBundle } from './verify-main-bundle'
 import { verifyBundledToolSetCatalog } from './verify-bundled-toolset'
 import { generateBundledSkillsManifest } from './generate-bundled-skills'
 import { errorLog, doneLog } from './log'
-import { getArgv } from './utils'
+import { applyBuildEnvFromArgv, getArgv } from './utils'
+
+applyBuildEnvFromArgv()
 
 const mainOpt = rollupOptions(process.env.NODE_ENV, 'main')
 const preloadOpt = rollupOptions(process.env.NODE_ENV, 'preload')

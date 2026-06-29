@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { resolveRuntimeNodeEnv } from './build-env'
 import { isValidSystemPropKey } from './system-prop-keys'
 
 const USER_CONFIG_ENV_FILE = join(homedir(), '.openfde', 'config', '.env')
@@ -71,10 +72,11 @@ export function resolveEnvFilePaths(
   searchRoots: readonly string[],
   processEnv: NodeJS.ProcessEnv = process.env,
 ): string[] {
-  const nodeEnv = processEnv.NODE_ENV?.trim() || 'development'
+  const nodeEnv = resolveRuntimeNodeEnv(processEnv)
   const envFileNames = new Set<string>(['.env', `.${nodeEnv}.env`])
   if (nodeEnv === 'production') envFileNames.add('.prod.env')
   if (nodeEnv === 'development') envFileNames.add('.dev.env')
+  if (nodeEnv === 'sit') envFileNames.add('.sit.env')
 
   const paths: string[] = [USER_CONFIG_ENV_FILE]
 

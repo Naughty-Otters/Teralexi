@@ -43,28 +43,35 @@ OpenFDE is an Electron desktop app for running and managing AI agents in a local
 # install dependencies
 npm install
 
-# run the desktop app in development
+# run the desktop app in development (uses env/.dev.env)
 npm run dev
 
 # run the renderer/main/preload build used by CI validation
 npm run build:web
 
-# build the production desktop app
+# build the production desktop app (uses env/.prod.env)
 npm run build
 ```
+
+For environment files, staging vs production builds, and GitHub Actions, see **[BUILD-AND-RELEASE.md](./BUILD-AND-RELEASE.md)**.
 
 ## Useful Scripts
 ```bash
 # development
 npm run dev
 
-# production builds
+# production builds (env/.prod.env)
 npm run build
 npm run build:web
 npm run build:mac
 npm run build:win32
 npm run build:win64
 npm run build:dir
+
+# staging / SIT builds (env/.sit.env)
+npm run build:sit
+npm run build:mac:sit
+npm run build:win64:sit
 
 # testing
 npm run test
@@ -85,11 +92,23 @@ Unit tests use [Vitest](https://vitest.dev/) with co-located `*.test.ts` files n
 CI enforces **70%** line, statement, and function coverage on unit-testable code. Integration boundaries (Electron IPC, SQLite store, WhatsApp, full agent flow orchestration, shell subprocess tools) are excluded from that gate; see `coverage.exclude` in `vitest.config.ts`. Per-area floors in `coverage.thresholds` also use **70%** for lines, statements, and functions.
 
 ## GitHub Actions
-CI runs in `.github/workflows/ci.yml` on pushes and pull requests to `main`, `master`, and `mini-main`:
+
+Both workflows are triggered manually from the **Actions** tab. See **[BUILD-AND-RELEASE.md](./BUILD-AND-RELEASE.md)** for full details.
+
+| Workflow | Purpose | Environment |
+| --- | --- | --- |
+| [CI](.github/workflows/ci.yml) | Unit tests + internal desktop builds | Staging (`env/.sit.env`) |
+| [Release](.github/workflows/release.yml) | Publish production installers to GitHub Releases | Production (`env/.prod.env`) |
+
+**CI** (manual `workflow_dispatch`):
 
 1. **Unit tests** (Ubuntu) — `npm run test:unit:coverage`; uploads the `coverage/` artifact.
-2. **Production build** (macOS, Windows, Linux in parallel) — platform-specific `build:*` scripts; uploads internal artifacts (`openfde-<platform>-ci-<run>-<sha>`, 14-day retention). Download from **Actions → workflow run → Artifacts**.
-3. **Update README** (Ubuntu, push only) — after a successful build, updates the CI status table at the top of this file (commit uses `[skip ci]` to avoid loops).
+2. **Staging build** (macOS + Windows) — `build:mac:sit` / `build:win64:sit`; uploads `openfde-<platform>-sit-<run>-<sha>` artifacts (14-day retention).
+3. **Update README** — refreshes the CI status table at the top of this file.
+
+**Release** (manual `workflow_dispatch`, confirm input `release`):
+
+- Production builds via `release:mac` / `release:win` and publishes to GitHub Releases.
 
 ## Project Layout
 ```text
@@ -112,6 +131,12 @@ Agent skills are markdown folders that define workflows, tools, forms, and refer
 UI and implementation notes for contributors (file-change diff UI, HITL preview IPC, shared types):
 
 **[→ CODING.md](./CODING.md)**
+
+## Build & release
+
+Environment files (`env/.dev.env`, `env/.sit.env`, `env/.prod.env`), local build commands, and GitHub Actions workflows:
+
+**[→ BUILD-AND-RELEASE.md](./BUILD-AND-RELEASE.md)**
 
 ## Notes
 - CI uses Node.js 22.x to match local development requirements.
