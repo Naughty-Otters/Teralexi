@@ -198,6 +198,8 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     uploadHint:
       '在 env/.dev.env 中设置 BASE_API（映射为 app.base.apiUrl）以启用向 /support/upload 的认证上传。',
     bundleSavedTo: '诊断包已保存至：',
+    uploadsRemainingToday: '今日剩余上传次数：',
+    uploadDailyLimitReached: '已达到每日上传上限，请明天再试。',
   },
   accounts: {
     tabs: { google: 'Google', github: 'GitHub' },

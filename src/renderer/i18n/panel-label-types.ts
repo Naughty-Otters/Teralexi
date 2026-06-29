@@ -158,6 +158,8 @@ export type SettingsPanelLabels = {
     uploadEndpoint: string
     uploadHint: string
     bundleSavedTo: string
+    uploadsRemainingToday: string
+    uploadDailyLimitReached: string
   }
   accounts: {
     tabs: { google: string; github: string }

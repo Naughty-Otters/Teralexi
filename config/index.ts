@@ -61,6 +61,14 @@ export default {
       getSystemPropValue('app.support.maxMegabytes', '100'),
       100,
     ),
+    maxUploadsPerDay: toNumber(
+      getSystemPropValue('app.support.maxUploadsPerDay', '5'),
+      5,
+    ),
+    uploadCooldownMinutes: toNumber(
+      getSystemPropValue('app.support.uploadCooldownMinutes', '10'),
+      10,
+    ),
   },
   client: {
     id: getSystemPropValue('app.client.id', '').trim(),
