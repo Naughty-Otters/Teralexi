@@ -19,6 +19,7 @@ import {
   loadEnvOverrides,
   parseEnvFile,
   resetEnvOverridesForTests,
+  resolveEnvSearchRoots,
   stripEnvValue,
   systemPropKeyToEnvName,
 } from './env-overrides'
@@ -113,6 +114,40 @@ APP_DEV_PORT=3000
       'http://metrics.example/graphql',
     )
     expect(overrides.get('app.dev.port')).toBe('4000')
+  })
+
+  it('resolveEnvSearchRoots includes packaged app root for dist/electron/main bundles', () => {
+    expect(
+      resolveEnvSearchRoots({
+        moduleDir: '/Applications/OpenFDE.app/Contents/Resources/app.asar/dist/electron/main',
+        appPath: '/Applications/OpenFDE.app/Contents/Resources/app.asar',
+        cwd: '/Users/tester',
+      }),
+    ).toEqual([
+      '/Applications/OpenFDE.app/Contents/Resources/app.asar',
+      '/Applications/OpenFDE.app/Contents/Resources/app.asar/dist/electron',
+      '/Users/tester',
+    ])
+  })
+
+  it('loads prod env from packaged app layout', () => {
+    vi.mocked(existsSync).mockImplementation((target) =>
+      String(target).endsWith('/app.asar/env/.prod.env'),
+    )
+    vi.mocked(readFileSync).mockReturnValue(
+      "BASE_API = 'https://api.example.com'\n",
+    )
+
+    const overrides = loadEnvOverrides({
+      knownKeys: ['app.base.apiUrl'],
+      searchRoots: resolveEnvSearchRoots({
+        moduleDir: '/app.asar/dist/electron/main',
+        appPath: '/app.asar',
+      }),
+      processEnv: { OPENFDE_BUILD_ENV: 'prod' },
+    })
+
+    expect(overrides.get('app.base.apiUrl')).toBe('https://api.example.com')
   })
 
   it('loads staging overrides from .sit.env when OPENFDE_BUILD_ENV is sit', () => {

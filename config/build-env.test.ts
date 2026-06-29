@@ -38,4 +38,8 @@ describe('build-env', () => {
       }),
     ).toBe('production')
   })
+
+  it('defaults runtime node env to development when no build env is set', () => {
+    expect(resolveRuntimeNodeEnv({})).toBe('development')
+  })
 })
