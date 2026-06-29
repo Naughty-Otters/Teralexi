@@ -9,11 +9,17 @@ export type SupportReportOptions = {
   upload?: boolean
 }
 
+export type SupportReportSkipReason = 'cooldown' | 'daily_limit'
+
 export type SupportReportResult = {
   ok: boolean
   reportId: string
   zipPath?: string
   uploaded?: boolean
+  skippedUpload?: boolean
+  skipReason?: SupportReportSkipReason
+  uploadsRemainingToday?: number
+  uploadCooldownRemainingSeconds?: number
   error?: string
 }
 
@@ -22,6 +28,10 @@ export type SupportConfig = {
   uploadUrl: string
   uploadConfigured: boolean
   maxMegabytes: number
+  maxUploadsPerDay: number
+  uploadCooldownMinutes: number
+  uploadsToday?: number
+  uploadsRemainingToday?: number
 }
 
 export type SupportClientErrorPayload = {
@@ -49,11 +59,12 @@ export type SupportBundleManifest = {
   bundleSha256?: string
 }
 
-/** Expected multipart POST body for `app.support.uploadUrl`. */
+/** Expected multipart POST body for `{BASE_API}/support/upload`. */
 export type SupportUploadFields = {
-  reportId: string
-  comments: string
-  appVersion: string
-  manifest: string
-  bundle: File | Blob
+  location: string
+  file: File | Blob
+  reportId?: string
+  comments?: string
+  appVersion?: string
+  manifest?: string
 }

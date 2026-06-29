@@ -7,6 +7,56 @@ import { getOpenFdeServerAccessToken } from './openfde-server-auth'
 
 const log = createLogger('services.support-bundle-uploader')
 
+/** Server storage key: letters, numbers, dots, underscores, hyphens only. */
+const SUPPORT_UPLOAD_LOCATION_RE = /^[A-Za-z0-9._-]+$/
+
+export function sanitizeSupportUploadLocation(raw: string): string {
+  const trimmed = raw.trim()
+  if (!trimmed) {
+    throw new Error('Support upload location is empty.')
+  }
+  if (SUPPORT_UPLOAD_LOCATION_RE.test(trimmed)) {
+    return trimmed
+  }
+  const sanitized = trimmed
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  if (sanitized && SUPPORT_UPLOAD_LOCATION_RE.test(sanitized)) {
+    return sanitized
+  }
+  throw new Error(
+    'Support upload location must contain only letters, numbers, dots, underscores, and hyphens.',
+  )
+}
+
+export function buildSupportUploadFormData(args: {
+  zipPath: string
+  zipBuffer?: Buffer
+  reportId: string
+  comments: string
+  manifest: SupportBundleManifest
+}): FormData {
+  const buffer = args.zipBuffer ?? readFileSync(args.zipPath)
+  const form = new FormData()
+  const location = sanitizeSupportUploadLocation(args.reportId)
+
+  // Platform API contract: `location` = storage key, `file` = zip payload.
+  form.append('location', location)
+  form.append(
+    'file',
+    new Blob([buffer], { type: 'application/zip' }),
+    basename(args.zipPath),
+  )
+
+  // Optional metadata for server-side indexing (ignored if unsupported).
+  form.append('reportId', args.reportId)
+  form.append('comments', args.comments)
+  form.append('appVersion', args.manifest.appVersion)
+  form.append('manifest', JSON.stringify(args.manifest))
+
+  return form
+}
+
 export async function uploadSupportBundle(args: {
   uploadUrl: string
   zipPath: string
@@ -15,16 +65,7 @@ export async function uploadSupportBundle(args: {
   manifest: SupportBundleManifest
 }): Promise<void> {
   const buffer = readFileSync(args.zipPath)
-  const form = new FormData()
-  form.append('reportId', args.reportId)
-  form.append('comments', args.comments)
-  form.append('appVersion', args.manifest.appVersion)
-  form.append('manifest', JSON.stringify(args.manifest))
-  form.append(
-    'bundle',
-    new Blob([buffer], { type: 'application/zip' }),
-    basename(args.zipPath),
-  )
+  const form = buildSupportUploadFormData({ ...args, zipBuffer: buffer })
 
   log.info('Uploading support bundle', {
     reportId: args.reportId,

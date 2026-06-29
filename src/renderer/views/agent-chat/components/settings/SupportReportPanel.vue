@@ -40,6 +40,15 @@
         {{ p.support.uploadHint }}
       </p>
 
+      <p v-if="supportConfig?.uploadConfigured && uploadsRemainingToday != null" class="support-meta">
+        {{ p.support.uploadsRemainingToday }}
+        <span class="support-meta-value">{{ uploadsRemainingToday }}</span>
+      </p>
+
+      <p v-if="uploadLimitReached" class="support-hint">
+        {{ p.support.uploadDailyLimitReached }}
+      </p>
+
       <p v-if="statusMessage" class="support-status" role="status">
         {{ statusMessage }}
       </p>
@@ -52,7 +61,7 @@
         <button
           type="button"
           class="support-btn"
-          :disabled="busy || !comments.trim()"
+          :disabled="exportDisabled"
           @click="onExport"
         >
           {{ p.actions.exportBundle }}
@@ -60,7 +69,7 @@
         <button
           type="button"
           class="support-btn support-btn--primary"
-          :disabled="busy || !comments.trim()"
+          :disabled="submitDisabled"
           @click="onSubmit"
         >
           {{ p.actions.submitReport }}
@@ -88,6 +97,22 @@ const busy = ref(false)
 const statusMessage = ref('')
 const lastZipPath = ref('')
 const supportConfig = ref<SupportConfig | null>(null)
+
+const uploadsRemainingToday = computed(
+  () => supportConfig.value?.uploadsRemainingToday ?? null,
+)
+
+const uploadLimitReached = computed(
+  () =>
+    supportConfig.value?.uploadConfigured === true &&
+    uploadsRemainingToday.value === 0,
+)
+
+const exportDisabled = computed(
+  () => busy.value || !comments.value.trim() || uploadLimitReached.value,
+)
+
+const submitDisabled = computed(() => exportDisabled.value)
 
 async function loadSupportConfig() {
   const channel = window.ipcRendererChannel?.GetSupportConfig
@@ -119,6 +144,7 @@ async function runReport(upload: boolean) {
 
   try {
     const result = await channel.invoke(buildPayload(upload))
+    await loadSupportConfig()
     if (!result.ok) {
       statusMessage.value = result.error ?? 'Report failed.'
       return
@@ -126,7 +152,11 @@ async function runReport(upload: boolean) {
 
     lastZipPath.value = result.zipPath ?? ''
     if (result.uploaded) {
-      statusMessage.value = `Report ${result.reportId} uploaded successfully.`
+      const remaining =
+        result.uploadsRemainingToday != null
+          ? ` (${result.uploadsRemainingToday} uploads remaining today)`
+          : ''
+      statusMessage.value = `Report ${result.reportId} uploaded successfully.${remaining}`
       return
     }
     if (result.error) {

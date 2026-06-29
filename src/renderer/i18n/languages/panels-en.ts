@@ -209,6 +209,9 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     uploadHint:
       'Set BASE_API in env/.dev.env (maps to app.base.apiUrl) to enable authenticated upload to /support/upload.',
     bundleSavedTo: 'Bundle saved to:',
+    uploadsRemainingToday: 'Uploads remaining today:',
+    uploadDailyLimitReached:
+      'Daily upload limit reached. Try again tomorrow.',
   },
   accounts: {
     tabs: { google: 'Google', github: 'GitHub' },

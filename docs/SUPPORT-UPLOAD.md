@@ -37,13 +37,14 @@ Upload requires the user to be signed in with Google so the app can attach a ser
 `Content-Type: multipart/form-data`  
 `Authorization: Bearer <server-access-token>`
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `reportId` | string | UUID for this report |
-| `comments` | string | User description of the problem |
-| `appVersion` | string | openfde semver (e.g. `0.0.1`) |
-| `manifest` | string | JSON `SupportBundleManifest` |
-| `bundle` | file | Zip archive (`application/zip`) |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `location` | string | yes | Storage key for the upload (report UUID; `[A-Za-z0-9._-]` only) |
+| `file` | file | yes | Zip archive (`application/zip`) |
+| `reportId` | string | no | Same UUID sent in `location` |
+| `comments` | string | no | User description of the problem |
+| `appVersion` | string | no | openfde semver (e.g. `0.0.1`) |
+| `manifest` | string | no | JSON `SupportBundleManifest` |
 
 ## Response
 
@@ -74,3 +75,12 @@ Channel auth under `~/.openfde/channels/` is never included.
 **Export bundle** saves to:
 
 `~/.openfde/logs/support-bundles/openfde-support-<reportId>.zip`
+
+## Client upload policy
+
+Before POSTing to `/support/upload`, the desktop app:
+
+1. **Upload cooldown** — default **10 minutes** between uploads per signed-in user (`app.support.uploadCooldownMinutes` in `config.properties`).
+2. **Daily quota** — default **5 uploads per calendar day** per signed-in user (`app.support.maxUploadsPerDay`). Tracked in `~/.openfde/logs/support-upload-tracker.json`.
+
+Export-only (**Export bundle**) is not rate-limited.
