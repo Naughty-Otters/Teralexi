@@ -76,6 +76,30 @@ export function parseEnvFile(
   return entries
 }
 
+/** Where bundled `env/.prod.env` / `.sit.env` files live at runtime. */
+export function resolveEnvSearchRoots(args?: {
+  moduleDir?: string
+  appPath?: string | null
+  cwd?: string
+}): string[] {
+  const moduleDir = args?.moduleDir ?? __dirname
+  const roots: string[] = []
+
+  if (args?.appPath?.trim()) {
+    roots.push(args.appPath.trim())
+  }
+
+  // Repo `config/` module → `<repo>/env`
+  roots.push(join(moduleDir, '..'))
+  // Packaged `dist/electron/main/` bundle → `<app>/env`
+  roots.push(join(moduleDir, '..', '..', '..'))
+
+  const cwd = args?.cwd ?? process.cwd()
+  if (cwd.trim()) roots.push(cwd)
+
+  return [...new Set(roots)]
+}
+
 export function resolveEnvFilePaths(
   searchRoots: readonly string[],
   processEnv: NodeJS.ProcessEnv = process.env,
@@ -143,14 +167,26 @@ export function loadEnvOverrides(args: {
   return merged
 }
 
+function resolveElectronAppPath(): string | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { app } = require('electron') as typeof import('electron')
+    return app?.getAppPath?.() ?? null
+  } catch {
+    return null
+  }
+}
+
 export function initializeEnvOverrides(knownKeys: readonly string[]): void {
   if (envOverridesInitialized) return
   envOverridesInitialized = true
 
-  const bundledRoot = join(__dirname, '..')
   cachedEnvOverrides = loadEnvOverrides({
     knownKeys,
-    searchRoots: [bundledRoot, process.cwd()],
+    searchRoots: resolveEnvSearchRoots({
+      appPath: resolveElectronAppPath(),
+      cwd: process.cwd(),
+    }),
   })
 }
 

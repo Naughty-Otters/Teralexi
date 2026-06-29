@@ -26,6 +26,11 @@ export function buildEnvToEnvFileName(mode: OpenFdeBuildEnv): string {
   return `.${mode}.env`
 }
 
+/** Inlined at desktop build time via rollup `@rollup/plugin-replace`. */
+function readBakedBuildEnv(): string {
+  return process.env.OPENFDE_BUILD_ENV ?? ''
+}
+
 export function resolveBuildEnv(
   processEnv: NodeJS.ProcessEnv = process.env,
 ): OpenFdeBuildEnv {
@@ -33,15 +38,15 @@ export function resolveBuildEnv(
   if (fromEnv?.trim()) {
     return normalizeBuildEnv(fromEnv)
   }
+  const baked = readBakedBuildEnv()
+  if (baked.trim()) {
+    return normalizeBuildEnv(baked)
+  }
   return normalizeBuildEnv(processEnv.NODE_ENV)
 }
 
 export function resolveRuntimeNodeEnv(
   processEnv: NodeJS.ProcessEnv = process.env,
 ): string {
-  const buildEnv = processEnv[OPENFDE_BUILD_ENV_VAR]?.trim()
-  if (buildEnv) {
-    return buildEnvToNodeEnv(normalizeBuildEnv(buildEnv))
-  }
-  return processEnv.NODE_ENV?.trim() || 'development'
+  return buildEnvToNodeEnv(resolveBuildEnv(processEnv))
 }
