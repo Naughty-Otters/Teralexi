@@ -125,9 +125,9 @@ import MonitorPanel from './components/MonitorPanel.vue'
 import WorkspacePanel from './components/WorkspacePanel.vue'
 import WorkflowPanel from '@renderer/views/workflows/WorkflowPanel.vue'
 import {
-  bindAppUpdateListeners,
-  useAppUpdate,
-} from '@renderer/composables/useAppUpdate'
+  registerAppUpdateAboutHandler,
+} from '@renderer/composables/useAppUpdateNavigation'
+import { useAppUpdate } from '@renderer/composables/useAppUpdate'
 import { getConversationChat } from './conversation-chat-session'
 import {
   flushStoreStreamSync,
@@ -163,7 +163,6 @@ const sidebarCollapsed = ref(true)
 const layoutEl = ref<HTMLElement | null>(null)
 const providerSetupOpen = ref(false)
 const signInGateOpen = ref(false)
-let unbindAppUpdate: (() => void) | null = null
 
 const signInGateDescription = computed(() => t.value.signInGate.wizard)
 
@@ -198,21 +197,13 @@ watch(
   () => appUpdateState.phase,
   (phase, prev) => {
     if (phase === prev) return
-    if (phase === 'available' && appUpdateState.newVersion) {
-      toast.add({
-        title: t.value.toast.updateAvailableTitle,
-        description: t.value.toast.updateAvailableDescription.replace(
-          '{version}',
-          appUpdateState.newVersion,
-        ),
-        color: 'primary',
-      })
-    }
     if (phase === 'downloaded') {
       toast.add({
-        title: 'Update ready',
-        description:
-          'Restart OpenFDE to install the update. Open Settings → About.',
+        title: t.value.toast.updateAvailableTitle,
+        description: t.value.titleBar.updateReady.replace(
+          '{version}',
+          appUpdateState.newVersion ? `v${appUpdateState.newVersion}` : 'v…',
+        ),
         color: 'success',
       })
     }
@@ -374,7 +365,9 @@ function renderLiveStepProgress(chunk: Record<string, unknown>): string {
 }
 
 onMounted(async () => {
-  unbindAppUpdate = bindAppUpdateListeners()
+  registerAppUpdateAboutHandler(() => {
+    rightPanelView.value = 'settings'
+  })
   void loadChatUiSettings()
   void loadAppLocale()
 
@@ -523,7 +516,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  unbindAppUpdate?.()
+  registerAppUpdateAboutHandler(null)
   resetTitleBarChatControls()
   window.ipcRendererChannel?.ConversationStoreChanged?.removeAllListeners?.()
   window.ipcRendererChannel?.AgentStreamChunk?.removeAllListeners?.()

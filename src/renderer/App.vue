@@ -12,7 +12,23 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue'
 import TitleBar from '@renderer/components/title-bar/title-bar.vue'
+import {
+  bindAppUpdateListeners,
+  loadAppVersion,
+} from '@renderer/composables/useAppUpdate'
+
+let unbindAppUpdate: (() => void) | null = null
+
+onMounted(() => {
+  unbindAppUpdate = bindAppUpdateListeners()
+  void loadAppVersion()
+})
+
+onUnmounted(() => {
+  unbindAppUpdate?.()
+})
 </script>
 
 <style scoped>

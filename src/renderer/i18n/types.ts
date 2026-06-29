@@ -262,6 +262,12 @@ export type AppLabels = {
     updateAvailableTitle: string
     updateAvailableDescription: string
   }
+  titleBar: {
+    updateAvailable: string
+    updateDownloading: string
+    updateReady: string
+    openAbout: string
+  }
   auth: {
     signInWithGoogle: string
     signingIn: string

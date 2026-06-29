@@ -108,7 +108,7 @@ Both workflows are triggered manually from the **Actions** tab. See **[BUILD-AND
 
 **Release** (manual `workflow_dispatch`, confirm input `release`):
 
-- Production builds via `release:mac` / `release:win`, then `release:upload-s3` to private S3. Clients fetch updates through authenticated `{BASE_API}/desktop/releases/stable/` (see [docs/DESKTOP-RELEASES.md](./docs/DESKTOP-RELEASES.md)).
+- Production builds via `release:mac` / `release:win`, then `release:upload-s3` to private S3. Clients fetch updates from public `{BASE_API}/desktop/releases/stable/` (see [docs/DESKTOP-RELEASES.md](./docs/DESKTOP-RELEASES.md)).
 
 ## Project Layout
 ```text

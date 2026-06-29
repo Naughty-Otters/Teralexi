@@ -5,6 +5,9 @@
     :class="{
       'window-title--mac': isMac,
       'window-title--windows': isWindows,
+      'window-title--update-available': updateHighlight.kind === 'available',
+      'window-title--update-downloading': updateHighlight.kind === 'downloading',
+      'window-title--update-ready': updateHighlight.kind === 'ready',
     }"
   >
     <div class="window-title__left">
@@ -24,6 +27,18 @@
               : 'i-lucide-panel-left-close'
           "
         />
+      </button>
+
+      <button
+        v-if="updateHighlight.visible"
+        type="button"
+        class="window-title__update-flag"
+        :title="t.titleBar.openAbout"
+        :aria-label="updateHighlight.label"
+        @click="onUpdateFlagClick"
+      >
+        <UIcon class="window-title__update-flag-icon" name="i-lucide-arrow-up-circle" />
+        <span class="window-title__update-flag-text">{{ updateHighlight.label }}</span>
       </button>
     </div>
 
@@ -124,12 +139,17 @@
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useTitleBarChatControls } from '@renderer/composables/useTitleBarChatControls'
+import { useAppUpdate } from '@renderer/composables/useAppUpdate'
+import { openAppUpdateAbout } from '@renderer/composables/useAppUpdateNavigation'
+import { useI18n } from '@renderer/composables/useI18n'
 import { useWorkspaceStore } from '@renderer/store/modules/workspace'
 const { ipcRendererChannel, systemInfo } = window
 
+const { t } = useI18n()
 const IsUseSysTitle = ref(false)
 const IsWeb = ref(Boolean(__ISWEB__))
 const chatControls = useTitleBarChatControls()
+const { state: appUpdateState } = useAppUpdate()
 const workspaceStore = useWorkspaceStore()
 const { activeWorkspacePath, pendingWorkspacePath } = storeToRefs(workspaceStore)
 const isMac = systemInfo.platform === 'darwin'
@@ -166,6 +186,45 @@ const windowTitleLabel = computed(() => {
 
   return [chatControls.title, meta, workspace].filter(Boolean).join(' · ')
 })
+
+const updateHighlight = computed(() => {
+  const version = appUpdateState.newVersion?.trim()
+  const versionToken = version ? `v${version}` : 'v…'
+
+  if (appUpdateState.phase === 'downloaded') {
+    return {
+      visible: true,
+      kind: 'ready' as const,
+      label: t.value.titleBar.updateReady.replace('{version}', versionToken),
+    }
+  }
+  if (appUpdateState.phase === 'downloading') {
+    const percent =
+      appUpdateState.percent != null ? ` ${Math.round(appUpdateState.percent)}%` : ''
+    return {
+      visible: true,
+      kind: 'downloading' as const,
+      label: `${t.value.titleBar.updateDownloading.replace('{version}', versionToken)}${percent}`,
+    }
+  }
+  if (appUpdateState.phase === 'available' && version) {
+    return {
+      visible: true,
+      kind: 'available' as const,
+      label: t.value.titleBar.updateAvailable.replace('{version}', versionToken),
+    }
+  }
+
+  return {
+    visible: false,
+    kind: 'idle' as const,
+    label: '',
+  }
+})
+
+function onUpdateFlagClick() {
+  openAppUpdateAbout()
+}
 
 ipcRendererChannel.IsUseSysTitle.invoke().then((res) => {
   IsUseSysTitle.value = res
@@ -213,6 +272,65 @@ ipcRendererChannel.IsUseSysTitle.invoke().then((res) => {
 
 .window-title__left {
   flex-shrink: 0;
+  gap: 8px;
+}
+
+.window-title__update-flag {
+  -webkit-app-region: no-drag;
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: min(34vw, 260px);
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-primary-500) 40%, var(--ui-border));
+  background: color-mix(in srgb, var(--color-primary-500) 14%, transparent);
+  color: var(--color-primary-600, var(--color-primary-500, #6366f1));
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  animation: title-bar-update-pulse 2.4s ease-in-out infinite;
+}
+
+.window-title__update-flag-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.window-title__update-flag-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.window-title__update-flag:hover {
+  background: color-mix(in srgb, var(--color-primary-500) 22%, transparent);
+}
+
+.window-title--update-available,
+.window-title--update-downloading {
+  border-bottom-color: color-mix(in srgb, var(--color-primary-500) 55%, var(--ui-border));
+  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--color-primary-500) 65%, transparent);
+}
+
+.window-title--update-ready {
+  border-bottom-color: color-mix(in srgb, var(--color-success-500, #22c55e) 55%, var(--ui-border));
+  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--color-success-500, #22c55e) 65%, transparent);
+}
+
+.window-title--update-ready .window-title__update-flag {
+  border-color: color-mix(in srgb, var(--color-success-500, #22c55e) 45%, var(--ui-border));
+  background: color-mix(in srgb, var(--color-success-500, #22c55e) 14%, transparent);
+  color: var(--color-success-600, #16a34a);
+}
+
+.window-title--update-downloading .window-title__update-flag {
+  animation: none;
 }
 
 .window-title__center {
@@ -336,6 +454,16 @@ ipcRendererChannel.IsUseSysTitle.invoke().then((res) => {
 @keyframes title-bar-pulse {
   50% {
     opacity: 0.45;
+  }
+}
+
+@keyframes title-bar-update-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary-500) 28%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary-500) 10%, transparent);
   }
 }
 </style>

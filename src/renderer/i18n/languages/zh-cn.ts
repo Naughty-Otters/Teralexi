@@ -279,6 +279,12 @@ export const lang: AppLocaleBundle = {
     updateAvailableDescription:
       'OpenFDE v{version} 已可下载。请打开 设置 → 关于。',
   },
+  titleBar: {
+    updateAvailable: '更新 {version}',
+    updateDownloading: '正在下载 {version}…',
+    updateReady: '重启安装 {version}',
+    openAbout: '打开 设置 → 关于 以更新',
+  },
   auth: {
     signInWithGoogle: '使用 Google 登录',
     signingIn: '正在登录…',
