@@ -492,4 +492,62 @@ describe('channel bridge integration', () => {
 
     expect(sendToTargetMock).not.toHaveBeenCalled()
   })
+
+  it('recreates the same channel session id after the conversation row is deleted', async () => {
+    streamAgentResponseMock.mockResolvedValueOnce({
+      structuredContent: 'First reply',
+      shouldPersistMemory: false,
+      hitlPaused: false,
+    })
+    streamAgentResponseMock.mockResolvedValueOnce({
+      structuredContent: 'Second reply',
+      shouldPersistMemory: false,
+      hitlPaused: false,
+    })
+
+    const bridge = getChannelConversationBridge()
+    const channelId = 'telegram'
+    const senderId = 'user-recreate'
+    const sessionId = `channel:${channelId}:${senderId}`
+
+    bridge.onIncomingMessage({
+      channelId,
+      senderId,
+      senderTarget: 'chat-recreate',
+      text: 'First message',
+      occurredAtIso: '2026-03-20T12:00:00.000Z',
+      agentId: CHANNEL_AGENT_ID,
+    })
+
+    await vi.waitFor(() => {
+      expect(conversations.has(sessionId)).toBe(true)
+    })
+
+    conversations.delete(sessionId)
+    conversationMessages.length = 0
+    streamAgentResponseMock.mockClear()
+    sendToTargetMock.mockClear()
+
+    bridge.onIncomingMessage({
+      channelId,
+      senderId,
+      senderTarget: 'chat-recreate',
+      text: 'Second message',
+      occurredAtIso: '2026-03-20T12:05:00.000Z',
+      agentId: CHANNEL_AGENT_ID,
+    })
+
+    await vi.waitFor(() => {
+      expect(conversations.has(sessionId)).toBe(true)
+    })
+
+    expect(
+      conversationMessages.filter(
+        (message) =>
+          message.conversationId === sessionId && message.role === 'user',
+      ),
+    ).toEqual([
+      expect.objectContaining({ content: 'Second message' }),
+    ])
+  })
 })
