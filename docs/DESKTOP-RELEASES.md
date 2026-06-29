@@ -77,6 +77,21 @@ app.desktop.releasesUrl=desktop/releases/stable
 
 The desktop app calls `autoUpdater.setFeedURL({ provider: 'generic', url: feedUrl })` at runtime with **no** `Authorization` header.
 
+### Local dev (`npm run dev`)
+
+`electron-updater` is disabled in unpackaged builds unless you opt in explicitly:
+
+```properties
+# env/.dev.env
+DESKTOP_UPDATE_FORCE_DEV = 'true'
+```
+
+Maps to `app.desktop.forceDevUpdateConfig` (env-only; not written to user `config.properties`). Also accepted as `APP_DESKTOP_FORCEDEVUPDATECONFIG=true` or `OPENFDE_APP_DESKTOP_FORCEDEVUPDATECONFIG=true`.
+
+When enabled, the app writes `~/.openfde/config/dev-app-update.yml` (feed URL + cache dir) so download/install works in dev — you do not need a `dev-app-update.yml` in the repo root.
+
+Packaged installs ignore this flag — updates always run when `BASE_API` is set.
+
 ## Server API contract (implement on your backend)
 
 Expose anonymous `GET` for the stable release prefix. Typical options:

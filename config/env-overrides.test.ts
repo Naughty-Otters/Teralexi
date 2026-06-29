@@ -84,6 +84,14 @@ APP_DEV_PORT=3000
     expect(parsed.get('app.base.apiUrl')).toBe('http://127.0.0.1:8000')
   })
 
+  it('maps DESKTOP_UPDATE_FORCE_DEV env var to app.desktop.forceDevUpdateConfig', () => {
+    const parsed = parseEnvFile(
+      "DESKTOP_UPDATE_FORCE_DEV = 'true'\n",
+      ['app.desktop.forceDevUpdateConfig'],
+    )
+    expect(parsed.get('app.desktop.forceDevUpdateConfig')).toBe('true')
+  })
+
   it('loads overrides from env files and process env', () => {
     vi.mocked(existsSync).mockImplementation((target) =>
       String(target).endsWith('/env/.prod.env'),

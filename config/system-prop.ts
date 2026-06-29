@@ -68,6 +68,7 @@ const DEFAULT_SYSTEM_PROPERTIES: Record<string, string> = {
   'app.support.maxUploadsPerDay': '5',
   'app.support.uploadCooldownMinutes': '10',
   'app.desktop.releasesUrl': '',
+  'app.desktop.forceDevUpdateConfig': 'false',
   'app.base.apiUrl': '',
   'app.client.id': '',
   'app.metrics.graphqlUrl': '',
@@ -79,6 +80,7 @@ const DEFAULT_SYSTEM_PROPERTIES: Record<string, string> = {
 export const ENV_ONLY_PROPERTY_KEYS = [
   'app.base.apiUrl',
   'app.openfde.googleAuthLoginUrl',
+  'app.desktop.forceDevUpdateConfig',
 ] as const
 
 export const SYSTEM_PROPERTY_KEYS = [

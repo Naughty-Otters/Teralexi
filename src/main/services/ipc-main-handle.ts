@@ -334,12 +334,19 @@ export class IpcMainHandleClass implements IIpcMainHandle {
   ) => {
     app.quit()
   }
-  CheckUpdate: (event: Electron.IpcMainInvokeEvent) => void | Promise<void> = (
+  CheckUpdate: (
+    event: Electron.IpcMainInvokeEvent,
+  ) =>
+    | import('@shared/app-update').AppUpdateMessage
+    | null
+    | Promise<import('@shared/app-update').AppUpdateMessage | null> = async (
     event,
   ) => {
     const windows = BrowserWindow.fromWebContents(event.sender)
-    if (!windows) return
-    return getAppUpdateManager().checkUpdate(windows)
+    if (!windows) return null
+    const manager = getAppUpdateManager()
+    await manager.checkUpdate(windows)
+    return manager.getLastMessage()
   }
   DownloadUpdate: (event: Electron.IpcMainInvokeEvent) => void | Promise<void> =
     (event) => {

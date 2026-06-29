@@ -64,6 +64,10 @@ export function parseEnvFile(
       entries.set('app.base.apiUrl', stripEnvValue(rawValue))
       continue
     }
+    if (rawKey === 'DESKTOP_UPDATE_FORCE_DEV') {
+      entries.set('app.desktop.forceDevUpdateConfig', stripEnvValue(rawValue))
+      continue
+    }
     const key = envNameToSystemPropKey(rawKey, knownKeys)
     if (!key) continue
 
@@ -126,6 +130,14 @@ export function loadEnvOverrides(args: {
   const baseApi = env.BASE_API?.trim()
   if (baseApi) {
     merged.set('app.base.apiUrl', stripEnvValue(baseApi))
+  }
+
+  const forceDevUpdate = env.DESKTOP_UPDATE_FORCE_DEV?.trim()
+  if (forceDevUpdate) {
+    merged.set(
+      'app.desktop.forceDevUpdateConfig',
+      stripEnvValue(String(forceDevUpdate)),
+    )
   }
 
   return merged

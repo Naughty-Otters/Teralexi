@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 const { on, checkForUpdates, downloadUpdate, quitAndInstall, setFeedURL } =
   vi.hoisted(() => ({
     on: vi.fn(),
-    checkForUpdates: vi.fn(() => Promise.resolve()),
+    checkForUpdates: vi.fn(() => Promise.resolve({})),
     downloadUpdate: vi.fn(() => Promise.resolve()),
     quitAndInstall: vi.fn(),
     setFeedURL: vi.fn(),
@@ -19,6 +19,9 @@ vi.mock('electron-updater', () => ({
     autoDownload: false,
     autoInstallOnAppQuit: true,
     requestHeaders: {},
+    forceDevUpdateConfig: false,
+    currentVersion: null,
+    updateConfigPath: '',
   },
 }))
 
@@ -42,15 +45,30 @@ vi.mock('./openfde-platform-config', () => ({
   getOpenFdeDesktopReleasesFeedUrl: vi.fn(
     () => 'http://127.0.0.1:8000/desktop/releases/stable/',
   ),
+  getOpenFdeDesktopForceDevUpdateConfig: vi.fn(() => false),
 }))
 
+vi.mock('@config/openfde-home', () => ({
+  getopenfdeConfigDir: vi.fn(() => '/Users/tester/.openfde/config'),
+}))
+
+vi.mock('node:fs', () => ({
+  mkdirSync: vi.fn(),
+  writeFileSync: vi.fn(),
+}))
+
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { app } from 'electron'
 import { autoUpdater } from 'electron-updater'
-import { getOpenFdeDesktopReleasesFeedUrl } from './openfde-platform-config'
+import {
+  getOpenFdeDesktopForceDevUpdateConfig,
+  getOpenFdeDesktopReleasesFeedUrl,
+} from './openfde-platform-config'
 import { webContentSend } from './web-content-send'
 import {
   AppUpdateManager,
   canRunDesktopUpdateCheck,
+  ensureDevAppUpdateConfig,
   getAppUpdateManager,
   prepareDesktopAutoUpdater,
 } from './check-update'
@@ -62,6 +80,7 @@ describe('check-update', () => {
     vi.mocked(quitAndInstall).mockClear()
     vi.mocked(setFeedURL).mockClear()
     vi.mocked(webContentSend.updateMsg).mockClear()
+    vi.mocked(getOpenFdeDesktopForceDevUpdateConfig).mockReturnValue(false)
     vi.mocked(getOpenFdeDesktopReleasesFeedUrl).mockReturnValue(
       'http://127.0.0.1:8000/desktop/releases/stable/',
     )
@@ -93,6 +112,59 @@ describe('check-update', () => {
     }
   })
 
+  it('prepareDesktopAutoUpdater enables dev update config when DESKTOP_UPDATE_FORCE_DEV is set', async () => {
+    Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
+    vi.mocked(getOpenFdeDesktopForceDevUpdateConfig).mockReturnValue(true)
+    await prepareDesktopAutoUpdater()
+    expect(autoUpdater.forceDevUpdateConfig).toBe(true)
+    expect(writeFileSync).toHaveBeenCalledWith(
+      '/Users/tester/.openfde/config/dev-app-update.yml',
+      expect.stringContaining('url: http://127.0.0.1:8000/desktop/releases/stable/'),
+      'utf-8',
+    )
+    expect(autoUpdater.updateConfigPath).toBe(
+      '/Users/tester/.openfde/config/dev-app-update.yml',
+    )
+    Object.defineProperty(app, 'isPackaged', { value: true, configurable: true })
+    await prepareDesktopAutoUpdater()
+    expect(autoUpdater.forceDevUpdateConfig).toBe(false)
+  })
+
+  it('ensureDevAppUpdateConfig writes updater cache metadata for dev downloads', () => {
+    const configPath = ensureDevAppUpdateConfig(
+      'http://127.0.0.1:8000/desktop/releases/stable',
+    )
+    expect(mkdirSync).toHaveBeenCalledWith('/Users/tester/.openfde/config', {
+      recursive: true,
+    })
+    expect(writeFileSync).toHaveBeenCalledWith(
+      '/Users/tester/.openfde/config/dev-app-update.yml',
+      [
+        'provider: generic',
+        'url: http://127.0.0.1:8000/desktop/releases/stable/',
+        'updaterCacheDirName: openfde-updater',
+        '',
+      ].join('\n'),
+      'utf-8',
+    )
+    expect(configPath).toBe('/Users/tester/.openfde/config/dev-app-update.yml')
+    expect(autoUpdater.updateConfigPath).toBe(configPath)
+  })
+
+  it('sends error when electron-updater returns null', async () => {
+    vi.mocked(checkForUpdates).mockResolvedValueOnce(null)
+    const mainWindow = {
+      webContents: {},
+      isDestroyed: () => false,
+    } as Electron.BrowserWindow
+    const updater = new AppUpdateManager()
+    await updater.checkUpdate(mainWindow)
+    expect(webContentSend.updateMsg).toHaveBeenCalledWith(
+      mainWindow.webContents,
+      expect.objectContaining({ phase: 'error' }),
+    )
+  })
+
   it('registers autoUpdater listeners and checks for updates when packaged', async () => {
     const mainWindow = {
       webContents: {},
@@ -105,29 +177,23 @@ describe('check-update', () => {
     expect(on).toHaveBeenCalled()
   })
 
-  it('canRunDesktopUpdateCheck allows localhost feed in unpackaged dev', () => {
+  it('canRunDesktopUpdateCheck allows unpackaged dev when force-dev flag is enabled', () => {
     Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
-    vi.mocked(getOpenFdeDesktopReleasesFeedUrl).mockReturnValue(
-      'http://127.0.0.1:8000/desktop/releases/stable/',
-    )
+    vi.mocked(getOpenFdeDesktopForceDevUpdateConfig).mockReturnValue(true)
     expect(canRunDesktopUpdateCheck()).toBe(true)
     Object.defineProperty(app, 'isPackaged', { value: true, configurable: true })
   })
 
-  it('canRunDesktopUpdateCheck blocks non-localhost feed in unpackaged dev', () => {
+  it('canRunDesktopUpdateCheck blocks unpackaged dev without force-dev flag', () => {
     Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
-    vi.mocked(getOpenFdeDesktopReleasesFeedUrl).mockReturnValue(
-      'https://api.example.com/desktop/releases/stable/',
-    )
+    vi.mocked(getOpenFdeDesktopForceDevUpdateConfig).mockReturnValue(false)
     expect(canRunDesktopUpdateCheck()).toBe(false)
     Object.defineProperty(app, 'isPackaged', { value: true, configurable: true })
   })
 
-  it('skips update check when running unpackaged without localhost feed', async () => {
+  it('skips update check when running unpackaged without force-dev flag', async () => {
     Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
-    vi.mocked(getOpenFdeDesktopReleasesFeedUrl).mockReturnValue(
-      'https://api.example.com/desktop/releases/stable/',
-    )
+    vi.mocked(getOpenFdeDesktopForceDevUpdateConfig).mockReturnValue(false)
     const mainWindow = {
       webContents: {},
       isDestroyed: () => false,

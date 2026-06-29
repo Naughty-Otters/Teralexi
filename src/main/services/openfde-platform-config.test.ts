@@ -7,6 +7,7 @@ vi.mock('@config/system-prop', () => ({
 import { getSystemPropValue } from '@config/system-prop'
 import {
   getOpenFdeBaseApiUrl,
+  getOpenFdeDesktopForceDevUpdateConfig,
   getOpenFdeDesktopReleasesFeedUrl,
   getOpenFdeGoogleAuthLoginUrl,
   getOpenFdeGraphqlUrl,
@@ -47,5 +48,13 @@ describe('openfde-platform-config', () => {
     expect(getOpenFdeSupportUploadUrl()).toBe(
       'http://127.0.0.1:8000/api/support/reports',
     )
+  })
+
+  it('reads desktop force-dev update flag from system props', () => {
+    vi.mocked(getSystemPropValue).mockImplementation((key: string) => {
+      if (key === 'app.desktop.forceDevUpdateConfig') return 'true'
+      return ''
+    })
+    expect(getOpenFdeDesktopForceDevUpdateConfig()).toBe(true)
   })
 })
