@@ -1,8 +1,15 @@
 import { autoUpdater } from 'electron-updater'
 import { app, BrowserWindow } from 'electron'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import semver from 'semver'
+import { getopenfdeConfigDir } from '@config/openfde-home'
 import type { AppUpdateMessage, AppUpdatePhase } from '@shared/app-update'
 import { resolveAppVersion } from '@main/config/app-version'
-import { getOpenFdeDesktopReleasesFeedUrl } from './openfde-platform-config'
+import {
+  getOpenFdeDesktopForceDevUpdateConfig,
+  getOpenFdeDesktopReleasesFeedUrl,
+} from './openfde-platform-config'
 import { webContentSend } from './web-content-send'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
 
@@ -10,6 +17,8 @@ const log = createLogger('services.check-update')
 
 const STARTUP_CHECK_DELAY_MS = 30_000
 const PERIODIC_CHECK_MS = 6 * 60 * 60 * 1000
+const UPDATER_CACHE_DIR_NAME = 'openfde-updater'
+const DEV_APP_UPDATE_CONFIG_FILENAME = 'dev-app-update.yml'
 
 let managerInstance: AppUpdateManager | null = null
 let periodicTimer: ReturnType<typeof setInterval> | null = null
@@ -33,28 +42,61 @@ export async function prepareDesktopAutoUpdater(): Promise<PrepareDesktopAutoUpd
     url: feedUrl,
   })
   autoUpdater.requestHeaders = {}
+  configureDesktopAutoUpdaterRuntime(feedUrl)
 
   return { ok: true, feedUrl }
 }
 
-/** Packaged builds always; unpackaged dev may check against localhost feeds only. */
+/** electron-updater reads dev-app-update.yml for updaterCacheDirName when downloading in dev. */
+export function ensureDevAppUpdateConfig(feedUrl: string): string {
+  const configDir = getopenfdeConfigDir()
+  mkdirSync(configDir, { recursive: true })
+  const configPath = join(configDir, DEV_APP_UPDATE_CONFIG_FILENAME)
+  const normalizedUrl = feedUrl.endsWith('/') ? feedUrl : `${feedUrl}/`
+  const yaml = [
+    'provider: generic',
+    `url: ${normalizedUrl}`,
+    `updaterCacheDirName: ${UPDATER_CACHE_DIR_NAME}`,
+    '',
+  ].join('\n')
+  writeFileSync(configPath, yaml, 'utf-8')
+  autoUpdater.updateConfigPath = configPath
+  return configPath
+}
+
+/** Unpackaged dev: electron-updater is disabled unless forceDevUpdateConfig is set. */
+function configureDesktopAutoUpdaterRuntime(feedUrl: string): void {
+  if (app.isPackaged) {
+    autoUpdater.forceDevUpdateConfig = false
+    return
+  }
+
+  const forceDev = getOpenFdeDesktopForceDevUpdateConfig()
+  autoUpdater.forceDevUpdateConfig = forceDev
+  if (!forceDev) return
+
+  ensureDevAppUpdateConfig(feedUrl)
+
+  const productVersion = resolveAppVersion()
+  const parsed = semver.parse(productVersion)
+  if (parsed) {
+    // Updater reads app.getVersion() (Electron runtime in dev); use product semver instead.
+    ;(autoUpdater as { currentVersion: semver.SemVer }).currentVersion = parsed
+  }
+}
+
+/** Packaged builds always; unpackaged dev requires explicit DESKTOP_UPDATE_FORCE_DEV. */
 export function canRunDesktopUpdateCheck(): boolean {
   if (app.isPackaged) return true
-  const feedUrl = getOpenFdeDesktopReleasesFeedUrl()
-  if (!feedUrl) return false
-  try {
-    const host = new URL(feedUrl).hostname.toLowerCase()
-    return host === 'localhost' || host === '127.0.0.1'
-  } catch {
-    return false
-  }
+  if (!getOpenFdeDesktopForceDevUpdateConfig()) return false
+  return Boolean(getOpenFdeDesktopReleasesFeedUrl())
 }
 
 function desktopUpdateCheckBlockedMessage(): string {
   if (app.isPackaged) {
     return 'Set BASE_API in env (maps to app.base.apiUrl) to enable updates.'
   }
-  return 'Updates from source are disabled unless BASE_API points at localhost (for local feed testing). Use a packaged build for production feeds.'
+  return 'Updates from source are disabled. Set DESKTOP_UPDATE_FORCE_DEV=true in env/.dev.env (maps to app.desktop.forceDevUpdateConfig) to test updates locally.'
 }
 
 export class AppUpdateManager {
@@ -154,12 +196,20 @@ export class AppUpdateManager {
     }
 
     log.info('Checking desktop updates', { feedUrl: prepared.feedUrl })
-    autoUpdater.checkForUpdates().catch((err) => {
+    try {
+      const result = await autoUpdater.checkForUpdates()
+      if (result === null) {
+        log.warn('Update check skipped by electron-updater')
+        this.send(mainWindow, 'error', {
+          error: 'Update check is unavailable in this environment.',
+        })
+      }
+    } catch (err) {
       log.error('Update check failed', { err })
       this.send(mainWindow, 'error', {
         error: err instanceof Error ? err.message : 'Update check failed.',
       })
-    })
+    }
   }
 
   async downloadUpdate(mainWindow: BrowserWindow) {

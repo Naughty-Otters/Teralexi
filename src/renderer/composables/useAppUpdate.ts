@@ -51,7 +51,18 @@ export function bindAppUpdateListeners(): () => void {
 
 export async function checkForAppUpdate(): Promise<void> {
   state.phase = 'checking'
-  await window.ipcRendererChannel?.CheckUpdate?.invoke()
+  const message = await window.ipcRendererChannel?.CheckUpdate?.invoke()
+  if (message) {
+    applyMessage(message)
+    return
+  }
+  if (state.phase === 'checking') {
+    applyMessage({
+      phase: 'error',
+      currentVersion: state.currentVersion,
+      error: 'Update check did not complete.',
+    })
+  }
 }
 
 export async function downloadAppUpdate(): Promise<void> {

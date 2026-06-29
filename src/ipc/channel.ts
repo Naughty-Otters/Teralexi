@@ -43,7 +43,10 @@ export class IpcChannelMainClass {
    * Exit application
    */
   AppClose: IpcMainEventListener = null
-  CheckUpdate: IpcMainEventListener = null
+  CheckUpdate: IpcMainEventListener<
+    void,
+    import('@shared/app-update').AppUpdateMessage | null
+  > = null
   ConfirmUpdate: IpcMainEventListener = null
   DownloadUpdate: IpcMainEventListener = null
   GetAppVersion: IpcMainEventListener<

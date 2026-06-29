@@ -10,6 +10,14 @@ import { OPENFDE_GOOGLE_AUTH_LOGIN_URL_KEY } from '@shared/google-account-settin
 const METRICS_GRAPHQL_URL_KEY = 'app.metrics.graphqlUrl'
 const SUPPORT_UPLOAD_URL_KEY = 'app.support.uploadUrl'
 const DESKTOP_RELEASES_URL_KEY = 'app.desktop.releasesUrl'
+const DESKTOP_FORCE_DEV_UPDATE_KEY = 'app.desktop.forceDevUpdateConfig'
+
+function parseBooleanProp(value: string, fallback = false): boolean {
+  const normalized = value.trim().toLowerCase()
+  if (normalized === 'true') return true
+  if (normalized === 'false') return false
+  return fallback
+}
 
 export function getOpenFdeBaseApiUrl(): string {
   return normalizeOpenFdeBaseApiUrl(
@@ -50,4 +58,12 @@ export function getOpenFdeDesktopReleasesFeedUrl(): string {
   })
   if (!resolved) return ''
   return resolved.endsWith('/') ? resolved : `${resolved}/`
+}
+
+/** Opt-in: allow electron-updater in unpackaged dev (`npm run dev`). */
+export function getOpenFdeDesktopForceDevUpdateConfig(): boolean {
+  return parseBooleanProp(
+    getSystemPropValue(DESKTOP_FORCE_DEV_UPDATE_KEY, 'false'),
+    false,
+  )
 }
