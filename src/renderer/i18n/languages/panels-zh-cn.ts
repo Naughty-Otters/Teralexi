@@ -196,7 +196,7 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     includeSandbox: '包含沙箱文件（可能较大）',
     uploadEndpoint: '上传端点：',
     uploadHint:
-      '在 ~/.openfde/config/config.properties 中设置 app.support.uploadUrl 以启用上传。',
+      '在 env/.dev.env 中设置 BASE_API（映射为 app.base.apiUrl）以启用向 /support/upload 的认证上传。',
     bundleSavedTo: '诊断包已保存至：',
   },
   accounts: {

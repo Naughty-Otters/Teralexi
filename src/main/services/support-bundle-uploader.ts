@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs'
 import { basename } from 'node:path'
 import type { SupportBundleManifest } from '@shared/support-bundle'
 import { createLogger } from '@main/logger'
+import { getOpenFdeBaseApiUrl } from './openfde-platform-config'
+import { getOpenFdeServerAccessToken } from './openfde-server-auth'
 
 const log = createLogger('services.support-bundle-uploader')
 
@@ -30,8 +32,19 @@ export async function uploadSupportBundle(args: {
     bytes: buffer.byteLength,
   })
 
+  const apiBaseUrl = getOpenFdeBaseApiUrl()
+  const bearerToken = await getOpenFdeServerAccessToken(apiBaseUrl)
+  if (!bearerToken) {
+    throw new Error(
+      'Sign in with your OpenFDE Google account before uploading a support report.',
+    )
+  }
+
   const response = await fetch(args.uploadUrl, {
     method: 'POST',
+    headers: {
+      Authorization: `Bearer ${bearerToken}`,
+    },
     body: form,
   })
 

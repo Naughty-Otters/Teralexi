@@ -29,7 +29,7 @@ export async function submitSupportReport(
         zipPath: built.zipPath,
         uploaded: false,
         error:
-          'Support bundle saved locally. Set app.support.uploadUrl in config.properties to enable upload.',
+          'Support bundle saved locally. Set BASE_API in env/.dev.env (or app.base.apiUrl) to enable upload.',
       }
     }
 

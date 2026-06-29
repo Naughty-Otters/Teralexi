@@ -207,7 +207,7 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     includeSandbox: 'Include sandbox files (may be large)',
     uploadEndpoint: 'Upload endpoint:',
     uploadHint:
-      'Set app.support.uploadUrl in ~/.openfde/config/config.properties to enable upload.',
+      'Set BASE_API in env/.dev.env (maps to app.base.apiUrl) to enable authenticated upload to /support/upload.',
     bundleSavedTo: 'Bundle saved to:',
   },
   accounts: {

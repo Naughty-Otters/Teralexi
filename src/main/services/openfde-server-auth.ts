@@ -1,6 +1,9 @@
 import { decodeJwtPayload } from '@shared/google-id-token'
+import { resolveMetricsApiBaseUrl } from '@shared/openfde-platform-api'
 import { createLogger } from '@main/logger'
 import { getOpenFdeAccountGoogleIdToken } from '@main/services/google-account-oauth'
+
+export { resolveMetricsApiBaseUrl }
 
 const log = createLogger('services.openfde-server-auth')
 
@@ -17,16 +20,6 @@ type ServerAuthResponse = {
 
 let cachedServerToken: CachedServerToken | null = null
 let inFlightServerToken: Promise<string | null> | null = null
-
-export function resolveMetricsApiBaseUrl(graphqlUrl: string): string {
-  const trimmed = graphqlUrl.trim()
-  if (!trimmed) return ''
-  try {
-    return new URL(trimmed).origin
-  } catch {
-    return ''
-  }
-}
 
 function resolveTokenExpiryMs(
   accessToken: string,

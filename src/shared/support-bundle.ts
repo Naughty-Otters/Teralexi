@@ -18,6 +18,7 @@ export type SupportReportResult = {
 }
 
 export type SupportConfig = {
+  baseApiUrl: string
   uploadUrl: string
   uploadConfigured: boolean
   maxMegabytes: number

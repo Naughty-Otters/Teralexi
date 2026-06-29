@@ -60,6 +60,10 @@ export function parseEnvFile(
 
     const rawKey = line.slice(0, eqIndex).trim()
     const rawValue = line.slice(eqIndex + 1).trim()
+    if (rawKey === 'BASE_API') {
+      entries.set('app.base.apiUrl', stripEnvValue(rawValue))
+      continue
+    }
     const key = envNameToSystemPropKey(rawKey, knownKeys)
     if (!key) continue
 
@@ -117,6 +121,11 @@ export function loadEnvOverrides(args: {
       merged.set(key, stripEnvValue(String(value)))
       break
     }
+  }
+
+  const baseApi = env.BASE_API?.trim()
+  if (baseApi) {
+    merged.set('app.base.apiUrl', stripEnvValue(baseApi))
   }
 
   return merged
