@@ -184,7 +184,8 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
       '尚未配置 Google Workspace。请先在上方填写 OAuth 客户端 ID 与密钥后再试。',
   },
   about: {
-    intro: 'OpenFDE 桌面应用。已安装版本可检查 GitHub Releases 更新。',
+    intro:
+      'OpenFDE 桌面应用。已安装版本通过 OpenFDE 账户登录后，从 BASE_API 认证更新源检查更新。',
     sourceHint: '当前从源码运行 — 自动更新仅适用于打包安装。',
   },
   support: {

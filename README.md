@@ -98,7 +98,7 @@ Both workflows are triggered manually from the **Actions** tab. See **[BUILD-AND
 | Workflow | Purpose | Environment |
 | --- | --- | --- |
 | [CI](.github/workflows/ci.yml) | Unit tests + internal desktop builds | Staging (`env/.sit.env`) |
-| [Release](.github/workflows/release.yml) | Publish production installers to GitHub Releases | Production (`env/.prod.env`) |
+| [Release](.github/workflows/release.yml) | Build production installers and upload to private S3 | Production (`env/.prod.env`) |
 
 **CI** (manual `workflow_dispatch`):
 
@@ -108,7 +108,7 @@ Both workflows are triggered manually from the **Actions** tab. See **[BUILD-AND
 
 **Release** (manual `workflow_dispatch`, confirm input `release`):
 
-- Production builds via `release:mac` / `release:win` and publishes to GitHub Releases.
+- Production builds via `release:mac` / `release:win`, then `release:upload-s3` to private S3. Clients fetch updates through authenticated `{BASE_API}/desktop/releases/stable/` (see [docs/DESKTOP-RELEASES.md](./docs/DESKTOP-RELEASES.md)).
 
 ## Project Layout
 ```text

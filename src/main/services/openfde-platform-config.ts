@@ -9,6 +9,7 @@ import { OPENFDE_GOOGLE_AUTH_LOGIN_URL_KEY } from '@shared/google-account-settin
 
 const METRICS_GRAPHQL_URL_KEY = 'app.metrics.graphqlUrl'
 const SUPPORT_UPLOAD_URL_KEY = 'app.support.uploadUrl'
+const DESKTOP_RELEASES_URL_KEY = 'app.desktop.releasesUrl'
 
 export function getOpenFdeBaseApiUrl(): string {
   return normalizeOpenFdeBaseApiUrl(
@@ -38,4 +39,15 @@ export function getOpenFdeSupportUploadUrl(): string {
     configured: getSystemPropValue(SUPPORT_UPLOAD_URL_KEY, ''),
     defaultPath: OPENFDE_PLATFORM_PATHS.supportUpload,
   })
+}
+
+/** Base URL for electron-updater `generic` feed (must end with `/`). */
+export function getOpenFdeDesktopReleasesFeedUrl(): string {
+  const resolved = resolveOpenFdePlatformEndpoint({
+    baseApi: getOpenFdeBaseApiUrl(),
+    configured: getSystemPropValue(DESKTOP_RELEASES_URL_KEY, ''),
+    defaultPath: OPENFDE_PLATFORM_PATHS.desktopReleases,
+  })
+  if (!resolved) return ''
+  return resolved.endsWith('/') ? resolved : `${resolved}/`
 }

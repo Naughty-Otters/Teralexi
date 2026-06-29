@@ -7,6 +7,7 @@ vi.mock('@config/system-prop', () => ({
 import { getSystemPropValue } from '@config/system-prop'
 import {
   getOpenFdeBaseApiUrl,
+  getOpenFdeDesktopReleasesFeedUrl,
   getOpenFdeGoogleAuthLoginUrl,
   getOpenFdeGraphqlUrl,
   getOpenFdeSupportUploadUrl,
@@ -30,6 +31,9 @@ describe('openfde-platform-config', () => {
     )
     expect(getOpenFdeSupportUploadUrl()).toBe(
       'http://127.0.0.1:8000/support/upload',
+    )
+    expect(getOpenFdeDesktopReleasesFeedUrl()).toBe(
+      'http://127.0.0.1:8000/desktop/releases/stable/',
     )
   })
 

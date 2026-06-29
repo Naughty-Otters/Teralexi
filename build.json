@@ -23,10 +23,8 @@
   ],
   "publish": [
     {
-      "provider": "github",
-      "owner": "Naughty-Otters",
-      "repo": "OpenFDE",
-      "releaseType": "release"
+      "provider": "generic",
+      "url": "https://api.openfde.com/desktop/releases/stable/"
     }
   ],
   "productName": "OpenFDE",
