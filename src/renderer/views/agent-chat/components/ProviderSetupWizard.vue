@@ -442,6 +442,12 @@ async function finish() {
 </script>
 
 <style scoped>
+@property --provider-setup-border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
 .provider-setup-overlay {
   position: fixed;
   inset: 0;
@@ -461,15 +467,61 @@ async function finish() {
 }
 
 .provider-setup-modal {
+  --provider-setup-border-angle: 0deg;
   width: min(560px, 100%);
   max-height: min(90vh, 720px);
   display: flex;
   flex-direction: column;
-  background: var(--ui-bg-elevated, var(--ui-bg));
-  border: 1px solid var(--ui-border);
   border-radius: 14px;
-  box-shadow: 0 24px 48px rgb(0 0 0 / 0.2);
   overflow: hidden;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(
+      var(--ui-bg-elevated, var(--ui-bg)),
+      var(--ui-bg-elevated, var(--ui-bg))
+    )
+    padding-box,
+    conic-gradient(
+      from var(--provider-setup-border-angle),
+      var(--color-primary-300, #93c5fd),
+      var(--color-primary-500, #3b82f6),
+      #a855f7,
+      #22d3ee,
+      var(--color-primary-300, #93c5fd)
+    )
+    border-box;
+  box-shadow:
+    0 24px 48px rgb(0 0 0 / 0.2),
+    0 0 18px color-mix(in srgb, var(--color-primary-500, #3b82f6) 32%, transparent),
+    0 0 36px color-mix(in srgb, #a855f7 20%, transparent);
+  animation: provider-setup-border-glow 12s linear infinite;
+}
+
+@keyframes provider-setup-border-glow {
+  to {
+    --provider-setup-border-angle: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .provider-setup-modal {
+    animation: none;
+    --provider-setup-border-angle: 135deg;
+    background:
+      linear-gradient(
+        var(--ui-bg-elevated, var(--ui-bg)),
+        var(--ui-bg-elevated, var(--ui-bg))
+      )
+      padding-box,
+      linear-gradient(
+        135deg,
+        var(--color-primary-400, #60a5fa),
+        var(--color-primary-500, #3b82f6),
+        #a855f7,
+        #22d3ee
+      )
+      border-box;
+  }
 }
 
 .provider-setup-modal--page {
