@@ -65,6 +65,7 @@ const DEFAULT_SYSTEM_PROPERTIES: Record<string, string> = {
   'editor.settings.aiCompletionMaxTokens': '128',
   'app.support.uploadUrl': '',
   'app.support.maxMegabytes': '100',
+  'app.base.apiUrl': '',
   'app.client.id': '',
   'app.metrics.graphqlUrl': '',
   'app.ui.locale': 'en',
@@ -73,6 +74,7 @@ const DEFAULT_SYSTEM_PROPERTIES: Record<string, string> = {
 
 /** Loaded from env files only — not written to user config.properties. */
 export const ENV_ONLY_PROPERTY_KEYS = [
+  'app.base.apiUrl',
   'app.openfde.googleAuthLoginUrl',
 ] as const
 

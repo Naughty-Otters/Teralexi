@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getSystemPropValue, getOpenFdeAccountGoogleIdToken, getOpenFdeServerAccessToken } =
+const { getOpenFdeAccountGoogleIdToken, getOpenFdeServerAccessToken } =
   vi.hoisted(() => ({
-    getSystemPropValue: vi.fn(),
     getOpenFdeAccountGoogleIdToken: vi.fn(),
     getOpenFdeServerAccessToken: vi.fn(),
   }))
 
-vi.mock('@config/system-prop', () => ({
-  getSystemPropValue,
+vi.mock('@main/services/openfde-platform-config', () => ({
+  getOpenFdeBaseApiUrl: vi.fn(() => 'http://127.0.0.1:8000'),
+  getOpenFdeGraphqlUrl: vi.fn(() => 'http://127.0.0.1:8000/graphql'),
 }))
 
 vi.mock('@main/services/google-account-oauth', () => ({
@@ -17,7 +17,6 @@ vi.mock('@main/services/google-account-oauth', () => ({
 
 vi.mock('@main/services/openfde-server-auth', () => ({
   getOpenFdeServerAccessToken,
-  resolveMetricsApiBaseUrl: (graphqlUrl: string) => new URL(graphqlUrl).origin,
 }))
 
 import {
@@ -27,7 +26,6 @@ import {
 
 describe('provider-metrics-reporter', () => {
   beforeEach(() => {
-    getSystemPropValue.mockReset()
     getOpenFdeAccountGoogleIdToken.mockReset()
     getOpenFdeServerAccessToken.mockReset()
     vi.stubGlobal('fetch', vi.fn())
@@ -107,7 +105,6 @@ describe('provider-metrics-reporter', () => {
   })
 
   it('posts addProviderMetric mutation with server JWT authorization', async () => {
-    getSystemPropValue.mockReturnValue('http://127.0.0.1:8000/graphql')
     getOpenFdeServerAccessToken.mockResolvedValue('server-access-token')
 
     vi.mocked(fetch).mockResolvedValue({
@@ -167,7 +164,6 @@ describe('provider-metrics-reporter', () => {
   })
 
   it('rejects when server access token is unavailable', async () => {
-    getSystemPropValue.mockReturnValue('http://127.0.0.1:8000/graphql')
     getOpenFdeServerAccessToken.mockResolvedValue(null)
 
     await expect(

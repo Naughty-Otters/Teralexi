@@ -1,8 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
 import {
-  copySync,
-  emptyDirSync,
-  ensureDirSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -10,6 +7,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs'
+import { copySync, emptyDirSync, ensureDirSync } from 'fs-extra'
 import { basename, dirname, join, relative } from 'node:path'
 import { arch, platform, release } from 'node:os'
 import AdmZip from 'adm-zip'

@@ -16,10 +16,25 @@ OpenFDE uses three build environments. Each maps to a file under `env/`:
 
 ### What each file controls
 
-- **Build-time (renderer):** values like `BASE_API` are loaded into `__CONFIG__` during Vite/Rollup builds.
-- **Runtime (main process):** dotted keys such as `app.metrics.graphqlUrl` and `app.openfde.googleAuthLoginUrl` override `config.properties` defaults.
+Configure the OpenFDE platform backend once with `BASE_API`. At runtime it maps to `app.base.apiUrl`. Default endpoints are relative paths under that base:
+
+| Endpoint | Default path |
+| --- | --- |
+| GraphQL metrics | `graphql` |
+| Google sign-in | `auth/login` |
+| Support upload | `support/upload` |
+
+- **Build-time (renderer):** `BASE_API` is also loaded into `__CONFIG__.BASE_API` for axios (`src/renderer/utils/request.ts`).
+- **Runtime (main process):** optional overrides such as `app.metrics.graphqlUrl` may be relative paths or legacy absolute URLs.
 
 User overrides in `~/.openfde/config/.env` always win over bundled env files.
+
+Example `env/.dev.env`:
+
+```properties
+BASE_API = 'http://127.0.0.1:8000'
+NODE_ENV = 'development'
+```
 
 ### Editing env files
 

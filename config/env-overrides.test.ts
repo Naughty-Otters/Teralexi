@@ -24,6 +24,7 @@ import {
 } from './env-overrides'
 
 const KNOWN_KEYS = [
+  'app.base.apiUrl',
   'app.metrics.graphqlUrl',
   'app.dev.port',
   'settings.telegram.botToken',
@@ -73,6 +74,14 @@ APP_DEV_PORT=3000
   it('strips surrounding quotes', () => {
     expect(stripEnvValue("'value'")).toBe('value')
     expect(stripEnvValue('"value"')).toBe('value')
+  })
+
+  it('maps BASE_API env var to app.base.apiUrl', () => {
+    const parsed = parseEnvFile(
+      "BASE_API = 'http://127.0.0.1:8000'\n",
+      KNOWN_KEYS,
+    )
+    expect(parsed.get('app.base.apiUrl')).toBe('http://127.0.0.1:8000')
   })
 
   it('loads overrides from env files and process env', () => {

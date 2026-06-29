@@ -12,14 +12,13 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { request as httpsRequest } from 'node:https'
 import { parse as parseUrl } from 'url'
-import { getSystemPropValue } from '@config/system-prop'
 import { getopenfdeAccountsDir } from '@config/openfde-home'
 import {
   DEFAULT_OPENFDE_GOOGLE_AUTH_LOGIN_URL_DEV,
   GoogleAccountNotConfiguredError,
   isOpenFdeGoogleAccountSignInConfigured,
-  OPENFDE_GOOGLE_AUTH_LOGIN_URL_KEY,
 } from '@shared/google-account-settings'
+import { getOpenFdeGoogleAuthLoginUrl as resolveConfiguredGoogleAuthLoginUrl } from '@main/services/openfde-platform-config'
 import { OPENFDE_CALLBACK_URL } from '@shared/openfde-protocol'
 import {
   googleProfileFromIdToken,
@@ -67,11 +66,8 @@ const SIGN_IN_TIMEOUT_MS = 5 * 60 * 1000
 const log = createLogger('services.google-account-oauth')
 
 export function resolveOpenFdeGoogleAuthLoginUrl(): string {
-  const fromEnv = getSystemPropValue(
-    OPENFDE_GOOGLE_AUTH_LOGIN_URL_KEY,
-    '',
-  ).trim()
-  if (fromEnv) return fromEnv
+  const resolved = resolveConfiguredGoogleAuthLoginUrl()
+  if (resolved) return resolved
   if (process.env.NODE_ENV === 'production') return ''
   return DEFAULT_OPENFDE_GOOGLE_AUTH_LOGIN_URL_DEV
 }

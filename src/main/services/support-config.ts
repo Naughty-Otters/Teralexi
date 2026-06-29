@@ -1,11 +1,17 @@
 import config from '@config/index'
 import type { SupportConfig } from '@shared/support-bundle'
+import {
+  getOpenFdeBaseApiUrl,
+  getOpenFdeSupportUploadUrl,
+} from './openfde-platform-config'
 
 export function getSupportConfig(): SupportConfig {
-  const uploadUrl = config.support.uploadUrl.trim()
+  const baseApiUrl = getOpenFdeBaseApiUrl()
+  const uploadUrl = getOpenFdeSupportUploadUrl()
   return {
+    baseApiUrl,
     uploadUrl,
-    uploadConfigured: uploadUrl.length > 0,
+    uploadConfigured: baseApiUrl.length > 0,
     maxMegabytes: Math.max(1, config.support.maxMegabytes),
   }
 }

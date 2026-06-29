@@ -1,10 +1,9 @@
-import { getSystemPropValue } from '@config/system-prop'
-import { createLogger } from '@main/logger'
 import { getOpenFdeAccountGoogleIdToken } from '@main/services/google-account-oauth'
 import {
-  getOpenFdeServerAccessToken,
-  resolveMetricsApiBaseUrl,
-} from '@main/services/openfde-server-auth'
+  getOpenFdeBaseApiUrl,
+  getOpenFdeGraphqlUrl,
+} from '@main/services/openfde-platform-config'
+import { getOpenFdeServerAccessToken } from '@main/services/openfde-server-auth'
 import type {
   AddProviderMetricInput,
   ProviderMetricType,
@@ -14,6 +13,7 @@ import {
   mapProviderMetricFieldsFromUsage,
 } from '@shared/provider-metrics/usage-mapper'
 import type { LanguageModelUsage } from '@openfde-ai'
+import { createLogger } from '@main/logger'
 
 const log = createLogger('services.provider-metrics-reporter')
 
@@ -62,11 +62,11 @@ type GraphQlResponse = {
 }
 
 export function getProviderMetricsGraphqlUrl(): string {
-  return getSystemPropValue(PROVIDER_METRICS_GRAPHQL_URL_KEY, '').trim()
+  return getOpenFdeGraphqlUrl()
 }
 
 export function getProviderMetricsApiBaseUrl(): string {
-  return resolveMetricsApiBaseUrl(getProviderMetricsGraphqlUrl())
+  return getOpenFdeBaseApiUrl()
 }
 
 export function buildAddProviderMetricInput(args: {
@@ -116,7 +116,7 @@ export async function reportProviderMetric(
     throw new Error('Provider metrics GraphQL URL is not configured')
   }
 
-  const apiBaseUrl = resolveMetricsApiBaseUrl(graphqlUrl)
+  const apiBaseUrl = getProviderMetricsApiBaseUrl()
   const bearerToken =
     serverAccessToken?.trim() ||
     (await getOpenFdeServerAccessToken(apiBaseUrl))
