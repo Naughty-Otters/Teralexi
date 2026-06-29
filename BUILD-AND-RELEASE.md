@@ -159,29 +159,33 @@ Optional: tag the commit (`git tag v0.0.2 && git push origin v0.0.2`) if you wan
 1. Open **Actions → Release → Run workflow**
 2. Select the branch or tag to build from
 3. Enter `release` in the confirm input
-4. Download artifacts or use the published GitHub Release
 
-When run from a **version tag** (`v0.0.2`), the workflow verifies the tag matches `package.json`. When run manually from a branch, it publishes using the current `package.json` version.
+The workflow uses **`env/.prod.env`**, builds macOS and Windows installers, and uploads to S3.
 
-### 3. Local publish (optional)
+If the workflow runs on a **version tag** (`v0.0.2`), the workflow verifies the tag matches `package.json`. When run manually from a branch, it publishes using the current `package.json` version.
 
-With `GH_TOKEN` set to a token that can create releases:
+### 3. Local build + S3 upload (optional)
 
 ```bash
-export GH_TOKEN=ghp_...
+export AWS_ACCESS_KEY_ID=...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_REGION=us-east-1
+export S3_RELEASE_BUCKET=your-bucket
+export OPENFDE_BUILD_ENV=prod
+
 npm run release:mac   # on macOS
-npm run release:win   # on Windows
+npm run release:upload-s3
 ```
 
-These scripts use `-m prod` and `env/.prod.env`.
+These scripts use `-m prod` and `env/.prod.env`. See [`docs/DESKTOP-RELEASES.md`](./docs/DESKTOP-RELEASES.md).
 
 ---
 
 ## Auto-update
 
-Packaged apps check GitHub Releases via `electron-updater`. Dev / unpackaged runs skip update checks.
+Packaged apps check `{BASE_API}/desktop/releases/stable/` via `electron-updater` (generic provider) with a Bearer token from Google sign-in. CI uploads installers to private S3; the API proxies reads — nothing is public-anonymous.
 
-See [`docs/RELEASE.md`](./docs/RELEASE.md) for signing, hot-update notes, and a first-release checklist.
+See [`docs/DESKTOP-RELEASES.md`](./docs/DESKTOP-RELEASES.md) and [`docs/RELEASE.md`](./docs/RELEASE.md).
 
 ---
 

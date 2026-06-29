@@ -8,7 +8,7 @@ on:
         required: true
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -54,12 +54,24 @@ jobs:
       - name: Run unit tests
         run: npm run test:unit
 
-      - name: Build and publish to GitHub Releases
+      - name: Build production installers
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_OPTIONS: --max-old-space-size=6144
           OPENFDE_BUILD_ENV: prod
         run: npm run ${{ matrix.npm_script }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload release artifacts to S3
+        env:
+          S3_RELEASE_BUCKET: ${{ secrets.S3_RELEASE_BUCKET }}
+          S3_RELEASE_PREFIX: desktop/releases/stable
+        run: npm run release:upload-s3
 
       - name: Upload build artifacts
         if: always()
@@ -72,5 +84,6 @@ jobs:
             build/*.exe
             build/*.yml
             build/latest*.yml
+            build/*.blockmap
           retention-days: 30
           if-no-files-found: ignore

@@ -2,6 +2,11 @@ import { autoUpdater } from 'electron-updater'
 import { app, BrowserWindow } from 'electron'
 import type { AppUpdateMessage, AppUpdatePhase } from '@shared/app-update'
 import { resolveAppVersion } from '@main/config/app-version'
+import { getOpenFdeServerAccessToken } from './openfde-server-auth'
+import {
+  getOpenFdeBaseApiUrl,
+  getOpenFdeDesktopReleasesFeedUrl,
+} from './openfde-platform-config'
 import { webContentSend } from './web-content-send'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
 
@@ -12,6 +17,48 @@ const PERIODIC_CHECK_MS = 6 * 60 * 60 * 1000
 
 let managerInstance: AppUpdateManager | null = null
 let periodicTimer: ReturnType<typeof setInterval> | null = null
+
+export type PrepareDesktopAutoUpdaterResult =
+  | { ok: true; feedUrl: string }
+  | { ok: false; error: string }
+
+export async function prepareDesktopAutoUpdater(): Promise<PrepareDesktopAutoUpdaterResult> {
+  const baseApiUrl = getOpenFdeBaseApiUrl()
+  if (!baseApiUrl) {
+    return {
+      ok: false,
+      error:
+        'Set BASE_API in env (maps to app.base.apiUrl) to enable authenticated updates.',
+    }
+  }
+
+  const feedUrl = getOpenFdeDesktopReleasesFeedUrl()
+  if (!feedUrl) {
+    return {
+      ok: false,
+      error: 'Desktop release feed URL is not configured.',
+    }
+  }
+
+  const bearerToken = await getOpenFdeServerAccessToken(baseApiUrl)
+  if (!bearerToken) {
+    return {
+      ok: false,
+      error:
+        'Sign in with your OpenFDE Google account before checking for updates.',
+    }
+  }
+
+  autoUpdater.setFeedURL({
+    provider: 'generic',
+    url: feedUrl,
+  })
+  autoUpdater.requestHeaders = {
+    Authorization: `Bearer ${bearerToken}`,
+  }
+
+  return { ok: true, feedUrl }
+}
 
 export class AppUpdateManager {
   public mainWindow: BrowserWindow | null = null
@@ -90,7 +137,7 @@ export class AppUpdateManager {
     return this.lastMessage
   }
 
-  checkUpdate(mainWindow: BrowserWindow) {
+  async checkUpdate(mainWindow: BrowserWindow) {
     if (!app.isPackaged) {
       log.info('Skipping update check in unpackaged app')
       this.mainWindow = mainWindow
@@ -102,6 +149,14 @@ export class AppUpdateManager {
 
     this.mainWindow = mainWindow
     this.ensureListeners()
+
+    const prepared = await prepareDesktopAutoUpdater()
+    if (!prepared.ok) {
+      this.send(mainWindow, 'error', { error: prepared.error })
+      return
+    }
+
+    log.info('Checking desktop updates', { feedUrl: prepared.feedUrl })
     autoUpdater.checkForUpdates().catch((err) => {
       log.error('Update check failed', { err })
       this.send(mainWindow, 'error', {
@@ -110,9 +165,16 @@ export class AppUpdateManager {
     })
   }
 
-  downloadUpdate(mainWindow: BrowserWindow) {
+  async downloadUpdate(mainWindow: BrowserWindow) {
     this.mainWindow = mainWindow
     this.ensureListeners()
+
+    const prepared = await prepareDesktopAutoUpdater()
+    if (!prepared.ok) {
+      this.send(mainWindow, 'error', { error: prepared.error })
+      return
+    }
+
     autoUpdater.downloadUpdate().catch((err) => {
       log.error('Update download failed', { err })
       this.send(mainWindow, 'error', {
@@ -131,17 +193,24 @@ export function getAppUpdateManager(): AppUpdateManager {
   return managerInstance
 }
 
-export function scheduleStartupUpdateCheck(mainWindow: BrowserWindow) {
+export async function scheduleStartupUpdateCheck(mainWindow: BrowserWindow) {
   if (!app.isPackaged) return
 
-  setTimeout(() => {
+  setTimeout(async () => {
     if (mainWindow.isDestroyed()) return
+    const prepared = await prepareDesktopAutoUpdater()
+    if (!prepared.ok) {
+      log.info('Skipping background update check', { reason: prepared.error })
+      return
+    }
     getAppUpdateManager().checkUpdate(mainWindow)
   }, STARTUP_CHECK_DELAY_MS)
 
   if (periodicTimer) clearInterval(periodicTimer)
-  periodicTimer = setInterval(() => {
+  periodicTimer = setInterval(async () => {
     if (mainWindow.isDestroyed()) return
+    const prepared = await prepareDesktopAutoUpdater()
+    if (!prepared.ok) return
     getAppUpdateManager().checkUpdate(mainWindow)
   }, PERIODIC_CHECK_MS)
 }

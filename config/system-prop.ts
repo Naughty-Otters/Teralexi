@@ -67,6 +67,7 @@ const DEFAULT_SYSTEM_PROPERTIES: Record<string, string> = {
   'app.support.maxMegabytes': '100',
   'app.support.maxUploadsPerDay': '5',
   'app.support.uploadCooldownMinutes': '10',
+  'app.desktop.releasesUrl': '',
   'app.base.apiUrl': '',
   'app.client.id': '',
   'app.metrics.graphqlUrl': '',

@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
-  RELEASE_GITHUB_OWNER,
-  RELEASE_GITHUB_REPO,
+  OPENFDE_DESKTOP_RELEASES_DEFAULT_PATH,
   type AppUpdateMessage,
 } from './app-update'
 
 describe('app-update', () => {
-  it('exports GitHub release coordinates', () => {
-    expect(RELEASE_GITHUB_OWNER).toBe('Naughty-Otters')
-    expect(RELEASE_GITHUB_REPO).toBe('OpenFDE')
+  it('exports desktop release feed default path', () => {
+    expect(OPENFDE_DESKTOP_RELEASES_DEFAULT_PATH).toBe(
+      'desktop/releases/stable',
+    )
   })
 
   it('allows typed update messages', () => {

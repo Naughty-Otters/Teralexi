@@ -339,13 +339,13 @@ export class IpcMainHandleClass implements IIpcMainHandle {
   ) => {
     const windows = BrowserWindow.fromWebContents(event.sender)
     if (!windows) return
-    getAppUpdateManager().checkUpdate(windows)
+    return getAppUpdateManager().checkUpdate(windows)
   }
   DownloadUpdate: (event: Electron.IpcMainInvokeEvent) => void | Promise<void> =
     (event) => {
       const windows = BrowserWindow.fromWebContents(event.sender)
       if (!windows) return
-      getAppUpdateManager().downloadUpdate(windows)
+      return getAppUpdateManager().downloadUpdate(windows)
     }
   ConfirmUpdate: (event: Electron.IpcMainInvokeEvent) => void | Promise<void> =
     () => {

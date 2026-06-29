@@ -5,6 +5,8 @@ export const OPENFDE_PLATFORM_PATHS = {
   graphql: 'graphql',
   googleAuthLogin: 'auth/login',
   supportUpload: 'support/upload',
+  /** Authenticated electron-updater generic feed (stable channel). */
+  desktopReleases: 'desktop/releases/stable',
 } as const
 
 export function normalizeOpenFdeBaseApiUrl(raw: string): string {

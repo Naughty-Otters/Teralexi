@@ -1,25 +1,15 @@
 # Releasing OpenFDE
 
-> **See also:** [BUILD-AND-RELEASE.md](../BUILD-AND-RELEASE.md) — environment files, local builds, and GitHub Actions (CI vs Release).
+> **See also:** [BUILD-AND-RELEASE.md](../BUILD-AND-RELEASE.md) — environment files, local builds, and GitHub Actions (CI vs Release).  
+> **Desktop updates:** [DESKTOP-RELEASES.md](./DESKTOP-RELEASES.md) — S3 publish + authenticated API feed.
 
-OpenFDE uses [Semantic Versioning](https://semver.org/) and publishes desktop builds to **GitHub Releases**. Installed apps check for updates via `electron-updater`.
+OpenFDE uses [Semantic Versioning](https://semver.org/). Installers are built from a **private GitHub repo** and published to **private S3**. Installed apps check for updates via `electron-updater` against `{BASE_API}/desktop/releases/stable/` with a Bearer token (Google sign-in).
 
 ## Version source of truth
 
 - **`package.json` → `version`** — currently `0.0.1`
 - **`CHANGELOG.md`** — user-facing release notes
 - Optional git tags: `v0.0.1`, `v0.0.2`, … (verified when the Release workflow runs on a tag ref)
-
-## GitHub repo
-
-Release publishing and auto-update feeds use:
-
-| Field | Value |
-| ----- | ----- |
-| Owner | `Naughty-Otters` |
-| Repo | `OpenFDE` |
-
-These values are defined in `build.json` and `src/shared/app-update.ts`.
 
 ## Day-to-day version bumps
 
@@ -48,7 +38,20 @@ git commit -m "chore(release): v0.0.2"
 git push origin main
 ```
 
-### 2. Run the Release workflow
+### 2. Configure S3 secrets (one-time)
+
+In GitHub **Settings → Secrets**, set:
+
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `S3_RELEASE_BUCKET`
+
+See [DESKTOP-RELEASES.md](./DESKTOP-RELEASES.md) for IAM scope (CI write-only on `desktop/releases/*`).
+
+Implement authenticated `GET /desktop/releases/stable/*` on your API before shipping updates to users.
+
+### 3. Run the Release workflow
 
 Production releases are **manual only**:
 
@@ -56,33 +59,39 @@ Production releases are **manual only**:
 2. Select the branch or tag to build from
 3. Type `release` in the confirm input
 
-The workflow uses **`env/.prod.env`** (`OPENFDE_BUILD_ENV=prod`), builds macOS and Windows installers, and publishes to GitHub Releases.
+The workflow uses **`env/.prod.env`**, builds macOS and Windows installers, and uploads to S3 (`desktop/releases/stable/`).
 
-If the workflow runs on a version tag (`v0.0.2`), it verifies the tag matches `package.json`. When run from a branch, it publishes using the current `package.json` version.
+If the workflow runs on a version tag (`v0.0.2`), it verifies the tag matches `package.json`. When run from a branch, it uses the current `package.json` version.
 
-Requires `GITHUB_TOKEN` (provided automatically in GitHub Actions).
-
-### 3. Local publish (optional)
-
-With `GH_TOKEN` set to a PAT that can create releases:
+### 4. Local build + S3 upload (optional)
 
 ```bash
-export GH_TOKEN=ghp_...
+export AWS_ACCESS_KEY_ID=...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_REGION=us-east-1
+export S3_RELEASE_BUCKET=your-bucket
+export OPENFDE_BUILD_ENV=prod
+
 npm run release:mac   # on macOS
+npm run release:upload-s3
+
 npm run release:win   # on Windows
+npm run release:upload-s3
 ```
 
 ## Auto-update behavior
 
 | When | Action |
 | ---- | ------ |
-| 30s after app launch | Silent check (packaged builds only) |
-| Every 6 hours | Background re-check |
+| 30s after app launch | Silent check (packaged + signed in + `BASE_API` configured) |
+| Every 6 hours | Background re-check (same requirements) |
 | Settings → About | Manual “Check for updates” |
 | Update available | User clicks “Download update” |
 | Download complete | User clicks “Restart and install” |
 
-Dev / unpackaged runs skip auto-update checks.
+Requires OpenFDE Google sign-in (server JWT). Dev / unpackaged runs skip auto-update checks.
+
+Feed URL: `{BASE_API}/desktop/releases/stable/` (override with `app.desktop.releasesUrl`).
 
 ## Code signing (before public launch)
 
@@ -95,14 +104,16 @@ Unsigned builds can still be published for internal testing; users may see OS se
 
 ## Hot update (legacy)
 
-`hot-updater` / `npm run pack:resources` is **not** used for production releases (`asar: true` in `build.json`). Use full installer updates via GitHub Releases only.
+`hot-updater` / `npm run pack:resources` is **not** used for production releases (`asar: true` in `build.json`). Use full installer updates via S3 + authenticated API only.
 
 ## First release checklist
 
-- [ ] Confirm GitHub owner/repo in `build.json` and `src/shared/app-update.ts`
-- [ ] Set production URLs in `env/.prod.env`
+- [ ] S3 bucket + IAM (CI write, API read)
+- [ ] GitHub Actions secrets (`AWS_*`, `S3_RELEASE_BUCKET`)
+- [ ] API routes for authenticated `GET /desktop/releases/stable/*`
+- [ ] Production `BASE_API` in `env/.prod.env`
 - [ ] Set up code signing (macOS + Windows)
 - [ ] Bump version, update `CHANGELOG.md`, push
 - [ ] Run the **Release** workflow with confirm `release`
-- [ ] Verify GitHub Release contains installers + `latest*.yml`
-- [ ] Install current version, bump to next, confirm in-app update flow
+- [ ] Verify S3 keys: `latest-mac.yml`, `latest.yml`, installers
+- [ ] Install current version, publish next, confirm in-app update flow (signed in)
