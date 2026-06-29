@@ -106,37 +106,42 @@ Or set `OPENFDE_BUILD_ENV` (`dev` | `sit` | `prod`) before running a build scrip
 
 ## GitHub Actions
 
-Both workflows are **manual only** (`workflow_dispatch`). Run them from **Actions** in the GitHub UI.
-
-### CI — staging builds
+### CI — staging (`env/.sit.env`)
 
 **Workflow:** [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)
 
-**Trigger:** Actions → **CI** → **Run workflow**
+**Triggers:**
 
-**What it does:**
+| Event | What runs |
+| --- | --- |
+| **Pull request** | Unit tests + signed macOS/Windows **sit** builds → GitHub artifacts |
+| **Push** to any branch | Same as PR |
+| **Push** to `main` | Same as PR + README CI status update |
+| **Manual** | Actions → **CI** → Run workflow (full staging pipeline) |
 
-1. Unit tests with coverage on Ubuntu (`npm run test:unit:coverage`)
-2. **Staging** desktop builds on macOS and Windows (`build:mac:sit`, `build:win64:sit`)
-3. Uploads artifacts named `openfde-<platform>-sit-<run>-<sha>` (14-day retention)
-4. Updates the CI status table at the top of [`README.md`](./README.md)
+**Build env:** `OPENFDE_BUILD_ENV=sit` → loads `env/.sit.env` (staging `BASE_API` only — same update feed path as prod).
 
-Use this for branch/PR validation and internal test installers before a release.
+**Scripts:** `build:mac:sit`, `build:win64:sit`
 
-### Release — production builds
+**Signing:** macOS and Windows jobs each receive platform-specific secrets (`MAC_SIGN_*` / `WIN_SIGN_*`). See [docs/CODE-SIGNING.md](./docs/CODE-SIGNING.md).
+
+**Outputs:**
+
+- Artifacts: `openfde-<platform>-sit-<run>-<sha>` (14-day retention)
+
+### Release — production (`env/.prod.env`)
 
 **Workflow:** [`.github/workflows/release.yml`](./.github/workflows/release.yml)
 
-**Trigger:** Actions → **Release** → **Run workflow**
+**Trigger:** Actions → **Release** → Run workflow → confirm `release`
 
-**Input:** type `release` in the confirm field.
+**Build env:** `OPENFDE_BUILD_ENV=prod` → loads `env/.prod.env`
 
-**What it does:**
+**Scripts:** `release:mac`, `release:win`
 
-1. Verifies release version (see below)
-2. Unit tests
-3. **Production** builds on macOS and Windows (`release:mac`, `release:win`) with `OPENFDE_BUILD_ENV=prod`
-4. Publishes installers and `latest*.yml` to GitHub Releases
+**Signing:** Same `MAC_SIGN_*` / `WIN_SIGN_*` secrets as CI (platform-specific per runner).
+
+**Output:** Upload to `s3://…/desktop/releases/stable/` (production update feed)
 
 ---
 
@@ -185,6 +190,8 @@ These scripts use `-m prod` and `env/.prod.env`. See [`docs/DESKTOP-RELEASES.md`
 
 Packaged apps check `{BASE_API}/desktop/releases/stable/` via `electron-updater` (generic provider). CI uploads installers to private S3; the update feed is served publicly (no sign-in).
 
+**macOS in-app install** requires signed + notarized release builds. See [docs/CODE-SIGNING.md](./docs/CODE-SIGNING.md).
+
 See [`docs/DESKTOP-RELEASES.md`](./docs/DESKTOP-RELEASES.md) and [`docs/RELEASE.md`](./docs/RELEASE.md).
 
 ---
@@ -194,6 +201,7 @@ See [`docs/DESKTOP-RELEASES.md`](./docs/DESKTOP-RELEASES.md) and [`docs/RELEASE.
 | Goal | Command / workflow |
 | --- | --- |
 | Run locally | `npm run dev` → `.dev.env` |
-| Internal test build | `npm run build:mac:sit` or CI workflow |
-| Public release | Release workflow + `env/.prod.env` |
+| PR / branch validation | **CI** workflow → `.sit.env`, signed sit artifacts |
+| Staging update feed | Same path as prod on staging API: `{BASE_API}/desktop/releases/stable/` (publish separately) |
+| Public production release | **Release** workflow → `.prod.env` → S3 `desktop/releases/stable/` |
 | Change API URLs | Edit the matching file in `env/` |

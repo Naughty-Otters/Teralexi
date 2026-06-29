@@ -95,6 +95,10 @@
   },
   "mac": {
     "icon": "build/icons/icon.icns",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "scripts/entitlements.mac.plist",
+    "entitlementsInherit": "scripts/entitlements.mac.plist",
     "extendInfo": {
       "CFBundleDisplayName": "OpenFDE",
       "CFBundleName": "OpenFDE"
@@ -106,6 +110,7 @@
   },
   "win": {
     "icon": "build/icons/icon.ico",
+    "signAndEditExecutable": true,
     "target": [
       "nsis"
     ]
