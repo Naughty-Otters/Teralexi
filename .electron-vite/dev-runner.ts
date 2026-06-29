@@ -1,5 +1,3 @@
-process.env.NODE_ENV = 'development'
-
 import readline from 'node:readline'
 import electron from 'electron'
 import chalk from 'chalk'
@@ -11,7 +9,9 @@ import { say } from 'cfonts'
 import { exec } from 'child_process'
 import type { ChildProcess } from 'child_process'
 import rollupOptions from './rollup.config'
-import { electronLog, getArgv, logStats, removeJunk } from './utils'
+import { applyBuildEnvFromArgv, electronLog, getArgv, logStats, removeJunk } from './utils'
+
+applyBuildEnvFromArgv()
 
 function escapeShellToken(token: string) {
   if (/^[A-Za-z0-9_./:-]+$/.test(token)) {

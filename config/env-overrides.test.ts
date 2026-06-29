@@ -97,4 +97,26 @@ APP_DEV_PORT=3000
     )
     expect(overrides.get('app.dev.port')).toBe('4000')
   })
+
+  it('loads staging overrides from .sit.env when OPENFDE_BUILD_ENV is sit', () => {
+    vi.mocked(existsSync).mockImplementation((target) =>
+      String(target).endsWith('/env/.sit.env'),
+    )
+    vi.mocked(readFileSync).mockReturnValue(
+      "app.metrics.graphqlUrl = 'http://staging.example/graphql'\n",
+    )
+
+    const overrides = loadEnvOverrides({
+      knownKeys: KNOWN_KEYS,
+      searchRoots: ['/app'],
+      processEnv: {
+        OPENFDE_BUILD_ENV: 'sit',
+        NODE_ENV: 'production',
+      },
+    })
+
+    expect(overrides.get('app.metrics.graphqlUrl')).toBe(
+      'http://staging.example/graphql',
+    )
+  })
 })

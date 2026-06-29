@@ -8,7 +8,9 @@ import json from '@rollup/plugin-json'
 import esbuild from 'rollup-plugin-esbuild'
 import obfuscator from 'rollup-plugin-obfuscator'
 import { defineConfig } from 'rollup'
-import { getConfig } from './utils'
+import { applyBuildEnvFromArgv, getConfig } from './utils'
+
+applyBuildEnvFromArgv()
 const config = getConfig()
 
 /** Native / heavy deps loaded from node_modules at runtime (not bundled). */
@@ -151,6 +153,9 @@ export default (env = 'production', type = 'main') => {
       replace({
         preventAssignment: true,
         'process.env.userConfig': config ? JSON.stringify(config) : '{}',
+        'process.env.OPENFDE_BUILD_ENV': JSON.stringify(
+          process.env.OPENFDE_BUILD_ENV ?? 'dev',
+        ),
       }),
       alias(pathAliases),
       nodeResolve({

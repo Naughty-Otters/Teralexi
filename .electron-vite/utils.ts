@@ -2,25 +2,43 @@ import { config } from 'dotenv'
 import { join } from 'path'
 import chalk from 'chalk'
 import cliConfig from '../config'
+import {
+  buildEnvToEnvFileName,
+  buildEnvToNodeEnv,
+  normalizeBuildEnv,
+  OPENFDE_BUILD_ENV_VAR,
+  type OpenFdeBuildEnv,
+} from '../config/build-env'
 import minimist from 'minimist'
 
 const argv = minimist(process.argv.slice(2))
-const rootResolve = (...pathSegments) => join(__dirname, '..', ...pathSegments)
+const rootResolve = (...pathSegments: string[]) =>
+  join(__dirname, '..', ...pathSegments)
 
 export const getEnv = () => argv['m']
 export const getArgv = () => argv
 
-const getEnvPath = () => {
-  if (
-    String(typeof getEnv()) === 'boolean' ||
-    String(typeof getEnv()) === 'undefined'
-  ) {
-    return rootResolve('env/.env')
+export function getBuildEnvMode(): OpenFdeBuildEnv {
+  if (process.env[OPENFDE_BUILD_ENV_VAR]?.trim()) {
+    return normalizeBuildEnv(process.env[OPENFDE_BUILD_ENV_VAR])
   }
-  return rootResolve(`env/.${getEnv()}.env`)
+  return normalizeBuildEnv(getEnv() ?? 'dev')
 }
 
-export const getConfig = () => config({ path: getEnvPath() }).parsed
+export function applyBuildEnvFromArgv(): OpenFdeBuildEnv {
+  const mode = getBuildEnvMode()
+  process.env[OPENFDE_BUILD_ENV_VAR] = mode
+  process.env.NODE_ENV = buildEnvToNodeEnv(mode)
+  return mode
+}
+
+const getEnvPath = () =>
+  rootResolve('env', buildEnvToEnvFileName(getBuildEnvMode()))
+
+export const getConfig = () => {
+  applyBuildEnvFromArgv()
+  return config({ path: getEnvPath() }).parsed
+}
 
 export const logStats = (proc: string, data: any) => {
   let log = ''
