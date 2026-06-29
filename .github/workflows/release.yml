@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   release:
-    name: Production release (${{ matrix.os }})
+    name: Production release (${{ matrix.platform }})
     if: inputs.confirm == 'release'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -26,9 +26,27 @@ jobs:
       matrix:
         include:
           - os: macos-latest
+            platform: mac
             npm_script: release:mac
+            mac_sign_certificate: ${{ secrets.MAC_SIGN_CERTIFICATE_BASE64 }}
+            mac_sign_certificate_password: ${{ secrets.MAC_SIGN_CERTIFICATE_PASSWORD }}
+            mac_sign_identity: ${{ secrets.MAC_SIGN_IDENTITY }}
+            mac_apple_id: ${{ secrets.APPLE_ID }}
+            mac_apple_app_specific_password: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+            mac_apple_team_id: ${{ secrets.APPLE_TEAM_ID }}
+            win_sign_certificate: ''
+            win_sign_certificate_password: ''
           - os: windows-latest
+            platform: win
             npm_script: release:win
+            mac_sign_certificate: ''
+            mac_sign_certificate_password: ''
+            mac_sign_identity: ''
+            mac_apple_id: ''
+            mac_apple_app_specific_password: ''
+            mac_apple_team_id: ''
+            win_sign_certificate: ${{ secrets.WIN_SIGN_CERTIFICATE_BASE64 }}
+            win_sign_certificate_password: ${{ secrets.WIN_SIGN_CERTIFICATE_PASSWORD }}
 
     steps:
       - name: Check out repository
@@ -54,10 +72,18 @@ jobs:
       - name: Run unit tests
         run: npm run test:unit
 
-      - name: Build production installers
+      - name: Build production installers (env/.prod.env)
         env:
           NODE_OPTIONS: --max-old-space-size=6144
           OPENFDE_BUILD_ENV: prod
+          MAC_SIGN_CERTIFICATE: ${{ matrix.mac_sign_certificate }}
+          MAC_SIGN_CERTIFICATE_PASSWORD: ${{ matrix.mac_sign_certificate_password }}
+          MAC_SIGN_IDENTITY: ${{ matrix.mac_sign_identity }}
+          MAC_APPLE_ID: ${{ matrix.mac_apple_id }}
+          MAC_APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.mac_apple_app_specific_password }}
+          MAC_APPLE_TEAM_ID: ${{ matrix.mac_apple_team_id }}
+          WIN_SIGN_CERTIFICATE: ${{ matrix.win_sign_certificate }}
+          WIN_SIGN_CERTIFICATE_PASSWORD: ${{ matrix.win_sign_certificate_password }}
         run: npm run ${{ matrix.npm_script }}
 
       - name: Configure AWS credentials
@@ -67,7 +93,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Upload release artifacts to S3
+      - name: Upload production release to S3
         env:
           S3_RELEASE_BUCKET: ${{ secrets.S3_RELEASE_BUCKET }}
           S3_RELEASE_PREFIX: desktop/releases/stable
@@ -77,7 +103,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: openfde-${{ matrix.os }}-prod
+          name: openfde-${{ matrix.platform }}-prod
           path: |
             build/*.dmg
             build/*.zip
