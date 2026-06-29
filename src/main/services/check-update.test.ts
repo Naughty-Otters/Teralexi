@@ -39,23 +39,18 @@ vi.mock('./web-content-send', () => ({
 }))
 
 vi.mock('./openfde-platform-config', () => ({
-  getOpenFdeBaseApiUrl: vi.fn(() => 'http://127.0.0.1:8000'),
   getOpenFdeDesktopReleasesFeedUrl: vi.fn(
     () => 'http://127.0.0.1:8000/desktop/releases/stable/',
   ),
 }))
 
-vi.mock('./openfde-server-auth', () => ({
-  getOpenFdeServerAccessToken: vi.fn(() => Promise.resolve('server-token')),
-}))
-
 import { app } from 'electron'
 import { autoUpdater } from 'electron-updater'
-import { getOpenFdeServerAccessToken } from './openfde-server-auth'
-import { getOpenFdeBaseApiUrl } from './openfde-platform-config'
+import { getOpenFdeDesktopReleasesFeedUrl } from './openfde-platform-config'
 import { webContentSend } from './web-content-send'
 import {
   AppUpdateManager,
+  canRunDesktopUpdateCheck,
   getAppUpdateManager,
   prepareDesktopAutoUpdater,
 } from './check-update'
@@ -67,13 +62,14 @@ describe('check-update', () => {
     vi.mocked(quitAndInstall).mockClear()
     vi.mocked(setFeedURL).mockClear()
     vi.mocked(webContentSend.updateMsg).mockClear()
-    vi.mocked(getOpenFdeServerAccessToken).mockResolvedValue('server-token')
-    vi.mocked(getOpenFdeBaseApiUrl).mockReturnValue('http://127.0.0.1:8000')
+    vi.mocked(getOpenFdeDesktopReleasesFeedUrl).mockReturnValue(
+      'http://127.0.0.1:8000/desktop/releases/stable/',
+    )
     Object.defineProperty(app, 'isPackaged', { value: true, configurable: true })
-    autoUpdater.requestHeaders = {}
+    autoUpdater.requestHeaders = { Authorization: 'Bearer stale' }
   })
 
-  it('prepareDesktopAutoUpdater configures generic feed and auth headers', async () => {
+  it('prepareDesktopAutoUpdater configures generic feed without auth headers', async () => {
     const prepared = await prepareDesktopAutoUpdater()
     expect(prepared.ok).toBe(true)
     if (prepared.ok) {
@@ -85,17 +81,15 @@ describe('check-update', () => {
       provider: 'generic',
       url: 'http://127.0.0.1:8000/desktop/releases/stable/',
     })
-    expect(autoUpdater.requestHeaders).toEqual({
-      Authorization: 'Bearer server-token',
-    })
+    expect(autoUpdater.requestHeaders).toEqual({})
   })
 
-  it('prepareDesktopAutoUpdater requires sign-in', async () => {
-    vi.mocked(getOpenFdeServerAccessToken).mockResolvedValue(null)
+  it('prepareDesktopAutoUpdater requires BASE_API feed URL', async () => {
+    vi.mocked(getOpenFdeDesktopReleasesFeedUrl).mockReturnValue('')
     const prepared = await prepareDesktopAutoUpdater()
     expect(prepared.ok).toBe(false)
     if (!prepared.ok) {
-      expect(prepared.error).toMatch(/Sign in/i)
+      expect(prepared.error).toMatch(/BASE_API/i)
     }
   })
 
@@ -111,8 +105,29 @@ describe('check-update', () => {
     expect(on).toHaveBeenCalled()
   })
 
-  it('skips update check when running unpackaged', async () => {
+  it('canRunDesktopUpdateCheck allows localhost feed in unpackaged dev', () => {
     Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
+    vi.mocked(getOpenFdeDesktopReleasesFeedUrl).mockReturnValue(
+      'http://127.0.0.1:8000/desktop/releases/stable/',
+    )
+    expect(canRunDesktopUpdateCheck()).toBe(true)
+    Object.defineProperty(app, 'isPackaged', { value: true, configurable: true })
+  })
+
+  it('canRunDesktopUpdateCheck blocks non-localhost feed in unpackaged dev', () => {
+    Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
+    vi.mocked(getOpenFdeDesktopReleasesFeedUrl).mockReturnValue(
+      'https://api.example.com/desktop/releases/stable/',
+    )
+    expect(canRunDesktopUpdateCheck()).toBe(false)
+    Object.defineProperty(app, 'isPackaged', { value: true, configurable: true })
+  })
+
+  it('skips update check when running unpackaged without localhost feed', async () => {
+    Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
+    vi.mocked(getOpenFdeDesktopReleasesFeedUrl).mockReturnValue(
+      'https://api.example.com/desktop/releases/stable/',
+    )
     const mainWindow = {
       webContents: {},
       isDestroyed: () => false,

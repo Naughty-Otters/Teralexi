@@ -2,11 +2,7 @@ import { autoUpdater } from 'electron-updater'
 import { app, BrowserWindow } from 'electron'
 import type { AppUpdateMessage, AppUpdatePhase } from '@shared/app-update'
 import { resolveAppVersion } from '@main/config/app-version'
-import { getOpenFdeServerAccessToken } from './openfde-server-auth'
-import {
-  getOpenFdeBaseApiUrl,
-  getOpenFdeDesktopReleasesFeedUrl,
-} from './openfde-platform-config'
+import { getOpenFdeDesktopReleasesFeedUrl } from './openfde-platform-config'
 import { webContentSend } from './web-content-send'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
 
@@ -23,29 +19,12 @@ export type PrepareDesktopAutoUpdaterResult =
   | { ok: false; error: string }
 
 export async function prepareDesktopAutoUpdater(): Promise<PrepareDesktopAutoUpdaterResult> {
-  const baseApiUrl = getOpenFdeBaseApiUrl()
-  if (!baseApiUrl) {
-    return {
-      ok: false,
-      error:
-        'Set BASE_API in env (maps to app.base.apiUrl) to enable authenticated updates.',
-    }
-  }
-
   const feedUrl = getOpenFdeDesktopReleasesFeedUrl()
   if (!feedUrl) {
     return {
       ok: false,
-      error: 'Desktop release feed URL is not configured.',
-    }
-  }
-
-  const bearerToken = await getOpenFdeServerAccessToken(baseApiUrl)
-  if (!bearerToken) {
-    return {
-      ok: false,
       error:
-        'Sign in with your OpenFDE Google account before checking for updates.',
+        'Set BASE_API in env (maps to app.base.apiUrl) to enable updates.',
     }
   }
 
@@ -53,11 +32,29 @@ export async function prepareDesktopAutoUpdater(): Promise<PrepareDesktopAutoUpd
     provider: 'generic',
     url: feedUrl,
   })
-  autoUpdater.requestHeaders = {
-    Authorization: `Bearer ${bearerToken}`,
-  }
+  autoUpdater.requestHeaders = {}
 
   return { ok: true, feedUrl }
+}
+
+/** Packaged builds always; unpackaged dev may check against localhost feeds only. */
+export function canRunDesktopUpdateCheck(): boolean {
+  if (app.isPackaged) return true
+  const feedUrl = getOpenFdeDesktopReleasesFeedUrl()
+  if (!feedUrl) return false
+  try {
+    const host = new URL(feedUrl).hostname.toLowerCase()
+    return host === 'localhost' || host === '127.0.0.1'
+  } catch {
+    return false
+  }
+}
+
+function desktopUpdateCheckBlockedMessage(): string {
+  if (app.isPackaged) {
+    return 'Set BASE_API in env (maps to app.base.apiUrl) to enable updates.'
+  }
+  return 'Updates from source are disabled unless BASE_API points at localhost (for local feed testing). Use a packaged build for production feeds.'
 }
 
 export class AppUpdateManager {
@@ -138,11 +135,11 @@ export class AppUpdateManager {
   }
 
   async checkUpdate(mainWindow: BrowserWindow) {
-    if (!app.isPackaged) {
-      log.info('Skipping update check in unpackaged app')
+    if (!canRunDesktopUpdateCheck()) {
+      log.info('Skipping update check', { isPackaged: app.isPackaged })
       this.mainWindow = mainWindow
       this.send(mainWindow, 'not-available', {
-        error: 'Updates are only available in installed builds.',
+        error: desktopUpdateCheckBlockedMessage(),
       })
       return
     }
@@ -194,7 +191,7 @@ export function getAppUpdateManager(): AppUpdateManager {
 }
 
 export async function scheduleStartupUpdateCheck(mainWindow: BrowserWindow) {
-  if (!app.isPackaged) return
+  if (!canRunDesktopUpdateCheck()) return
 
   setTimeout(async () => {
     if (mainWindow.isDestroyed()) return

@@ -174,7 +174,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
 import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { useAgentStore } from '@store/agent'
@@ -216,6 +216,9 @@ import MemorySetting from './settings/MemorySetting.vue'
 import ChatUiSetting from './settings/ChatUiSetting.vue'
 import DeveloperSetting from './settings/DeveloperSetting.vue'
 import AboutUpdatePanel from './settings/AboutUpdatePanel.vue'
+import {
+  registerSettingsTabHandler,
+} from '@renderer/composables/useAppUpdateNavigation'
 
 const emit = defineEmits<{ close: [] }>()
 
@@ -270,7 +273,7 @@ const tabs = computed(() => [
   { id: 'toolset' as SettingsTab, label: t.value.settings.tabs.toolset, requiresSignIn: false },
   { id: 'mcp' as SettingsTab, label: t.value.settings.tabs.mcp, requiresSignIn: true },
   { id: 'developer' as SettingsTab, label: t.value.settings.tabs.developer, requiresSignIn: true },
-  { id: 'about' as SettingsTab, label: t.value.settings.tabs.about, requiresSignIn: true },
+  { id: 'about' as SettingsTab, label: t.value.settings.tabs.about, requiresSignIn: false },
 ])
 
 const activeTabRequiresSignIn = computed(
@@ -311,11 +314,21 @@ function switchLlmVendor(tab: ProviderType) {
 }
 
 onMounted(() => {
+  registerSettingsTabHandler((tab) => {
+    if (tab === 'about' || tab === 'llm') {
+      switchTab(tab as SettingsTab)
+    }
+  })
+
   const pendingTab = sessionStorage.getItem('openfde.settingsTab')
-  if (pendingTab === 'llm') {
+  if (pendingTab === 'llm' || pendingTab === 'about') {
     sessionStorage.removeItem('openfde.settingsTab')
-    switchTab('llm')
+    switchTab(pendingTab as SettingsTab)
   }
+})
+
+onUnmounted(() => {
+  registerSettingsTabHandler(null)
 })
 </script>
 

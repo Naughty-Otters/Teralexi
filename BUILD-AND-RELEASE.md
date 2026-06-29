@@ -183,7 +183,7 @@ These scripts use `-m prod` and `env/.prod.env`. See [`docs/DESKTOP-RELEASES.md`
 
 ## Auto-update
 
-Packaged apps check `{BASE_API}/desktop/releases/stable/` via `electron-updater` (generic provider) with a Bearer token from Google sign-in. CI uploads installers to private S3; the API proxies reads — nothing is public-anonymous.
+Packaged apps check `{BASE_API}/desktop/releases/stable/` via `electron-updater` (generic provider). CI uploads installers to private S3; the update feed is served publicly (no sign-in).
 
 See [`docs/DESKTOP-RELEASES.md`](./docs/DESKTOP-RELEASES.md) and [`docs/RELEASE.md`](./docs/RELEASE.md).
 

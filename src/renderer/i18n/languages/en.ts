@@ -286,6 +286,12 @@ export const lang: AppLocaleBundle = {
     updateAvailableDescription:
       'OpenFDE v{version} is ready to download. Open Settings → About.',
   },
+  titleBar: {
+    updateAvailable: 'Update {version}',
+    updateDownloading: 'Downloading {version}…',
+    updateReady: 'Restart to install {version}',
+    openAbout: 'Open Settings → About to update',
+  },
   auth: {
     signInWithGoogle: 'Sign in with Google',
     signingIn: 'Signing in…',

@@ -8,7 +8,6 @@ export const SIGNED_IN_ONLY_SETTINGS_TABS = [
   'chat',
   'mcp',
   'developer',
-  'about',
 ] as const
 
 export type SignedInOnlySettingsTab =

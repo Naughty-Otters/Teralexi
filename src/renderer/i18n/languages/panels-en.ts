@@ -193,7 +193,7 @@ export const settingsPanelsEn: SettingsPanelLabels = {
   },
   about: {
     intro:
-      'OpenFDE desktop app. Installed builds check for updates via your signed-in OpenFDE account (authenticated feed on BASE_API).',
+      'OpenFDE desktop app. Installed builds check for updates from BASE_API (Settings → About).',
     sourceHint:
       'Running from source — auto-update applies only to packaged installs.',
   },

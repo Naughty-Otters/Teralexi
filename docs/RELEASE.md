@@ -1,9 +1,9 @@
 # Releasing OpenFDE
 
 > **See also:** [BUILD-AND-RELEASE.md](../BUILD-AND-RELEASE.md) — environment files, local builds, and GitHub Actions (CI vs Release).  
-> **Desktop updates:** [DESKTOP-RELEASES.md](./DESKTOP-RELEASES.md) — S3 publish + authenticated API feed.
+> **Desktop updates:** [DESKTOP-RELEASES.md](./DESKTOP-RELEASES.md) — S3 publish + public update feed.
 
-OpenFDE uses [Semantic Versioning](https://semver.org/). Installers are built from a **private GitHub repo** and published to **private S3**. Installed apps check for updates via `electron-updater` against `{BASE_API}/desktop/releases/stable/` with a Bearer token (Google sign-in).
+OpenFDE uses [Semantic Versioning](https://semver.org/). Installers are built from a **private GitHub repo** and published to **private S3**. Installed apps check for updates via `electron-updater` against `{BASE_API}/desktop/releases/stable/` (no sign-in required).
 
 ## Version source of truth
 
@@ -49,7 +49,7 @@ In GitHub **Settings → Secrets**, set:
 
 See [DESKTOP-RELEASES.md](./DESKTOP-RELEASES.md) for IAM scope (CI write-only on `desktop/releases/*`).
 
-Implement authenticated `GET /desktop/releases/stable/*` on your API before shipping updates to users.
+Implement public `GET /desktop/releases/stable/*` on your API or CDN before shipping updates to users.
 
 ### 3. Run the Release workflow
 
@@ -83,15 +83,15 @@ npm run release:upload-s3
 
 | When | Action |
 | ---- | ------ |
-| 30s after app launch | Silent check (packaged + signed in + `BASE_API` configured) |
-| Every 6 hours | Background re-check (same requirements) |
+| 30s after app launch | Silent check (packaged builds with `BASE_API` configured) |
+| Every 6 hours | Background re-check |
 | Settings → About | Manual “Check for updates” |
 | Update available | User clicks “Download update” |
 | Download complete | User clicks “Restart and install” |
 
-Requires OpenFDE Google sign-in (server JWT). Dev / unpackaged runs skip auto-update checks.
+Dev / unpackaged runs skip auto-update checks.
 
-Feed URL: `{BASE_API}/desktop/releases/stable/` (override with `app.desktop.releasesUrl`).
+Feed URL: `{BASE_API}/desktop/releases/stable/` (override with `app.desktop.releasesUrl`). No authentication.
 
 ## Code signing (before public launch)
 
@@ -110,10 +110,10 @@ Unsigned builds can still be published for internal testing; users may see OS se
 
 - [ ] S3 bucket + IAM (CI write, API read)
 - [ ] GitHub Actions secrets (`AWS_*`, `S3_RELEASE_BUCKET`)
-- [ ] API routes for authenticated `GET /desktop/releases/stable/*`
+- [ ] Public `GET /desktop/releases/stable/*` (API or CDN in front of S3)
 - [ ] Production `BASE_API` in `env/.prod.env`
 - [ ] Set up code signing (macOS + Windows)
 - [ ] Bump version, update `CHANGELOG.md`, push
 - [ ] Run the **Release** workflow with confirm `release`
 - [ ] Verify S3 keys: `latest-mac.yml`, `latest.yml`, installers
-- [ ] Install current version, publish next, confirm in-app update flow (signed in)
+- [ ] Install current version, publish next, confirm in-app update flow

@@ -5,7 +5,7 @@ export const OPENFDE_PLATFORM_PATHS = {
   graphql: 'graphql',
   googleAuthLogin: 'auth/login',
   supportUpload: 'support/upload',
-  /** Authenticated electron-updater generic feed (stable channel). */
+  /** Public electron-updater generic feed (stable channel). */
   desktopReleases: 'desktop/releases/stable',
 } as const
 
