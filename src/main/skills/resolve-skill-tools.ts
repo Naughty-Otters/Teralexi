@@ -1,5 +1,6 @@
 import type { SkillTool } from './types'
 import { MANDATORY_TOOL_NAMES } from '@shared/agent/mandatory-tools'
+import { NO_TOOLSET_EXPANSION_SKILL_IDS } from '@shared/agent/skill-workspace-tool-defaults'
 import { PLAN_MODE_ALWAYS_IN_CATALOG_TOOL_NAMES, PLAN_MODE_TOOL_NAMES } from '@toolSet/planning/constants'
 import { UNIVERSAL_SUB_AGENT_TOOL_NAMES } from '@toolSet/sub-agents/constants'
 
@@ -9,6 +10,24 @@ const UNIVERSAL_GLOBAL_TOOL_NAMES = new Set<string>([
   ...PLAN_MODE_ALWAYS_IN_CATALOG_TOOL_NAMES,
   ...UNIVERSAL_SUB_AGENT_TOOL_NAMES,
 ])
+
+/** Plan/sub-agent tools without automatic file/git/workspace reads. */
+const SANDBOX_ONLY_UNIVERSAL_TOOL_NAMES = new Set<string>([
+  ...MANDATORY_TOOL_NAMES,
+  ...PLAN_MODE_TOOL_NAMES,
+  ...UNIVERSAL_SUB_AGENT_TOOL_NAMES,
+])
+
+function universalGlobalToolNamesForSkill(skillId?: string): Set<string> {
+  if (
+    skillId &&
+    (NO_TOOLSET_EXPANSION_SKILL_IDS as readonly string[]).includes(skillId) &&
+    skillId === 'default'
+  ) {
+    return SANDBOX_ONLY_UNIVERSAL_TOOL_NAMES
+  }
+  return UNIVERSAL_GLOBAL_TOOL_NAMES
+}
 
 /** Tag prefix for tools owned by a single skill (`actions/`). */
 export function skillActionTag(skillId: string): string {
@@ -39,18 +58,20 @@ export function resolveSkillToolCatalog(
   globalTools: SkillTool[],
   skillActionTools: SkillTool[],
   allowedTools?: string[],
+  skillId?: string,
 ): SkillTool[] {
   const actionNames = new Set(skillActionTools.map((tool) => tool.name))
   const allowed = (allowedTools ?? [])
     .map((name) => name.trim().replace(/^`|`$/g, ''))
     .filter(Boolean)
+  const universal = universalGlobalToolNamesForSkill(skillId)
 
   const globalFiltered =
     allowed.length > 0
       ? globalTools.filter(
           (tool) =>
             !actionNames.has(tool.name) &&
-            (allowed.includes(tool.name) || UNIVERSAL_GLOBAL_TOOL_NAMES.has(tool.name)),
+            (allowed.includes(tool.name) || universal.has(tool.name)),
         )
       : globalTools.filter((tool) => !actionNames.has(tool.name))
 

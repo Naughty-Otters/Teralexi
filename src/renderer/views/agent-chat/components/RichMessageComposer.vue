@@ -3,10 +3,9 @@
     class="rich-composer"
     :class="{
       'rich-composer--picker-open':
-        mentionOpen || subAgentMentionOpen || slashOpen || agentPickerOpen,
+        mentionOpen || slashOpen || agentPickerOpen,
       'rich-composer--agent-picker-open': agentPickerOpen,
-      'rich-composer--editor-menu-open':
-        mentionOpen || subAgentMentionOpen || slashOpen,
+      'rich-composer--editor-menu-open': mentionOpen || slashOpen,
     }"
   >
     <div class="rich-composer-toolbar" role="toolbar" aria-label="Message composer">
@@ -15,6 +14,7 @@
           ref="agentPickerRef"
           v-model:highlight-index="agentPickerHighlightIndex"
           :selected-agent-id="selectedAgentId"
+          :agents="chatAgents"
           :agent-options="agentOptions"
           @select-agent="emit('select-agent', $event)"
           @menu-open-change="agentPickerOpen = $event"
@@ -132,17 +132,6 @@
         @highlight="slashHighlightIndex = $event"
         @close="onSlashMenuClose"
       />
-      <ComposerSubAgentMentionMenu
-        ref="subAgentMentionMenuRef"
-        :open="subAgentMentionOpen"
-        :query="subAgentMentionQuery"
-        :items="subAgentMentionItems"
-        :active-index="subAgentMentionHighlightIndex"
-        :enabled="subAgentMentionEnabled"
-        @select="onSubAgentMentionSelect"
-        @highlight="subAgentMentionHighlightIndex = $event"
-        @close="onSubAgentMentionMenuClose"
-      />
       <ComposerFileMentionMenu
         :open="mentionOpen"
         :query="mentionQuery"
@@ -161,19 +150,18 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { Markdown } from '@tiptap/markdown'
 import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor, type Editor } from '@tiptap/vue-3'
-import { ref, watch, onBeforeUnmount, onMounted, nextTick } from 'vue'
+import { ref, watch, onBeforeUnmount, onMounted, nextTick, computed } from 'vue'
 import AgentPickerButton from './AgentPickerButton.vue'
+import {
+  buildAgentPickerEntries,
+  listSelectableAgentPickerOptions,
+  type SkillGroupAgentRef,
+} from '@shared/agent/skill-groups'
 import {
   registerComposerAgentPicker,
   unregisterComposerAgentPicker,
 } from '@renderer/composables/useComposerAgentPicker'
 import ComposerFileMentionMenu from './ComposerFileMentionMenu.vue'
-import ComposerSubAgentMentionMenu from './ComposerSubAgentMentionMenu.vue'
-import {
-  filterSubAgentMentionMenuItems,
-  shouldPreferSubAgentMentionMenu,
-} from './composer-sub-agent-mentions'
-import type { SubAgentTarget } from '@shared/agent/sub-agent-targets'
 import ComposerSlashCommandMenu from './ComposerSlashCommandMenu.vue'
 import WorkspaceSelector from './WorkspaceSelector.vue'
 import { useWorkspaceStore } from '@store/workspace'
@@ -190,12 +178,12 @@ const props = withDefaults(
     placeholder?: string
     selectedAgentId: string | null
     agentOptions: Array<{ id: string; name: string }>
+    chatAgents?: SkillGroupAgentRef[]
     conversationId?: string | null
     workspaceDisabled?: boolean
     /** When false, only universal slash commands (/compact, /help) are offered. */
     codingAgent?: boolean
-    subAgentTargets?: SubAgentTarget[]
-    subAgentMentionEnabled?: boolean
+    subAgentSlashEnabled?: boolean
     /** When true, hides agent picker and workspace selector in the toolbar. */
     hideContextSelectors?: boolean
     disabled?: boolean
@@ -206,10 +194,10 @@ const props = withDefaults(
     placeholder: 'Message…',
     selectedAgentId: null,
     agentOptions: () => [],
+    chatAgents: () => [],
     conversationId: null,
     workspaceDisabled: false,
-    subAgentTargets: () => [],
-    subAgentMentionEnabled: false,
+    subAgentSlashEnabled: false,
     hideContextSelectors: false,
     disabled: false,
     stagedAttachments: () => [],
@@ -235,24 +223,33 @@ const mentionLoading = ref(false)
 const mentionRange = ref<{ from: number; to: number } | null>(null)
 let mentionSearchToken = 0
 
-const subAgentMentionOpen = ref(false)
-const subAgentMentionQuery = ref('')
-const subAgentMentionItems = ref<SubAgentTarget[]>([])
-const subAgentMentionRange = ref<{ from: number; to: number } | null>(null)
-const subAgentMentionHighlightIndex = ref(0)
-
 const slashOpen = ref(false)
 const slashQuery = ref('')
 const slashItems = ref<ComposerSlashCommand[]>([])
 const slashRange = ref<{ from: number; to: number } | null>(null)
 const slashHighlightIndex = ref(0)
 const slashMenuRef = ref<InstanceType<typeof ComposerSlashCommandMenu> | null>(null)
-const subAgentMentionMenuRef = ref<InstanceType<typeof ComposerSubAgentMentionMenu> | null>(
-  null,
-)
 const agentPickerRef = ref<InstanceType<typeof AgentPickerButton> | null>(null)
 const agentPickerOpen = ref(false)
 const agentPickerHighlightIndex = ref(0)
+
+const selectableAgentCount = computed(() => {
+  if (props.chatAgents.length > 0) {
+    return listSelectableAgentPickerOptions(
+      buildAgentPickerEntries(props.chatAgents),
+    ).length
+  }
+  return props.agentOptions.length
+})
+
+function selectableAgentAt(index: number): { id: string } | undefined {
+  if (props.chatAgents.length > 0) {
+    return listSelectableAgentPickerOptions(
+      buildAgentPickerEntries(props.chatAgents),
+    )[index]
+  }
+  return props.agentOptions[index]
+}
 
 const workspaceStore = useWorkspaceStore()
 
@@ -300,66 +297,6 @@ function closeMentionMenu() {
   mentionLoading.value = false
 }
 
-function closeSubAgentMentionMenu() {
-  subAgentMentionOpen.value = false
-  subAgentMentionQuery.value = ''
-  subAgentMentionItems.value = []
-  subAgentMentionRange.value = null
-  subAgentMentionHighlightIndex.value = 0
-}
-
-function onSubAgentMentionMenuClose() {
-  closeSubAgentMentionMenu()
-  editor.value?.chain().focus().run()
-}
-
-function refreshSubAgentMentionMenu(ed: Editor): boolean {
-  const hit = getMentionAtCursor(ed)
-  if (
-    !hit ||
-    !shouldPreferSubAgentMentionMenu(
-      hit.query,
-      props.subAgentMentionEnabled,
-      props.subAgentTargets,
-    )
-  ) {
-    closeSubAgentMentionMenu()
-    return false
-  }
-
-  closeMentionMenu()
-  const wasOpen = subAgentMentionOpen.value
-  const queryChanged = subAgentMentionQuery.value !== hit.query
-  subAgentMentionOpen.value = true
-  subAgentMentionQuery.value = hit.query
-  subAgentMentionRange.value = { from: hit.from, to: hit.to }
-  subAgentMentionItems.value = filterSubAgentMentionMenuItems(
-    props.subAgentTargets,
-    hit.query,
-  )
-  if (!wasOpen || queryChanged) {
-    subAgentMentionHighlightIndex.value = 0
-  } else if (subAgentMentionHighlightIndex.value >= subAgentMentionItems.value.length) {
-    subAgentMentionHighlightIndex.value = Math.max(
-      0,
-      subAgentMentionItems.value.length - 1,
-    )
-  }
-  return true
-}
-
-function onSubAgentMentionSelect(item: SubAgentTarget) {
-  const ed = editor.value
-  const range = subAgentMentionRange.value
-  if (!ed || !range) return
-  const insert = `@${item.mentionSlug} `
-  ed.chain()
-    .focus()
-    .insertContentAt({ from: range.from, to: range.to }, insert)
-    .run()
-  closeSubAgentMentionMenu()
-}
-
 function getSlashCommandAtCursor(ed: Editor): {
   query: string
   from: number
@@ -384,7 +321,7 @@ function refreshSlashMenu(ed: Editor) {
   const items = filterSlashCommands(
     hit.query,
     props.codingAgent ?? false,
-    props.subAgentMentionEnabled,
+    props.subAgentSlashEnabled,
   )
   if (items.length === 0) {
     closeSlashMenu()
@@ -433,33 +370,16 @@ async function refreshComposerMenus(ed: Editor) {
   const slashHit = getSlashCommandAtCursor(ed)
   if (slashHit) {
     closeMentionMenu()
-    closeSubAgentMentionMenu()
     refreshSlashMenu(ed)
     return
   }
   closeSlashMenu()
-
-  const mentionHit = getMentionAtCursor(ed)
-  if (mentionHit && refreshSubAgentMentionMenu(ed)) {
-    return
-  }
-  closeSubAgentMentionMenu()
   await refreshMentionMenu(ed)
 }
 
 async function refreshMentionMenu(ed: Editor) {
   const hit = getMentionAtCursor(ed)
   if (!hit || !props.conversationId?.trim()) {
-    closeMentionMenu()
-    return
-  }
-  if (
-    shouldPreferSubAgentMentionMenu(
-      hit.query,
-      props.subAgentMentionEnabled,
-      props.subAgentTargets,
-    )
-  ) {
     closeMentionMenu()
     return
   }
@@ -546,34 +466,18 @@ watch(
   },
 )
 
-watch(
-  () => subAgentMentionItems.value.length,
-  (len) => {
-    if (subAgentMentionHighlightIndex.value >= len) {
-      subAgentMentionHighlightIndex.value = Math.max(0, len - 1)
-    }
-  },
-)
-
 const SubmitOnEnter = Extension.create({
   name: 'submitOnEnter',
   addKeyboardShortcuts() {
     return {
       ArrowDown: () => {
         if (agentPickerOpen.value) {
-          const len = props.agentOptions.length
+          const len = selectableAgentCount.value
           if (len > 0) {
             agentPickerHighlightIndex.value =
               (agentPickerHighlightIndex.value + 1) % len
             agentPickerRef.value?.scrollToHighlight()
           }
-          return true
-        }
-        if (subAgentMentionOpen.value && subAgentMentionItems.value.length > 0) {
-          subAgentMentionMenuRef.value?.moveHighlight(
-            subAgentMentionHighlightIndex.value,
-            1,
-          )
           return true
         }
         if (!slashOpen.value || slashItems.value.length === 0) return false
@@ -584,19 +488,12 @@ const SubmitOnEnter = Extension.create({
       },
       ArrowUp: () => {
         if (agentPickerOpen.value) {
-          const len = props.agentOptions.length
+          const len = selectableAgentCount.value
           if (len > 0) {
             agentPickerHighlightIndex.value =
               (agentPickerHighlightIndex.value - 1 + len) % len
             agentPickerRef.value?.scrollToHighlight()
           }
-          return true
-        }
-        if (subAgentMentionOpen.value && subAgentMentionItems.value.length > 0) {
-          subAgentMentionMenuRef.value?.moveHighlight(
-            subAgentMentionHighlightIndex.value,
-            -1,
-          )
           return true
         }
         if (!slashOpen.value || slashItems.value.length === 0) return false
@@ -608,16 +505,12 @@ const SubmitOnEnter = Extension.create({
       },
       Tab: () => {
         if (agentPickerOpen.value) {
-          const len = props.agentOptions.length
+          const len = selectableAgentCount.value
           if (len > 0) {
             agentPickerHighlightIndex.value =
               (agentPickerHighlightIndex.value + 1) % len
             agentPickerRef.value?.scrollToHighlight()
           }
-          return true
-        }
-        if (subAgentMentionOpen.value && subAgentMentionItems.value.length > 0) {
-          subAgentMentionMenuRef.value?.focusActiveItem()
           return true
         }
         if (!slashOpen.value || slashItems.value.length === 0) return false
@@ -627,10 +520,6 @@ const SubmitOnEnter = Extension.create({
       Escape: () => {
         if (agentPickerOpen.value) {
           agentPickerRef.value?.closeMenu()
-          return true
-        }
-        if (subAgentMentionOpen.value) {
-          onSubAgentMentionMenuClose()
           return true
         }
         if (slashOpen.value) {
@@ -646,16 +535,11 @@ const SubmitOnEnter = Extension.create({
       Enter: () => {
         if (this.editor.view.composing) return false
         if (agentPickerOpen.value) {
-          const agent = props.agentOptions[agentPickerHighlightIndex.value]
+          const agent = selectableAgentAt(agentPickerHighlightIndex.value)
           if (agent) {
             emit('select-agent', agent.id)
             agentPickerRef.value?.closeMenu()
           }
-          return true
-        }
-        if (subAgentMentionOpen.value && subAgentMentionItems.value.length > 0) {
-          const item = subAgentMentionItems.value[subAgentMentionHighlightIndex.value]
-          if (item) onSubAgentMentionSelect(item)
           return true
         }
         if (slashOpen.value && slashItems.value.length > 0) {

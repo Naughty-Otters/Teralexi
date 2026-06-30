@@ -68,6 +68,20 @@ export interface SkillProperties {
    * [MIN, MAX]_TOOL_LOOP_MAX_ITERATIONS. Falls back to the default when unset.
    */
   maxIterations?: number
+  /** Skill family id for grouped UI (e.g. `coding`). From `group` in properties.md. */
+  skillGroup?: string
+  /** Human label for the family (e.g. `Coding`). From `group_label`. */
+  skillGroupLabel?: string
+  /** Variant key within the group (e.g. `review`). From `variant`. */
+  skillVariant?: string
+  /** Human label for the variant (e.g. `Review`). From `variant_label`. */
+  skillVariantLabel?: string
+  /** Sort order for group sections in the agent picker. From `group_order`. */
+  skillGroupOrder?: number
+  /** Sort order within a group. From `variant_order`. */
+  skillVariantOrder?: number
+  /** Primary/default variant when picking the group. From `group_primary`. */
+  skillGroupPrimary?: boolean
 }
 
 // ── Constraints ───────────────────────────────────────────────────────────

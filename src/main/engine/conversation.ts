@@ -597,7 +597,7 @@ async function executeSubAgentMentionDelegation(
     return {
       finalContent: '',
       hasError: true,
-      errorMessage: '@ sub-agent mentions are unavailable while plan mode is active.',
+      errorMessage: '/sub-agent delegation is unavailable while plan mode is active.',
     }
   }
 

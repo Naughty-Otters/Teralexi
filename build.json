@@ -6,7 +6,8 @@
     "**/node_modules/node-pty/**",
     "**/node_modules/esbuild/**",
     "**/node_modules/@esbuild/**",
-    "config/**"
+    "config/**",
+    ".openfde/**"
   ],
   "electronLanguages": [
     "en-US"
@@ -42,6 +43,7 @@
     "dist/electron/**/*",
     "config/**/*",
     "env/**/*",
+    ".openfde/**/*",
     "!**/*.{map,tsbuildinfo}",
     "!**/*.test.{ts,tsx,js,jsx,mjs,cjs}",
     "!**/*.integration.test.{ts,tsx,js,jsx,mjs,cjs}",

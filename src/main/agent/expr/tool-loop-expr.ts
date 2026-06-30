@@ -74,7 +74,7 @@ import { INVOKE_AGENT_TOOL_NAME, SUB_AGENT_TOOL_NAMES } from '@toolSet/sub-agent
 import {
   buildSubAgentCatalog,
   formatSubAgentToolSuffix,
-} from '../delegation/sub-agent-catalog'
+} from '../delegation/skill-routing-catalog'
 import { applyRuntimePlanModeGate } from '../coding/plan-mode-runtime-gate'
 import {
   isPlanModeTodosAllDoneOnDisk,

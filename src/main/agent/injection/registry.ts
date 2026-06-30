@@ -6,6 +6,7 @@ import { validationRulesInjector } from './injectors/validation-rules'
 import { runScriptPreferenceInjector } from './injectors/run-script-preference'
 import { taskTrackingInjector } from './injectors/task-tracking'
 import { memoryPersonaInjector } from './injectors/memory-persona'
+import { projectRulesInjector } from './injectors/project-rules'
 import { codingModeInstructionsInjector } from './injectors/coding-mode-instructions'
 import { previousStepInjector } from './injectors/previous-step'
 import { sandboxStructureInjector } from './injectors/sandbox-structure'
@@ -36,6 +37,7 @@ const ALL_INJECTORS: AgentInjector[] = [
   runScriptPreferenceInjector,
   taskTrackingInjector,
   memoryPersonaInjector,
+  projectRulesInjector,
   subAgentsInjector,
   codingModeInstructionsInjector,
   previousStepInjector,

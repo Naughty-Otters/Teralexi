@@ -27,22 +27,17 @@ describe('bundled skills (integration)', () => {
     )
   })
 
-  it('keeps git_* tools in default when github skill is absent', async () => {
+  it('default skill is sandbox-only without file or git tools', async () => {
     const globalTools = await loadToolSetTools()
     const { buildBundledSkillDefinitions } = await import('./bundled-skills')
     const skills = await buildBundledSkillDefinitions(globalTools)
-    const github = skills.find((s) => s.id === 'github')
     const defaultSkill = skills.find((s) => s.id === 'default')
 
-    expect(github).toBeUndefined()
-    expect(defaultSkill?.tools.some((t) => t.name === 'git_status')).toBe(true)
-    expect(defaultSkill?.tools.some((t) => t.name === 'read_file')).toBe(true)
-    expect(defaultSkill?.tools.some((t) => t.name === 'github_pr_list')).toBe(
-      false,
-    )
-    expect(defaultSkill?.tools.some((t) => t.name === 'github_auth_status')).toBe(
-      false,
-    )
+    expect(defaultSkill).toBeDefined()
+    expect(defaultSkill?.tools.some((t) => t.name === 'run_script')).toBe(true)
+    expect(defaultSkill?.tools.some((t) => t.name === 'web_search')).toBe(true)
+    expect(defaultSkill?.tools.some((t) => t.name === 'read_file')).toBe(false)
+    expect(defaultSkill?.tools.some((t) => t.name === 'git_status')).toBe(false)
   })
 
   it('documents catalog is allowed toolSet plus action tools only', async () => {

@@ -13,6 +13,9 @@ import {
 import { classifyTaskComplexity } from '../expr/task-complexity-router'
 import { hasRecentPlanExecutionCompleted } from './plan-mode-session-reminders'
 import { isSubAgentAgentRun } from '../run/sub-agent-run-policy'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('agent.auto-plan-mode')
 
 export function canAutoActivatePlanMode(
   conversationId: string | undefined,
@@ -61,6 +64,19 @@ export function heuristicTaskLooksComplex(userMessage: string): boolean {
   return complexPatterns.some((pattern) => pattern.test(text))
 }
 
+/** Review / audit requests should not auto-enter explore mode or call the silent router. */
+export function heuristicTaskLooksReviewOrFocused(userMessage: string): boolean {
+  const text = userMessage.trim()
+  if (!text) return false
+  const patterns = [
+    /\bcode\s+\w*rev\w*\b/i,
+    /\breview\b.*\b(code|changes|diff|pr|pull request|workspace|branch)\b/i,
+    /\b(pr|pull request)\s+review\b/i,
+    /\b(audit|inspect)\b.*\b(code|changes|diff|pr)\b/i,
+  ]
+  return patterns.some((pattern) => pattern.test(text))
+}
+
 /**
  * In normal coding mode, auto-enter read-only explore mode when the task looks complex.
  * Runs silently (no Thinking pipeline step / bubble).
@@ -78,6 +94,10 @@ export async function maybeAutoActivatePlanMode(
   const userMessage = ctx.getLatestUserMessageContent().trim()
   if (!userMessage) return false
 
+  if (heuristicTaskLooksReviewOrFocused(userMessage)) {
+    return false
+  }
+
   if (heuristicTaskLooksComplex(userMessage)) {
     activatePlanModeForComplexTask(
       conversationId,
@@ -87,7 +107,17 @@ export async function maybeAutoActivatePlanMode(
     return true
   }
 
-  const routing = await classifyTaskComplexity(ctx)
+  let routing: Awaited<ReturnType<typeof classifyTaskComplexity>> = null
+  try {
+    routing = await classifyTaskComplexity(ctx)
+  } catch (err) {
+    log.warn('Silent task router failed; continuing without auto explore mode', {
+      conversationId,
+      skillId: ctx.opts.skillId,
+      err,
+    })
+    return false
+  }
   if (routing?.execution_mode !== 'planning') return false
 
   activatePlanModeForComplexTask(

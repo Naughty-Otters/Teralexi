@@ -9,6 +9,7 @@ import type {
 import type { SkillDefinition } from './skill-models'
 import { normalizeSkillFileText } from './skill-path'
 import { parseSkillVisibility } from './skill-visibility'
+import { parseSkillGroupFromFrontmatter } from '@shared/agent/skill-groups'
 import { SKILL_MARKDOWN_LLM, SKILL_MARKDOWN_SECTIONS } from './llm-constants'
 
 /** Parse simple `key: value` frontmatter (no nested YAML needed) */
@@ -165,6 +166,7 @@ export function parseSkillMarkdown(
     visibility: parseSkillVisibility(fm.visibility as string | undefined),
     ...(allowedTools.length > 0 ? { allowedTools } : {}),
     ...(maxIterations != null ? { maxIterations } : {}),
+    ...parseSkillGroupFromFrontmatter(fm as Record<string, unknown>),
   }
 
   const summaryText =

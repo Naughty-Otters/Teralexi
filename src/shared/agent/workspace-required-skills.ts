@@ -1,3 +1,5 @@
+import { skillIsCodingFamily } from './coding-agent'
+
 /** Skill folder ids that require a user workspace folder before sending messages. */
 export const WORKSPACE_REQUIRED_SKILL_IDS = ['coding'] as const
 
@@ -17,6 +19,7 @@ export function resolveAgentSkillId(agent: {
 export function skillRequiresWorkspace(skillId: string | null | undefined): boolean {
   const id = skillId?.trim()
   if (!id) return false
+  if (skillIsCodingFamily(id)) return true
   return (WORKSPACE_REQUIRED_SKILL_IDS as readonly string[]).includes(id)
 }
 

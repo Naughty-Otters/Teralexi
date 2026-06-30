@@ -71,6 +71,12 @@ export type EngineAgent = {
   compiledArtifact?: SkillCompiledArtifact
   compilationStatus?: 'pending' | 'ready' | 'failed' | 'missing'
   stageLlmSettings?: AgentStageLlmSettings
+  enabled?: boolean
+  skillGroup?: string
+  skillGroupLabel?: string
+  skillVariant?: string
+  skillVariantLabel?: string
+  skillVariantOrder?: number
 }
 
 function buildStageLlmSettings(
@@ -172,6 +178,16 @@ function mergeSkillAgentWithStoredConfig(
       saved?.model ?? skillAgent.model,
       saved,
     ),
+    enabled: saved?.enabled ?? skillAgent.enabled,
+    ...(skillAgent.skillGroup
+      ? {
+          skillGroup: skillAgent.skillGroup,
+          skillGroupLabel: skillAgent.skillGroupLabel,
+          skillVariant: skillAgent.skillVariant,
+          skillVariantLabel: skillAgent.skillVariantLabel,
+          skillVariantOrder: skillAgent.skillVariantOrder,
+        }
+      : {}),
   }
   merged.executionSteps = normalizeExecutionSteps(merged) as AgentExecutionSteps
   if (skillAgent.compiledArtifact?.thinking.instructions.trim()) {

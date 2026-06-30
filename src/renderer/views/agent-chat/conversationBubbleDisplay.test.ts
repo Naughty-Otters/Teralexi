@@ -157,6 +157,24 @@ describe('filterVisibleConversationBubbles', () => {
     expect(visible.some((s) => s.id === 'ThinkingStep')).toBe(true)
   })
 
+  it('keeps only the latest agentic run section when configured', () => {
+    const visible = filterVisibleConversationBubbles(
+      [
+        ...sections,
+        {
+          id: 'toolLoop',
+          title: 'Tool loop again',
+          bodyHtml: '<p>more tools</p>',
+          status: 'done',
+        },
+      ],
+      { toolCallListDisplay: 'latest' },
+    )
+    expect(
+      visible.filter((s) => AGENTIC_RUN_CONVERSATION_SECTION_IDS.has(s.id)),
+    ).toEqual([expect.objectContaining({ id: 'toolLoop' })])
+  })
+
   it('hides thinking sections when thinking bubbles hidden', () => {
     const visible = filterVisibleConversationBubbles(sections, {
       thinkingBubbleDisplay: 'none',

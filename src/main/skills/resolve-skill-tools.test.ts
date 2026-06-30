@@ -58,6 +58,29 @@ describe('resolveSkillToolCatalog', () => {
     ])
   })
 
+  it('default skill omits plan-mode file/git reads from universal catalog', () => {
+    const globalWithUniversal = [
+      stubTool('read_file'),
+      stubTool('git_status'),
+      stubTool('web_search'),
+      stubTool('run_script'),
+      stubTool('enter_plan_mode'),
+      stubTool('invoke_agent'),
+    ]
+    const catalog = resolveSkillToolCatalog(
+      globalWithUniversal,
+      [],
+      ['run_script', 'web_search'],
+      'default',
+    )
+    expect(catalog.map((t) => t.name)).toEqual([
+      'web_search',
+      'run_script',
+      'enter_plan_mode',
+      'invoke_agent',
+    ])
+  })
+
   it('includes all global tools when allowed_tools is unset', () => {
     const actions = [stubTool('create_spreadsheet')]
     const catalog = resolveSkillToolCatalog(global, actions)

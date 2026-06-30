@@ -8,12 +8,14 @@ import { resolveAppRoot } from './config/app-paths'
 configureAppBranding()
 initStaticPaths()
 
-import { initializeopenfdeHome } from '@config/openfde-home'
+import { initializeopenfdeHome, getopenfdeRulesDir } from '@config/openfde-home'
 import { isPackagedApp } from './config/app-paths'
+import { seedBundledDefaultRulesIfMissing } from './config/bundled-default-rules'
 import { clearSkillModuleCache, loadToolSetTools } from '@main/skills/skill-module-loader'
 import { ensureClientId } from '@main/services/client-identity'
 
 initializeopenfdeHome(app)
+seedBundledDefaultRulesIfMissing(getopenfdeRulesDir())
 ensureClientId()
 // Dev-only: drop stale esbuild bundles when source changes frequently.
 if (!isPackagedApp()) {

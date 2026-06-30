@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { expandSkillAllowedToolsForCatalog } from '@shared/agent/skill-workspace-tool-defaults'
 import { loadToolSetTools } from './skill-module-loader'
 import { resolveSkillToolCatalog } from './resolve-skill-tools'
 import {
@@ -24,10 +25,16 @@ describe('coding skill catalog', () => {
   it('allowed_tools in properties.md resolve to registered toolSet tools', async () => {
     const md = readFileSync(CODING_PROPERTIES, 'utf-8')
     const allowed = parseAllowedToolsFromProperties(md)
-    expect(allowed.length).toBeGreaterThan(10)
+    expect(allowed.length).toBeGreaterThan(5)
+    expect(allowed).not.toContain('run_script')
 
     const globalTools = await loadToolSetTools()
-    const catalog = resolveSkillToolCatalog(globalTools, [], allowed)
+    const expanded = expandSkillAllowedToolsForCatalog(
+      'coding',
+      globalTools,
+      allowed,
+    )
+    const catalog = resolveSkillToolCatalog(globalTools, [], expanded)
     const catalogNames = new Set(catalog.map((t) => t.name))
 
     for (const name of allowed) {
@@ -47,7 +54,13 @@ describe('coding skill catalog', () => {
 
   it('includes workspace file CRUD and verification tools coding workflow needs', async () => {
     const md = readFileSync(CODING_PROPERTIES, 'utf-8')
-    const allowed = new Set(parseAllowedToolsFromProperties(md))
+    const allowed = new Set(
+      expandSkillAllowedToolsForCatalog(
+        'coding',
+        await loadToolSetTools(),
+        parseAllowedToolsFromProperties(md),
+      ),
+    )
     const required = [
       'read_file',
       'edit_file',

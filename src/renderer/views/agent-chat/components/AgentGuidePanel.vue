@@ -3,36 +3,57 @@
     <h2 class="agent-guide__title">{{ t.agentGuide.title }}</h2>
     <p class="agent-guide__subtitle">{{ t.agentGuide.subtitle }}</p>
 
-    <div class="agent-guide__grid">
-      <button
-        v-for="agent in agents"
-        :key="agent.id"
-        type="button"
-        class="agent-guide__tile"
-        :class="{ 'agent-guide__tile--selected': agent.id === selectedAgentId }"
-        @click="emit('select-agent', agent.id)"
-      >
-        <UAvatar :alt="agent.name" :color="agent.color" size="md" />
-        <span class="agent-guide__tile-name">{{ agent.name }}</span>
-        <span v-if="agent.description" class="agent-guide__tile-desc">
-          {{ agent.description }}
-        </span>
-        <span
-          v-if="agent.id === selectedAgentId"
-          class="agent-guide__tile-badge"
+    <div class="agent-guide__layout">
+      <template v-for="row in guideRows" :key="row.key">
+        <h3
+          v-if="row.kind === 'header'"
+          class="agent-guide__section-title"
         >
-          {{ t.agentGuide.selected }}
-        </span>
-      </button>
+          {{ row.label }}
+        </h3>
+        <div
+          v-else
+          class="agent-guide__row"
+          :class="`agent-guide__row--count-${row.tiles.length}`"
+        >
+          <button
+            v-for="tile in row.tiles"
+            :key="tile.id"
+            type="button"
+            class="agent-guide__tile"
+            :class="{ 'agent-guide__tile--selected': tile.id === selectedAgentId }"
+            @click="emit('select-agent', tile.id)"
+          >
+            <UAvatar :alt="tile.displayName" :color="tile.color" size="md" />
+            <span class="agent-guide__tile-name">{{ tile.tileLabel }}</span>
+            <span v-if="tile.description" class="agent-guide__tile-desc">
+              {{ tile.description }}
+            </span>
+            <span
+              v-if="tile.id === selectedAgentId"
+              class="agent-guide__tile-badge"
+            >
+              {{ t.agentGuide.selected }}
+            </span>
+          </button>
+        </div>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
+import {
+  agentPickerRowLabel,
+  buildAgentPickerEntries,
+  formatAgentGroupDisplayName,
+  type SkillGroupAgentRef,
+} from '@shared/agent/skill-groups'
 import type { Agent } from '@store/agent'
 
-defineProps<{
+const props = defineProps<{
   agents: Agent[]
   selectedAgentId: string | null
 }>()
@@ -42,6 +63,84 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+const TILES_PER_ROW = 4
+
+type GuideTile = {
+  id: string
+  color: Agent['color']
+  description: string
+  displayName: string
+  tileLabel: string
+}
+
+type GuideDisplayRow =
+  | { kind: 'header'; key: string; label: string }
+  | { kind: 'tiles'; key: string; tiles: GuideTile[] }
+
+function pushTileRows(rows: GuideDisplayRow[], tiles: GuideTile[]): void {
+  for (let index = 0; index < tiles.length; index += TILES_PER_ROW) {
+    const slice = tiles.slice(index, index + TILES_PER_ROW)
+    rows.push({
+      kind: 'tiles',
+      key: `tiles:${slice.map((tile) => tile.id).join('-')}`,
+      tiles: slice,
+    })
+  }
+}
+
+const guideRows = computed((): GuideDisplayRow[] => {
+  const refs: SkillGroupAgentRef[] = props.agents.map((agent) => ({
+    id: agent.id,
+    name: agent.name,
+    skillId: agent.skillId,
+    skillGroup: agent.skillGroup,
+    skillGroupLabel: agent.skillGroupLabel,
+    skillVariant: agent.skillVariant,
+    skillVariantLabel: agent.skillVariantLabel,
+    skillGroupOrder: agent.skillGroupOrder,
+    skillVariantOrder: agent.skillVariantOrder,
+    enabled: agent.enabled,
+  }))
+
+  const entries = buildAgentPickerEntries(refs)
+  const rows: GuideDisplayRow[] = []
+  let pendingTiles: GuideTile[] = []
+
+  const flushPendingTiles = () => {
+    if (pendingTiles.length === 0) return
+    pushTileRows(rows, pendingTiles)
+    pendingTiles = []
+  }
+
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index]!
+    if (entry.kind === 'header') {
+      flushPendingTiles()
+      rows.push({
+        kind: 'header',
+        key: `header:${entry.groupId}`,
+        label: entry.label,
+      })
+      continue
+    }
+
+    const agent = props.agents.find((item) => item.id === entry.option.id)
+    if (!agent) continue
+
+    const groupedUnderHeader = entries[index - 1]?.kind === 'header'
+    pendingTiles.push({
+      id: agent.id,
+      color: agent.color,
+      description: agent.description,
+      displayName: formatAgentGroupDisplayName(agent),
+      tileLabel: agentPickerRowLabel(entry.option, groupedUnderHeader),
+    })
+  }
+
+  flushPendingTiles()
+  return rows
+})
 </script>
 
 <style scoped>
@@ -72,85 +171,113 @@ const { t } = useI18n()
   color: var(--ui-text-muted);
 }
 
-.agent-guide__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+.agent-guide__layout {
+  width: min(960px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 14px;
-  width: min(920px, 100%);
-  justify-items: center;
+}
+
+.agent-guide__section-title {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ui-text-muted);
+  text-align: center;
+}
+
+.agent-guide__row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 14px;
+  width: 100%;
 }
 
 .agent-guide__tile {
+  box-sizing: border-box;
   display: flex;
+  flex: 0 0 220px;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  width: 100%;
-  max-width: 220px;
-  min-height: 168px;
-  padding: 20px 16px 16px;
+  gap: 8px;
+  width: 220px;
+  min-width: 0;
+  padding: 18px 16px;
   border: 1px solid var(--ui-border);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--ui-bg-elevated, var(--ui-bg)) 92%, transparent);
+  border-radius: 14px;
+  background: var(--ui-bg-elevated);
   cursor: pointer;
-  font-family: inherit;
-  text-align: center;
   transition:
-    border-color 0.15s,
-    transform 0.15s,
-    box-shadow 0.15s,
-    background 0.15s;
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 
 .agent-guide__tile:hover {
-  border-color: color-mix(in srgb, var(--color-primary-500) 45%, var(--ui-border));
-  background: color-mix(in srgb, var(--color-primary-500) 5%, var(--ui-bg));
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.08);
+  border-color: color-mix(in srgb, var(--color-primary-500, #6366f1) 35%, var(--ui-border));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ui-text) 8%, transparent);
+  transform: translateY(-1px);
 }
 
 .agent-guide__tile--selected {
-  border-color: var(--color-primary-500);
-  background: color-mix(in srgb, var(--color-primary-500) 8%, var(--ui-bg));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary-500) 18%, transparent);
+  border-color: var(--color-primary-500, #6366f1);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary-500, #6366f1) 40%, transparent);
 }
 
 .agent-guide__tile-name {
-  font-size: 15px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--ui-text);
-  line-height: 1.3;
 }
 
 .agent-guide__tile-desc {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
   font-size: 12px;
   line-height: 1.45;
   color: var(--ui-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .agent-guide__tile-badge {
-  margin-top: auto;
-  padding: 3px 10px;
+  margin-top: 4px;
+  padding: 2px 8px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-primary-700, var(--color-primary-600));
-  background: color-mix(in srgb, var(--color-primary-500) 14%, transparent);
+  color: var(--color-primary-600, var(--color-primary-500, #6366f1));
+  background: color-mix(in srgb, var(--color-primary-500, #6366f1) 12%, transparent);
 }
 
-@media (max-width: 640px) {
-  .agent-guide__grid {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+@media (max-width: 960px) {
+  .agent-guide__tile {
+    flex-basis: calc((100% - 3 * 14px) / 4);
+    width: calc((100% - 3 * 14px) / 4);
+  }
+}
+
+@media (max-width: 720px) {
+  .agent-guide__row {
+    flex-wrap: wrap;
   }
 
   .agent-guide__tile {
-    min-height: 150px;
-    padding: 16px 12px 12px;
+    flex: 0 1 calc((100% - 14px) / 2);
+    width: calc((100% - 14px) / 2);
+  }
+}
+
+@media (max-width: 420px) {
+  .agent-guide__tile {
+    flex: 1 1 100%;
+    width: 100%;
   }
 }
 </style>

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DEFAULT_SKILL_TOOLSET_TAGS,
   expandSkillAllowedToolsForCatalog,
   expandSkillWorkspaceAvailableSet,
   mergeSkillWorkspaceApprovalOverrides,
@@ -19,12 +18,15 @@ const catalog = [
   { name: 'deep_research', tags: ['web', 'research', 'scholar'], needsApproval: true },
   { name: 'export_research_pdf', tags: ['research'], needsApproval: true },
   { name: 'github_pr_create', tags: ['github'], needsApproval: true },
-  { name: 'lsp', tags: ['lsp'], needsApproval: false },
+  { name: 'lsp', tags: ['code-intelligence'], needsApproval: false },
+  { name: 'enter_plan_mode', tags: ['planning'], needsApproval: false },
+  { name: 'update_todos', tags: ['task-tracking'], needsApproval: false },
+  { name: 'invoke_agent', tags: ['sub-agents'], needsApproval: true },
 ]
 
 describe('skill-workspace-tool-defaults', () => {
   it('matches tools by default skill toolset tags', () => {
-    expect(toolNamesMatchingTags(catalog, DEFAULT_SKILL_TOOLSET_TAGS)).toEqual([
+    expect(toolNamesMatchingTags(catalog, ['file-system', 'git', 'workspace'])).toEqual([
       'read_file',
       'write_file',
       'run_workspace_command',
@@ -32,17 +34,14 @@ describe('skill-workspace-tool-defaults', () => {
     ])
   })
 
-  it('expands properties.md allowed_tools before catalog resolution', () => {
+  it('does not expand workspace tools for default skill allow-list', () => {
     const expanded = expandSkillAllowedToolsForCatalog('default', catalog, [
       'web_search',
       'run_script',
     ])
-    expect(expanded).toContain('web_search')
-    expect(expanded).toContain('read_file')
-    expect(expanded).toContain('git_commit')
-    expect(expanded).toContain('run_workspace_command')
-    expect(expanded).toContain('run_script')
-    expect(expanded).not.toContain('lsp')
+    expect(expanded).toEqual(['web_search', 'run_script'])
+    expect(expanded).not.toContain('read_file')
+    expect(expanded).not.toContain('git_commit')
   })
 
   it('returns undefined when skill has no allowed_tools allow-list', () => {
@@ -52,7 +51,31 @@ describe('skill-workspace-tool-defaults', () => {
     expect(expandSkillAllowedToolsForCatalog('default', catalog, [])).toBeUndefined()
   })
 
-  it('expands file-system, git, and workspace tools for any skill', () => {
+  it('expands coding skill with file-system, git, workspace, and coding extras', () => {
+    const expanded = expandSkillAllowedToolsForCatalog('coding', catalog, [
+      'grep_files',
+    ])
+    expect(expanded).toContain('grep_files')
+    expect(expanded).toContain('read_file')
+    expect(expanded).toContain('run_workspace_command')
+    expect(expanded).toContain('git_commit')
+    expect(expanded).toContain('lsp')
+    expect(expanded).toContain('enter_plan_mode')
+    expect(expanded).toContain('update_todos')
+    expect(expanded).toContain('invoke_agent')
+    expect(expanded).not.toContain('run_script')
+  })
+
+  it('does not expand write tools for coding-review', () => {
+    const expanded = expandSkillAllowedToolsForCatalog('coding-review', catalog, [
+      'read_file',
+      'git_diff',
+    ])
+    expect(expanded).toEqual(['read_file', 'git_diff'])
+    expect(expanded).not.toContain('write_file')
+  })
+
+  it('expands file-system, git, and workspace tools for research skill', () => {
     const expanded = expandSkillWorkspaceAvailableSet('research', catalog, ['lsp'])
     expect(expanded).toContain('write_file')
     expect(expanded).toContain('run_workspace_command')
@@ -109,7 +132,7 @@ describe('skill-workspace-tool-defaults', () => {
     expect(expanded).not.toContain('lsp')
   })
 
-  it('builds no-approval overrides for toolset tools on any skill', () => {
+  it('builds no-approval overrides for toolset tools on documents skill', () => {
     const overrides = mergeSkillWorkspaceApprovalOverrides(
       'documents',
       catalog,

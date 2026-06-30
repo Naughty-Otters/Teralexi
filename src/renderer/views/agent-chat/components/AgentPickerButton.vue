@@ -24,33 +24,44 @@
         tabindex="-1"
         @pointerdown.stop
       >
-        <button
-          v-for="(agent, index) in agentOptions"
-          :key="agent.id"
-          :ref="(el) => setItemRef(el, index)"
-          type="button"
-          class="agent-picker-option"
-          :class="{
-            'agent-picker-option--active': index === highlightIndex,
-          }"
-          role="option"
-          :aria-selected="agent.id === selectedAgentId"
-          @mousedown.prevent
-          @pointerdown.stop
-          @mouseenter="setHighlightIndex(index)"
-          @mousemove="setHighlightIndex(index)"
-          @click.stop="selectAgent(agent.id)"
-          @keydown="onItemKeydown($event, index)"
-        >
-          <span class="agent-picker-option__name">{{ agent.name }}</span>
-          <UIcon
-            v-if="agent.id === selectedAgentId"
-            class="agent-picker-option__check"
-            name="i-lucide-check"
-            aria-hidden="true"
-          />
-        </button>
-        <p v-if="agentOptions.length === 0" class="agent-picker-empty">
+        <template v-for="(entry, index) in pickerEntries" :key="entryKey(entry, index)">
+          <div
+            v-if="entry.kind === 'header'"
+            class="agent-picker-group-header"
+          >
+            {{ entry.label }}
+          </div>
+          <button
+            v-else
+            :ref="(el) => setItemRef(el, selectableIndex(index))"
+            type="button"
+            class="agent-picker-option"
+            :class="{
+              'agent-picker-option--active':
+                selectableIndex(index) === highlightIndex,
+              'agent-picker-option--grouped': isGroupedOption(entry, index),
+            }"
+            role="option"
+            :aria-selected="entry.option.id === selectedAgentId"
+            @mousedown.prevent
+            @pointerdown.stop
+            @mouseenter="setHighlightIndex(selectableIndex(index))"
+            @mousemove="setHighlightIndex(selectableIndex(index))"
+            @click.stop="selectAgent(entry.option.id)"
+            @keydown="onItemKeydown($event, selectableIndex(index))"
+          >
+            <span class="agent-picker-option__name">{{
+              agentPickerRowLabel(entry.option, isGroupedOption(entry, index))
+            }}</span>
+            <UIcon
+              v-if="entry.option.id === selectedAgentId"
+              class="agent-picker-option__check"
+              name="i-lucide-check"
+              aria-hidden="true"
+            />
+          </button>
+        </template>
+        <p v-if="selectableAgents.length === 0" class="agent-picker-empty">
           No agents enabled
         </p>
       </div>
@@ -59,6 +70,13 @@
 </template>
 
 <script setup lang="ts">
+import {
+  agentPickerRowLabel,
+  buildAgentPickerEntries,
+  listSelectableAgentPickerOptions,
+  type AgentPickerEntry,
+  type SkillGroupAgentRef,
+} from '@shared/agent/skill-groups'
 import {
   computed,
   nextTick,
@@ -71,7 +89,12 @@ import {
 
 const props = defineProps<{
   selectedAgentId: string | null
-  agentOptions: Array<{ id: string; name: string }>
+  /** Flat agent list (legacy) — converted to grouped entries when pickerEntries is omitted. */
+  agentOptions?: Array<{ id: string; name: string }>
+  /** Pre-built grouped picker rows (preferred). */
+  pickerEntries?: AgentPickerEntry[]
+  /** Full agent refs for building grouped entries when pickerEntries is omitted. */
+  agents?: SkillGroupAgentRef[]
 }>()
 
 const highlightIndex = defineModel<number>('highlightIndex', { default: 0 })
@@ -88,6 +111,68 @@ const menuOpen = ref(false)
 const itemRefs = ref<(HTMLButtonElement | null)[]>([])
 const menuStyle = ref<CSSProperties>({})
 
+const pickerEntries = computed((): AgentPickerEntry[] => {
+  if (props.pickerEntries?.length) return props.pickerEntries
+  if (props.agents?.length) return buildAgentPickerEntries(props.agents)
+  if (props.agentOptions?.length) {
+    return buildAgentPickerEntries(
+      props.agentOptions.map((agent) => ({
+        id: agent.id,
+        name: agent.name,
+      })),
+    )
+  }
+  return []
+})
+
+const selectableAgents = computed(() =>
+  listSelectableAgentPickerOptions(pickerEntries.value),
+)
+
+const selectableIndexByEntryIndex = computed(() => {
+  const map = new Map<number, number>()
+  let selectable = 0
+  pickerEntries.value.forEach((entry, index) => {
+    if (entry.kind === 'agent') {
+      map.set(index, selectable)
+      selectable += 1
+    }
+  })
+  return map
+})
+
+function selectableIndex(entryIndex: number): number {
+  return selectableIndexByEntryIndex.value.get(entryIndex) ?? 0
+}
+
+function entryKey(entry: AgentPickerEntry, index: number): string {
+  if (entry.kind === 'header') return `header:${entry.groupId}:${index}`
+  return entry.option.id
+}
+
+function isGroupedOption(entry: AgentPickerEntry, index: number): boolean {
+  if (entry.kind !== 'agent' || !entry.option.skillGroup) return false
+  const prev = pickerEntries.value[index - 1]
+  return prev?.kind === 'header'
+}
+
+const selectedDisplayName = computed(() => {
+  const selected = selectableAgents.value.find(
+    (agent) => agent.id === props.selectedAgentId,
+  )
+  if (selected) return selected.displayName
+  const legacy = props.agentOptions?.find(
+    (agent) => agent.id === props.selectedAgentId,
+  )
+  return legacy?.name ?? 'Select agent'
+})
+
+const triggerTitle = computed(() =>
+  props.selectedAgentId
+    ? `Agent: ${selectedDisplayName.value} (change)`
+    : 'Select agent',
+)
+
 function updateMenuPosition(): void {
   const trigger = triggerRef.value
   if (!trigger) return
@@ -95,7 +180,7 @@ function updateMenuPosition(): void {
   menuStyle.value = {
     left: `${Math.max(8, rect.left)}px`,
     bottom: `${Math.max(8, window.innerHeight - rect.top + 6)}px`,
-    minWidth: `${Math.max(rect.width, 200)}px`,
+    minWidth: `${Math.max(rect.width, 220)}px`,
   }
 }
 
@@ -109,18 +194,6 @@ function unbindMenuPositionListeners(): void {
   window.removeEventListener('scroll', updateMenuPosition, true)
 }
 
-const selectedName = computed(
-  () =>
-    props.agentOptions.find((a) => a.id === props.selectedAgentId)?.name ??
-    'Select agent',
-)
-
-const triggerTitle = computed(() =>
-  props.selectedAgentId
-    ? `Agent: ${selectedName.value} (change)`
-    : 'Select agent',
-)
-
 function setItemRef(el: unknown, index: number) {
   if (el instanceof HTMLButtonElement) {
     itemRefs.value[index] = el
@@ -132,7 +205,7 @@ function setHighlightIndex(index: number) {
 }
 
 function initialHighlightIndex(): number {
-  const idx = props.agentOptions.findIndex(
+  const idx = selectableAgents.value.findIndex(
     (agent) => agent.id === props.selectedAgentId,
   )
   return idx >= 0 ? idx : 0
@@ -146,14 +219,14 @@ function scrollToHighlight() {
 }
 
 function moveHighlight(delta: number) {
-  const len = props.agentOptions.length
+  const len = selectableAgents.value.length
   if (len === 0) return
   highlightIndex.value = (highlightIndex.value + delta + len) % len
   scrollToHighlight()
 }
 
 function selectHighlighted() {
-  const agent = props.agentOptions[highlightIndex.value]
+  const agent = selectableAgents.value[highlightIndex.value]
   if (agent) selectAgent(agent.id)
 }
 
@@ -173,7 +246,7 @@ function onItemKeydown(event: KeyboardEvent, index: number) {
       break
     case 'Enter':
       event.preventDefault()
-      selectAgent(props.agentOptions[index]?.id ?? '')
+      selectAgent(selectableAgents.value[index]?.id ?? '')
       break
     case 'Escape':
       event.preventDefault()
@@ -183,7 +256,7 @@ function onItemKeydown(event: KeyboardEvent, index: number) {
 }
 
 function onDocumentKeydown(event: KeyboardEvent) {
-  if (!menuOpen.value || props.agentOptions.length === 0) return
+  if (!menuOpen.value || selectableAgents.value.length === 0) return
   const target = event.target
   if (target instanceof Node && rootEl.value?.contains(target)) return
 
@@ -261,7 +334,7 @@ watch(menuOpen, (open) => {
 })
 
 watch(
-  () => props.agentOptions.length,
+  () => selectableAgents.value.length,
   (len) => {
     itemRefs.value = []
     if (menuOpen.value && highlightIndex.value >= len) {
@@ -290,6 +363,7 @@ defineExpose({
   closeMenu,
   scrollToHighlight,
   menuOpen,
+  selectableAgents,
 })
 </script>
 
@@ -331,8 +405,8 @@ defineExpose({
   position: fixed;
   z-index: 200;
   pointer-events: auto;
-  max-width: min(280px, calc(100vw - 16px));
-  max-height: min(240px, calc(100vh - 16px));
+  max-width: min(300px, calc(100vw - 16px));
+  max-height: min(280px, calc(100vh - 16px));
   overflow-y: auto;
   padding: 4px;
   border-radius: 10px;
@@ -341,6 +415,16 @@ defineExpose({
   box-shadow:
     0 4px 6px color-mix(in srgb, var(--ui-text) 8%, transparent),
     0 12px 28px color-mix(in srgb, var(--ui-text) 14%, transparent);
+}
+
+.agent-picker-group-header {
+  padding: 6px 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ui-text-muted);
+  user-select: none;
 }
 
 .agent-picker-option {
@@ -357,6 +441,10 @@ defineExpose({
   font-size: 13px;
   text-align: left;
   cursor: pointer;
+}
+
+.agent-picker-option--grouped {
+  padding-left: 18px;
 }
 
 .agent-picker-option:hover:not(.agent-picker-option--active) {

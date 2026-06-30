@@ -3,9 +3,10 @@ import { subAgentsInjector } from './sub-agents'
 import type { InjectionRunContext } from '../types'
 import type { AgentStepContext } from '../../context'
 
-vi.mock('../../delegation/sub-agent-catalog', () => ({
-  buildSubAgentCatalog: vi.fn(),
-  formatSubAgentInstructionsBlock: vi.fn(),
+vi.mock('../../delegation/skill-routing-catalog', () => ({
+  buildSkillRoutingCatalog: vi.fn(),
+  formatSkillRoutingBlock: vi.fn(),
+  hasSkillRoutingTargets: vi.fn(),
   hasSubAgentDelegationTool: vi.fn(),
 }))
 
@@ -14,10 +15,11 @@ vi.mock('../../coding/plan-mode-state', () => ({
 }))
 
 import {
-  buildSubAgentCatalog,
-  formatSubAgentInstructionsBlock,
+  buildSkillRoutingCatalog,
+  formatSkillRoutingBlock,
+  hasSkillRoutingTargets,
   hasSubAgentDelegationTool,
-} from '../../delegation/sub-agent-catalog'
+} from '../../delegation/skill-routing-catalog'
 
 function makeRunCtx(overrides: Partial<InjectionRunContext> = {}): InjectionRunContext {
   return {
@@ -40,17 +42,26 @@ function makeRunCtx(overrides: Partial<InjectionRunContext> = {}): InjectionRunC
 describe('subAgentsInjector', () => {
   beforeEach(() => {
     vi.mocked(hasSubAgentDelegationTool).mockReturnValue(true)
-    vi.mocked(buildSubAgentCatalog).mockReturnValue({
-      invokeAgentTargets: [
-        { id: 'skill:documents', name: 'Documents', description: 'PDF work' },
+    vi.mocked(buildSkillRoutingCatalog).mockReturnValue({
+      entries: [
+        {
+          agentId: 'skill:documents',
+          skillId: 'documents',
+          displayName: 'Documents',
+          description: 'PDF work',
+          trigger: 'Review PDFs',
+          canSwitch: true,
+          canInvoke: true,
+        },
       ],
+      groupLabel: null,
     })
-    vi.mocked(formatSubAgentInstructionsBlock).mockReturnValue(
-      '### Sub-agent delegation\n- `skill:documents`',
+    vi.mocked(formatSkillRoutingBlock).mockReturnValue(
+      '### Related skills & sub-agents\n- `skill:documents`',
     )
   })
 
-  it('applies only on root tool-loop runs with sub-agent tools', () => {
+  it('applies on root tool-loop runs with routing targets', () => {
     expect(subAgentsInjector.applies(makeRunCtx())).toBe(true)
     expect(
       subAgentsInjector.applies(
@@ -63,13 +74,14 @@ describe('subAgentsInjector', () => {
       ),
     ).toBe(false)
     vi.mocked(hasSubAgentDelegationTool).mockReturnValue(false)
-    expect(subAgentsInjector.applies(makeRunCtx())).toBe(false)
+    vi.mocked(hasSkillRoutingTargets).mockReturnValue(false)
+    expect(subAgentsInjector.applies(makeRunCtx({ tools: [] }))).toBe(false)
   })
 
-  it('injectInstructions returns formatted catalog block', () => {
+  it('injectInstructions returns formatted routing block', () => {
     const block = subAgentsInjector.injectInstructions!(makeRunCtx())
     expect(block).toContain('skill:documents')
-    expect(buildSubAgentCatalog).toHaveBeenCalled()
-    expect(formatSubAgentInstructionsBlock).toHaveBeenCalled()
+    expect(buildSkillRoutingCatalog).toHaveBeenCalled()
+    expect(formatSkillRoutingBlock).toHaveBeenCalled()
   })
 })
