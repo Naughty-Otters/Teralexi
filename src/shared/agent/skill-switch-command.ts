@@ -1,4 +1,5 @@
 import { resolveAgentSkillId } from './workspace-required-skills'
+import { formatSkillSwitchHelpGrouped } from './skill-groups'
 
 /** Matches `/skill:coding` but not `/skill:install …`. */
 export const SKILL_SWITCH_COMMAND_RE =
@@ -83,16 +84,5 @@ export function listSkillSwitchTargets(
 export function formatSkillSwitchHelp(
   agents: readonly SkillSwitchAgentRef[],
 ): string {
-  const targets = listSkillSwitchTargets(agents)
-  const lines = [
-    '/skill:<id> — Switch to another skill agent',
-    '/skill:install <url> — Install a skill from GitHub (Coding agent)',
-  ]
-  if (targets.length > 0) {
-    lines.push(
-      'Skills: ' +
-        targets.map((t) => `/skill:${t.skillId} (${t.name})`).join(', '),
-    )
-  }
-  return lines.join('\n')
+  return formatSkillSwitchHelpGrouped(agents)
 }

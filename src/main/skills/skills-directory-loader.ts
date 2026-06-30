@@ -123,6 +123,7 @@ export async function loadSkillsFromDirectory(
         globalTools,
         skillActionTools,
         allowedForCatalog,
+        entry,
       )
 
       const skill = parseSkillMarkdown(

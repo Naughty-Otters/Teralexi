@@ -44,6 +44,10 @@ vi.mock('../coding/explore-manifest', () => ({
   ),
 }))
 
+vi.mock('../workspace/conversation-workspace', () => ({
+  loadConversationWorkspace: vi.fn(() => null),
+}))
+
 vi.mock('@main/cache/app-cache', () => ({
   appCache: {
     getAgents: vi.fn(),

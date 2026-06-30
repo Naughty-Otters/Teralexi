@@ -35,6 +35,9 @@ describe('app-paths', () => {
     expect(joinAppResourcePath('toolSet')).toBe(
       '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked/toolSet',
     )
+    expect(joinAppResourcePath('.openfde', 'rules')).toBe(
+      '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked/.openfde/rules',
+    )
     expect(
       toOnDiskAppPath(
         '/Applications/OpenFDE.app/Contents/Resources/app.asar/toolSet/index.ts',

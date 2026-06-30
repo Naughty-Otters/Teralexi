@@ -14,6 +14,7 @@ const TOOL_LOOP_DEFAULT_INSTRUCTIONS = [
   'validation-rules',
   'run-script-preference',
   'memory-persona',
+  'project-rules',
   'sub-agents',
   'previous-step',
   'sandbox-structure',
@@ -31,6 +32,7 @@ const TOOL_LOOP_CODING_INSTRUCTIONS = [
   'run-script-preference',
   'task-tracking',
   'memory-persona',
+  'project-rules',
   'sub-agents',
   'coding-mode-instructions',
   'previous-step',
@@ -53,6 +55,7 @@ const TODO_EXECUTION_INSTRUCTIONS = [
   'workspace-structure',
   'tool-result-rules',
   'memory-persona',
+  'project-rules',
   'language',
 ] as const
 

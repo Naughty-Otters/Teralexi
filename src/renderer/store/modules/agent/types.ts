@@ -43,6 +43,14 @@ export interface Agent {
   isSkill?: boolean
   /** Folder name of the originating skill (only when isSkill is true) */
   skillId?: string
+  /** Skill family id for grouped picker UI (from properties.md `group`). */
+  skillGroup?: string
+  skillGroupLabel?: string
+  skillVariant?: string
+  skillVariantLabel?: string
+  skillGroupOrder?: number
+  skillVariantOrder?: number
+  skillGroupPrimary?: boolean
   /** Multi-step execution configuration */
   executionSteps?: AgentExecutionSteps
   /** Editable instructions (skill.md) prompt */

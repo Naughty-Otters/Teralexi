@@ -11,25 +11,36 @@
         <span class="acp-tab-name">Add Agent</span>
       </button>
 
-      <button
-        v-for="agent in agentStore.agents"
-        :key="agent.id"
-        class="acp-tab"
-        :class="{
-          'acp-tab--active': selectedId === agent.id,
-          'acp-tab--disabled': !agent.enabled,
-        }"
-        @click="selectedId = agent.id"
+      <template
+        v-for="(entry, index) in settingsSidebarEntries"
+        :key="sidebarEntryKey(entry, index)"
       >
-        <UAvatar :alt="agent.name" :color="agent.color" size="xs" />
-        <span class="acp-tab-name">{{ agent.name }}</span>
-        <span
-          v-if="isWorkflowPanelAgentId(agent.id)"
-          class="acp-tab-badge"
+        <div
+          v-if="entry.kind === 'header'"
+          class="acp-group-header"
         >
-          {{ p.agents.workflowBadge }}
-        </span>
-      </button>
+          {{ entry.label }}
+        </div>
+        <button
+          v-else
+          class="acp-tab"
+          :class="{
+            'acp-tab--active': selectedId === entry.agent.id,
+            'acp-tab--disabled': !entry.agent.enabled,
+            'acp-tab--grouped': entry.grouped,
+          }"
+          @click="selectedId = entry.agent.id"
+        >
+          <UAvatar :alt="entry.label" :color="entry.agent.color" size="xs" />
+          <span class="acp-tab-name">{{ entry.label }}</span>
+          <span
+            v-if="isWorkflowPanelAgentId(entry.agent.id)"
+            class="acp-tab-badge"
+          >
+            {{ p.agents.workflowBadge }}
+          </span>
+        </button>
+      </template>
     </aside>
 
     <!-- Right pane: add form -->
@@ -61,7 +72,9 @@
     <!-- Right pane: selected agent settings -->
     <section v-else-if="selectedAgent" class="acp-content sp-section">
       <div class="sp-section-title-row">
-        <span class="sp-section-title">{{ selectedAgent.name }}</span>
+        <span class="sp-section-title">{{
+          formatAgentGroupDisplayName(selectedAgent)
+        }}</span>
         <label
           class="sp-toggle"
           :title="selectedAgent.enabled ? 'Disable agent' : 'Enable agent'"
@@ -118,6 +131,12 @@ import { useAgentStore } from '@store/agent'
 import type { ProviderType, Agent } from '@store/agent'
 import { DEFAULT_TOOL_LOOP_MAX_ITERATIONS, DEFAULT_TODO_MAX_RETRIES } from '@shared/agent/tool-loop'
 import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
+import {
+  agentPickerRowLabel,
+  buildAgentPickerEntries,
+  formatAgentGroupDisplayName,
+  type AgentPickerEntry,
+} from '@shared/agent/skill-groups'
 import AgentFormTabs from './AgentFormTabs.vue'
 import type { AgentFormData } from './AgentFormTabs.vue'
 
@@ -134,6 +153,47 @@ const selectedAgent = computed(() =>
     ? (agentStore.agents.find((a) => a.id === selectedId.value) ?? null)
     : null,
 )
+
+type SettingsSidebarEntry =
+  | { kind: 'header'; groupId: string; label: string }
+  | { kind: 'agent'; agent: Agent; label: string; grouped: boolean }
+
+const settingsSidebarEntries = computed((): SettingsSidebarEntry[] => {
+  const pickerEntries = buildAgentPickerEntries(agentStore.agents)
+  const out: SettingsSidebarEntry[] = []
+
+  for (let index = 0; index < pickerEntries.length; index += 1) {
+    const entry: AgentPickerEntry = pickerEntries[index]!
+    if (entry.kind === 'header') {
+      out.push({
+        kind: 'header',
+        groupId: entry.groupId,
+        label: entry.label,
+      })
+      continue
+    }
+
+    const agent = agentStore.agents.find((item) => item.id === entry.option.id)
+    if (!agent) continue
+
+    const prev = pickerEntries[index - 1]
+    const grouped = prev?.kind === 'header'
+
+    out.push({
+      kind: 'agent',
+      agent,
+      label: agentPickerRowLabel(entry.option, grouped),
+      grouped,
+    })
+  }
+
+  return out
+})
+
+function sidebarEntryKey(entry: SettingsSidebarEntry, index: number): string {
+  if (entry.kind === 'header') return `header:${entry.groupId}:${index}`
+  return entry.agent.id
+}
 
 /** Skill folder name for skill-backed agents (`skill:<id>` or `skillId`). */
 function resolveAgentSkillId(agent: Agent): string | null {
@@ -382,6 +442,19 @@ function submitAddAgent() {
 
 .acp-tab--disabled {
   opacity: 0.5;
+}
+
+.acp-group-header {
+  padding: 10px 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ui-text-muted);
+}
+
+.acp-tab--grouped {
+  padding-left: 18px;
 }
 
 .acp-tab--add {

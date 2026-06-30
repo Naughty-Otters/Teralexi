@@ -2665,6 +2665,13 @@ export const useAgentStore = defineStore('agent', () => {
       skillId: string
       allowedTools?: string[]
       actionToolNames?: string[]
+      skillGroup?: string
+      skillGroupLabel?: string
+      skillVariant?: string
+      skillVariantLabel?: string
+      skillGroupOrder?: number
+      skillVariantOrder?: number
+      skillGroupPrimary?: boolean
       compiledArtifact?: {
         thinking?: { instructions?: string }
         instructions?: { instructions?: string }
@@ -2772,6 +2779,13 @@ export const useAgentStore = defineStore('agent', () => {
           provider: (saved?.provider ?? s.provider) as ProviderType,
           isSkill: true as const,
           skillId: s.skillId,
+          skillGroup: s.skillGroup,
+          skillGroupLabel: s.skillGroupLabel,
+          skillVariant: s.skillVariant,
+          skillVariantLabel: s.skillVariantLabel,
+          skillGroupOrder: s.skillGroupOrder,
+          skillVariantOrder: s.skillVariantOrder,
+          skillGroupPrimary: s.skillGroupPrimary,
           skillsPrompt: resolved.skillsPrompt,
           availableSkillTools,
           availableSet,

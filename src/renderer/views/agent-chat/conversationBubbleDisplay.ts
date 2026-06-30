@@ -1,7 +1,4 @@
 import type { UIMessage } from '@openfde-ai'
-import {
-  shouldHideAgenticRunConversationSections,
-} from '@shared/agent/tool-call-list-display'
 import { filterThinkingConversationSections } from '@shared/agent/thinking-bubble-display'
 import { userFacingTextFromStructuredOuter } from '@shared/agent/assistant-external-reply'
 import { parseAssistantStructuredContent } from '@store/agent/context'
@@ -122,12 +119,15 @@ export function filterVisibleConversationBubbles<
     )
   }
 
-  if (
-    options.toolCallListDisplay &&
-    shouldHideAgenticRunConversationSections(options.toolCallListDisplay)
-  ) {
+  if (options.toolCallListDisplay === 'none') {
     result = result.filter(
       (section) => !AGENTIC_RUN_CONVERSATION_SECTION_IDS.has(section.id),
+    )
+  } else if (options.toolCallListDisplay === 'latest') {
+    result = filterThinkingConversationSections(
+      result,
+      'latest',
+      AGENTIC_RUN_CONVERSATION_SECTION_IDS,
     )
   }
 

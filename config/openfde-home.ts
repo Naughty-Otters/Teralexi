@@ -25,6 +25,7 @@ const openfde_APP_DIRS = [
   'skills',
   'toolSet',
   'workflows',
+  'rules',
 ] as const
 
 /** Channel session/data dirs under `~/.openfde/channels/`. */
@@ -172,6 +173,13 @@ export function getopenfdeToolSetDir(): string {
 /** User-defined workflow folders (`~/.openfde/workflows`). */
 export function getopenfdeWorkflowsDir(): string {
   const dir = join(getopenfdeHome(), 'workflows')
+  ensureDir(dir)
+  return dir
+}
+
+/** User project rules (`~/.openfde/rules`). Workspace rules live in `<project>/.openfde/rules/`. */
+export function getopenfdeRulesDir(): string {
+  const dir = join(getopenfdeHome(), 'rules')
   ensureDir(dir)
   return dir
 }

@@ -44,7 +44,7 @@ export const UNIVERSAL_SLASH_COMMANDS: readonly ComposerSlashCommand[] = [
 export const SUB_AGENT_SLASH_COMMAND: ComposerSlashCommand = {
   name: 'sub-agent',
   label: '/sub-agent',
-  description: 'Delegate directly to a sub-agent (@slug task)',
+  description: 'Delegate directly to a sub-agent (slug + task)',
   icon: 'i-lucide-users',
 }
 

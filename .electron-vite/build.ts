@@ -7,6 +7,7 @@ import { Listr } from 'listr2'
 import rollupOptions from './rollup.config'
 import { verifyMainBundle } from './verify-main-bundle'
 import { verifyBundledToolSetCatalog } from './verify-bundled-toolset'
+import { verifyBundledOpenFdeRules } from './verify-bundled-openfde-rules'
 import { generateBundledSkillsManifest } from './generate-bundled-skills'
 import { errorLog, doneLog } from './log'
 import { applyBuildEnvFromArgv, getArgv } from './utils'
@@ -48,6 +49,7 @@ async function unionBuild() {
         task: async () => {
           try {
             generateBundledSkillsManifest()
+            verifyBundledOpenFdeRules()
             const build = await rollup(mainOpt)
             await build.write(mainOpt.output as OutputOptions)
             verifyMainBundle()

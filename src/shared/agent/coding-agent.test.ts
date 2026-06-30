@@ -4,6 +4,8 @@ import { agentIsCodingAgent, skillIsCodingAgent } from './coding-agent'
 describe('coding-agent', () => {
   it('detects coding skill id', () => {
     expect(skillIsCodingAgent('coding')).toBe(true)
+    expect(skillIsCodingAgent('coding-review')).toBe(true)
+    expect(skillIsCodingAgent('coding-pr')).toBe(true)
     expect(skillIsCodingAgent('research')).toBe(false)
   })
 

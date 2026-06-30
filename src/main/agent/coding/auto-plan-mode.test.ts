@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from 'vitest'
 import {
   canAutoActivatePlanMode,
   heuristicTaskLooksComplex,
+  heuristicTaskLooksReviewOrFocused,
   maybeAutoActivatePlanMode,
 } from './auto-plan-mode'
 import {
@@ -21,6 +22,18 @@ describe('auto-plan-mode', () => {
       ),
     ).toBe(true)
     expect(heuristicTaskLooksComplex('What is a closure?')).toBe(false)
+  })
+
+  it('heuristicTaskLooksReviewOrFocused detects review requests', () => {
+    expect(
+      heuristicTaskLooksReviewOrFocused('do code revewi for my worskapces'),
+    ).toBe(true)
+    expect(
+      heuristicTaskLooksReviewOrFocused('review my PR before merge'),
+    ).toBe(true)
+    expect(
+      heuristicTaskLooksReviewOrFocused('implement login with OAuth'),
+    ).toBe(false)
   })
 
   it('canAutoActivatePlanMode is true for normal coding conversations', () => {

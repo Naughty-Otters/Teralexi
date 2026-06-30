@@ -80,6 +80,38 @@ enabled: true
 | `scripts_dir` | no | Comma-separated script folders (default `scripts`) |
 | `form_dir` | no | Comma-separated HITL form folders (default `form`) |
 | `allowed_tools` | no | Comma-separated **shared toolSet** tool names for this skill's catalog and default AvailableSet (e.g. `read_file, git_status`). Other skills do not see tools listed here. Tools from this skill's `actions/` folder (including nested `actions/<subdir>/`) are tagged `skill:<id>`, belong only to this skill, and are **always** enabled by default with `allowed_tools` |
+| `group` | no | Skill family id for grouped UI (e.g. `coding`) |
+| `group_label` | no | Display label for the family (e.g. `Coding`) |
+| `variant` | no | Variant key within the group (e.g. `review`) |
+| `variant_label` | no | Short picker label (e.g. `Review`) |
+| `group_order` | no | Sort order for group sections in picker/settings |
+| `variant_order` | no | Sort order within a group |
+| `group_primary` | no | Marks the default variant when user picks the family |
+
+**Description (discovery):** Write in third person. Include **what** the skill does and **when** to select it (trigger phrases). Example: *"Edits and verifies code in the user workspace. Use when fixing bugs or running tests — not for general Q&A."*
+
+### Project rules (Cursor-style `.cursor/rules`)
+
+Persistent conventions live outside skills:
+
+| Location | Scope |
+|----------|--------|
+| `~/.openfde/rules/*.md` | Global — all projects |
+| `<workspace>/.openfde/rules/*.md` | Project-specific |
+
+Rules are injected into every agent run (after skill instructions). Use for commit style, test commands, or team standards — keep each file focused and under ~50 lines.
+
+Example in this repo: [`.openfde/rules/coding-standards.md`](../.openfde/rules/coding-standards.md).
+
+### Bundled coding sub-skills
+
+| Skill | When |
+|-------|------|
+| `coding` | Implement, test, verify in workspace |
+| `coding-review` | Read-only PR/diff review |
+| `coding-pr` | Commit, push, open PR |
+
+Copy patterns from `skills/coding/refs/` for plan modes, sub-agents, and procedural contracts.
 
 If `properties.md` is missing, openfde falls back to defaults (`gemma4` / `ollama`) or frontmatter in `skill.md`.
 
@@ -106,8 +138,9 @@ Planner `reference_url` values must still be **paths under the skill folder**, e
 
 | Skill type | `allowed_tools` | `skill.md` tone |
 |------------|-----------------|-----------------|
-| **Coding | File tools, `lsp`, `run_workspace_command`, git — **no** `run_script` | “Where files live”: project paths only; sandbox `output/` rare |
-| **Default** | `run_script`, web | Sandbox-first; file tools only if user picked workspace and asked for code |
+| **Coding** | Core file tools + `lsp`, `invoke_agent`; tag expansion adds git, workspace, planning, todos | Project paths; see `skills/coding/refs/` |
+| **Coding Review / PR** | Explicit read-only or git-only lists; **no** tag expansion | Sub-skills for review vs PR workflows |
+| **Default** | `run_script`, web only; **no** file/git/workspace expansion | Sandbox-first; suggest Coding for repo edits |
 | **Documents** | Doc tools + `run_script`; `read_file` for user data | Deliverables → `output/results/`; do not edit user repo |
 
 Shared path rules live in the toolSet (`WORKSPACE_PATH_HINT` / shell descriptions). See [`CODING.md`](../CODING.md#workspace-vs-sandbox).

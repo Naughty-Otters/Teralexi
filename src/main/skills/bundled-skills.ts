@@ -75,6 +75,7 @@ export async function buildBundledSkillDefinitions(
       globalTools,
       skillActionTools,
       allowedForCatalog,
+      skillId,
     )
 
     const skill = parseSkillMarkdown(

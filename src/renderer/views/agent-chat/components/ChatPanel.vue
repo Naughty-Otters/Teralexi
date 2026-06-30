@@ -154,6 +154,7 @@
           :send-disabled="!canSend"
           :selected-agent-id="agentStore.selectedAgentId"
           :agent-options="composerAgentOptions"
+          :chat-agents="composerChatAgents"
           :conversation-id="agentStore.currentConversationId"
           :workspace-disabled="isBusy"
           :workspace-hint="workspaceComposerHint"
@@ -163,8 +164,7 @@
           :coding-mode="codingMode"
           :plan-display-status="planDisplayStatus"
           :background-tasks="backgroundTasks"
-          :sub-agent-targets="delegatableSubAgentTargets"
-          :sub-agent-mention-enabled="subAgentMentionEnabled"
+          :sub-agent-slash-enabled="subAgentSlashEnabled"
           :staged-attachments="stagedAttachments"
           :can-add-attachments="canAddAttachments"
           @select-agent="onSelectAgent"
@@ -235,6 +235,7 @@ import {
 import { useWorkspaceStore } from '@store/workspace'
 import { useWorkspaceNavigationStore } from '@store/workspace-navigation'
 import { agentIsCodingAgent } from '@shared/agent/coding-agent'
+import { formatAgentGroupDisplayName } from '@shared/agent/skill-groups'
 import {
   agentIsGoogleWorkspaceAgent,
   googleWorkspaceComposerHint as buildGoogleWorkspaceComposerHint,
@@ -349,9 +350,7 @@ import {
 } from '@shared/agent/coding-mode'
 import type { BackgroundTaskView } from './BackgroundTaskPanel.vue'
 import {
-  extractFirstSubAgentMentionSlug,
   resolveDelegatableSubAgentTargets,
-  resolveSubAgentMention,
 } from '@shared/agent/sub-agent-targets'
 import {
   isSubAgentSlashCommand,
@@ -788,9 +787,11 @@ const isBusy = computed(() =>
   ['submitted', 'streaming'].includes(chatStatus.value),
 )
 
-const activeAgentName = computed(
-  () => agentStore.selectedAgent?.name ?? 'Select an agent',
-)
+const activeAgentName = computed(() => {
+  const agent = agentStore.selectedAgent
+  if (!agent) return 'Select an agent'
+  return formatAgentGroupDisplayName(agent)
+})
 const activeAgentModel = computed(() => agentStore.selectedAgent?.model ?? '')
 const activeAgentColor = computed(
   () => agentStore.selectedAgent?.color ?? 'neutral',
@@ -811,6 +812,8 @@ const composerAgentOptions = computed(() =>
     name: agent.name,
   })),
 )
+
+const composerChatAgents = computed(() => agentStore.chatSelectableAgents)
 
 const selectedAgentRequiresWorkspace = computed(() =>
   agentStore.selectedAgent
@@ -854,7 +857,7 @@ const canSend = computed(() => {
   if (
     text &&
     isSubAgentSlashCommand(text) &&
-    subAgentMentionEnabled.value &&
+    subAgentSlashEnabled.value &&
     parseSubAgentSlashCommand(text, delegatableSubAgentTargets.value)
   ) {
     return true
@@ -1086,7 +1089,7 @@ const delegatableSubAgentTargets = computed(() => {
   )
 })
 
-const subAgentMentionEnabled = computed(() => {
+const subAgentSlashEnabled = computed(() => {
   const caller = agentStore.selectedAgent
   if (!caller) return false
   const status = planDisplayStatus.value
@@ -1580,7 +1583,7 @@ async function runHelpCommand() {
     description: formatSlashHelp(
       selectedAgentIsCoding.value,
       agentStore.chatSelectableAgents,
-      subAgentMentionEnabled.value ? delegatableSubAgentTargets.value : [],
+      subAgentSlashEnabled.value ? delegatableSubAgentTargets.value : [],
     ),
     color: 'neutral',
   })
@@ -2016,40 +2019,14 @@ async function onSubmit() {
 
   if (!chatInst.value) await rebuildChat()
 
-  const subAgentMention = subAgentMentionEnabled.value
-    ? (resolveSubAgentMention(text, delegatableSubAgentTargets.value) ??
-      parseSubAgentSlashCommand(text, delegatableSubAgentTargets.value))
+  const subAgentDelegation = subAgentSlashEnabled.value
+    ? parseSubAgentSlashCommand(text, delegatableSubAgentTargets.value)
     : null
-  if (!subAgentMention && subAgentMentionEnabled.value) {
-    const slug =
-      extractFirstSubAgentMentionSlug(text) ??
-      (isSubAgentSlashCommand(text)
-        ? text
-            .trim()
-            .match(/^\/sub-agent\s+(\S+)/i)?.[1]
-            ?.replace(/^@/, '')
-        : null)
-    if (slug) {
-      const available = delegatableSubAgentTargets.value
-        .map((t) => `@${t.mentionSlug}`)
-        .join(', ')
-      toast.add({
-        title: 'Unknown sub-agent',
-        description: available
-          ? `@${slug} is not enabled. Available: ${available}`
-          : isSubAgentSlashCommand(text)
-            ? 'Enable sub-agents in agent settings to use /sub-agent.'
-            : 'Enable sub-agents in agent settings to use @ mentions.',
-        color: 'warning',
-      })
-      return
-    }
-  }
 
   if (
     isSubAgentSlashCommand(text) &&
-    subAgentMentionEnabled.value &&
-    !subAgentMention
+    subAgentSlashEnabled.value &&
+    !subAgentDelegation
   ) {
     toast.add({
       title: 'Invalid /sub-agent command',
@@ -2083,14 +2060,14 @@ async function onSubmit() {
   armStickToBottom()
   scheduleScrollToBottom('auto')
   const sendText = text || sendTextForAttachments(sourcePaths)
-  if (subAgentMention) {
+  if (subAgentDelegation) {
     await chatInst.value!.sendMessage(
       { text: sendText },
       {
         body: {
           subAgentMention: {
-            targetAgentId: subAgentMention.agentId,
-            task: subAgentMention.task,
+            targetAgentId: subAgentDelegation.agentId,
+            task: subAgentDelegation.task,
           },
           attachmentSourcePaths: sourcePaths,
         },

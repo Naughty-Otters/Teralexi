@@ -49,6 +49,17 @@ export function skillToAgent(skill: SkillDefinition): SkillAgent {
     ...(skill.actionToolNames.length > 0
       ? { actionToolNames: [...skill.actionToolNames] }
       : {}),
+    ...(skill.properties.skillGroup
+      ? {
+          skillGroup: skill.properties.skillGroup,
+          skillGroupLabel: skill.properties.skillGroupLabel,
+          skillVariant: skill.properties.skillVariant,
+          skillVariantLabel: skill.properties.skillVariantLabel,
+          skillGroupOrder: skill.properties.skillGroupOrder,
+          skillVariantOrder: skill.properties.skillVariantOrder,
+          skillGroupPrimary: skill.properties.skillGroupPrimary,
+        }
+      : {}),
     skillsPrompt: skillsText,
     executionSteps: needsExecutionSteps
       ? {

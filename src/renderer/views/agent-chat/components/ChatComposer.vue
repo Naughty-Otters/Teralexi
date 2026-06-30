@@ -24,11 +24,11 @@
         :model-value="modelValue"
         :selected-agent-id="selectedAgentId"
         :agent-options="agentOptions"
+        :chat-agents="chatAgents"
         :conversation-id="conversationId"
         :workspace-disabled="workspaceDisabled"
         :coding-agent="codingAgent"
-        :sub-agent-targets="subAgentTargets"
-        :sub-agent-mention-enabled="subAgentMentionEnabled"
+        :sub-agent-slash-enabled="subAgentSlashEnabled"
         :staged-attachments="stagedAttachments"
         :can-add-attachments="canAddAttachments"
         placeholder="Message…"
@@ -74,14 +74,14 @@ import {
   planModeComposerHint,
   type PlanModeDisplayStatus,
 } from '@shared/agent/plan-mode-phase'
-import type { SubAgentTarget } from '@shared/agent/sub-agent-targets'
+import type { StagedChatAttachment } from '@renderer/composables/useChatAttachments'
 import RichMessageComposer from './RichMessageComposer.vue'
 import CodingModeBar from './CodingModeBar.vue'
 import WorkspacePathBanner from './WorkspacePathBanner.vue'
 import BackgroundTaskPanel, {
   type BackgroundTaskView,
 } from './BackgroundTaskPanel.vue'
-import type { StagedChatAttachment } from '@renderer/composables/useChatAttachments'
+import type { SkillGroupAgentRef } from '@shared/agent/skill-groups'
 
 const props = defineProps<{
   modelValue: string
@@ -89,6 +89,7 @@ const props = defineProps<{
   sendDisabled: boolean
   selectedAgentId: string | null
   agentOptions: Array<{ id: string; name: string }>
+  chatAgents?: SkillGroupAgentRef[]
   conversationId?: string | null
   workspaceDisabled?: boolean
   workspaceHint?: string | null
@@ -99,8 +100,7 @@ const props = defineProps<{
   codingMode?: CodingMode
   planDisplayStatus?: PlanModeDisplayStatus
   backgroundTasks?: BackgroundTaskView[]
-  subAgentTargets?: SubAgentTarget[]
-  subAgentMentionEnabled?: boolean
+  subAgentSlashEnabled?: boolean
   stagedAttachments?: StagedChatAttachment[]
   canAddAttachments?: boolean
 }>()
@@ -120,8 +120,7 @@ const codingMode = computed(() => props.codingMode ?? 'normal')
 const codingAgent = computed(() => props.codingAgent === true)
 const backgroundTasks = computed(() => props.backgroundTasks ?? [])
 const showCodingModeBar = computed(() => props.showCodingModeBar === true)
-const subAgentTargets = computed(() => props.subAgentTargets ?? [])
-const subAgentMentionEnabled = computed(() => props.subAgentMentionEnabled === true)
+const subAgentSlashEnabled = computed(() => props.subAgentSlashEnabled === true)
 const stagedAttachments = computed(() => props.stagedAttachments ?? [])
 const canAddAttachments = computed(() => props.canAddAttachments !== false)
 

@@ -10,6 +10,8 @@ describe('bundled-skills', () => {
   it('includes all shipped bundled skill ids', () => {
     expect(getBundledSkillIds().sort()).toEqual([
       'coding',
+      'coding-pr',
+      'coding-review',
       'default',
       'documents',
       'google-workspace',
@@ -21,7 +23,7 @@ describe('bundled-skills', () => {
     await loadToolSetTools()
     const { buildBundledSkillDefinitions } = await import('./bundled-skills')
     const skills = await buildBundledSkillDefinitions([])
-    expect(skills.length).toBeGreaterThanOrEqual(5)
+    expect(skills.length).toBeGreaterThanOrEqual(7)
     const documents = skills.find((skill) => skill.id === 'documents')
     expect(documents?.actionToolNames).toContain('render_document')
     expect(documents?.sections.instructions.length).toBeGreaterThan(0)

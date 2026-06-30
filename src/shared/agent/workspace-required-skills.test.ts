@@ -14,8 +14,10 @@ describe('workspace-required-skills', () => {
     expect(resolveAgentSkillId({ id: 'custom-agent' })).toBeNull()
   })
 
-  it('flags coding and code-review only', () => {
+  it('flags coding family skills', () => {
     expect(skillRequiresWorkspace('coding')).toBe(true)
+    expect(skillRequiresWorkspace('coding-review')).toBe(true)
+    expect(skillRequiresWorkspace('coding-pr')).toBe(true)
     expect(skillRequiresWorkspace('default')).toBe(false)
     expect(agentRequiresWorkspace({ skillId: 'documents' })).toBe(false)
   })

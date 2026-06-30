@@ -50,6 +50,14 @@ export interface SkillAgent {
   allowedTools?: string[]
   /** Names from `actions/` — always enabled by default with `allowed_tools`. */
   actionToolNames?: string[]
+  /** Skill family metadata from properties.md `group` / `variant` fields. */
+  skillGroup?: string
+  skillGroupLabel?: string
+  skillVariant?: string
+  skillVariantLabel?: string
+  skillGroupOrder?: number
+  skillVariantOrder?: number
+  skillGroupPrimary?: boolean
   compiledArtifact?: SkillCompiledArtifact
   compilationStatus?: SkillCompilationStatus | 'missing'
 }

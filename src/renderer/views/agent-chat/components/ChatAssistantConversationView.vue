@@ -238,7 +238,7 @@
     class="conversation-tool-responses conversation-tool-responses--standalone"
   >
     <ChatConversationToolResponseBubble
-      v-for="toolBubble in toolResponseBubbles"
+      v-for="toolBubble in visibleToolResponseBubbles"
       :key="toolBubble.key"
       :part="toolBubble.part"
       :viewer="toolBubble.viewer"
