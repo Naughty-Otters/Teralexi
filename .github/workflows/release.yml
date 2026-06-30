@@ -28,25 +28,9 @@ jobs:
           - os: macos-latest
             platform: mac
             npm_script: release:mac
-            mac_sign_certificate: ${{ secrets.MAC_SIGN_CERTIFICATE_BASE64 }}
-            mac_sign_certificate_password: ${{ secrets.MAC_SIGN_CERTIFICATE_PASSWORD }}
-            mac_sign_identity: ${{ secrets.MAC_SIGN_IDENTITY }}
-            mac_apple_id: ${{ secrets.APPLE_ID }}
-            mac_apple_app_specific_password: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-            mac_apple_team_id: ${{ secrets.APPLE_TEAM_ID }}
-            win_sign_certificate: ''
-            win_sign_certificate_password: ''
           - os: windows-latest
             platform: win
             npm_script: release:win
-            mac_sign_certificate: ''
-            mac_sign_certificate_password: ''
-            mac_sign_identity: ''
-            mac_apple_id: ''
-            mac_apple_app_specific_password: ''
-            mac_apple_team_id: ''
-            win_sign_certificate: ${{ secrets.WIN_SIGN_CERTIFICATE_BASE64 }}
-            win_sign_certificate_password: ${{ secrets.WIN_SIGN_CERTIFICATE_PASSWORD }}
 
     steps:
       - name: Check out repository
@@ -76,14 +60,14 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=6144
           OPENFDE_BUILD_ENV: prod
-          MAC_SIGN_CERTIFICATE: ${{ matrix.mac_sign_certificate }}
-          MAC_SIGN_CERTIFICATE_PASSWORD: ${{ matrix.mac_sign_certificate_password }}
-          MAC_SIGN_IDENTITY: ${{ matrix.mac_sign_identity }}
-          MAC_APPLE_ID: ${{ matrix.mac_apple_id }}
-          MAC_APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.mac_apple_app_specific_password }}
-          MAC_APPLE_TEAM_ID: ${{ matrix.mac_apple_team_id }}
-          WIN_SIGN_CERTIFICATE: ${{ matrix.win_sign_certificate }}
-          WIN_SIGN_CERTIFICATE_PASSWORD: ${{ matrix.win_sign_certificate_password }}
+          MAC_SIGN_CERTIFICATE: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_CERTIFICATE_BASE64 || '' }}
+          MAC_SIGN_CERTIFICATE_PASSWORD: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_CERTIFICATE_PASSWORD || '' }}
+          MAC_SIGN_IDENTITY: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_IDENTITY || '' }}
+          MAC_APPLE_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_ID || '' }}
+          MAC_APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.platform == 'mac' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          MAC_APPLE_TEAM_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_TEAM_ID || '' }}
+          WIN_SIGN_CERTIFICATE: ${{ matrix.platform == 'win' && secrets.WIN_SIGN_CERTIFICATE_BASE64 || '' }}
+          WIN_SIGN_CERTIFICATE_PASSWORD: ${{ matrix.platform == 'win' && secrets.WIN_SIGN_CERTIFICATE_PASSWORD || '' }}
         run: npm run ${{ matrix.npm_script }}
 
       - name: Configure AWS credentials
