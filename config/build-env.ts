@@ -2,6 +2,9 @@ export type OpenFdeBuildEnv = 'dev' | 'sit' | 'prod'
 
 export const OPENFDE_BUILD_ENV_VAR = 'OPENFDE_BUILD_ENV'
 
+/** Replaced at desktop bundle time via rollup/vite `define` (see `.electron-vite/rollup.config.ts`). */
+export const BAKED_OPENFDE_BUILD_ENV = '__OPENFDE_BUILD_ENV__'
+
 export function normalizeBuildEnv(raw: unknown): OpenFdeBuildEnv {
   const mode = String(raw ?? '')
     .trim()
@@ -26,8 +29,14 @@ export function buildEnvToEnvFileName(mode: OpenFdeBuildEnv): string {
   return `.${mode}.env`
 }
 
-/** Inlined at desktop build time via rollup `@rollup/plugin-replace`. */
+import { isUnresolvedBakedPlaceholder } from './baked-app-env'
+
+/** Inlined at desktop build time; falls back to process env for dev/tests. */
 function readBakedBuildEnv(): string {
+  const baked = BAKED_OPENFDE_BUILD_ENV
+  if (baked && !isUnresolvedBakedPlaceholder(baked)) {
+    return baked
+  }
   return process.env.OPENFDE_BUILD_ENV ?? ''
 }
 

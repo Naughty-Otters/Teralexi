@@ -13,6 +13,7 @@ import { join, dirname } from 'path'
 import { request as httpsRequest } from 'node:https'
 import { parse as parseUrl } from 'url'
 import { getopenfdeAccountsDir } from '@config/openfde-home'
+import { isPackagedRuntime } from '@config/env-overrides'
 import {
   DEFAULT_OPENFDE_GOOGLE_AUTH_LOGIN_URL_DEV,
   GoogleAccountNotConfiguredError,
@@ -68,7 +69,7 @@ const log = createLogger('services.google-account-oauth')
 export function resolveOpenFdeGoogleAuthLoginUrl(): string {
   const resolved = resolveConfiguredGoogleAuthLoginUrl()
   if (resolved) return resolved
-  if (process.env.NODE_ENV === 'production') return ''
+  if (isPackagedRuntime()) return ''
   return DEFAULT_OPENFDE_GOOGLE_AUTH_LOGIN_URL_DEV
 }
 

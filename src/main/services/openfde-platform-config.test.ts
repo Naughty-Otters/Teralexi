@@ -19,6 +19,17 @@ describe('openfde-platform-config', () => {
     vi.mocked(getSystemPropValue).mockReset()
   })
 
+  it('derives google auth from BASE_API when env-only override is unset', () => {
+    vi.mocked(getSystemPropValue).mockImplementation((key: string) => {
+      if (key === 'app.base.apiUrl') return 'https://staging.example.com/'
+      return ''
+    })
+
+    expect(getOpenFdeGoogleAuthLoginUrl()).toBe(
+      'https://staging.example.com/auth/login',
+    )
+  })
+
   it('derives platform endpoints from BASE_API only', () => {
     vi.mocked(getSystemPropValue).mockImplementation((key: string) => {
       if (key === 'app.base.apiUrl') return 'http://127.0.0.1:8000'

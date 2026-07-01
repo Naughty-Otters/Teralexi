@@ -27,7 +27,9 @@ Installed OpenFDE app (no auth)
 
 ## Environment files
 
-Build and runtime config is loaded from `env/` (bundled into the app) and optionally overridden by `~/.openfde/config/.env` (never commit secrets there to git — keep signing certs/passwords in that file locally or in GitHub secrets only).
+Edit `env/.dev.env`, `env/.sit.env`, or `env/.prod.env` before building. Values are **baked into the app at build time** — packaged apps do not load env files at runtime.
+
+`~/.openfde/config/.env` is only used for **code-signing secrets** when running electron-builder locally (never commit secrets to git).
 
 | File | `OPENFDE_BUILD_ENV` | Used by | Purpose |
 | --- | --- | --- | --- |
@@ -35,7 +37,7 @@ Build and runtime config is loaded from `env/` (bundled into the app) and option
 | `env/.sit.env` | `sit` | CI workflow, `npm run build:*:sit` | Staging / internal QA |
 | `env/.prod.env` | `prod` | Release workflow, `npm run build:*`, `npm run release:*` | Production releases |
 
-Process env and `~/.openfde/config/.env` override bundled env files. See [BUILD-AND-RELEASE.md](../BUILD-AND-RELEASE.md) for build modes.
+See [BUILD-AND-RELEASE.md](../BUILD-AND-RELEASE.md) for build modes.
 
 ---
 
@@ -78,14 +80,6 @@ app.desktop.releasesUrl=desktop/releases/stable
 ```
 
 **Staging vs production:** use the same default path (`desktop/releases/stable/`). The only difference between `env/.sit.env` and `env/.prod.env` is **`BASE_API`** — staging apps check `https://stage_api.openfde.dev/desktop/releases/stable/`, production apps check `https://api.openfde.dev/desktop/releases/stable/`. Do not set a separate `app.desktop.releasesUrl` for sit.
-
-### User override file
-
-`~/.openfde/config/.env` wins over bundled env files. Example:
-
-```properties
-BASE_API = 'http://localhost:8000'
-```
 
 ---
 

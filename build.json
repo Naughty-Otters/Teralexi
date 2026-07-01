@@ -13,6 +13,7 @@
     "en-US"
   ],
   "afterPack": "scripts/electron-after-pack.cjs",
+  "afterSign": "scripts/electron-after-sign.cjs",
   "extraResources": [
     {
       "from": "build/icons",
@@ -42,7 +43,6 @@
   "files": [
     "dist/electron/**/*",
     "config/**/*",
-    "env/**/*",
     ".openfde/**/*",
     "!**/*.{map,tsbuildinfo}",
     "!**/*.test.{ts,tsx,js,jsx,mjs,cjs}",

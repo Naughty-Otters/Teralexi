@@ -83,6 +83,14 @@ export const ENV_ONLY_PROPERTY_KEYS = [
   'app.desktop.forceDevUpdateConfig',
 ] as const
 
+const ENV_ONLY_PROPERTY_KEY_SET = new Set<string>(ENV_ONLY_PROPERTY_KEYS)
+
+function stripEnvOnlyKeys(entries: Map<string, string>): void {
+  for (const key of ENV_ONLY_PROPERTY_KEYS) {
+    entries.delete(key)
+  }
+}
+
 export const SYSTEM_PROPERTY_KEYS = [
   ...Object.keys(DEFAULT_SYSTEM_PROPERTIES),
   ...ENV_ONLY_PROPERTY_KEYS,
@@ -133,6 +141,7 @@ function readConfigProperties(): Map<string, string> {
 function resolveAllProps(): Map<string, string> {
   ensureEnvOverridesLoaded()
   const merged = readConfigProperties()
+  stripEnvOnlyKeys(merged)
   for (const [key, value] of getEnvOverrides()) {
     if (!isValidSystemPropKey(key)) continue
     if (value !== '') merged.set(key, value)
@@ -142,13 +151,16 @@ function resolveAllProps(): Map<string, string> {
 
 function writeAllProps(entries: Map<string, string>): void {
   const filePath = getSystemPropPath()
+  const persisted = new Map(entries)
+  stripEnvOnlyKeys(persisted)
   mkdirSync(getopenfdeConfigDir(), { recursive: true })
   mkdirSync(dirname(filePath), { recursive: true })
-  writeFileSync(filePath, stringifySystemProp(entries), 'utf-8')
+  writeFileSync(filePath, stringifySystemProp(persisted), 'utf-8')
 }
 
 export function ensureSystemPropFile(): string {
   const merged = readConfigProperties()
+  stripEnvOnlyKeys(merged)
   writeAllProps(merged)
   return getSystemPropPath()
 }
@@ -178,8 +190,14 @@ export function setSystemPropValue(
   if (!isValidSystemPropKey(key)) {
     throw new Error(`Invalid config.properties key format: ${key}`)
   }
+  if (ENV_ONLY_PROPERTY_KEY_SET.has(key)) {
+    throw new Error(
+      `${key} is baked at build time and cannot be saved to config.properties`,
+    )
+  }
 
   const merged = readConfigProperties()
+  stripEnvOnlyKeys(merged)
   merged.set(key, String(value))
   writeAllProps(merged)
 }

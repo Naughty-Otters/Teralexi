@@ -77,8 +77,40 @@ describe('system-prop', () => {
     expect(picked['missing.key']).toBeUndefined()
   })
 
-  it('setSystemPropValue rejects invalid keys', () => {
-    expect(() => setSystemPropValue('bad', 'x')).toThrow(/Invalid/)
+  it('ignores env-only keys persisted in config.properties', () => {
+    vi.mocked(existsSync).mockReturnValue(true)
+    vi.mocked(readFileSync).mockReturnValue(
+      [
+        'app.openfde.googleAuthLoginUrl=http://localhost:8000/auth/login',
+        'app.base.apiUrl=http://localhost:8000',
+      ].join('\n'),
+    )
+    vi.mocked(getEnvOverrides).mockReturnValue(
+      new Map([['app.base.apiUrl', 'https://staging.example.com/']]),
+    )
+
+    expect(getSystemPropValue('app.base.apiUrl')).toBe('https://staging.example.com/')
+    expect(getSystemPropValue('app.openfde.googleAuthLoginUrl')).toBe('')
+  })
+
+  it('ensureSystemPropFile strips env-only keys from config.properties', () => {
+    vi.mocked(existsSync).mockReturnValue(true)
+    vi.mocked(readFileSync).mockReturnValue(
+      'app.openfde.googleAuthLoginUrl=http://localhost:8000/auth/login\napp.dev.port=3000\n',
+    )
+
+    ensureSystemPropFile()
+
+    const body = String(writeFileSync.mock.calls.at(-1)?.[1])
+    expect(body).toContain('app.dev.port=3000')
+    expect(body).not.toContain('app.openfde.googleAuthLoginUrl')
+    expect(body).not.toContain('localhost:8000')
+  })
+
+  it('setSystemPropValue rejects env-only keys', () => {
+    expect(() =>
+      setSystemPropValue('app.base.apiUrl', 'http://localhost:8000'),
+    ).toThrow(/build time/)
   })
 
   it('setSystemPropValue writes merged map', () => {

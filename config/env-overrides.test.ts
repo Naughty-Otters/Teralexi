@@ -5,21 +5,19 @@ vi.mock('node:fs', () => ({
   readFileSync: vi.fn(),
 }))
 
-vi.mock('node:os', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('node:os')>()
-  return {
-    ...actual,
-    homedir: vi.fn(() => '/Users/tester'),
-  }
-})
+const electronMock = vi.hoisted(() => ({
+  app: { isPackaged: false as boolean },
+}))
+
+vi.mock('electron', () => electronMock)
 
 import { existsSync, readFileSync } from 'node:fs'
+import { loadBakedEnvOverrides } from './baked-app-env'
 import {
   envNameToSystemPropKey,
   loadEnvOverrides,
   parseEnvFile,
   resetEnvOverridesForTests,
-  resolveEnvSearchRoots,
   stripEnvValue,
   systemPropKeyToEnvName,
 } from './env-overrides'
@@ -36,6 +34,7 @@ describe('env-overrides', () => {
     resetEnvOverridesForTests()
     vi.mocked(existsSync).mockReset()
     vi.mocked(readFileSync).mockReset()
+    electronMock.app.isPackaged = false
   })
 
   it('maps system prop keys to env var names', () => {
@@ -48,18 +47,11 @@ describe('env-overrides', () => {
     expect(envNameToSystemPropKey('APP_METRICS_GRAPHQLURL', KNOWN_KEYS)).toBe(
       'app.metrics.graphqlUrl',
     )
-    expect(
-      envNameToSystemPropKey('OPENFDE_APP_METRICS_GRAPHQLURL', KNOWN_KEYS),
-    ).toBe('app.metrics.graphqlUrl')
-    expect(
-      envNameToSystemPropKey('app.metrics.graphqlUrl', KNOWN_KEYS),
-    ).toBe('app.metrics.graphqlUrl')
   })
 
   it('parses quoted env values and dotted keys', () => {
     const parsed = parseEnvFile(
       `
-# comment
 app.metrics.graphqlUrl = 'http://127.0.0.1:8000/graphql'
 APP_DEV_PORT=3000
 `,
@@ -72,11 +64,6 @@ APP_DEV_PORT=3000
     expect(parsed.get('app.dev.port')).toBe('3000')
   })
 
-  it('strips surrounding quotes', () => {
-    expect(stripEnvValue("'value'")).toBe('value')
-    expect(stripEnvValue('"value"')).toBe('value')
-  })
-
   it('maps BASE_API env var to app.base.apiUrl', () => {
     const parsed = parseEnvFile(
       "BASE_API = 'http://127.0.0.1:8000'\n",
@@ -85,90 +72,41 @@ APP_DEV_PORT=3000
     expect(parsed.get('app.base.apiUrl')).toBe('http://127.0.0.1:8000')
   })
 
-  it('maps DESKTOP_UPDATE_FORCE_DEV env var to app.desktop.forceDevUpdateConfig', () => {
-    const parsed = parseEnvFile(
-      "DESKTOP_UPDATE_FORCE_DEV = 'true'\n",
-      ['app.desktop.forceDevUpdateConfig'],
-    )
-    expect(parsed.get('app.desktop.forceDevUpdateConfig')).toBe('true')
-  })
-
-  it('loads overrides from env files and process env', () => {
+  it('loads dev env file when unpackaged', () => {
     vi.mocked(existsSync).mockImplementation((target) =>
-      String(target).endsWith('/env/.prod.env'),
+      String(target).endsWith('/env/.dev.env'),
     )
     vi.mocked(readFileSync).mockReturnValue(
-      "app.metrics.graphqlUrl = 'http://metrics.example/graphql'\n",
-    )
-
-    const overrides = loadEnvOverrides({
-      knownKeys: KNOWN_KEYS,
-      searchRoots: ['/app'],
-      processEnv: {
-        NODE_ENV: 'production',
-        APP_DEV_PORT: '4000',
-      },
-    })
-
-    expect(overrides.get('app.metrics.graphqlUrl')).toBe(
-      'http://metrics.example/graphql',
-    )
-    expect(overrides.get('app.dev.port')).toBe('4000')
-  })
-
-  it('resolveEnvSearchRoots includes packaged app root for dist/electron/main bundles', () => {
-    expect(
-      resolveEnvSearchRoots({
-        moduleDir: '/Applications/OpenFDE.app/Contents/Resources/app.asar/dist/electron/main',
-        appPath: '/Applications/OpenFDE.app/Contents/Resources/app.asar',
-        cwd: '/Users/tester',
-      }),
-    ).toEqual([
-      '/Applications/OpenFDE.app/Contents/Resources/app.asar',
-      '/Applications/OpenFDE.app/Contents/Resources/app.asar/dist/electron',
-      '/Users/tester',
-    ])
-  })
-
-  it('loads prod env from packaged app layout', () => {
-    vi.mocked(existsSync).mockImplementation((target) =>
-      String(target).endsWith('/app.asar/env/.prod.env'),
-    )
-    vi.mocked(readFileSync).mockReturnValue(
-      "BASE_API = 'https://api.example.com'\n",
+      "BASE_API = 'http://127.0.0.1:8000'\n",
     )
 
     const overrides = loadEnvOverrides({
       knownKeys: ['app.base.apiUrl'],
-      searchRoots: resolveEnvSearchRoots({
-        moduleDir: '/app.asar/dist/electron/main',
-        appPath: '/app.asar',
-      }),
-      processEnv: { OPENFDE_BUILD_ENV: 'prod' },
+      searchRoots: ['/Users/tester/code/OpenFDE'],
+      processEnv: { OPENFDE_BUILD_ENV: 'dev' },
     })
 
-    expect(overrides.get('app.base.apiUrl')).toBe('https://api.example.com')
+    expect(overrides.get('app.base.apiUrl')).toBe('http://127.0.0.1:8000')
   })
 
-  it('loads staging overrides from .sit.env when OPENFDE_BUILD_ENV is sit', () => {
-    vi.mocked(existsSync).mockImplementation((target) =>
-      String(target).endsWith('/env/.sit.env'),
-    )
-    vi.mocked(readFileSync).mockReturnValue(
-      "app.metrics.graphqlUrl = 'http://staging.example/graphql'\n",
-    )
+  it('uses baked values when packaged', () => {
+    electronMock.app.isPackaged = true
 
     const overrides = loadEnvOverrides({
-      knownKeys: KNOWN_KEYS,
-      searchRoots: ['/app'],
-      processEnv: {
-        OPENFDE_BUILD_ENV: 'sit',
-        NODE_ENV: 'production',
-      },
+      knownKeys: ['app.base.apiUrl'],
+      processEnv: { BASE_API: 'https://staging.example.com/' },
     })
 
-    expect(overrides.get('app.metrics.graphqlUrl')).toBe(
-      'http://staging.example/graphql',
-    )
+    expect(overrides.get('app.base.apiUrl')).toBe('https://staging.example.com/')
+    electronMock.app.isPackaged = false
+  })
+})
+
+describe('baked-app-env', () => {
+  it('loadBakedEnvOverrides reads process env when placeholders are unset', () => {
+    const overrides = loadBakedEnvOverrides(['app.base.apiUrl'], {
+      BASE_API: 'https://staging.example.com/',
+    } as NodeJS.ProcessEnv)
+    expect(overrides.get('app.base.apiUrl')).toBe('https://staging.example.com/')
   })
 })

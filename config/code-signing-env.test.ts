@@ -9,8 +9,7 @@ vi.mock('./env-overrides', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./env-overrides')>()
   return {
     ...actual,
-    initializeEnvOverrides: vi.fn(),
-    resolveEnvSearchRoots: vi.fn(() => ['/app']),
+    resolveBuildTimeEnvFilePaths: vi.fn(() => ['/app/env/.prod.env']),
   }
 })
 
@@ -129,5 +128,39 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
       ]),
     )
     expect(args).toEqual(['--config.mac.notarize=true'])
+  })
+
+  it('disables hardenedRuntime for unsigned macOS builds', () => {
+    expect(
+      buildElectronBuilderExtraArgs(new Map(), { buildingMac: true }),
+    ).toEqual(['--config.mac.hardenedRuntime=false'])
+    expect(
+      buildElectronBuilderExtraArgs(
+        new Map([['CSC_NAME', 'Developer ID Application: Example']]),
+        { buildingMac: true },
+      ),
+    ).toEqual([])
+  })
+
+  it('disables Windows signing for unsigned Windows builds', () => {
+    expect(
+      buildElectronBuilderExtraArgs(new Map(), { buildingWin: true }),
+    ).toEqual(['--config.win.signAndEditExecutable=false'])
+    expect(
+      buildElectronBuilderExtraArgs(
+        new Map([['WIN_CSC_LINK', 'C:\\certs\\openfde.pfx']]),
+        { buildingWin: true },
+      ),
+    ).toEqual([])
+  })
+
+  it('applyUnsignedPlatformBuildPolicy disables auto-discovery for unsigned targets', async () => {
+    const { applyUnsignedPlatformBuildPolicy } = await import('./code-signing-env')
+    const env = {} as NodeJS.ProcessEnv
+    applyUnsignedPlatformBuildPolicy(env, new Map(), {
+      buildingMac: true,
+      buildingWin: true,
+    })
+    expect(env.CSC_IDENTITY_AUTO_DISCOVERY).toBe('false')
   })
 })

@@ -9,15 +9,17 @@ import { getConfig } from './utils'
 function resolve(dir: string) {
   return join(__dirname, '..', dir)
 }
-const config = getConfig()
-
 const root = resolve('src/renderer')
+
+const config = getConfig() ?? {}
 
 export default defineConfig({
   mode: config && config.NODE_ENV,
   root,
   define: {
     __CONFIG__: config,
+    '__CONFIG__.BASE_API': JSON.stringify(config.BASE_API ?? ''),
+    '__CONFIG__.NODE_ENV': JSON.stringify(config.NODE_ENV ?? ''),
     __ISWEB__: Number(config && config.target),
   },
   resolve: {

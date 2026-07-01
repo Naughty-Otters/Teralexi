@@ -2,12 +2,9 @@ import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import {
-  initializeEnvOverrides,
-  resolveEnvFilePaths,
-  resolveEnvSearchRoots,
+  resolveBuildTimeEnvFilePaths,
   stripEnvValue,
 } from './env-overrides'
-import { SYSTEM_PROPERTY_KEYS } from './system-prop'
 
 /** electron-builder env vars (build-time only). */
 export const ELECTRON_BUILDER_SIGNING_KEYS = [
@@ -81,13 +78,8 @@ export function parseCodeSigningEnvFile(content: string): Map<string, string> {
 export function loadCodeSigningEnv(
   processEnv: NodeJS.ProcessEnv = process.env,
 ): Map<string, string> {
-  initializeEnvOverrides(SYSTEM_PROPERTY_KEYS)
-
   const merged = new Map<string, string>()
-  for (const filePath of resolveEnvFilePaths(
-    resolveEnvSearchRoots({ cwd: process.cwd() }),
-    processEnv,
-  )) {
+  for (const filePath of resolveBuildTimeEnvFilePaths(process.cwd(), processEnv)) {
     if (!existsSync(filePath)) continue
     const parsed = parseCodeSigningEnvFile(readFileSync(filePath, 'utf-8'))
     for (const [key, value] of parsed) {
@@ -164,10 +156,37 @@ export function applyCodeSigningEnv(
 
 export function buildElectronBuilderExtraArgs(
   env: Map<string, string> = loadCodeSigningEnv(),
+  options?: { buildingMac?: boolean; buildingWin?: boolean },
 ): string[] {
   const args: string[] = []
   if (isMacNotarizeConfigured(env)) {
     args.push('--config.mac.notarize=true')
   }
+  // Unsigned macOS builds on recent macOS versions fail at dyld launch when
+  // hardenedRuntime is enabled but inner frameworks are not signed consistently.
+  if (options?.buildingMac && !isMacCodeSigningConfigured(env)) {
+    args.push('--config.mac.hardenedRuntime=false')
+  }
+  // Unsigned Windows builds must skip Authenticode signing (build.json default is true).
+  if (options?.buildingWin && !isWindowsCodeSigningConfigured(env)) {
+    args.push('--config.win.signAndEditExecutable=false')
+  }
   return args
+}
+
+/**
+ * Prevent electron-builder from auto-discovering keychain certs when the target
+ * platform has no explicit signing credentials — avoids partial/inconsistent signing.
+ */
+export function applyUnsignedPlatformBuildPolicy(
+  processEnv: NodeJS.ProcessEnv,
+  signingEnv: Map<string, string>,
+  options: { buildingMac?: boolean; buildingWin?: boolean },
+): void {
+  if (options.buildingMac && !isMacCodeSigningConfigured(signingEnv)) {
+    processEnv.CSC_IDENTITY_AUTO_DISCOVERY = 'false'
+  }
+  if (options.buildingWin && !isWindowsCodeSigningConfigured(signingEnv)) {
+    processEnv.CSC_IDENTITY_AUTO_DISCOVERY = 'false'
+  }
 }
