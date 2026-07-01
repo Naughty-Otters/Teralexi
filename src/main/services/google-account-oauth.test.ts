@@ -7,9 +7,12 @@ vi.mock('fs', () => ({
   mkdirSync: vi.fn(),
 }))
 
-vi.mock('electron', () => ({
+const electronMock = vi.hoisted(() => ({
   shell: { openExternal: vi.fn(async () => undefined) },
+  app: { isPackaged: false },
 }))
+
+vi.mock('electron', () => electronMock)
 
 vi.mock('node:https', () => ({
   default: { request: vi.fn() },
@@ -28,6 +31,15 @@ vi.mock('@main/services/google-account-notify', () => ({
   notifyGoogleAccountChanged: vi.fn(),
 }))
 
+vi.mock('@config/env-overrides', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@config/env-overrides')>()
+  return {
+    ...actual,
+    isPackagedRuntime: vi.fn(() => false),
+  }
+})
+
+import { isPackagedRuntime } from '@config/env-overrides'
 import {
   applyGoogleAccountOAuthCallback,
   clearStoredAccount,
@@ -71,13 +83,10 @@ describe('google-account-oauth', () => {
     expect(googleAccountSignInIsConfigured()).toBe(true)
   })
 
-  it('startGoogleAccountSignIn rejects when auth URL is empty in production', async () => {
-    vi.stubEnv('NODE_ENV', 'production')
-    vi.mocked(getSystemPropValue).mockReturnValue('')
-    await expect(startGoogleAccountSignIn()).rejects.toMatchObject({
-      message: GOOGLE_ACCOUNT_NOT_CONFIGURED,
-    })
-    vi.unstubAllEnvs()
+  it('resolveOpenFdeGoogleAuthLoginUrl returns empty in packaged app without config', () => {
+    vi.mocked(isPackagedRuntime).mockReturnValue(true)
+    expect(resolveOpenFdeGoogleAuthLoginUrl()).toBe('')
+    vi.mocked(isPackagedRuntime).mockReturnValue(false)
   })
 
   it('applyGoogleAccountOAuthCallback accepts Google ID token', async () => {

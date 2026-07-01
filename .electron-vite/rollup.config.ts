@@ -156,6 +156,13 @@ export default (env = 'production', type = 'main') => {
         'process.env.OPENFDE_BUILD_ENV': JSON.stringify(
           process.env.OPENFDE_BUILD_ENV ?? 'dev',
         ),
+        __OPENFDE_BUILD_ENV__: JSON.stringify(
+          process.env.OPENFDE_BUILD_ENV ?? 'dev',
+        ),
+        __OPENFDE_BASE_API__: JSON.stringify(config?.BASE_API ?? ''),
+        __OPENFDE_DESKTOP_UPDATE_FORCE_DEV__: JSON.stringify(
+          config?.DESKTOP_UPDATE_FORCE_DEV ?? '',
+        ),
       }),
       alias(pathAliases),
       nodeResolve({

@@ -1,30 +1,32 @@
 import { spawnSync } from 'node:child_process'
+import { join } from 'node:path'
 import { applyBuildEnvFromArgv } from '../.electron-vite/utils'
 import {
   applyCodeSigningEnv,
+  applyUnsignedPlatformBuildPolicy,
   buildElectronBuilderExtraArgs,
   isMacCodeSigningConfigured,
   isMacNotarizeConfigured,
   isWindowsCodeSigningConfigured,
 } from '../config/code-signing-env'
+import { detectElectronBuilderTargets } from '../config/electron-builder-targets'
+import { resignUnsignedMacAppsInBuildOutput } from './macos-unsigned-resign'
 
 applyBuildEnvFromArgv()
-const signingEnv = applyCodeSigningEnv()
 
 const userArgs = process.argv.slice(2)
-const args = [...userArgs, ...buildElectronBuilderExtraArgs(signingEnv)]
+const { buildingMac, buildingWin } = detectElectronBuilderTargets(userArgs)
 
-const buildingMac = userArgs.some(
-  (arg) => arg === '--mac' || arg.startsWith('--mac='),
-)
-const buildingWin = userArgs.some(
-  (arg) =>
-    arg === '--win' ||
-    arg.startsWith('--win=') ||
-    arg.includes('--win ') ||
-    userArgs.includes('--x64') ||
-    userArgs.includes('--ia32'),
-)
+const signingEnv = applyCodeSigningEnv()
+applyUnsignedPlatformBuildPolicy(process.env, signingEnv, {
+  buildingMac,
+  buildingWin,
+})
+
+const args = [
+  ...userArgs,
+  ...buildElectronBuilderExtraArgs(signingEnv, { buildingMac, buildingWin }),
+]
 
 if (buildingMac) {
   if (isMacCodeSigningConfigured(signingEnv)) {
@@ -34,7 +36,7 @@ if (buildingMac) {
     }
   } else {
     console.log(
-      '[code-sign] No macOS signing env found — build will be unsigned. Set MAC_SIGN_IDENTITY or MAC_SIGN_CERTIFICATE in env or ~/.openfde/config/.env',
+      '[code-sign] macOS unsigned build (hardenedRuntime disabled, post-build ad-hoc re-sign). Set MAC_SIGN_IDENTITY or MAC_SIGN_CERTIFICATE to sign.',
     )
   }
 }
@@ -44,7 +46,7 @@ if (buildingWin) {
     console.log('[code-sign] Windows Authenticode signing configured')
   } else {
     console.log(
-      '[code-sign] No Windows signing env found — build will be unsigned. Set WIN_SIGN_CERTIFICATE in env or ~/.openfde/config/.env',
+      '[code-sign] Windows unsigned build (signAndEditExecutable disabled). Set WIN_SIGN_CERTIFICATE to sign.',
     )
   }
 }
@@ -55,4 +57,22 @@ const result = spawnSync('electron-builder', args, {
   shell: process.platform === 'win32',
 })
 
-process.exit(result.status ?? 1)
+if (result.status !== 0) {
+  process.exit(result.status ?? 1)
+}
+
+if (buildingMac && !isMacCodeSigningConfigured(signingEnv)) {
+  const buildDir = join(process.cwd(), 'build')
+  const signedApps = resignUnsignedMacAppsInBuildOutput(buildDir)
+  if (signedApps.length === 0) {
+    console.warn(
+      `[code-sign] expected a macOS .app under ${buildDir}/mac-* but none was found for post-build re-sign`,
+    )
+  } else {
+    for (const appPath of signedApps) {
+      console.log(`[code-sign] post-build ad-hoc re-signed: ${appPath}`)
+    }
+  }
+}
+
+process.exit(0)

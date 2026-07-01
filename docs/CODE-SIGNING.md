@@ -127,6 +127,27 @@ base64 -i openfde.pfx | pbcopy
 
 If signing secrets are missing, workflows still produce unsigned installers.
 
+### Unsigned vs signed builds (macOS + Windows)
+
+OpenFDE defaults to **unsigned builds that launch locally** when no signing credentials are configured. When you provide keys in `~/.openfde/config/.env` (or CI secrets), the same build scripts sign automatically.
+
+| Platform | Unsigned (no keys) | Signed (keys provided) |
+| --- | --- | --- |
+| **macOS** | `hardenedRuntime` disabled; app is ad-hoc re-signed in `afterSign` (before dmg/zip) and again post-build | `MAC_SIGN_IDENTITY` / `MAC_SIGN_CERTIFICATE` → Developer ID signing; `hardenedRuntime` stays enabled |
+| **Windows** | `signAndEditExecutable` disabled → unsigned `.exe` / NSIS installer | `WIN_SIGN_CERTIFICATE` → Authenticode signing |
+
+Friendly env vars (see table below) map to electron-builder `CSC_*` / `WIN_CSC_*` / `APPLE_*`. Auto-discovery of keychain certificates is **disabled** for unsigned platform builds so macOS does not partially sign with a stray cert.
+
+**macOS unsigned manual fix** (only needed for artifacts built before this policy):
+
+```bash
+codesign --force --deep --sign - build/mac-arm64/OpenFDE.app
+xattr -cr build/mac-arm64/OpenFDE.app
+open build/mac-arm64/OpenFDE.app
+```
+
+For distribution to other machines, use Developer ID + notarization (macOS) or Authenticode (Windows).
+
 ## Related
 
 - [BUILD-AND-RELEASE.md](../BUILD-AND-RELEASE.md)

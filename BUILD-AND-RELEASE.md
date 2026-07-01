@@ -24,10 +24,10 @@ Configure the OpenFDE platform backend once with `BASE_API`. At runtime it maps 
 | Google sign-in | `auth/login` |
 | Support upload | `support/upload` |
 
-- **Build-time (renderer):** `BASE_API` is also loaded into `__CONFIG__.BASE_API` for axios (`src/renderer/utils/request.ts`).
-- **Runtime (main process):** optional overrides such as `app.metrics.graphqlUrl` may be relative paths or legacy absolute URLs.
+- **Build-time (main + renderer):** `BASE_API` is baked into both bundles from `env/.{mode}.env`. Packaged apps do not read env files at runtime — rebuild to change API targets.
+- **Runtime (main process):** optional overrides such as `app.metrics.graphqlUrl` may be relative paths or legacy absolute URLs (via `config.properties` only).
 
-User overrides in `~/.openfde/config/.env` always win over bundled env files.
+**Code signing:** builds are **unsigned by default** (macOS and Windows). Add `MAC_SIGN_*` and/or `WIN_SIGN_*` to `~/.openfde/config/.env` (or CI secrets) when running electron-builder — see [docs/CODE-SIGNING.md](./docs/CODE-SIGNING.md).
 
 Example `env/.dev.env`:
 
