@@ -121,7 +121,7 @@ See **[docs/CODE-SIGNING.md](./CODE-SIGNING.md)** for configuring Apple Develope
 | **macOS** | Developer ID + notarization for smooth in-app updates |
 | **Windows** | Authenticode certificate to reduce SmartScreen warnings |
 
-Set signing credentials in `~/.openfde/config/.env` (local) or GitHub Actions secrets (Release workflow). Unsigned builds still work for internal testing.
+Set signing credentials via **shell environment variables** (local) or GitHub Actions secrets (Release workflow). Unsigned builds still work for internal testing.
 
 ## Hot update (legacy)
 

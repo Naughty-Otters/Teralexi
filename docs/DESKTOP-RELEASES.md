@@ -29,7 +29,7 @@ Installed OpenFDE app (no auth)
 
 Edit `env/.dev.env`, `env/.sit.env`, or `env/.prod.env` before building. Values are **baked into the app at build time** — packaged apps do not load env files at runtime.
 
-`~/.openfde/config/.env` is only used for **code-signing secrets** when running electron-builder locally (never commit secrets to git).
+User runtime settings (OAuth, bots, UI, etc.) live in **`~/.openfde/config/config.properties`** only — not in a `.env` file under that directory.
 
 | File | `OPENFDE_BUILD_ENV` | Used by | Purpose |
 | --- | --- | --- | --- |
@@ -123,29 +123,29 @@ Restart the dev app after changing env files.
 
 Installers must be **signed** for production auto-update install (especially macOS ShipIt / Gatekeeper). Signing is configured at **build time**, not in the running app.
 
-Configure in **`~/.openfde/config/.env`** locally or **GitHub Actions secrets** in CI/Release workflows. Full guide: **[CODE-SIGNING.md](./CODE-SIGNING.md)**.
+Configure via **shell environment variables** locally or **GitHub Actions secrets** in CI/Release workflows. Full guide: **[CODE-SIGNING.md](./CODE-SIGNING.md)**.
 
-### Summary — local (`~/.openfde/config/.env`)
+### Summary — local (shell exports)
 
 **macOS**
 
-```properties
-MAC_SIGN_IDENTITY = 'Developer ID Application: Your Name (TEAMID)'
+```bash
+export MAC_SIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)'
 # or
-MAC_SIGN_CERTIFICATE = '~/certs/openfde.p12'
-MAC_SIGN_CERTIFICATE_PASSWORD = 'your-p12-password'
+export MAC_SIGN_CERTIFICATE=~/certs/openfde.p12
+export MAC_SIGN_CERTIFICATE_PASSWORD='your-p12-password'
 
 # Notarization (required for in-app install on macOS)
-MAC_APPLE_ID = 'you@example.com'
-MAC_APPLE_APP_SPECIFIC_PASSWORD = 'xxxx-xxxx-xxxx-xxxx'
-MAC_APPLE_TEAM_ID = 'TEAMID'
+export MAC_APPLE_ID='you@example.com'
+export MAC_APPLE_APP_SPECIFIC_PASSWORD='xxxx-xxxx-xxxx-xxxx'
+export MAC_APPLE_TEAM_ID='TEAMID'
 ```
 
 **Windows**
 
-```properties
-WIN_SIGN_CERTIFICATE = '~/certs/openfde.pfx'
-WIN_SIGN_CERTIFICATE_PASSWORD = 'your-pfx-password'
+```bash
+export WIN_SIGN_CERTIFICATE=~/certs/openfde.pfx
+export WIN_SIGN_CERTIFICATE_PASSWORD='your-pfx-password'
 ```
 
 All `npm run build:*` and `npm run release:*` scripts use `scripts/run-electron-builder.ts`, which loads these vars before invoking electron-builder.
@@ -298,7 +298,7 @@ Staging and production use the **same key layout** under their respective API ho
 
 ```bash
 export OPENFDE_BUILD_ENV=prod
-# Signing: set MAC_SIGN_* / WIN_SIGN_* in ~/.openfde/config/.env
+# Signing: export MAC_SIGN_* / WIN_SIGN_* in your shell (see CODE-SIGNING.md)
 # S3:
 export AWS_ACCESS_KEY_ID=...
 export AWS_SECRET_ACCESS_KEY=...
@@ -423,7 +423,7 @@ Never embed CI or signing credentials in the desktop app.
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| “Set BASE_API…” in packaged app | `env/.prod.env` not loaded at runtime (rebuild after env path fix) or missing `BASE_API` | Set `BASE_API` in `env/.prod.env`; rebuild; or override in `~/.openfde/config/.env` |
+| “Set BASE_API…” in packaged app | `env/.prod.env` not loaded at runtime (rebuild after env path fix) or missing `BASE_API` | Set `BASE_API` in `env/.prod.env`; rebuild |
 | Dev stuck on “Checking for updates” | `DESKTOP_UPDATE_FORCE_DEV` not set | Add to `env/.dev.env`, restart dev app |
 | Download fails: `dev-app-update.yml` ENOENT | Dev mode without generated config | Set `DESKTOP_UPDATE_FORCE_DEV=true` (app writes `~/.openfde/config/dev-app-update.yml`) |
 | Install fails: ShipIt / code signature | Unsigned or mismatched signing | Sign + notarize macOS builds; see [CODE-SIGNING.md](./CODE-SIGNING.md) |

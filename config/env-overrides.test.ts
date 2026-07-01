@@ -18,6 +18,7 @@ import {
   loadEnvOverrides,
   parseEnvFile,
   resetEnvOverridesForTests,
+  resolveBuildTimeEnvFilePaths,
   stripEnvValue,
   systemPropKeyToEnvName,
 } from './env-overrides'
@@ -70,6 +71,15 @@ APP_DEV_PORT=3000
       KNOWN_KEYS,
     )
     expect(parsed.get('app.base.apiUrl')).toBe('http://127.0.0.1:8000')
+  })
+
+  it('resolveBuildTimeEnvFilePaths uses only repo env files', () => {
+    expect(
+      resolveBuildTimeEnvFilePaths('/repo', { OPENFDE_BUILD_ENV: 'sit' }),
+    ).toEqual(['/repo/env/.sit.env'])
+    expect(
+      resolveBuildTimeEnvFilePaths('/repo', { OPENFDE_BUILD_ENV: 'prod' }),
+    ).toEqual(['/repo/env/.prod.env'])
   })
 
   it('loads dev env file when unpackaged', () => {

@@ -22,7 +22,7 @@ export const ELECTRON_BUILDER_SIGNING_KEYS = [
 export type ElectronBuilderSigningKey =
   (typeof ELECTRON_BUILDER_SIGNING_KEYS)[number]
 
-/** Friendly aliases for env files and ~/.openfde/config/.env. */
+/** Friendly aliases for `env/.{mode}.env` and shell env (build-time only). */
 export const CODE_SIGNING_ENV_ALIASES: Record<string, ElectronBuilderSigningKey> =
   {
     MAC_SIGN_CERTIFICATE: 'CSC_LINK',
