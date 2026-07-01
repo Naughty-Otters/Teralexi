@@ -1,5 +1,4 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { loadBakedEnvOverrides } from './baked-app-env'
 import {
@@ -7,8 +6,6 @@ import {
   resolveBuildEnv,
 } from './build-env'
 import { isValidSystemPropKey } from './system-prop-keys'
-
-const USER_CONFIG_ENV_FILE = join(homedir(), '.openfde', 'config', '.env')
 
 const OPENFDE_ENV_PREFIX = 'OPENFDE_'
 
@@ -90,16 +87,13 @@ export function parseEnvFile(
   return entries
 }
 
-/** Dev + build-time signing: `env/.{mode}.env` then optional user secrets file. */
+/** Build-time env file for the active mode (`env/.dev.env`, `.sit.env`, or `.prod.env`). */
 export function resolveBuildTimeEnvFilePaths(
   cwd = process.cwd(),
   processEnv: NodeJS.ProcessEnv = process.env,
 ): string[] {
   const mode = resolveBuildEnv(processEnv)
-  return [
-    join(cwd, 'env', buildEnvToEnvFileName(mode)),
-    USER_CONFIG_ENV_FILE,
-  ]
+  return [join(cwd, 'env', buildEnvToEnvFileName(mode))]
 }
 
 /** @deprecated Use {@link resolveBuildTimeEnvFilePaths}. */
