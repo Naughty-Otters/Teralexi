@@ -28,16 +28,18 @@
         role="tablist"
         aria-label="Open file tabs"
       >
-        <button
+        <div
           v-for="tab in editorTabs"
           :key="tab.path"
-          type="button"
           role="tab"
+          tabindex="0"
           class="file-editor-tab"
           :class="{ 'file-editor-tab--active': tab.path === editorPath }"
           :title="tab.path"
           :aria-selected="tab.path === editorPath"
           @click="activateTab(tab.path)"
+          @keydown.enter.prevent="activateTab(tab.path)"
+          @keydown.space.prevent="activateTab(tab.path)"
         >
           <span class="file-editor-tab-name">{{ tabLabel(tab.path) }}</span>
           <span
@@ -54,7 +56,7 @@
           >
             <UIcon name="i-lucide-x" style="width: 12px; height: 12px" />
           </button>
-        </button>
+        </div>
       </div>
 
       <div class="file-editor-toolbar">
