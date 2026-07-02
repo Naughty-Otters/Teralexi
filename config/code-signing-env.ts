@@ -56,6 +56,25 @@ function resolveCertificatePath(value: string): string {
   return expandHomePath(trimmed)
 }
 
+/**
+ * True when a CSC_LINK value is an inline certificate (base64 content or a
+ * `data:` URL) rather than a local file path. Mirrors electron-builder's own
+ * detection in `codeSign/codesign.ts`: a `data:` URL, or bare base64 that is
+ * long (> 2048 chars, e.g. a `.p12`) or padded (ends with `=`).
+ *
+ * Inline certs must be kept when a signing identity is also set (CI passes both
+ * MAC_SIGN_IDENTITY and MAC_SIGN_CERTIFICATE_BASE64); only a local .p12 *path*
+ * should defer to the Keychain identity.
+ */
+export function isInlineCertificate(value: string): boolean {
+  const trimmed = value.trim()
+  if (!trimmed) return false
+  if (trimmed.startsWith('data:')) return true
+  if (trimmed.length > 2048) return true
+  if (trimmed.endsWith('=')) return true
+  return false
+}
+
 /** electron-builder CSC_NAME must omit the Keychain prefix (e.g. "Developer ID Application:"). */
 export function normalizeMacSignIdentity(name: string): string {
   const trimmed = name.trim()
@@ -171,9 +190,11 @@ export function applyCodeSigningEnv(
     processEnv.CSC_NAME = normalizedName
     processEnv.CSC_IDENTITY_AUTO_DISCOVERY = 'false'
     const link = processEnv.CSC_LINK?.trim()
-    // Local .p12 + keychain identity: prefer keychain (bad .p12 breaks signing).
-    // CI uses data: base64 CSC_LINK — keep that path.
-    if (link && !link.startsWith('data:')) {
+    // Local .p12 *path* + keychain identity: prefer keychain (a bad/mismatched
+    // .p12 breaks signing). But keep inline certs — CI passes an identity plus
+    // base64 (raw or data:) via MAC_SIGN_CERTIFICATE_BASE64, and dropping it
+    // would leave the runner with no cert to sign with.
+    if (link && !isInlineCertificate(link)) {
       delete processEnv.CSC_LINK
       delete processEnv.CSC_KEY_PASSWORD
     }
@@ -187,6 +208,141 @@ export function applyCodeSigningEnv(
   }
 
   return signingEnv
+}
+
+/** A single line of signing-env diagnostics. */
+export interface CodeSigningDiagnostic {
+  level: 'info' | 'warn'
+  message: string
+}
+
+interface SigningVarSpec {
+  alias: string
+  key: ElectronBuilderSigningKey
+}
+
+const MAC_SIGNING_VARS: SigningVarSpec[] = [
+  { alias: 'MAC_SIGN_IDENTITY', key: 'CSC_NAME' },
+  { alias: 'MAC_SIGN_CERTIFICATE', key: 'CSC_LINK' },
+  { alias: 'MAC_SIGN_CERTIFICATE_PASSWORD', key: 'CSC_KEY_PASSWORD' },
+]
+
+const MAC_NOTARIZE_VARS: SigningVarSpec[] = [
+  { alias: 'MAC_APPLE_ID', key: 'APPLE_ID' },
+  { alias: 'MAC_APPLE_APP_SPECIFIC_PASSWORD', key: 'APPLE_APP_SPECIFIC_PASSWORD' },
+  { alias: 'MAC_APPLE_TEAM_ID', key: 'APPLE_TEAM_ID' },
+]
+
+const WIN_SIGNING_VARS: SigningVarSpec[] = [
+  { alias: 'WIN_SIGN_CERTIFICATE', key: 'WIN_CSC_LINK' },
+  { alias: 'WIN_SIGN_CERTIFICATE_PASSWORD', key: 'WIN_CSC_KEY_PASSWORD' },
+]
+
+/**
+ * Inspect the resolved signing env and produce human-readable diagnostics that
+ * report which required variables are present/missing per target platform.
+ * Values are never printed — only presence. Missing required vars are `warn`.
+ */
+export function describeCodeSigningEnv(
+  env: Map<string, string> = loadCodeSigningEnv(),
+  options: { buildingMac?: boolean; buildingWin?: boolean } = {},
+): CodeSigningDiagnostic[] {
+  const out: CodeSigningDiagnostic[] = []
+  const has = (key: string): boolean => Boolean(env.get(key)?.trim())
+  // Per-variable presence lines are informational (macOS identity vs .p12 are
+  // alternatives). Actual requirement failures are reported as `warn` below.
+  const line = (spec: SigningVarSpec): CodeSigningDiagnostic => ({
+    level: 'info',
+    message: `  ${spec.alias} (${spec.key}): ${has(spec.key) ? 'present' : 'MISSING'}`,
+  })
+
+  if (options.buildingMac) {
+    out.push({ level: 'info', message: 'macOS signing variables:' })
+    for (const spec of MAC_SIGNING_VARS) out.push(line(spec))
+
+    if (!isMacCodeSigningConfigured(env)) {
+      out.push({
+        level: 'warn',
+        message:
+          'macOS signing NOT configured (set MAC_SIGN_IDENTITY or MAC_SIGN_CERTIFICATE). App will be ad-hoc signed and CANNOT be notarized.',
+      })
+    } else if (
+      has('CSC_LINK') &&
+      !has('CSC_KEY_PASSWORD') &&
+      !env.get('CSC_LINK')!.trim().startsWith('data:')
+    ) {
+      out.push({
+        level: 'warn',
+        message:
+          'MAC_SIGN_CERTIFICATE (.p12) provided but MAC_SIGN_CERTIFICATE_PASSWORD is MISSING; signing may fail.',
+      })
+    }
+
+    out.push({ level: 'info', message: 'Apple notarization variables:' })
+    for (const spec of MAC_NOTARIZE_VARS) out.push(line(spec))
+
+    const presentNotarize = MAC_NOTARIZE_VARS.filter((v) => has(v.key))
+    if (presentNotarize.length === 0) {
+      out.push({
+        level: 'warn',
+        message:
+          'Notarization DISABLED (no Apple credentials). Distributed macOS app may be blocked by Gatekeeper.',
+      })
+    } else if (presentNotarize.length < MAC_NOTARIZE_VARS.length) {
+      const missing = MAC_NOTARIZE_VARS.filter((v) => !has(v.key)).map(
+        (v) => v.alias,
+      )
+      out.push({
+        level: 'warn',
+        message: `Notarization PARTIALLY configured; missing: ${missing.join(', ')}. Notarization will be skipped.`,
+      })
+    } else if (!isMacCodeSigningConfigured(env)) {
+      out.push({
+        level: 'warn',
+        message:
+          'Apple notarization credentials present but no signing identity — notarization requires a Developer ID signature.',
+      })
+    }
+  }
+
+  if (options.buildingWin) {
+    out.push({ level: 'info', message: 'Windows signing variables:' })
+    for (const spec of WIN_SIGNING_VARS) out.push(line(spec))
+
+    if (!isWindowsCodeSigningConfigured(env)) {
+      out.push({
+        level: 'warn',
+        message:
+          'Windows signing NOT configured (set WIN_SIGN_CERTIFICATE); build will use a self-signed certificate or be unsigned.',
+      })
+    } else if (has('WIN_CSC_LINK') && !has('WIN_CSC_KEY_PASSWORD')) {
+      out.push({
+        level: 'warn',
+        message:
+          'WIN_SIGN_CERTIFICATE provided but WIN_SIGN_CERTIFICATE_PASSWORD is MISSING; signing may fail.',
+      })
+    }
+  }
+
+  return out
+}
+
+/** Emit signing diagnostics through the given logger (defaults to console). */
+export function logCodeSigningEnv(
+  env: Map<string, string> = loadCodeSigningEnv(),
+  options: { buildingMac?: boolean; buildingWin?: boolean } = {},
+  logger: {
+    info: (msg: string) => void
+    warn: (msg: string) => void
+  } = { info: (m) => console.log(m), warn: (m) => console.warn(m) },
+): CodeSigningDiagnostic[] {
+  const diagnostics = describeCodeSigningEnv(env, options)
+  for (const d of diagnostics) {
+    const message = `[code-sign] ${d.message}`
+    if (d.level === 'warn') logger.warn(message)
+    else logger.info(message)
+  }
+  return diagnostics
 }
 
 export function buildElectronBuilderExtraArgs(

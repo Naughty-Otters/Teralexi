@@ -9,10 +9,13 @@ import { existsSync, readFileSync } from 'node:fs'
 import {
   applyCodeSigningEnv,
   buildElectronBuilderExtraArgs,
+  describeCodeSigningEnv,
+  isInlineCertificate,
   isMacCodeSigningConfigured,
   isMacNotarizeConfigured,
   isWindowsCodeSigningConfigured,
   loadCodeSigningEnv,
+  logCodeSigningEnv,
   normalizeMacSignIdentity,
   parseCodeSigningEnvFile,
   resolveCodeSigningEnvFilePaths,
@@ -71,6 +74,31 @@ describe('code-signing-env', () => {
     expect(env.CSC_NAME).toBe('Example (TEAM123)')
     expect(env.CSC_LINK).toBe('data:application/x-pkcs12;base64,AAAA')
     expect(env.CSC_KEY_PASSWORD).toBe('mac-secret')
+  })
+
+  it('applyCodeSigningEnv keeps RAW base64 CSC_LINK (MAC_SIGN_CERTIFICATE_BASE64) when identity is set', () => {
+    // CI passes a Developer ID identity AND the raw (non-data:) base64 .p12.
+    const rawBase64 = `${'A'.repeat(3000)}=`
+    const env = {
+      ...process.env,
+      MAC_SIGN_IDENTITY: 'Developer ID Application: Example (TEAM123)',
+      MAC_SIGN_CERTIFICATE: rawBase64,
+      MAC_SIGN_CERTIFICATE_PASSWORD: 'mac-secret',
+    } as NodeJS.ProcessEnv
+
+    applyCodeSigningEnv(env)
+    expect(env.CSC_NAME).toBe('Example (TEAM123)')
+    expect(env.CSC_LINK).toBe(rawBase64)
+    expect(env.CSC_KEY_PASSWORD).toBe('mac-secret')
+  })
+
+  it('isInlineCertificate distinguishes inline certs from local paths', () => {
+    expect(isInlineCertificate('data:application/x-pkcs12;base64,AAAA')).toBe(true)
+    expect(isInlineCertificate(`${'A'.repeat(3000)}`)).toBe(true)
+    expect(isInlineCertificate('QUFBQQ==')).toBe(true)
+    expect(isInlineCertificate('~/certs/openfde.p12')).toBe(false)
+    expect(isInlineCertificate('/abs/path/openfde.p12')).toBe(false)
+    expect(isInlineCertificate('')).toBe(false)
   })
 
   it('resolveCodeSigningEnvFilePaths points at gitignored env/.signing.env', () => {
@@ -225,5 +253,73 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
       buildingWin: true,
     })
     expect(env.CSC_IDENTITY_AUTO_DISCOVERY).toBe('false')
+  })
+
+  const messages = (d: { message: string }[]) => d.map((x) => x.message)
+
+  it('describeCodeSigningEnv reports missing macOS + notarization vars as warnings', () => {
+    const diagnostics = describeCodeSigningEnv(new Map(), { buildingMac: true })
+    const warnings = diagnostics.filter((d) => d.level === 'warn')
+
+    expect(messages(diagnostics)).toContain('  MAC_SIGN_IDENTITY (CSC_NAME): MISSING')
+    expect(messages(warnings).join('\n')).toContain('macOS signing NOT configured')
+    expect(messages(warnings).join('\n')).toContain('Notarization DISABLED')
+  })
+
+  it('describeCodeSigningEnv marks present vars as info', () => {
+    const env = new Map([
+      ['CSC_NAME', 'Example (TEAM123)'],
+      ['APPLE_ID', 'dev@example.com'],
+      ['APPLE_APP_SPECIFIC_PASSWORD', 'abcd'],
+      ['APPLE_TEAM_ID', 'TEAM123'],
+    ])
+    const diagnostics = describeCodeSigningEnv(env, { buildingMac: true })
+    expect(diagnostics.some((d) => d.message.includes('MAC_SIGN_IDENTITY (CSC_NAME): present'))).toBe(true)
+    expect(diagnostics.every((d) => d.level === 'info')).toBe(true)
+  })
+
+  it('describeCodeSigningEnv warns on partial notarization credentials', () => {
+    const env = new Map([
+      ['CSC_NAME', 'Example (TEAM123)'],
+      ['APPLE_ID', 'dev@example.com'],
+    ])
+    const warnings = describeCodeSigningEnv(env, { buildingMac: true }).filter(
+      (d) => d.level === 'warn',
+    )
+    const text = messages(warnings).join('\n')
+    expect(text).toContain('Notarization PARTIALLY configured')
+    expect(text).toContain('MAC_APPLE_APP_SPECIFIC_PASSWORD')
+    expect(text).toContain('MAC_APPLE_TEAM_ID')
+  })
+
+  it('describeCodeSigningEnv warns when Windows cert is missing', () => {
+    const warnings = describeCodeSigningEnv(new Map(), { buildingWin: true }).filter(
+      (d) => d.level === 'warn',
+    )
+    expect(messages(warnings).join('\n')).toContain('Windows signing NOT configured')
+  })
+
+  it('describeCodeSigningEnv warns when .p12 password is missing', () => {
+    const env = new Map([
+      ['CSC_NAME', 'Example (TEAM123)'],
+      ['CSC_LINK', '/certs/openfde.p12'],
+    ])
+    const text = messages(
+      describeCodeSigningEnv(env, { buildingMac: true }).filter(
+        (d) => d.level === 'warn',
+      ),
+    ).join('\n')
+    expect(text).toContain('MAC_SIGN_CERTIFICATE_PASSWORD is MISSING')
+  })
+
+  it('logCodeSigningEnv routes warnings and info to the correct logger channel', () => {
+    const info: string[] = []
+    const warn: string[] = []
+    logCodeSigningEnv(new Map(), { buildingWin: true }, {
+      info: (m) => info.push(m),
+      warn: (m) => warn.push(m),
+    })
+    expect(info.some((m) => m.startsWith('[code-sign] '))).toBe(true)
+    expect(warn.some((m) => m.includes('Windows signing NOT configured'))).toBe(true)
   })
 })

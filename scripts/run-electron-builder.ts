@@ -8,6 +8,7 @@ import {
   isMacCodeSigningConfigured,
   isMacNotarizeConfigured,
   isWindowsCodeSigningConfigured,
+  logCodeSigningEnv,
 } from '../config/code-signing-env'
 import { detectElectronBuilderTargets } from '../config/electron-builder-targets'
 import { resignUnsignedMacAppsInBuildOutput } from './macos-unsigned-resign'
@@ -19,6 +20,10 @@ const userArgs = stripOpenFdeCliArgs(process.argv.slice(2))
 const { buildingMac, buildingWin } = detectElectronBuilderTargets(userArgs)
 
 const signingEnv = applyCodeSigningEnv()
+
+// Report presence/absence of every required signing variable up front (before
+// the self-signed fallback injects anything), so the log reflects real inputs.
+logCodeSigningEnv(signingEnv, { buildingMac, buildingWin })
 
 // Windows: when no real Authenticode cert is supplied, fall back to an
 // ephemeral self-signed certificate so the build still produces a signed
