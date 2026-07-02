@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# Pre-push guard for OpenFDE.
+#
+# Blocks a push unless:
+#   1. All unit tests pass.
+#   2. Coverage meets the thresholds configured in vitest.config.ts.
+#
+# Both are enforced by a single `test:unit:coverage` run (vitest fails the
+# process when a coverage threshold is not met).
+#
+# Bypass in an emergency with:  git push --no-verify
+
+set -e
+
+# Skip in CI — the pipeline runs the same checks and re-running here is wasteful.
+if [ -n "$CI" ]; then
+  exit 0
+fi
+
+echo "[pre-push] Running unit tests with coverage thresholds..."
+
+# Prefer the repo-local npm; fall back to whatever is on PATH.
+if command -v npm >/dev/null 2>&1; then
+  npm run test:unit:coverage
+else
+  echo "[pre-push] npm not found on PATH; skipping tests." >&2
+  exit 0
+fi
+
+echo "[pre-push] Unit tests and coverage passed. Proceeding with push."

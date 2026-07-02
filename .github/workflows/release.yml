@@ -19,6 +19,8 @@ jobs:
     name: Production release (${{ matrix.platform }})
     if: inputs.confirm == 'release'
     runs-on: ${{ matrix.os }}
+    # Signing / notarization / AWS secrets live in the "release" environment.
+    environment: release
     timeout-minutes: 60
 
     strategy:
@@ -63,9 +65,9 @@ jobs:
           MAC_SIGN_CERTIFICATE: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_CERTIFICATE_BASE64 || '' }}
           MAC_SIGN_CERTIFICATE_PASSWORD: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_CERTIFICATE_PASSWORD || '' }}
           MAC_SIGN_IDENTITY: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_IDENTITY || '' }}
-          MAC_APPLE_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_ID || '' }}
-          MAC_APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.platform == 'mac' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
-          MAC_APPLE_TEAM_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_TEAM_ID || '' }}
+          MAC_APPLE_ID: ${{ matrix.platform == 'mac' && secrets.MAC_APPLE_ID || '' }}
+          MAC_APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.platform == 'mac' && secrets.MAC_APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          MAC_APPLE_TEAM_ID: ${{ matrix.platform == 'mac' && secrets.MAC_APPLE_TEAM_ID || '' }}
           WIN_SIGN_CERTIFICATE: ${{ matrix.platform == 'win' && secrets.WIN_SIGN_CERTIFICATE_BASE64 || '' }}
           WIN_SIGN_CERTIFICATE_PASSWORD: ${{ matrix.platform == 'win' && secrets.WIN_SIGN_CERTIFICATE_PASSWORD || '' }}
         run: npm run ${{ matrix.npm_script }}
