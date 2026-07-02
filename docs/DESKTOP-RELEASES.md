@@ -27,15 +27,16 @@ Installed OpenFDE app (no auth)
 
 ## Environment files
 
-Edit `env/.dev.env`, `env/.sit.env`, or `env/.prod.env` before building. Values are **baked into the app at build time** — packaged apps do not load env files at runtime.
+Edit `env/.dev.env`, `env/.sit.env`, or `env/.prod.env` for app config (`BASE_API`, etc.). Values are **baked into the app at build time** — packaged apps do not load env files at runtime.
 
-User runtime settings (OAuth, bots, UI, etc.) live in **`~/.openfde/config/config.properties`** only — not in a `.env` file under that directory.
+**Code signing** (build-time only, never packaged): copy `env/.signing.env.example` → `env/.signing.env` (gitignored). Same file is used for **both** sit and prod local builds.
 
 | File | `OPENFDE_BUILD_ENV` | Used by | Purpose |
 | --- | --- | --- | --- |
 | `env/.dev.env` | `dev` | `npm run dev` | Local development |
-| `env/.sit.env` | `sit` | CI workflow, `npm run build:*:sit` | Staging / internal QA |
-| `env/.prod.env` | `prod` | Release workflow, `npm run build:*`, `npm run release:*` | Production releases |
+| `env/.sit.env` | `sit` | CI workflow, `npm run build:*:sit` | Staging app config |
+| `env/.prod.env` | `prod` | Release workflow, `npm run build:*`, `npm run release:*` | Production app config |
+| `env/.signing.env` | — | Local `build:*` / `release:*` (sit + prod) | Signing secrets (gitignored) |
 
 See [BUILD-AND-RELEASE.md](../BUILD-AND-RELEASE.md) for build modes.
 
@@ -123,29 +124,28 @@ Restart the dev app after changing env files.
 
 Installers must be **signed** for production auto-update install (especially macOS ShipIt / Gatekeeper). Signing is configured at **build time**, not in the running app.
 
-Configure via **shell environment variables** locally or **GitHub Actions secrets** in CI/Release workflows. Full guide: **[CODE-SIGNING.md](./CODE-SIGNING.md)**.
+Configure via **`env/.signing.env`** locally or **GitHub Actions secrets** in CI/Release workflows. Full guide: **[CODE-SIGNING.md](./CODE-SIGNING.md)**.
 
-### Summary — local (shell exports)
-
-**macOS**
+### Summary — local (`env/.signing.env`)
 
 ```bash
-export MAC_SIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)'
-# or
-export MAC_SIGN_CERTIFICATE=~/certs/openfde.p12
-export MAC_SIGN_CERTIFICATE_PASSWORD='your-p12-password'
+cp env/.signing.env.example env/.signing.env
+```
 
-# Notarization (required for in-app install on macOS)
-export MAC_APPLE_ID='you@example.com'
-export MAC_APPLE_APP_SPECIFIC_PASSWORD='xxxx-xxxx-xxxx-xxxx'
-export MAC_APPLE_TEAM_ID='TEAMID'
+**macOS** (example `env/.signing.env`):
+
+```properties
+MAC_SIGN_IDENTITY = 'Your Name (TEAMID)'
+MAC_APPLE_ID = 'you@example.com'
+MAC_APPLE_APP_SPECIFIC_PASSWORD = 'xxxx-xxxx-xxxx-xxxx'
+MAC_APPLE_TEAM_ID = 'TEAMID'
 ```
 
 **Windows**
 
-```bash
-export WIN_SIGN_CERTIFICATE=~/certs/openfde.pfx
-export WIN_SIGN_CERTIFICATE_PASSWORD='your-pfx-password'
+```properties
+WIN_SIGN_CERTIFICATE = '~/certs/openfde.pfx'
+WIN_SIGN_CERTIFICATE_PASSWORD = 'your-pfx-password'
 ```
 
 All `npm run build:*` and `npm run release:*` scripts use `scripts/run-electron-builder.ts`, which loads these vars before invoking electron-builder.
@@ -298,7 +298,7 @@ Staging and production use the **same key layout** under their respective API ho
 
 ```bash
 export OPENFDE_BUILD_ENV=prod
-# Signing: export MAC_SIGN_* / WIN_SIGN_* in your shell (see CODE-SIGNING.md)
+# Signing: env/.signing.env (see CODE-SIGNING.md)
 # S3:
 export AWS_ACCESS_KEY_ID=...
 export AWS_SECRET_ACCESS_KEY=...

@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  OTTER_AGENT_SANDBOX_ROOT_ENV,
+  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
   SANDBOX_ROOT_GLOBAL_KEY,
 } from './sandbox-paths'
 import {
@@ -31,10 +31,10 @@ function setSandboxRoot(root: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (root) {
     g[SANDBOX_ROOT_GLOBAL_KEY] = root
-    process.env[OTTER_AGENT_SANDBOX_ROOT_ENV] = root
+    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = root
   } else {
     delete g[SANDBOX_ROOT_GLOBAL_KEY]
-    delete process.env[OTTER_AGENT_SANDBOX_ROOT_ENV]
+    delete process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]
   }
 }
 

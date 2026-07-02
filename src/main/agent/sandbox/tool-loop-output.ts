@@ -6,10 +6,10 @@ import { mkdirSync } from 'fs'
 import { join } from 'path'
 import { toolLoopFilesystemScopeFromStepKey } from '../run/flow-scoped-ids'
 
-export const OTTER_AGENT_SANDBOX_OUTPUT_SCOPE_ENV =
-  'OTTER_AGENT_SANDBOX_OUTPUT_SCOPE' as const
+export const OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV =
+  'OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE' as const
 export const SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY =
-  '__OTTER_AGENT_SANDBOX_OUTPUT_SCOPE__' as const
+  '__OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE__' as const
 
 const TOOL_LOOP_OUTPUT_SEGMENT = 'toolLoop' as const
 
@@ -19,17 +19,17 @@ export function getSandboxOutputScopeFromEnv(): string | undefined {
   if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
     return fromGlobal.trim()
   }
-  return process.env[OTTER_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]?.trim() || undefined
+  return process.env[OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]?.trim() || undefined
 }
 
 export function setSandboxOutputScope(scope: string | undefined): void {
   const g = globalThis as unknown as Record<string, unknown>
   if (scope?.trim()) {
     const v = scope.trim()
-    process.env[OTTER_AGENT_SANDBOX_OUTPUT_SCOPE_ENV] = v
+    process.env[OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV] = v
     g[SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY] = v
   } else {
-    delete process.env[OTTER_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]
+    delete process.env[OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]
     delete g[SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY]
   }
 }

@@ -1,50 +1,72 @@
 # Code signing (macOS + Windows)
 
-OpenFDE uses [electron-builder](https://www.electron.build/code-signing) signing env vars at **build time**. Configure them via **shell exports** (local) or **GitHub Actions secrets** (CI/Release).
+OpenFDE uses [electron-builder](https://www.electron.build/code-signing) signing env vars at **build time only**. Signing config is **never baked into the app** and **never packaged** in the installer.
 
-Do **not** commit `.p12` / `.pfx` files or passwords to the repo.
+| Where | Used for |
+| --- | --- |
+| **`env/.signing.env`** (gitignored) | Local `npm run build:*` / `release:*` — **both sit and prod** |
+| **Shell exports** | Override `.signing.env` when needed |
+| **GitHub Actions secrets** | CI and Release workflows |
 
-Runtime user settings belong in `~/.openfde/config/config.properties` — not in a separate `.env` file under that directory.
+Do **not** commit `.p12` / `.pfx` files, passwords, or `env/.signing.env`.
 
-## Local configuration (shell environment)
+Runtime user settings belong in `~/.openfde/config/config.properties`.
 
-Export signing variables in your terminal before `npm run build:*` / `npm run release:*`. Process env wins over values in `env/.prod.env` if both are set.
+## Local configuration (`env/.signing.env`)
+
+```bash
+cp env/.signing.env.example env/.signing.env
+# Edit env/.signing.env with your MAC_SIGN_* / WIN_SIGN_* values
+```
+
+Example `env/.signing.env`:
+
+```properties
+MAC_SIGN_IDENTITY = 'Your Name (TEAMID)'
+MAC_APPLE_ID = 'you@example.com'
+MAC_APPLE_APP_SPECIFIC_PASSWORD = 'xxxx-xxxx-xxxx-xxxx'
+MAC_APPLE_TEAM_ID = 'TEAMID'
+```
+
+Process environment variables override `.signing.env` (useful for one-off tests).
 
 ### macOS (Developer ID + notarization)
 
 Required for in-app auto-update install on macOS.
 
-**Option A — Keychain identity**
+**Option A — Keychain identity** (recommended locally)
 
-```bash
-export MAC_SIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)'
+```properties
+MAC_SIGN_IDENTITY = 'Your Name (TEAMID)'
 ```
+
+Use the name from Keychain **without** the `Developer ID Application:` prefix — electron-builder adds that automatically. You can also paste the full Keychain string; OpenFDE strips the prefix for you.
 
 List identities: `security find-identity -v -p codesigning`
 
-**Option B — `.p12` file**
+**Option B — `.p12` file** (CI or when cert is not in Keychain)
 
-```bash
-export MAC_SIGN_CERTIFICATE=~/certs/openfde.p12
-export MAC_SIGN_CERTIFICATE_PASSWORD='your-p12-password'
-export MAC_SIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)'
+```properties
+MAC_SIGN_CERTIFICATE = '~/certs/openfde.p12'
+MAC_SIGN_CERTIFICATE_PASSWORD = 'your-p12-password'
+MAC_SIGN_IDENTITY = 'Your Name (TEAMID)'
 ```
 
-**Notarization**
+**Notarization** (add to `env/.signing.env` for local prod releases)
 
-```bash
-export MAC_APPLE_ID='you@example.com'
-export MAC_APPLE_APP_SPECIFIC_PASSWORD='xxxx-xxxx-xxxx-xxxx'
-export MAC_APPLE_TEAM_ID='TEAMID'
+```properties
+MAC_APPLE_ID = 'you@example.com'
+MAC_APPLE_APP_SPECIFIC_PASSWORD = 'xxxx-xxxx-xxxx-xxxx'
+MAC_APPLE_TEAM_ID = 'TEAMID'
 ```
 
 When all three Apple vars are set, builds pass `--config.mac.notarize=true` automatically.
 
 ### Windows (Authenticode)
 
-```bash
-export WIN_SIGN_CERTIFICATE=~/certs/openfde.pfx
-export WIN_SIGN_CERTIFICATE_PASSWORD='your-pfx-password'
+```properties
+WIN_SIGN_CERTIFICATE = '~/certs/openfde.pfx'
+WIN_SIGN_CERTIFICATE_PASSWORD = 'your-pfx-password'
 ```
 
 On Windows runners / local Windows builds, `WIN_SIGN_*` is mapped to `CSC_LINK` for electron-builder. When cross-building Windows from macOS, electron-builder uses `WIN_CSC_LINK` directly.
@@ -69,15 +91,13 @@ You can also set `CSC_*`, `WIN_CSC_*`, and `APPLE_*` directly.
 ## Local builds
 
 ```bash
-export OPENFDE_BUILD_ENV=prod
-export MAC_SIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)'  # optional
-npm run build:mac      # macOS
-npm run build:win64    # Windows (on Windows or with WIN_SIGN_* when cross-building)
+cp env/.signing.env.example env/.signing.env   # once
+npm run build:mac:sit   # signed sit build (uses .sit.env + .signing.env)
+npm run build:mac       # signed prod build (uses .prod.env + .signing.env)
 npm run release:mac
-npm run release:win
 ```
 
-All build scripts use `scripts/run-electron-builder.ts`, which loads signing env from `env/.{mode}.env` (non-secret app config) and the current process environment before calling electron-builder. Unsigned builds still work when secrets are unset.
+All build scripts use `scripts/run-electron-builder.ts`, which loads `env/.signing.env` then process env before calling electron-builder. App config (`BASE_API`, etc.) still comes from `env/.{dev|sit|prod}.env`. Unsigned builds still work when `.signing.env` is missing.
 
 ## GitHub Actions secrets
 

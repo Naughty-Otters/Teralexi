@@ -24,13 +24,13 @@ vi.mock('./lsp-client', () => {
   return { LspClient: MockLspClient }
 })
 
-const LSP_MANAGER_GLOBAL_KEY = '__OTTER_LSP_MANAGER__' as const
+const LSP_MANAGER_GLOBAL_KEY = '__OPENFDE_LSP_MANAGER__' as const
 
 import { getLspManager } from './lsp-manager'
 
 function resetLspManager() {
   delete (globalThis as Record<string, unknown>)[LSP_MANAGER_GLOBAL_KEY]
-  delete (globalThis as Record<string, unknown>)['__OTTER_EDITOR_LSP_BRIDGE__']
+  delete (globalThis as Record<string, unknown>)['__OPENFDE_EDITOR_LSP_BRIDGE__']
 }
 
 describe('LspManager', () => {

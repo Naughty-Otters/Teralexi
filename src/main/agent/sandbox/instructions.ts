@@ -23,7 +23,7 @@ export const SANDBOX_LLM = {
   RULE_CAPTURES:
     '- Captures live under the step `results/` dir. Set `resultFileRelativePath` for the main deliverable; the tool scans the whole step folder (except `scripts/`) for new/changed files and returns `artifacts[]`. Scripts are syntax-checked before execution (preflight).',
   RULE_CWD:
-    '- When a tool-loop step is active, `run_script` / `run_script_file` cwd is that step dir (`output/toolLoop/<step>/`). Write generated outputs under `./results/` or `results/scratch/`; only `scripts/` is excluded from deliverable discovery. Read workspace files via `OTTER_WORKSPACE_PATH` or workspace paths in `scriptArgs`. Use `promote_artifact` for intentional workspace deliverables. Env: `OTTER_SANDBOX_ROOT`, `OTTER_STEP_CWD`, `OTTER_RESULTS_DIR`, `OTTER_REFERENCE_SCRIPTS_DIR`, `OTTER_WORKSPACE_PATH` (when workspace set).',
+    '- When a tool-loop step is active, `run_script` / `run_script_file` cwd is that step dir (`output/toolLoop/<step>/`). Write generated outputs under `./results/` or `results/scratch/`; only `scripts/` is excluded from deliverable discovery. Read workspace files via `OPENFDE_WORKSPACE_PATH` or workspace paths in `scriptArgs`. Use `promote_artifact` for intentional workspace deliverables. Env: `OPENFDE_SANDBOX_ROOT`, `OPENFDE_STEP_CWD`, `OPENFDE_RESULTS_DIR`, `OPENFDE_REFERENCE_SCRIPTS_DIR`, `OPENFDE_WORKSPACE_PATH` (when workspace set).',
   RULE_READONLY:
     '- Treat skills/, refs/, and reference scripts/ as read-only unless copying out.',
 } as const
@@ -91,7 +91,7 @@ export function buildWorkspaceStructureBlock(
       '- If the user pastes a full path under this folder, use read_file on that path or the equivalent relative path.',
       '- Use output/, scripts/, refs/, or skills/ only for sandbox artifacts — not the user repo.',
       '- Do NOT write agent runtime artifacts (captures, tool output, script temp files) into this folder — scripts run in the sandbox step and may only read from here.',
-      '- Scripts: read project data via OTTER_WORKSPACE_PATH or path-like scriptArgs; write outputs in sandbox results/ then promote_artifact when needed.',
+      '- Scripts: read project data via OPENFDE_WORKSPACE_PATH or path-like scriptArgs; write outputs in sandbox results/ then promote_artifact when needed.',
       '- Use lsp for symbol navigation (definition, references, hover) in project files.',
       '- After edits, verify with run_workspace_command (e.g. npm test) when appropriate.',
       '- Git: git_status / git_diff / git_log / git_add / git_commit / git_push / git_create_pr (not run_script for git).',

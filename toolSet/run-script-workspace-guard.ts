@@ -68,4 +68,4 @@ export function detectWorkspaceWrites(options: {
 }
 
 export const WORKSPACE_WRITE_WARNING =
-  'Script created or modified files in the user workspace. Write generated outputs under OTTER_RESULTS_DIR, ./results/, or results/scratch/ in the sandbox step folder. Use promote_artifact to copy deliverables into the workspace when intentional.'
+  'Script created or modified files in the user workspace. Write generated outputs under OPENFDE_RESULTS_DIR, ./results/, or results/scratch/ in the sandbox step folder. Use promote_artifact to copy deliverables into the workspace when intentional.'

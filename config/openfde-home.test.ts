@@ -45,24 +45,6 @@ describe('openfde-home', () => {
     expect(vi.mocked(mkdirSync)).toHaveBeenCalled()
   })
 
-  it('migrates legacy ~/.otters when ~/.openfde is missing', async () => {
-    const fs = await import('fs')
-    vi.mocked(fs.existsSync).mockImplementation((path) => {
-      const p = String(path)
-      if (p.endsWith('.openfde')) return false
-      if (p.endsWith('.otters')) return true
-      return false
-    })
-
-    const mod = await loadopenfdeHome()
-    mod.initializeopenfdeHome(null)
-
-    expect(vi.mocked(fs.renameSync)).toHaveBeenCalledWith(
-      join('/mock-home', '.otters'),
-      join('/mock-home', '.openfde'),
-    )
-  })
-
   it('exposes path helpers after init', async () => {
     const mod = await loadopenfdeHome()
     mod.initializeopenfdeHome(null)
@@ -162,7 +144,7 @@ describe('openfde-home', () => {
     )
   })
 
-  it('redirects legacy channel data paths into channels/', async () => {
+  it('creates channel data dirs under channels/', async () => {
     const mod = await loadopenfdeHome()
     mod.initializeopenfdeHome(null)
     vi.mocked(mkdirSync).mockClear()
@@ -175,18 +157,18 @@ describe('openfde-home', () => {
     )
   })
 
-  it('guessLegacyElectronUserData covers platforms', async () => {
+  it('guessDefaultElectronUserData covers platforms', async () => {
     const mod = await loadopenfdeHome()
     const original = process.platform
 
     Object.defineProperty(process, 'platform', { value: 'darwin' })
-    expect(mod.guessLegacyElectronUserData('app')).toContain('Application Support')
+    expect(mod.guessDefaultElectronUserData('app')).toContain('Application Support')
 
     Object.defineProperty(process, 'platform', { value: 'win32' })
-    expect(mod.guessLegacyElectronUserData('app')).toContain('app')
+    expect(mod.guessDefaultElectronUserData('app')).toContain('app')
 
     Object.defineProperty(process, 'platform', { value: 'linux' })
-    expect(mod.guessLegacyElectronUserData('app')).toContain('app')
+    expect(mod.guessDefaultElectronUserData('app')).toContain('app')
 
     Object.defineProperty(process, 'platform', { value: original })
   })

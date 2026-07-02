@@ -2,7 +2,7 @@ import type { AssistantStructuredContent } from '../types'
 import { userFacingTextFromStructuredOuter } from '@shared/agent/assistant-external-reply'
 
 const EMBEDDED_STRUCTURED_MARKER =
-  /<!--\s*otter-structured:([A-Za-z0-9+/=]+)\s*-->/i
+  /<!--\s*openfde-structured:([A-Za-z0-9+/=]+)\s*-->/i
 
 function parseEmbeddedStructuredContent(
   raw: string,

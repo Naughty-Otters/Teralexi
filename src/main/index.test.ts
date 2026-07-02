@@ -35,7 +35,11 @@ vi.mock('electron', () => ({
 
 vi.mock('@config/openfde-home', () => ({
   initializeopenfdeHome: vi.fn(),
-  pruneStaleChannelDataDirs: vi.fn(),
+  getopenfdeRulesDir: vi.fn(() => '/mock/.openfde/rules'),
+}))
+
+vi.mock('./config/bundled-default-rules', () => ({
+  seedBundledDefaultRulesIfMissing: vi.fn(),
 }))
 
 vi.mock('@main/services/client-identity', () => ({

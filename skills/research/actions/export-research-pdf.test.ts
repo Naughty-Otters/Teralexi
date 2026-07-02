@@ -30,14 +30,14 @@ describe('exportResearchPdf', () => {
     fs.writeFileSync(markdownAbs, '# Topic\n\n## Abstract\n\nBody.', 'utf8')
 
     const g = globalThis as unknown as Record<string, unknown>
-    g.__OTTER_AGENT_SANDBOX_ROOT__ = sandboxRoot
-    process.env.OTTER_AGENT_SANDBOX_ROOT = sandboxRoot
+    g.__OPENFDE_AGENT_SANDBOX_ROOT__ = sandboxRoot
+    process.env.OPENFDE_AGENT_SANDBOX_ROOT = sandboxRoot
   })
 
   afterEach(() => {
     fs.rmSync(sandboxRoot, { recursive: true, force: true })
-    delete process.env.OTTER_AGENT_SANDBOX_ROOT
-    delete (globalThis as unknown as Record<string, unknown>).__OTTER_AGENT_SANDBOX_ROOT__
+    delete process.env.OPENFDE_AGENT_SANDBOX_ROOT
+    delete (globalThis as unknown as Record<string, unknown>).__OPENFDE_AGENT_SANDBOX_ROOT__
   })
 
   it('exports PDF using sandbox.root, not the requireActiveSandbox object', async () => {

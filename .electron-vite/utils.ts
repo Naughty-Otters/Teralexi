@@ -18,11 +18,31 @@ const rootResolve = (...pathSegments: string[]) =>
 export const getEnv = () => argv['m']
 export const getArgv = () => argv
 
+/** Remove OpenFDE-only flags before forwarding argv to electron-builder. */
+export function stripOpenFdeCliArgs(argv: readonly string[]): string[] {
+  const out: string[] = []
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
+    if (arg === '-m' || arg === '--m') {
+      if (i + 1 < argv.length && !argv[i + 1].startsWith('-')) {
+        i++
+      }
+      continue
+    }
+    out.push(arg)
+  }
+  return out
+}
+
 export function getBuildEnvMode(): OpenFdeBuildEnv {
+  const fromArgv = getEnv()
+  if (fromArgv?.trim()) {
+    return normalizeBuildEnv(fromArgv)
+  }
   if (process.env[OPENFDE_BUILD_ENV_VAR]?.trim()) {
     return normalizeBuildEnv(process.env[OPENFDE_BUILD_ENV_VAR])
   }
-  return normalizeBuildEnv(getEnv() ?? 'dev')
+  return 'dev'
 }
 
 export function applyBuildEnvFromArgv(): OpenFdeBuildEnv {

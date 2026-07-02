@@ -7,8 +7,8 @@ import {
   getSandboxOutputScopeFromEnv,
   getSandboxRootFromEnv,
   isPathInsideSandbox,
-  OTTER_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
-  OTTER_AGENT_SANDBOX_ROOT_ENV,
+  OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
+  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
   remapLegacySharedOutputPath,
   requireActiveSandbox,
   resolvePathAllowingOutside,
@@ -28,10 +28,10 @@ function setSandboxRoot(root: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (root) {
     g[SANDBOX_ROOT_GLOBAL_KEY] = root
-    process.env[OTTER_AGENT_SANDBOX_ROOT_ENV] = root
+    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = root
   } else {
     delete g[SANDBOX_ROOT_GLOBAL_KEY]
-    delete process.env[OTTER_AGENT_SANDBOX_ROOT_ENV]
+    delete process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]
   }
 }
 
@@ -43,14 +43,14 @@ describe('getSandboxRootFromEnv', () => {
   afterEach(() => setSandboxRoot(undefined))
 
   it('prefers globalThis over env', () => {
-    process.env[OTTER_AGENT_SANDBOX_ROOT_ENV] = '/env/root'
+    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = '/env/root'
     ;(globalThis as Record<string, unknown>)[SANDBOX_ROOT_GLOBAL_KEY] =
       '  /global/root  '
     expect(getSandboxRootFromEnv()).toBe('/global/root')
   })
 
   it('reads from env when global unset', () => {
-    process.env[OTTER_AGENT_SANDBOX_ROOT_ENV] = ' /env/root '
+    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = ' /env/root '
     expect(getSandboxRootFromEnv()).toBe('/env/root')
   })
 
@@ -181,7 +181,7 @@ describe('tool-loop output scope', () => {
       path.join('output', 'toolLoop', 'step-abc', 'scripts'),
     )
     expect(getSandboxOutputScopeFromEnv()).toBe('step-abc')
-    expect(process.env[OTTER_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]).toBe('step-abc')
+    expect(process.env[OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]).toBe('step-abc')
     expect(
       (globalThis as Record<string, unknown>)[SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY],
     ).toBe('step-abc')

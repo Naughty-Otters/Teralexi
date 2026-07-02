@@ -5,14 +5,6 @@ vi.mock('node:fs', () => ({
   readFileSync: vi.fn(),
 }))
 
-vi.mock('./env-overrides', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./env-overrides')>()
-  return {
-    ...actual,
-    resolveBuildTimeEnvFilePaths: vi.fn(() => ['/app/env/.prod.env']),
-  }
-})
-
 import { existsSync, readFileSync } from 'node:fs'
 import {
   applyCodeSigningEnv,
@@ -21,7 +13,9 @@ import {
   isMacNotarizeConfigured,
   isWindowsCodeSigningConfigured,
   loadCodeSigningEnv,
+  normalizeMacSignIdentity,
   parseCodeSigningEnvFile,
+  resolveCodeSigningEnvFilePaths,
 } from './code-signing-env'
 
 describe('code-signing-env', () => {
@@ -37,6 +31,75 @@ describe('code-signing-env', () => {
     delete process.env.APPLE_TEAM_ID
     delete process.env.MAC_SIGN_IDENTITY
     delete process.env.WIN_SIGN_CERTIFICATE
+  })
+
+  it('normalizeMacSignIdentity strips Keychain prefix for electron-builder', () => {
+    expect(
+      normalizeMacSignIdentity(
+        'Developer ID Application: zhenqi li (X5L2P5D43H)',
+      ),
+    ).toBe('zhenqi li (X5L2P5D43H)')
+    expect(normalizeMacSignIdentity('zhenqi li (X5L2P5D43H)')).toBe(
+      'zhenqi li (X5L2P5D43H)',
+    )
+  })
+
+  it('applyCodeSigningEnv normalizes CSC_NAME and prefers keychain over local .p12', () => {
+    const env = {
+      ...process.env,
+      MAC_SIGN_IDENTITY: 'Developer ID Application: Example (TEAM123)',
+      MAC_SIGN_CERTIFICATE: '~/certs/openfde.p12',
+      MAC_SIGN_CERTIFICATE_PASSWORD: 'mac-secret',
+    } as NodeJS.ProcessEnv
+
+    applyCodeSigningEnv(env)
+    expect(env.CSC_NAME).toBe('Example (TEAM123)')
+    expect(env.CSC_LINK).toBeUndefined()
+    expect(env.CSC_KEY_PASSWORD).toBeUndefined()
+    expect(env.CSC_IDENTITY_AUTO_DISCOVERY).toBe('false')
+  })
+
+  it('applyCodeSigningEnv keeps base64 CSC_LINK for CI when identity is set', () => {
+    const env = {
+      ...process.env,
+      CSC_NAME: 'Developer ID Application: Example (TEAM123)',
+      CSC_LINK: 'data:application/x-pkcs12;base64,AAAA',
+      CSC_KEY_PASSWORD: 'mac-secret',
+    } as NodeJS.ProcessEnv
+
+    applyCodeSigningEnv(env)
+    expect(env.CSC_NAME).toBe('Example (TEAM123)')
+    expect(env.CSC_LINK).toBe('data:application/x-pkcs12;base64,AAAA')
+    expect(env.CSC_KEY_PASSWORD).toBe('mac-secret')
+  })
+
+  it('resolveCodeSigningEnvFilePaths points at gitignored env/.signing.env', () => {
+    expect(resolveCodeSigningEnvFilePaths('/repo')).toEqual([
+      '/repo/env/.signing.env',
+    ])
+  })
+
+  it('loads signing vars from env/.signing.env', () => {
+    vi.mocked(existsSync).mockImplementation((target) =>
+      String(target).endsWith('/env/.signing.env'),
+    )
+    vi.mocked(readFileSync).mockReturnValue(
+      "MAC_SIGN_IDENTITY = 'Example (TEAM123)'\n",
+    )
+
+    const env = loadCodeSigningEnv()
+    expect(env.get('CSC_NAME')).toBe('Example (TEAM123)')
+  })
+
+  it('prefers process env over env/.signing.env', () => {
+    vi.mocked(existsSync).mockReturnValue(true)
+    vi.mocked(readFileSync).mockReturnValue(
+      "MAC_SIGN_IDENTITY = 'From File'\n",
+    )
+    process.env.MAC_SIGN_IDENTITY = 'From Shell'
+
+    const env = loadCodeSigningEnv()
+    expect(env.get('CSC_NAME')).toBe('From Shell')
   })
 
   it('maps friendly MAC_SIGN_* and WIN_SIGN_* aliases from env files', () => {
@@ -60,7 +123,7 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
     expect(parsed.get('APPLE_ID')).toBe('dev@example.com')
   })
 
-  it('prefers process env over env files', () => {
+  it('prefers process env over env/.signing.env on disk', () => {
     vi.mocked(existsSync).mockReturnValue(true)
     vi.mocked(readFileSync).mockReturnValue(
       "MAC_SIGN_IDENTITY = 'Developer ID Application: From File'\n",
@@ -109,7 +172,7 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
 
     try {
       applyCodeSigningEnv(env)
-      expect(env.CSC_NAME).toBe('Developer ID Application: Example (TEAM123)')
+      expect(env.CSC_NAME).toBe('Example (TEAM123)')
       expect(env.CSC_LINK).toContain('openfde.pfx')
       expect(env.CSC_KEY_PASSWORD).toBe('win-secret')
       expect(env.WIN_CSC_LINK).toContain('openfde.pfx')

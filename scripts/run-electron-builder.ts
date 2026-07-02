@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
-import { applyBuildEnvFromArgv } from '../.electron-vite/utils'
+import { applyBuildEnvFromArgv, stripOpenFdeCliArgs } from '../.electron-vite/utils'
 import {
   applyCodeSigningEnv,
   applyUnsignedPlatformBuildPolicy,
@@ -14,7 +14,7 @@ import { resignUnsignedMacAppsInBuildOutput } from './macos-unsigned-resign'
 
 applyBuildEnvFromArgv()
 
-const userArgs = process.argv.slice(2)
+const userArgs = stripOpenFdeCliArgs(process.argv.slice(2))
 const { buildingMac, buildingWin } = detectElectronBuilderTargets(userArgs)
 
 const signingEnv = applyCodeSigningEnv()

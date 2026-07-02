@@ -5,10 +5,10 @@ import {
 } from './tool-loop-output'
 import { getSandboxRootFromEnv, getWorkspacePathFromEnv } from './paths'
 import {
-  OTTER_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
-  OTTER_AGENT_SANDBOX_ROOT_ENV,
-  OTTER_AGENT_WORKSPACE_PATH_ENV,
-  OTTER_AGENT_CONVERSATION_ID_ENV,
+  OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
+  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
+  OPENFDE_AGENT_WORKSPACE_PATH_ENV,
+  OPENFDE_AGENT_CONVERSATION_ID_ENV,
   SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY,
   SANDBOX_ROOT_GLOBAL_KEY,
   WORKSPACE_PATH_GLOBAL_KEY,
@@ -44,10 +44,10 @@ function applySandboxGlobalsToProcess(bindings: SandboxGlobalsBindings): void {
   const g = globalThis as unknown as Record<string, unknown>
   const root = bindings.root?.trim()
   if (root) {
-    process.env[OTTER_AGENT_SANDBOX_ROOT_ENV] = root
+    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = root
     g[SANDBOX_ROOT_GLOBAL_KEY] = root
   } else {
-    delete process.env[OTTER_AGENT_SANDBOX_ROOT_ENV]
+    delete process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]
     delete g[SANDBOX_ROOT_GLOBAL_KEY]
   }
 
@@ -60,19 +60,19 @@ function applySandboxGlobalsToProcess(bindings: SandboxGlobalsBindings): void {
 
   const workspacePath = bindings.workspacePath?.trim()
   if (workspacePath) {
-    process.env[OTTER_AGENT_WORKSPACE_PATH_ENV] = workspacePath
+    process.env[OPENFDE_AGENT_WORKSPACE_PATH_ENV] = workspacePath
     g[WORKSPACE_PATH_GLOBAL_KEY] = workspacePath
   } else {
-    delete process.env[OTTER_AGENT_WORKSPACE_PATH_ENV]
+    delete process.env[OPENFDE_AGENT_WORKSPACE_PATH_ENV]
     delete g[WORKSPACE_PATH_GLOBAL_KEY]
   }
 
   const conversationId = bindings.conversationId?.trim()
   if (conversationId) {
-    process.env[OTTER_AGENT_CONVERSATION_ID_ENV] = conversationId
+    process.env[OPENFDE_AGENT_CONVERSATION_ID_ENV] = conversationId
     g[CONVERSATION_ID_GLOBAL_KEY] = conversationId
   } else {
-    delete process.env[OTTER_AGENT_CONVERSATION_ID_ENV]
+    delete process.env[OPENFDE_AGENT_CONVERSATION_ID_ENV]
     delete g[CONVERSATION_ID_GLOBAL_KEY]
   }
 }
@@ -83,7 +83,7 @@ export function captureSandboxGlobalsFromProcess(): SandboxGlobalsSnapshot {
   const conversationId =
     typeof fromGlobalConv === 'string' && fromGlobalConv.trim()
       ? fromGlobalConv.trim()
-      : process.env[OTTER_AGENT_CONVERSATION_ID_ENV]?.trim() || undefined
+      : process.env[OPENFDE_AGENT_CONVERSATION_ID_ENV]?.trim() || undefined
 
   return {
     root: getSandboxRootFromEnv(),
