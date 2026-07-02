@@ -186,18 +186,30 @@ export function applyCodeSigningEnv(
   }
 
   const normalizedName = processEnv.CSC_NAME?.trim()
+  const link = processEnv.CSC_LINK?.trim()
+  const inlineCert = link ? isInlineCertificate(link) : false
   if (normalizedName) {
     processEnv.CSC_NAME = normalizedName
-    processEnv.CSC_IDENTITY_AUTO_DISCOVERY = 'false'
-    const link = processEnv.CSC_LINK?.trim()
     // Local .p12 *path* + keychain identity: prefer keychain (a bad/mismatched
     // .p12 breaks signing). But keep inline certs — CI passes an identity plus
     // base64 (raw or data:) via MAC_SIGN_CERTIFICATE_BASE64, and dropping it
     // would leave the runner with no cert to sign with.
-    if (link && !isInlineCertificate(link)) {
+    if (link && !inlineCert) {
       delete processEnv.CSC_LINK
       delete processEnv.CSC_KEY_PASSWORD
     }
+  }
+
+  // Only disable identity auto-discovery when relying on a Keychain identity
+  // (no inline cert to import). With an inline cert — CI's base64 .p12 imported
+  // into a dedicated temp keychain — keep auto-discovery ON so electron-builder
+  // can still resolve the Developer ID identity from the imported cert even if
+  // CSC_NAME is absent or doesn't exactly match. Disabling it here caused CI to
+  // silently fall back to an ad-hoc signature (no Developer ID, no timestamp).
+  if (normalizedName && !inlineCert) {
+    processEnv.CSC_IDENTITY_AUTO_DISCOVERY = 'false'
+  } else if (inlineCert) {
+    delete processEnv.CSC_IDENTITY_AUTO_DISCOVERY
   }
 
   const winLink = processEnv.WIN_CSC_LINK?.trim()
@@ -352,6 +364,12 @@ export function buildElectronBuilderExtraArgs(
   const args: string[] = []
   if (isMacNotarizeConfigured(env)) {
     args.push('--config.mac.notarize=true')
+  }
+  if (options?.buildingMac && isMacCodeSigningConfigured(env)) {
+    // Fail the build if the Developer ID identity can't be resolved instead of
+    // silently producing an ad-hoc signature (which then fails notarization with
+    // "not signed with a valid Developer ID certificate" / "no secure timestamp").
+    args.push('--config.mac.forceCodeSigning=true')
   }
   // Unsigned macOS builds on recent macOS versions fail at dyld launch when
   // hardenedRuntime is enabled but inner frameworks are not signed consistently.

@@ -225,12 +225,31 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
     expect(
       buildElectronBuilderExtraArgs(new Map(), { buildingMac: true }),
     ).toEqual(['--config.mac.hardenedRuntime=false'])
+  })
+
+  it('forces code signing for signed macOS builds (fail loudly instead of ad-hoc)', () => {
     expect(
       buildElectronBuilderExtraArgs(
         new Map([['CSC_NAME', 'Developer ID Application: Example']]),
         { buildingMac: true },
       ),
-    ).toEqual([])
+    ).toEqual(['--config.mac.forceCodeSigning=true'])
+  })
+
+  it('keeps identity auto-discovery enabled for inline (CI base64) certs', () => {
+    const env = {
+      ...process.env,
+      MAC_SIGN_IDENTITY: 'Developer ID Application: Example (TEAM123)',
+      MAC_SIGN_CERTIFICATE: `${'A'.repeat(3000)}=`,
+      MAC_SIGN_CERTIFICATE_PASSWORD: 'mac-secret',
+    } as NodeJS.ProcessEnv
+    delete env.CSC_IDENTITY_AUTO_DISCOVERY
+
+    applyCodeSigningEnv(env)
+    // Inline cert imported into a temp keychain — leave auto-discovery on so the
+    // identity resolves even if CSC_NAME doesn't match exactly.
+    expect(env.CSC_IDENTITY_AUTO_DISCOVERY).toBeUndefined()
+    expect(env.CSC_LINK).toContain('AAAA')
   })
 
   it('disables Windows signing for unsigned Windows builds', () => {

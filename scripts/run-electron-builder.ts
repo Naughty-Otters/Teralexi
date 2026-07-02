@@ -61,8 +61,23 @@ const args = [
 ]
 
 if (buildingMac) {
+  // Notarization without a Developer ID signature always fails with
+  // "not signed with a valid Developer ID certificate" + "no secure timestamp".
+  // Fail fast with an actionable message instead of the cryptic notary errors.
+  if (isMacNotarizeConfigured(signingEnv) && !isMacCodeSigningConfigured(signingEnv)) {
+    console.error(
+      '[code-sign] ERROR: Apple notarization is configured but macOS signing is NOT.\n' +
+        '           Notarization requires a Developer ID signature — an ad-hoc/unsigned app\n' +
+        '           will be rejected ("not signed with a valid Developer ID certificate",\n' +
+        '           "signature does not include a secure timestamp").\n' +
+        "           Set MAC_SIGN_CERTIFICATE_BASE64 + MAC_SIGN_CERTIFICATE_PASSWORD (and optionally\n" +
+        "           MAC_SIGN_IDENTITY) in the 'release' environment so the signing cert reaches this job.",
+    )
+    process.exit(1)
+  }
+
   if (isMacCodeSigningConfigured(signingEnv)) {
-    console.log('[code-sign] macOS signing configured')
+    console.log('[code-sign] macOS signing configured (forceCodeSigning on — build fails if identity is unresolved)')
     if (isMacNotarizeConfigured(signingEnv)) {
       console.log('[code-sign] Apple notarization enabled')
     }
