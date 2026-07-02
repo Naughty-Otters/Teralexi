@@ -68,15 +68,29 @@ describe('app-icons', () => {
 
   it('getTrayIconPngPath prefers build tray icons before dev source paths', async () => {
     mockApp.isPackaged = false
-    const existsSync = vi.fn((path: string) => {
-      const normalized = String(path).replace(/\\/g, '/')
-      return (
-        normalized.endsWith('/build/icons/tray-icon@2x.png') ||
-        normalized.endsWith('/build/icons/tray-icon.png')
-      )
+    // @2x is preferred only on macOS HiDPI displays; pin the platform so the
+    // assertion is deterministic on Linux/Windows CI runners.
+    const originalPlatform = process.platform
+    Object.defineProperty(process, 'platform', {
+      value: 'darwin',
+      configurable: true,
     })
-    vi.doMock('fs', () => ({ existsSync }))
-    const { getTrayIconPngPath } = await import('./app-icons')
-    expect(getTrayIconPngPath()).toMatch(/\/build\/icons\/tray-icon@2x\.png$/)
+    try {
+      const existsSync = vi.fn((path: string) => {
+        const normalized = String(path).replace(/\\/g, '/')
+        return (
+          normalized.endsWith('/build/icons/tray-icon@2x.png') ||
+          normalized.endsWith('/build/icons/tray-icon.png')
+        )
+      })
+      vi.doMock('fs', () => ({ existsSync }))
+      const { getTrayIconPngPath } = await import('./app-icons')
+      expect(getTrayIconPngPath()).toMatch(/\/build\/icons\/tray-icon@2x\.png$/)
+    } finally {
+      Object.defineProperty(process, 'platform', {
+        value: originalPlatform,
+        configurable: true,
+      })
+    }
   })
 })

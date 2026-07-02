@@ -99,9 +99,9 @@ describe('mcp-runtime-check', () => {
   })
 
   it('resolves commands on PATH', () => {
-    expect(resolveCommandOnPath('npx', '/opt/homebrew/bin')).toBe(
-      '/opt/homebrew/bin/npx',
-    )
+    const npxPath = join('/opt/homebrew/bin', 'npx')
+    vi.mocked(existsSync).mockImplementation((target) => String(target) === npxPath)
+    expect(resolveCommandOnPath('npx', '/opt/homebrew/bin')).toBe(npxPath)
   })
 
   it('reports npx availability when executable responds', () => {
