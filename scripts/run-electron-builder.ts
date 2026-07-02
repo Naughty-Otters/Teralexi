@@ -11,6 +11,7 @@ import {
 } from '../config/code-signing-env'
 import { detectElectronBuilderTargets } from '../config/electron-builder-targets'
 import { resignUnsignedMacAppsInBuildOutput } from './macos-unsigned-resign'
+import { generateSelfSignedWindowsCert } from './self-signed-win-cert'
 
 applyBuildEnvFromArgv()
 
@@ -18,6 +19,32 @@ const userArgs = stripOpenFdeCliArgs(process.argv.slice(2))
 const { buildingMac, buildingWin } = detectElectronBuilderTargets(userArgs)
 
 const signingEnv = applyCodeSigningEnv()
+
+// Windows: when no real Authenticode cert is supplied, fall back to an
+// ephemeral self-signed certificate so the build still produces a signed
+// installer instead of failing. If generation fails, we drop through to the
+// existing unsigned path (signAndEditExecutable disabled).
+if (buildingWin && !isWindowsCodeSigningConfigured(signingEnv)) {
+  const selfSigned = generateSelfSignedWindowsCert()
+  if (selfSigned) {
+    console.log(
+      `[code-sign] Windows: no cert provided — using generated self-signed certificate (${selfSigned.pfxPath})`,
+    )
+    process.env.WIN_CSC_LINK = selfSigned.pfxPath
+    process.env.WIN_CSC_KEY_PASSWORD = selfSigned.password
+    signingEnv.set('WIN_CSC_LINK', selfSigned.pfxPath)
+    signingEnv.set('WIN_CSC_KEY_PASSWORD', selfSigned.password)
+    if (process.platform === 'win32') {
+      process.env.CSC_LINK = selfSigned.pfxPath
+      process.env.CSC_KEY_PASSWORD = selfSigned.password
+    }
+  } else {
+    console.warn(
+      '[code-sign] Windows: self-signed certificate generation failed — building unsigned.',
+    )
+  }
+}
+
 applyUnsignedPlatformBuildPolicy(process.env, signingEnv, {
   buildingMac,
   buildingWin,

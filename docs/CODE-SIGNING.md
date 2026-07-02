@@ -111,9 +111,11 @@ Both **Release** (production → S3) and **CI** (staging artifacts) workflows us
 | `MAC_SIGN_CERTIFICATE_BASE64`   | `MAC_SIGN_CERTIFICATE`            | Base64 `.p12`                |
 | `MAC_SIGN_CERTIFICATE_PASSWORD` | `MAC_SIGN_CERTIFICATE_PASSWORD`   | `.p12` password              |
 | `MAC_SIGN_IDENTITY`             | `MAC_SIGN_IDENTITY`               | Developer ID identity string |
-| `APPLE_ID`                      | `MAC_APPLE_ID`                    | Notarization                 |
-| `APPLE_APP_SPECIFIC_PASSWORD`   | `MAC_APPLE_APP_SPECIFIC_PASSWORD` | Notarization                 |
-| `APPLE_TEAM_ID`                 | `MAC_APPLE_TEAM_ID`               | Notarization                 |
+| `MAC_APPLE_ID`                  | `MAC_APPLE_ID`                    | Notarization                 |
+| `MAC_APPLE_APP_SPECIFIC_PASSWORD` | `MAC_APPLE_APP_SPECIFIC_PASSWORD` | Notarization               |
+| `MAC_APPLE_TEAM_ID`             | `MAC_APPLE_TEAM_ID`               | Notarization                 |
+
+Store these in the **`release`** environment (Settings → Environments → release). The Release job declares `environment: release`, so the workflow can only read them from there.
 
 
 Encode macOS certificate:
@@ -172,6 +174,100 @@ open build/mac-arm64/OpenFDE.app
 ```
 
 For distribution to other machines, use Developer ID + notarization (macOS) or Authenticode (Windows).
+
+## Verify a signed app after build
+
+Build output lands in `build/` (see `directories.output` in `build.json`). Replace paths/versions below with your actual artifacts.
+
+### Automated: `npm run verify:signing`
+
+`scripts/verify-signing.mjs` runs every check below against all `.app` / `.dmg` / `.exe` artifacts it finds and prints a pass/warn/fail summary.
+
+```bash
+npm run verify:signing                 # scan ./build
+node scripts/verify-signing.mjs --dir build --strict   # non-zero exit on any warning
+node scripts/verify-signing.mjs --json                 # machine-readable output
+```
+
+- macOS checks run only on macOS; Windows Authenticode checks run only where `powershell`/`signtool` exist (otherwise reported as `skip`).
+- Default exit code is `0` unless a hard signature failure occurs; `--strict` also fails on warnings (unsigned / self-signed / unnotarized), which is useful in CI.
+
+The manual commands below are what the script wraps, for when you want to inspect a single artifact in detail.
+
+### macOS
+
+**1. Verify the signature is valid and complete**
+
+```bash
+codesign --verify --deep --strict --verbose=2 "build/mac-arm64/OpenFDE.app"
+```
+
+Expect `…: valid on disk` and `…: satisfies its Designated Requirement`. Any `code object is not signed at all` means an inner framework was missed.
+
+**2. Inspect who signed it (Authority chain + Team ID)**
+
+```bash
+codesign -dv --verbose=4 "build/mac-arm64/OpenFDE.app"
+```
+
+Look for:
+- `Authority=Developer ID Application: Your Name (TEAMID)` → properly Developer ID signed.
+- `Authority=Apple Development…` or a single `Signature=adhoc` → **not** distributable (dev/ad-hoc only).
+- `TeamIdentifier=TEAMID` matches your `MAC_APPLE_TEAM_ID`.
+
+**3. Gatekeeper assessment (what end users' Macs actually check)**
+
+```bash
+spctl --assess --type execute --verbose "build/mac-arm64/OpenFDE.app"
+```
+
+Expect `source=Notarized Developer ID` and `accepted`. `source=Unnotarized Developer ID` means signed but not notarized; `rejected` means Gatekeeper will block it.
+
+**4. Confirm the notarization ticket is stapled**
+
+```bash
+xcrun stapler validate "build/mac-arm64/OpenFDE.app"
+xcrun stapler validate "build/OpenFDE-<version>-arm64.dmg"
+```
+
+Expect `The validate action worked!`. `does not have a ticket stapled` means notarization did not complete or the staple step was skipped.
+
+### Windows
+
+Run these on Windows (PowerShell), against the NSIS installer and/or the unpacked `.exe`.
+
+**PowerShell (no SDK required):**
+
+```powershell
+Get-AuthenticodeSignature "build\OpenFDE Setup <version>.exe" | Format-List
+```
+
+Read the `Status` field:
+- `Valid` → signed with a certificate trusted by this machine (real Authenticode cert).
+- `UnknownError` / `NotTrusted` → signed, but the signing cert is **not trusted** — this is the expected result for the **self-signed fallback**. Check `SignerCertificate.Subject`; `CN=OpenFDE (Self-Signed)` confirms it is the ephemeral self-signed cert, not a production cert.
+- `NotSigned` → unsigned build (no cert configured and self-signed generation was skipped/failed).
+
+**signtool (Windows SDK):**
+
+```powershell
+# /pa uses the Authenticode policy; /v is verbose
+signtool verify /pa /v "build\OpenFDE Setup <version>.exe"
+```
+
+A real cert prints `Successfully verified`. A self-signed cert fails chain-of-trust verification (`A certificate chain processed, but terminated in a root certificate which is not trusted`) — that is expected until a real Authenticode cert is supplied via `WIN_SIGN_CERTIFICATE`.
+
+> Self-signed installers are signed but will still trigger a SmartScreen "unknown publisher" prompt. Use a real Authenticode certificate for distribution.
+
+### Quick sanity check for CI artifacts
+
+The build log already reports the chosen path via `scripts/run-electron-builder.ts`:
+
+- `[code-sign] macOS signing configured` / `Apple notarization enabled`
+- `[code-sign] Windows Authenticode signing configured`
+- `[code-sign] Windows: … using generated self-signed certificate …`
+- `[code-sign] … unsigned build …`
+
+If the log shows the signed path but the checks above fail, the credentials were present but wrong (e.g. mismatched password or an untrusted/expired cert).
 
 ## Related
 
