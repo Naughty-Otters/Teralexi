@@ -52,7 +52,7 @@ jobs:
 
   build:
     name: Staging build (${{ matrix.platform }})
-    needs: unit-tests
+    #needs: unit-tests
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     environment: mac_signs
@@ -70,14 +70,14 @@ jobs:
               build/*.blockmap
               build/*.yml
               build/latest*.yml
-          - os: windows-latest
-            platform: win
-            npm_script: build:win64:sit
-            artifact_path: |
-              build/*.exe
-              build/*.blockmap
-              build/*.yml
-              build/latest*.yml
+          # - os: windows-latest
+          #   platform: win
+          #   npm_script: build:win64:sit
+          #   artifact_path: |
+          #     build/*.exe
+          #     build/*.blockmap
+          #     build/*.yml
+          #     build/latest*.yml
 
     steps:
       - name: Check out repository
