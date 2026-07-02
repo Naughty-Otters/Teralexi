@@ -49,12 +49,38 @@ In GitHub **Settings → Secrets**, set:
 - `AWS_REGION`
 - `S3_RELEASE_BUCKET`
 
-**Code signing** (optional but required for smooth macOS auto-update and Windows SmartScreen):
+**Code signing** (optional for internal testing; required for smooth macOS auto-update and Windows SmartScreen):
 
-- macOS: `MAC_SIGN_CERTIFICATE_BASE64`, `MAC_SIGN_CERTIFICATE_PASSWORD`, `MAC_SIGN_IDENTITY`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`
-- Windows: `WIN_SIGN_CERTIFICATE_BASE64`, `WIN_SIGN_CERTIFICATE_PASSWORD`
+| Platform | GitHub secret | Purpose |
+| --- | --- | --- |
+| macOS | `MAC_SIGN_CERTIFICATE_BASE64` | Base64-encoded `.p12` (Developer ID Application) |
+| macOS | `MAC_SIGN_CERTIFICATE_PASSWORD` | Password for the `.p12` |
+| macOS | `MAC_SIGN_IDENTITY` | e.g. `Developer ID Application: Your Name (TEAMID)` |
+| macOS | `APPLE_ID` | Apple ID email (notarization) |
+| macOS | `APPLE_APP_SPECIFIC_PASSWORD` | App-specific password from appleid.apple.com |
+| macOS | `APPLE_TEAM_ID` | 10-character Team ID from Apple Developer |
+| Windows | `WIN_SIGN_CERTIFICATE_BASE64` | Base64-encoded `.pfx` |
+| Windows | `WIN_SIGN_CERTIFICATE_PASSWORD` | Password for the `.pfx` |
 
-See [CODE-SIGNING.md](./CODE-SIGNING.md) for local setup and certificate encoding.
+See [CODE-SIGNING.md](./CODE-SIGNING.md) for `env/.signing.env` setup and certificate encoding.
+
+#### macOS notarization (`APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`)
+
+You **do not** need these for local dev or unsigned builds. Set them only when publishing **signed, notarized** macOS installers (Release workflow or `npm run release:mac`) so other Macs trust the app and in-app update install works.
+
+| Variable | GitHub secret | Where to get it |
+| --- | --- | --- |
+| `MAC_APPLE_ID` | `APPLE_ID` | Apple ID email for your [Apple Developer Program](https://developer.apple.com/programs) account |
+| `MAC_APPLE_APP_SPECIFIC_PASSWORD` | `APPLE_APP_SPECIFIC_PASSWORD` | [appleid.apple.com](https://appleid.apple.com) → **Sign-In and Security** → **App-Specific Passwords** → Generate (format `xxxx-xxxx-xxxx-xxxx`). **Not** your normal Apple ID password. |
+| `MAC_APPLE_TEAM_ID` | `APPLE_TEAM_ID` | [developer.apple.com/account](https://developer.apple.com/account) → **Membership details** → **Team ID** (10 characters, e.g. `ABC123XYZ0`). Also appears in your signing identity: `Developer ID Application: Name (TEAMID)`. |
+
+**Signing vs notarization:** `MAC_SIGN_*` signs the app with your Developer ID certificate. The three `MAC_APPLE_*` vars let electron-builder **notarize** the build with Apple. Both are required for production macOS distribution; signing alone is not enough for Gatekeeper on other machines.
+
+**Local release build (optional):** configure `env/.signing.env` (see [CODE-SIGNING.md](./CODE-SIGNING.md)), then:
+
+```bash
+npm run release:mac
+```
 
 Implement public `GET /desktop/releases/stable/*` on your API or CDN before shipping updates to users.
 
@@ -114,14 +140,28 @@ Feed URL: `{BASE_API}/desktop/releases/stable/` (override with `app.desktop.rele
 
 ## Code signing (before public launch)
 
-See **[docs/CODE-SIGNING.md](./CODE-SIGNING.md)** for configuring Apple Developer ID certificates, notarization, and CI secrets.
+See **[docs/CODE-SIGNING.md](./CODE-SIGNING.md)** for full setup (Developer ID certificate, `.p12` export, Windows Authenticode, CI encoding).
 
 | Platform | Requirement |
 | -------- | ----------- |
-| **macOS** | Developer ID + notarization for smooth in-app updates |
+| **macOS** | Developer ID signing + notarization for smooth in-app updates on other Macs |
 | **Windows** | Authenticode certificate to reduce SmartScreen warnings |
 
-Set signing credentials via **shell environment variables** (local) or GitHub Actions secrets (Release workflow). Unsigned builds still work for internal testing.
+Set signing credentials via **shell environment variables** (local) or **GitHub Actions secrets** (Release workflow). Unsigned builds still work for internal testing on your own machine.
+
+### When you need Apple notarization vars
+
+| Goal | Need `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID`? |
+| --- | --- |
+| `npm run dev`, unsigned `build:mac` | No |
+| Signed build for your Mac only | No (signing cert is enough locally) |
+| **Release workflow** or distributable prod DMG/ZIP | **Yes** (all three + `MAC_SIGN_*`) |
+
+| Local export | GitHub secret | Source |
+| --- | --- | --- |
+| `MAC_APPLE_ID` | `APPLE_ID` | Apple Developer account email |
+| `MAC_APPLE_APP_SPECIFIC_PASSWORD` | `APPLE_APP_SPECIFIC_PASSWORD` | [appleid.apple.com](https://appleid.apple.com) → App-Specific Passwords |
+| `MAC_APPLE_TEAM_ID` | `APPLE_TEAM_ID` | developer.apple.com → Membership → Team ID |
 
 ## Hot update (legacy)
 
@@ -133,7 +173,8 @@ Set signing credentials via **shell environment variables** (local) or GitHub Ac
 - [ ] GitHub Actions secrets (`AWS_*`, `S3_RELEASE_BUCKET`)
 - [ ] Public `GET /desktop/releases/stable/*` (API or CDN in front of S3)
 - [ ] Production `BASE_API` in `env/.prod.env`
-- [ ] Set up code signing (macOS + Windows)
+- [ ] Set up code signing (macOS Developer ID + notarization; Windows Authenticode)
+- [ ] GitHub secrets: `MAC_SIGN_*`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`, `WIN_SIGN_*`
 - [ ] Bump version, update `CHANGELOG.md`, push
 - [ ] Run the **Release** workflow with confirm `release`
 - [ ] Verify S3 keys: `latest-mac.yml`, `latest.yml`, installers

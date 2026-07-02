@@ -361,7 +361,7 @@ function renderLiveStepProgress(chunk: Record<string, unknown>): string {
     },
   }
 
-  return `${visible}\n<!-- otter-structured:${encodeStructuredMarker(structured)} -->`
+  return `${visible}\n<!-- openfde-structured:${encodeStructuredMarker(structured)} -->`
 }
 
 onMounted(async () => {

@@ -1,10 +1,10 @@
 import { realpathSync } from 'fs'
 import path from 'path'
 import {
-  OTTER_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
-  OTTER_AGENT_SANDBOX_ROOT_ENV,
-  OTTER_AGENT_WORKSPACE_PATH_ENV,
-  OTTER_AGENT_CONVERSATION_ID_ENV,
+  OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
+  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
+  OPENFDE_AGENT_WORKSPACE_PATH_ENV,
+  OPENFDE_AGENT_CONVERSATION_ID_ENV,
   SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY,
   SANDBOX_ROOT_GLOBAL_KEY,
   WORKSPACE_PATH_GLOBAL_KEY,
@@ -24,9 +24,9 @@ import {
 } from './tool-loop-output'
 
 export {
-  OTTER_AGENT_SANDBOX_ROOT_ENV,
+  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
   SANDBOX_ROOT_GLOBAL_KEY,
-  OTTER_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
+  OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
   SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY,
   ensureToolLoopStepOutputDirs,
   getOutputResultsRelPrefix,
@@ -45,7 +45,7 @@ export function getSandboxRootFromEnv(): string | undefined {
   if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
     return fromGlobal.trim()
   }
-  return process.env[OTTER_AGENT_SANDBOX_ROOT_ENV]?.trim() || undefined
+  return process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]?.trim() || undefined
 }
 
 export function requireActiveSandbox():
@@ -335,7 +335,7 @@ export function getWorkspacePathFromEnv(): string | null {
   if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
     return fromGlobal.trim()
   }
-  return process.env[OTTER_AGENT_WORKSPACE_PATH_ENV]?.trim() || null
+  return process.env[OPENFDE_AGENT_WORKSPACE_PATH_ENV]?.trim() || null
 }
 
 /** Active conversation id for plan-mode tools (global → env). */
@@ -345,7 +345,7 @@ export function getConversationIdFromEnv(): string | undefined {
   if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
     return fromGlobal.trim()
   }
-  return process.env[OTTER_AGENT_CONVERSATION_ID_ENV]?.trim() || undefined
+  return process.env[OPENFDE_AGENT_CONVERSATION_ID_ENV]?.trim() || undefined
 }
 
 /**

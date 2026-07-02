@@ -9,7 +9,7 @@ vi.mock('fs', () => ({
 
 vi.mock('@config/openfde-home', () => ({
   getopenfdeConfigDir: vi.fn(() => '/mock/.openfde/config'),
-  getopenfdeSystemPropPath: vi.fn(() => '/mock/.openfde/config/config.properties'),
+  getopenfdeConfigPropertiesPath: vi.fn(() => '/mock/.openfde/config/config.properties'),
 }))
 
 vi.mock('./env-overrides', () => ({

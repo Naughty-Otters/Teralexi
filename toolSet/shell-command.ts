@@ -100,7 +100,7 @@ const sharedRunScriptFieldsRest = {
   /**
    * Working directory for the interpreter process.
    * Only `"sandbox"` is supported: cwd is the active tool-loop step folder (or sandbox root).
-   * Scripts may read the user project via `OTTER_WORKSPACE_PATH` or workspace paths in
+   * Scripts may read the user project via `OPENFDE_WORKSPACE_PATH` or workspace paths in
    * `scriptArgs`; use `run_workspace_command` for npm/git/test in the project folder.
    */
   workingDirectory: z
@@ -108,7 +108,7 @@ const sharedRunScriptFieldsRest = {
     .optional()
     .default('sandbox')
     .describe(
-      'Must be "sandbox" (default). Process cwd is the sandbox step folder. Read workspace files via OTTER_WORKSPACE_PATH or path-like scriptArgs; use run_workspace_command for project commands.',
+      'Must be "sandbox" (default). Process cwd is the sandbox step folder. Read workspace files via OPENFDE_WORKSPACE_PATH or path-like scriptArgs; use run_workspace_command for project commands.',
     ),
 } as const
 
@@ -323,14 +323,14 @@ function buildScriptProcessEnv(options: {
   return {
     ...process.env,
     ...extra,
-    OTTER_SANDBOX_ROOT: sandboxRoot,
-    OTTER_STEP_CWD: cwd,
-    OTTER_RESULTS_DIR: path.join(sandboxRoot, getOutputResultsRelPrefix()),
-    OTTER_SCRIPTS_DIR: path.join(sandboxRoot, getOutputScriptsRelPrefix()),
-    OTTER_REFERENCE_SCRIPTS_DIR: path.join(sandboxRoot, 'scripts'),
-    ...(stepBase ? { OTTER_TOOL_LOOP_STEP_DIR: stepBase } : {}),
+    OPENFDE_SANDBOX_ROOT: sandboxRoot,
+    OPENFDE_STEP_CWD: cwd,
+    OPENFDE_RESULTS_DIR: path.join(sandboxRoot, getOutputResultsRelPrefix()),
+    OPENFDE_SCRIPTS_DIR: path.join(sandboxRoot, getOutputScriptsRelPrefix()),
+    OPENFDE_REFERENCE_SCRIPTS_DIR: path.join(sandboxRoot, 'scripts'),
+    ...(stepBase ? { OPENFDE_TOOL_LOOP_STEP_DIR: stepBase } : {}),
     ...(workspacePath
-      ? { OTTER_WORKSPACE_PATH: path.resolve(workspacePath) }
+      ? { OPENFDE_WORKSPACE_PATH: path.resolve(workspacePath) }
       : {}),
   }
 }
@@ -885,7 +885,7 @@ export const runScript: SkillTool = {
   name: 'run_script',
   tags: ['shell-command'],
   description:
-    '**Input must include `scriptType`** (required string: `bash` | `python` | `nodejs` | `javascript`). Agent sandbox shell only: execFile(interpreter, [scriptFile, ...scriptArgs]) — no raw shell strings or pipes. When a tool-loop step is active, process cwd is that step folder (`output/toolLoop/<step>/`); write outputs under `./results/` (or `results/scratch/` for temp files) and use `resultFileRelativePath` for deliverables. Read user project files via `OTTER_WORKSPACE_PATH` or workspace-relative paths in `scriptArgs`. Use `promote_artifact` to copy deliverables into the workspace. Use `run_workspace_command` for npm/git/test in the project folder.',
+    '**Input must include `scriptType`** (required string: `bash` | `python` | `nodejs` | `javascript`). Agent sandbox shell only: execFile(interpreter, [scriptFile, ...scriptArgs]) — no raw shell strings or pipes. When a tool-loop step is active, process cwd is that step folder (`output/toolLoop/<step>/`); write outputs under `./results/` (or `results/scratch/` for temp files) and use `resultFileRelativePath` for deliverables. Read user project files via `OPENFDE_WORKSPACE_PATH` or workspace-relative paths in `scriptArgs`. Use `promote_artifact` to copy deliverables into the workspace. Use `run_workspace_command` for npm/git/test in the project folder.',
   inputSchema: runSandboxScriptContentInput,
   needsApproval: false,
   async execute(input) {

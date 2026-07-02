@@ -4,18 +4,13 @@ import {
   getEnvOverrides,
   initializeEnvOverrides,
 } from './env-overrides'
-import { getopenfdeConfigDir, getopenfdeSystemPropPath } from './openfde-home'
+import { getopenfdeConfigDir, getopenfdeConfigPropertiesPath } from './openfde-home'
 import {
   CONFIG_PROPERTIES_FILENAME,
   isValidSystemPropKey,
 } from './system-prop-keys'
 
 export { isValidSystemPropKey, CONFIG_PROPERTIES_FILENAME } from './system-prop-keys'
-
-/** @deprecated Use {@link CONFIG_PROPERTIES_FILENAME} */
-export const SYSTEM_PROP_FILENAME = CONFIG_PROPERTIES_FILENAME
-export const LEGACY_SYSTEM_PROP_FILENAME = 'system.prop'
-export const SYSTEM_PROP_DIRNAME = 'config'
 
 const DEFAULT_SYSTEM_PROPERTIES: Record<string, string> = {
   'app.build.hotPublishUrl': '',
@@ -101,7 +96,7 @@ function ensureEnvOverridesLoaded(): void {
 }
 
 function getSystemPropPath(): string {
-  return getopenfdeSystemPropPath()
+  return getopenfdeConfigPropertiesPath()
 }
 
 function parseSystemProp(content: string): Map<string, string> {

@@ -27,7 +27,7 @@ Configure the OpenFDE platform backend once with `BASE_API`. At runtime it maps 
 - **Build-time (main + renderer):** `BASE_API` is baked into both bundles from `env/.{mode}.env`. Packaged apps do not read env files at runtime — rebuild to change API targets.
 - **Runtime (main process):** optional overrides such as `app.metrics.graphqlUrl` may be relative paths or legacy absolute URLs (via `config.properties` only).
 
-**Code signing:** builds are **unsigned by default** (macOS and Windows). Export `MAC_SIGN_*` and/or `WIN_SIGN_*` in your shell (or use CI secrets) when running electron-builder — see [docs/CODE-SIGNING.md](./docs/CODE-SIGNING.md).
+**Code signing:** builds are **unsigned by default** (macOS and Windows). Copy `env/.signing.env.example` → `env/.signing.env` for local signed builds (sit and prod). CI/Release uses GitHub Actions secrets — see [docs/CODE-SIGNING.md](./docs/CODE-SIGNING.md).
 
 Example `env/.dev.env`:
 
@@ -40,9 +40,11 @@ NODE_ENV = 'development'
 
 ```text
 env/
-  .dev.env    # local development
-  .sit.env    # staging / CI
-  .prod.env   # production releases
+  .dev.env              # local development
+  .sit.env              # staging / CI app config
+  .prod.env             # production app config
+  .signing.env.example  # template (committed)
+  .signing.env          # local signing secrets (gitignored, build-time only)
 ```
 
 Update URLs and secrets in the matching file before building for that environment. Do not commit real production secrets unless your team policy allows it.

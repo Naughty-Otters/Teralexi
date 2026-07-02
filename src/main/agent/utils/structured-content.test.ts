@@ -83,7 +83,7 @@ describe('structured-content', () => {
       }),
       'utf8',
     ).toString('base64')
-    const raw = `- Planning\n\nPlan\n<!-- otter-structured:${embedded} -->`
+    const raw = `- Planning\n\nPlan\n<!-- openfde-structured:${embedded} -->`
 
     expect(parseAssistantStructuredContent(raw)).toEqual({
       version: 2,

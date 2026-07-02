@@ -1,10 +1,17 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import {
-  resolveBuildTimeEnvFilePaths,
-  stripEnvValue,
-} from './env-overrides'
+import { stripEnvValue } from './env-overrides'
+
+/** Gitignored local signing secrets (`env/.signing.env`). Never packaged in the app. */
+export const SIGNING_ENV_FILENAME = '.signing.env'
+
+/** Build-time signing env file — shared by sit and prod local builds. */
+export function resolveCodeSigningEnvFilePaths(
+  cwd = process.cwd(),
+): string[] {
+  return [join(cwd, 'env', SIGNING_ENV_FILENAME)]
+}
 
 /** electron-builder env vars (build-time only). */
 export const ELECTRON_BUILDER_SIGNING_KEYS = [
@@ -22,7 +29,7 @@ export const ELECTRON_BUILDER_SIGNING_KEYS = [
 export type ElectronBuilderSigningKey =
   (typeof ELECTRON_BUILDER_SIGNING_KEYS)[number]
 
-/** Friendly aliases for `env/.{mode}.env` and shell env (build-time only). */
+/** Friendly aliases for `env/.signing.env` and shell env (build-time only). */
 export const CODE_SIGNING_ENV_ALIASES: Record<string, ElectronBuilderSigningKey> =
   {
     MAC_SIGN_CERTIFICATE: 'CSC_LINK',
@@ -47,6 +54,22 @@ function resolveCertificatePath(value: string): string {
   const trimmed = value.trim()
   if (trimmed.startsWith('data:')) return trimmed
   return expandHomePath(trimmed)
+}
+
+/** electron-builder CSC_NAME must omit the Keychain prefix (e.g. "Developer ID Application:"). */
+export function normalizeMacSignIdentity(name: string): string {
+  const trimmed = name.trim()
+  const prefixes = [
+    'Developer ID Application:',
+    '3rd Party Mac Developer Application:',
+    'Apple Development:',
+  ]
+  for (const prefix of prefixes) {
+    if (trimmed.startsWith(prefix)) {
+      return trimmed.slice(prefix.length).trim()
+    }
+  }
+  return trimmed
 }
 
 export function parseCodeSigningEnvFile(content: string): Map<string, string> {
@@ -79,7 +102,7 @@ export function loadCodeSigningEnv(
   processEnv: NodeJS.ProcessEnv = process.env,
 ): Map<string, string> {
   const merged = new Map<string, string>()
-  for (const filePath of resolveBuildTimeEnvFilePaths(process.cwd(), processEnv)) {
+  for (const filePath of resolveCodeSigningEnvFilePaths(process.cwd())) {
     if (!existsSync(filePath)) continue
     const parsed = parseCodeSigningEnvFile(readFileSync(filePath, 'utf-8'))
     for (const [key, value] of parsed) {
@@ -137,11 +160,23 @@ export function applyCodeSigningEnv(
     if (key === 'CSC_LINK' || key === 'WIN_CSC_LINK') {
       resolved = resolveCertificatePath(value)
     }
+    if (key === 'CSC_NAME') {
+      resolved = normalizeMacSignIdentity(value)
+    }
     processEnv[key] = resolved
   }
 
-  if (signingEnv.get('CSC_NAME')?.trim()) {
+  const normalizedName = processEnv.CSC_NAME?.trim()
+  if (normalizedName) {
+    processEnv.CSC_NAME = normalizedName
     processEnv.CSC_IDENTITY_AUTO_DISCOVERY = 'false'
+    const link = processEnv.CSC_LINK?.trim()
+    // Local .p12 + keychain identity: prefer keychain (bad .p12 breaks signing).
+    // CI uses data: base64 CSC_LINK — keep that path.
+    if (link && !link.startsWith('data:')) {
+      delete processEnv.CSC_LINK
+      delete processEnv.CSC_KEY_PASSWORD
+    }
   }
 
   const winLink = processEnv.WIN_CSC_LINK?.trim()

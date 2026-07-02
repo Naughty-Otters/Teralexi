@@ -1,17 +1,12 @@
 import { createRequire } from 'module'
-import { existsSync, mkdirSync, renameSync } from 'fs'
+import { mkdirSync } from 'fs'
 import { homedir } from 'os'
-import { dirname, join, resolve, sep } from 'path'
+import { dirname, join, resolve } from 'path'
 import { CONFIG_PROPERTIES_FILENAME } from './system-prop-keys'
 
 export const openfde_HOME_DIRNAME = '.openfde'
 export const openfde_DB_FILENAME = 'openfde.db'
 export const openfde_MEMORY_VECTORS_DB_FILENAME = 'memory-vectors.db'
-
-/** Previous product data directory; migrated on first launch. */
-export const LEGACY_OTTERS_HOME_DIRNAME = '.otters'
-export const LEGACY_OTTERS_DB_FILENAME = 'otters.db'
-export const LEGACY_CONVERSATIONS_DB_FILENAME = 'conversations.db'
 
 /** App-owned paths under `~/.openfde/` (not Electron `userData` as a whole). */
 const openfde_APP_DIRS = [
@@ -46,21 +41,6 @@ function resolveopenfdeHomePath(): string {
   return join(homedir(), openfde_HOME_DIRNAME)
 }
 
-function migrateLegacyHomeIfNeeded(newHome: string): void {
-  const legacyHome = resolve(join(homedir(), LEGACY_OTTERS_HOME_DIRNAME))
-  const resolvedNew = resolve(newHome)
-
-  if (legacyHome !== resolvedNew && !existsSync(resolvedNew) && existsSync(legacyHome)) {
-    renameSync(legacyHome, resolvedNew)
-  }
-
-  const legacyDb = join(resolvedNew, openfde_DB_DIRNAME, LEGACY_OTTERS_DB_FILENAME)
-  const newDb = join(resolvedNew, openfde_DB_DIRNAME, openfde_DB_FILENAME)
-  if (existsSync(legacyDb) && !existsSync(newDb)) {
-    renameSync(legacyDb, newDb)
-  }
-}
-
 export function getopenfdeHome(): string {
   if (!openfdeHomePath) {
     openfdeHomePath = resolveopenfdeHomePath()
@@ -81,11 +61,6 @@ export function getopenfdeConfigPropertiesPath(): string {
   return join(getopenfdeConfigDir(), CONFIG_PROPERTIES_FILENAME)
 }
 
-/** @deprecated Use {@link getopenfdeConfigPropertiesPath} */
-export function getopenfdeSystemPropPath(): string {
-  return getopenfdeConfigPropertiesPath()
-}
-
 export function getopenfdeDbDir(): string {
   const dir = join(getopenfdeHome(), openfde_DB_DIRNAME)
   ensureDir(dir)
@@ -96,11 +71,6 @@ export function getopenfdeDbPath(): string {
   const path = join(getopenfdeDbDir(), openfde_DB_FILENAME)
   ensureParentDirForFile(path)
   return path
-}
-
-/** @deprecated Use {@link getopenfdeDbPath} */
-export function getopenfdeConversationsDbPath(): string {
-  return getopenfdeDbPath()
 }
 
 export function getopenfdeWorkspacePath(): string {
@@ -305,30 +275,8 @@ function getElectronApp(): ElectronAppLike | null {
   }
 }
 
-/** Legacy builds used `~/.openfde/<channel-dir>`; route those into `channels/`. */
-function redirectLegacyChannelDataPath(targetPath: string): string {
-  const home = resolve(resolveopenfdeHomePath())
-  const resolved = resolve(targetPath)
-  const channelsRoot = join(home, 'channels')
-
-  for (const name of openfde_CHANNEL_DATA_DIRS) {
-    const legacyRoot = join(home, name)
-    if (
-      resolved === legacyRoot ||
-      resolved.startsWith(`${legacyRoot}${sep}`)
-    ) {
-      const relative = resolved.slice(legacyRoot.length).replace(/^[/\\]+/, '')
-      return relative
-        ? join(channelsRoot, name, relative)
-        : join(channelsRoot, name)
-    }
-  }
-
-  return targetPath
-}
-
 function ensureDir(path: string): void {
-  mkdirSync(redirectLegacyChannelDataPath(path), { recursive: true })
+  mkdirSync(path, { recursive: true })
 }
 
 /** Ensures the parent directory of a file path exists (for SQLite DBs, JSON writes, etc.). */
@@ -337,7 +285,7 @@ export function ensureParentDirForFile(filePath: string): void {
 }
 
 /**
- * Creates `~/.openfde/` and migrates data from `~/.otters/` when present.
+ * Creates `~/.openfde/` and standard subdirectories on first use.
  * Electron `userData` stays at the default OS location for Chromium internals.
  */
 export function initializeopenfdeHome(app?: ElectronAppLike | null): string {
@@ -346,8 +294,6 @@ export function initializeopenfdeHome(app?: ElectronAppLike | null): string {
   if (initialized) {
     return openfdeHomePath ?? home
   }
-
-  migrateLegacyHomeIfNeeded(home)
 
   openfdeHomePath = home
   initialized = true
@@ -369,8 +315,8 @@ export function isopenfdeHomeInitialized(): boolean {
   return initialized
 }
 
-/** Default Electron userData before any custom `setPath`. */
-export function guessLegacyElectronUserData(appName = 'openfde'): string {
+/** Default Electron userData path for a given app name. */
+export function guessDefaultElectronUserData(appName = 'openfde'): string {
   const platform = process.platform
   if (platform === 'darwin') {
     return join(homedir(), 'Library', 'Application Support', appName)

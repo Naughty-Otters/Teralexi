@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { getSandboxRootFromEnv } from './paths'
 import {
-  OTTER_AGENT_SANDBOX_ROOT_ENV,
+  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
   SANDBOX_ROOT_GLOBAL_KEY,
 } from './run-context'
 import { runWithExclusiveSandboxGlobals, resetSandboxGlobalsLockForTests } from './sandbox-globals-lock'
 
 function clearSandboxGlobals(): void {
-  delete process.env[OTTER_AGENT_SANDBOX_ROOT_ENV]
+  delete process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]
   delete (globalThis as Record<string, unknown>)[SANDBOX_ROOT_GLOBAL_KEY]
 }
 

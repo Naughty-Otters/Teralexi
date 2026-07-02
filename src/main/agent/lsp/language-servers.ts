@@ -78,11 +78,11 @@ export const LANGUAGE_SERVERS: LanguageServerDef[] = [
 ]
 
 /** Env var carrying the app's own `node_modules/.bin` (set at main startup). */
-export const OTTER_LSP_BUNDLED_BIN_ENV = 'OTTER_LSP_BUNDLED_BIN' as const
+export const OPENFDE_LSP_BUNDLED_BIN_ENV = 'OPENFDE_LSP_BUNDLED_BIN' as const
 
 /** The app-bundled `node_modules/.bin` dir, if known. */
 export function bundledBinDir(): string | null {
-  return process.env[OTTER_LSP_BUNDLED_BIN_ENV]?.trim() || null
+  return process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]?.trim() || null
 }
 
 /**
@@ -96,7 +96,7 @@ export function initBundledLspBin(appRootCandidates: string[]): string | null {
     if (!root?.trim()) continue
     const dir = join(root, 'node_modules', '.bin')
     if (existsSync(dir)) {
-      process.env[OTTER_LSP_BUNDLED_BIN_ENV] = dir
+      process.env[OPENFDE_LSP_BUNDLED_BIN_ENV] = dir
       return dir
     }
   }

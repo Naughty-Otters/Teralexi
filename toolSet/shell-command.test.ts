@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  OTTER_AGENT_SANDBOX_ROOT_ENV,
-  OTTER_AGENT_WORKSPACE_PATH_ENV,
+  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
+  OPENFDE_AGENT_WORKSPACE_PATH_ENV,
   SANDBOX_ROOT_GLOBAL_KEY,
   WORKSPACE_PATH_GLOBAL_KEY,
   setSandboxOutputScope,
@@ -28,10 +28,10 @@ function setSandboxRoot(root: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (root) {
     g[SANDBOX_ROOT_GLOBAL_KEY] = root
-    process.env[OTTER_AGENT_SANDBOX_ROOT_ENV] = root
+    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = root
   } else {
     delete g[SANDBOX_ROOT_GLOBAL_KEY]
-    delete process.env[OTTER_AGENT_SANDBOX_ROOT_ENV]
+    delete process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]
   }
 }
 
@@ -39,10 +39,10 @@ function setWorkspaceRoot(root: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (root) {
     g[WORKSPACE_PATH_GLOBAL_KEY] = root
-    process.env[OTTER_AGENT_WORKSPACE_PATH_ENV] = root
+    process.env[OPENFDE_AGENT_WORKSPACE_PATH_ENV] = root
   } else {
     delete g[WORKSPACE_PATH_GLOBAL_KEY]
-    delete process.env[OTTER_AGENT_WORKSPACE_PATH_ENV]
+    delete process.env[OPENFDE_AGENT_WORKSPACE_PATH_ENV]
   }
 }
 
@@ -205,10 +205,10 @@ describe('shell-command tools', () => {
     expect(opts.cwd).toBe(
       path.join(sandboxRoot, 'output', 'toolLoop', scope),
     )
-    expect(opts.env?.OTTER_REFERENCE_SCRIPTS_DIR).toBe(
+    expect(opts.env?.OPENFDE_REFERENCE_SCRIPTS_DIR).toBe(
       path.join(sandboxRoot, 'scripts'),
     )
-    expect(opts.env?.OTTER_STEP_CWD).toBe(opts.cwd)
+    expect(opts.env?.OPENFDE_STEP_CWD).toBe(opts.cwd)
   })
 
   it('passes absolute script path to interpreter when cwd is step', async () => {
@@ -410,7 +410,7 @@ describe('shell-command tools', () => {
     expect(scriptEntries.some((name) => name.endsWith('.py'))).toBe(true)
   })
 
-  it('exposes OTTER_WORKSPACE_PATH when workspace is set', async () => {
+  it('exposes OPENFDE_WORKSPACE_PATH when workspace is set', async () => {
     const workspaceRoot = await mkdtemp(path.join(tmpdir(), 'openfde-ws-'))
     setWorkspaceRoot(workspaceRoot)
     mockExecSuccess('ok\n')
@@ -421,7 +421,7 @@ describe('shell-command tools', () => {
     const runCall = findScriptProcessCall(execFileMock.mock.calls)
     expect(runCall).toBeDefined()
     const opts = runCall![2] as { env?: NodeJS.ProcessEnv }
-    expect(opts.env?.OTTER_WORKSPACE_PATH).toBe(path.resolve(workspaceRoot))
+    expect(opts.env?.OPENFDE_WORKSPACE_PATH).toBe(path.resolve(workspaceRoot))
   })
 
   it('resolves scriptArgs to workspace paths for reads', async () => {

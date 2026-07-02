@@ -7,7 +7,7 @@ import {
   initBundledLspBin,
   isLspSupportedFile,
   matchLanguageServer,
-  OTTER_LSP_BUNDLED_BIN_ENV,
+  OPENFDE_LSP_BUNDLED_BIN_ENV,
   resolveServerCommand,
   LANGUAGE_SERVERS,
 } from './language-servers'
@@ -50,11 +50,11 @@ describe('isLspSupportedFile', () => {
 
 describe('resolveServerCommand', () => {
   let dir: string
-  const savedEnv = process.env[OTTER_LSP_BUNDLED_BIN_ENV]
+  const savedEnv = process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]
   afterEach(() => {
     if (dir) rmSync(dir, { recursive: true, force: true })
-    if (savedEnv === undefined) delete process.env[OTTER_LSP_BUNDLED_BIN_ENV]
-    else process.env[OTTER_LSP_BUNDLED_BIN_ENV] = savedEnv
+    if (savedEnv === undefined) delete process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]
+    else process.env[OPENFDE_LSP_BUNDLED_BIN_ENV] = savedEnv
   })
 
   it('prefers a project-local node_modules/.bin install', () => {
@@ -72,7 +72,7 @@ describe('resolveServerCommand', () => {
     mkdirSync(bundledBin, { recursive: true })
     const server = join(bundledBin, 'typescript-language-server')
     writeFileSync(server, '#!/usr/bin/env node\n')
-    process.env[OTTER_LSP_BUNDLED_BIN_ENV] = bundledBin
+    process.env[OPENFDE_LSP_BUNDLED_BIN_ENV] = bundledBin
 
     // workspace has no local install → resolves to the bundled one
     const ws = join(dir, 'empty-workspace')
@@ -85,7 +85,7 @@ describe('resolveServerCommand', () => {
     const bundledBin = join(dir, 'bundled', '.bin')
     mkdirSync(bundledBin, { recursive: true })
     writeFileSync(join(bundledBin, 'typescript-language-server'), 'x')
-    process.env[OTTER_LSP_BUNDLED_BIN_ENV] = bundledBin
+    process.env[OPENFDE_LSP_BUNDLED_BIN_ENV] = bundledBin
 
     const ws = join(dir, 'ws')
     const localBinDir = join(ws, 'node_modules', '.bin')
@@ -97,18 +97,18 @@ describe('resolveServerCommand', () => {
 
   it('falls back to the bare command when nothing is installed', () => {
     dir = mkdtempSync(join(tmpdir(), 'openfde-lsp-nobin-'))
-    delete process.env[OTTER_LSP_BUNDLED_BIN_ENV]
+    delete process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]
     expect(resolveServerCommand(tsServer, dir)).toBe('typescript-language-server')
   })
 })
 
 describe('initBundledLspBin', () => {
   let dir: string
-  const savedEnv = process.env[OTTER_LSP_BUNDLED_BIN_ENV]
+  const savedEnv = process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]
   afterEach(() => {
     if (dir) rmSync(dir, { recursive: true, force: true })
-    if (savedEnv === undefined) delete process.env[OTTER_LSP_BUNDLED_BIN_ENV]
-    else process.env[OTTER_LSP_BUNDLED_BIN_ENV] = savedEnv
+    if (savedEnv === undefined) delete process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]
+    else process.env[OPENFDE_LSP_BUNDLED_BIN_ENV] = savedEnv
   })
 
   it('publishes the first candidate root that has node_modules/.bin', () => {
@@ -117,12 +117,12 @@ describe('initBundledLspBin', () => {
     mkdirSync(join(good, 'node_modules', '.bin'), { recursive: true })
     const result = initBundledLspBin([join(dir, 'missing'), good])
     expect(result).toBe(join(good, 'node_modules', '.bin'))
-    expect(process.env[OTTER_LSP_BUNDLED_BIN_ENV]).toBe(result)
+    expect(process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]).toBe(result)
   })
 
   it('returns null when no candidate has node_modules/.bin', () => {
     dir = mkdtempSync(join(tmpdir(), 'openfde-lsp-init-none-'))
-    delete process.env[OTTER_LSP_BUNDLED_BIN_ENV]
+    delete process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]
     expect(initBundledLspBin([join(dir, 'a'), join(dir, 'b')])).toBeNull()
   })
 })
