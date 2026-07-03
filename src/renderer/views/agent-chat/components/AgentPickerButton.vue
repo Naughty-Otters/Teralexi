@@ -24,37 +24,58 @@
         tabindex="-1"
         @pointerdown.stop
       >
-        <template v-for="(entry, index) in pickerEntries" :key="entryKey(entry, index)">
+        <template v-for="row in renderRows" :key="row.key">
           <div
-            v-if="entry.kind === 'header'"
-            class="agent-picker-group-header"
+            v-if="row.type === 'section'"
+            class="agent-picker-section"
+            :class="{ 'agent-picker-section--group': row.variant === 'group' }"
+            :style="row.accent ? { '--agent-accent': row.accent } : undefined"
           >
-            {{ entry.label }}
+            <UIcon
+              v-if="row.variant === 'group'"
+              class="agent-picker-section__icon"
+              name="i-lucide-layers"
+              aria-hidden="true"
+            />
+            <span class="agent-picker-section__label">{{ row.label }}</span>
+            <span
+              v-if="row.count"
+              class="agent-picker-section__count"
+              aria-hidden="true"
+              >{{ row.count }}</span
+            >
           </div>
           <button
             v-else
-            :ref="(el) => setItemRef(el, selectableIndex(index))"
+            :ref="(el) => setItemRef(el, row.selectableIdx)"
             type="button"
             class="agent-picker-option"
             :class="{
-              'agent-picker-option--active':
-                selectableIndex(index) === highlightIndex,
-              'agent-picker-option--grouped': isGroupedOption(entry, index),
+              'agent-picker-option--active': row.selectableIdx === highlightIndex,
+              'agent-picker-option--grouped': row.underHeader,
+              'agent-picker-option--first': row.first,
+              'agent-picker-option--last': row.last,
             }"
+            :style="{ '--agent-accent': row.accent }"
             role="option"
-            :aria-selected="entry.option.id === selectedAgentId"
+            :aria-selected="row.option.id === selectedAgentId"
+            :title="rowTitle(row.option)"
             @mousedown.prevent
             @pointerdown.stop
-            @mouseenter="setHighlightIndex(selectableIndex(index))"
-            @mousemove="setHighlightIndex(selectableIndex(index))"
-            @click.stop="selectAgent(entry.option.id)"
-            @keydown="onItemKeydown($event, selectableIndex(index))"
+            @mouseenter="setHighlightIndex(row.selectableIdx)"
+            @mousemove="setHighlightIndex(row.selectableIdx)"
+            @click.stop="selectAgent(row.option.id)"
+            @keydown="onItemKeydown($event, row.selectableIdx)"
           >
-            <span class="agent-picker-option__name">{{
-              agentPickerRowLabel(entry.option, isGroupedOption(entry, index))
-            }}</span>
+            <span
+              v-if="row.underHeader"
+              class="agent-picker-option__rail"
+              aria-hidden="true"
+            />
+            <span class="agent-picker-option__dot" aria-hidden="true" />
+            <span class="agent-picker-option__name">{{ row.label }}</span>
             <UIcon
-              v-if="entry.option.id === selectedAgentId"
+              v-if="row.option.id === selectedAgentId"
               class="agent-picker-option__check"
               name="i-lucide-check"
               aria-hidden="true"
@@ -74,6 +95,7 @@ import {
   agentPickerRowLabel,
   buildAgentPickerEntries,
   listSelectableAgentPickerOptions,
+  type AgentPickerAgentOption,
   type AgentPickerEntry,
   type SkillGroupAgentRef,
 } from '@shared/agent/skill-groups'
@@ -129,31 +151,129 @@ const selectableAgents = computed(() =>
   listSelectableAgentPickerOptions(pickerEntries.value),
 )
 
-const selectableIndexByEntryIndex = computed(() => {
-  const map = new Map<number, number>()
+type SectionRow = {
+  type: 'section'
+  key: string
+  variant: 'plain' | 'group'
+  label: string
+  accent?: string
+  count?: number
+}
+
+type AgentRow = {
+  type: 'agent'
+  key: string
+  option: AgentPickerAgentOption
+  label: string
+  selectableIdx: number
+  underHeader: boolean
+  accent: string
+  first: boolean
+  last: boolean
+}
+
+type RenderRow = SectionRow | AgentRow
+
+const DEFAULT_ACCENT = 'var(--ui-text-muted)'
+
+/** Map an agent color token to a concrete accent color for dots and rails. */
+function accentFor(color?: string | null): string {
+  switch (color) {
+    case 'primary':
+      return 'var(--color-primary-500, #6366f1)'
+    case 'secondary':
+      return 'var(--color-secondary-500, #8b5cf6)'
+    case 'success':
+      return 'var(--color-success-500, #22c55e)'
+    case 'info':
+      return 'var(--color-info-500, #3b82f6)'
+    case 'warning':
+      return 'var(--color-warning-500, #f59e0b)'
+    case 'error':
+      return 'var(--color-error-500, #ef4444)'
+    default:
+      return DEFAULT_ACCENT
+  }
+}
+
+const hasGroups = computed(() =>
+  pickerEntries.value.some((entry) => entry.kind === 'header'),
+)
+
+/**
+ * Flatten picker entries into renderable rows: a leading "Agents" section for
+ * ungrouped agents (only when groups also exist), group headers with an accent
+ * inherited from the primary variant, and agent rows that know whether they sit
+ * under a group header (so we can draw the sub-agent rail + first/last corners).
+ */
+const renderRows = computed((): RenderRow[] => {
+  const entries = pickerEntries.value
+  const rows: RenderRow[] = []
   let selectable = 0
-  pickerEntries.value.forEach((entry, index) => {
-    if (entry.kind === 'agent') {
-      map.set(index, selectable)
-      selectable += 1
+  let currentGroupId: string | null = null
+  let currentAccent = DEFAULT_ACCENT
+  let leadingSectionAdded = false
+
+  entries.forEach((entry) => {
+    if (entry.kind === 'header') {
+      currentGroupId = entry.groupId
+      currentAccent = accentFor(entry.color)
+      rows.push({
+        type: 'section',
+        key: `header:${entry.groupId}`,
+        variant: 'group',
+        label: entry.label,
+        accent: currentAccent,
+        count: entry.count,
+      })
+      return
     }
+
+    const option = entry.option
+    const underHeader =
+      currentGroupId != null && option.skillGroup === currentGroupId
+    if (!underHeader) currentGroupId = null
+
+    if (!underHeader && !leadingSectionAdded && hasGroups.value) {
+      rows.push({
+        type: 'section',
+        key: 'section:agents',
+        variant: 'plain',
+        label: 'Agents',
+      })
+      leadingSectionAdded = true
+    }
+
+    rows.push({
+      type: 'agent',
+      key: option.id,
+      option,
+      label: agentPickerRowLabel(option, underHeader),
+      selectableIdx: selectable++,
+      underHeader,
+      accent: underHeader ? currentAccent : accentFor(option.color),
+      first: false,
+      last: false,
+    })
   })
-  return map
+
+  // Mark first/last agent rows within each grouped run for rail corners.
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    if (row.type !== 'agent' || !row.underHeader) continue
+    const prev = rows[i - 1]
+    const next = rows[i + 1]
+    row.first = !prev || prev.type === 'section'
+    row.last = !next || next.type !== 'agent' || !next.underHeader
+  }
+
+  return rows
 })
 
-function selectableIndex(entryIndex: number): number {
-  return selectableIndexByEntryIndex.value.get(entryIndex) ?? 0
-}
-
-function entryKey(entry: AgentPickerEntry, index: number): string {
-  if (entry.kind === 'header') return `header:${entry.groupId}:${index}`
-  return entry.option.id
-}
-
-function isGroupedOption(entry: AgentPickerEntry, index: number): boolean {
-  if (entry.kind !== 'agent' || !entry.option.skillGroup) return false
-  const prev = pickerEntries.value[index - 1]
-  return prev?.kind === 'header'
+function rowTitle(option: AgentPickerAgentOption): string {
+  return option.description
+    ? `${option.displayName} — ${option.description}`
+    : option.displayName
 }
 
 const selectedDisplayName = computed(() => {
@@ -417,8 +537,11 @@ defineExpose({
     0 12px 28px color-mix(in srgb, var(--ui-text) 14%, transparent);
 }
 
-.agent-picker-group-header {
-  padding: 6px 10px 4px;
+.agent-picker-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 4px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -427,7 +550,43 @@ defineExpose({
   user-select: none;
 }
 
+.agent-picker-section:not(:first-child) {
+  margin-top: 4px;
+}
+
+.agent-picker-section--group {
+  color: color-mix(in srgb, var(--agent-accent, var(--ui-text-muted)) 78%, var(--ui-text));
+}
+
+.agent-picker-section__icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  color: var(--agent-accent, var(--ui-text-muted));
+}
+
+.agent-picker-section__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.agent-picker-section__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--agent-accent, var(--ui-text-muted));
+  background: color-mix(in srgb, var(--agent-accent, var(--ui-text-muted)) 16%, transparent);
+}
+
 .agent-picker-option {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -444,7 +603,54 @@ defineExpose({
 }
 
 .agent-picker-option--grouped {
-  padding-left: 18px;
+  padding-left: 26px;
+}
+
+/* Vertical tree rail connecting sub-agent variants to their group. */
+.agent-picker-option__rail {
+  position: absolute;
+  left: 13px;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  pointer-events: none;
+}
+
+.agent-picker-option__rail::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-left: 1.5px solid
+    color-mix(in srgb, var(--agent-accent, var(--ui-border)) 40%, var(--ui-border));
+}
+
+.agent-picker-option__rail::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 9px;
+  border-top: 1.5px solid
+    color-mix(in srgb, var(--agent-accent, var(--ui-border)) 40%, var(--ui-border));
+}
+
+.agent-picker-option--first .agent-picker-option__rail::before {
+  top: 50%;
+}
+
+.agent-picker-option--last .agent-picker-option__rail::before {
+  bottom: 50%;
+}
+
+.agent-picker-option__dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--agent-accent, var(--ui-text-muted));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--agent-accent, var(--ui-text-muted)) 14%, transparent);
 }
 
 .agent-picker-option:hover:not(.agent-picker-option--active) {
@@ -455,28 +661,35 @@ defineExpose({
 .agent-picker-option--active:hover {
   background-color: color-mix(
     in srgb,
-    var(--color-primary-500, #6366f1) 18%,
+    var(--agent-accent, var(--color-primary-500, #6366f1)) 16%,
     transparent
   );
   box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--color-primary-500, #6366f1) 45%, var(--ui-border, #e5e7eb));
+    color-mix(
+      in srgb,
+      var(--agent-accent, var(--color-primary-500, #6366f1)) 45%,
+      var(--ui-border, #e5e7eb)
+    );
 }
 
 .agent-picker-option--active .agent-picker-option__name {
-  color: var(--color-primary-600, var(--color-primary-500, #6366f1));
+  color: color-mix(in srgb, var(--agent-accent, var(--color-primary-500, #6366f1)) 82%, var(--ui-text));
   font-weight: 700;
 }
 
 .agent-picker-option__name {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .agent-picker-option__check {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
-  color: var(--color-primary-500, #6366f1);
+  color: var(--agent-accent, var(--color-primary-500, #6366f1));
   opacity: 0.72;
 }
 
