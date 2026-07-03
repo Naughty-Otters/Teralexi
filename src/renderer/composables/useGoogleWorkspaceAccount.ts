@@ -27,10 +27,13 @@ export function useGoogleWorkspaceAccount() {
     void refresh()
   }
 
-  function onGoogleWorkspaceAccountChanged(payload: {
-    account: GoogleWorkspaceAccountSummary | null
-  }) {
-    account.value = payload.account
+  function onGoogleWorkspaceAccountChanged(
+    _event: unknown,
+    payload: {
+      account: GoogleWorkspaceAccountSummary | null
+    },
+  ) {
+    account.value = payload?.account ?? null
   }
 
   onMounted(() => {
