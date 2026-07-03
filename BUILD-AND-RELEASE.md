@@ -145,6 +145,105 @@ Or set `OPENFDE_BUILD_ENV` (`dev` | `sit` | `prod`) before running a build scrip
 
 **Output:** Upload to `s3://…/desktop/releases/stable/` (production update feed)
 
+**Publishing auth:** The S3 upload uses **GitHub OIDC** to assume an AWS IAM role — no long-lived access keys. See [AWS OIDC setup](#aws-oidc-setup-for-s3-publishing) below.
+
+---
+
+## AWS OIDC setup for S3 publishing
+
+The Release workflow authenticates to AWS with short-lived credentials via GitHub's OIDC provider (`aws-actions/configure-aws-credentials`), so there are no static AWS keys stored in GitHub. This is a **one-time setup per AWS account**.
+
+### Required GitHub secrets (environment: `release`)
+
+| Secret | Example | Purpose |
+| --- | --- | --- |
+| `AWS_ROLE_TO_ASSUME` | `arn:aws:iam::123456789012:role/openfde-release` | Role the workflow assumes via OIDC |
+| `AWS_REGION` | `us-east-1` | Region of the release bucket (no trailing spaces/newlines) |
+| `S3_RELEASE_BUCKET` | `your-release-bucket` | Target bucket for installers |
+
+### 1. Register the GitHub OIDC identity provider in IAM
+
+Check **IAM → Identity providers** first. If there is no provider for `token.actions.githubusercontent.com`, create it:
+
+```bash
+aws iam create-open-id-connect-provider \
+  --url https://token.actions.githubusercontent.com \
+  --client-id-list sts.amazonaws.com
+```
+
+- **Provider URL:** `https://token.actions.githubusercontent.com`
+- **Audience (client ID):** `sts.amazonaws.com`
+
+If the provider already exists but is missing the audience, add it:
+
+```bash
+aws iam add-client-id-to-open-id-connect-provider \
+  --open-id-connect-provider-arn arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com \
+  --client-id sts.amazonaws.com
+```
+
+> Skipping this step (or a missing/incorrect audience) causes:
+> `Could not assume role with OIDC: The web identity token provided could not be validated.`
+
+### 2. Create the IAM role with a trust policy
+
+Create a role (name it e.g. `openfde-release`) whose **trust policy** allows the GitHub OIDC provider to assume it. Replace `<ACCOUNT_ID>` with your 12-digit AWS account ID and `<OWNER>/<REPO>` with your GitHub repo (e.g. `zhenqili/OpenFDE`).
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:<OWNER>/<REPO>:*"
+        }
+      }
+    }
+  ]
+}
+```
+
+Because the release job runs with `environment: release`, GitHub's token `sub` claim is `repo:<OWNER>/<REPO>:environment:release`. The `repo:<OWNER>/<REPO>:*` wildcard above covers it; tighten it to `repo:<OWNER>/<REPO>:environment:release` if you want to restrict assumption to the `release` environment only.
+
+### 3. Attach an S3 write permission policy to the role
+
+Grant the role permission to upload to the release bucket/prefix:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:ListBucket"],
+      "Resource": [
+        "arn:aws:s3:::<S3_RELEASE_BUCKET>",
+        "arn:aws:s3:::<S3_RELEASE_BUCKET>/desktop/releases/stable/*"
+      ]
+    }
+  ]
+}
+```
+
+### 4. Verify
+
+Set `AWS_ROLE_TO_ASSUME`, `AWS_REGION`, and `S3_RELEASE_BUCKET` in the `release` environment, then run the Release workflow. The **Configure AWS credentials (OIDC)** step should log `Assuming role with OIDC` and succeed.
+
+Troubleshooting:
+
+- `getaddrinfo ENOTFOUND sts.<region>.amazonaws.com` → `AWS_REGION` is invalid or has trailing whitespace/newline.
+- `The web identity token provided could not be validated` → OIDC provider not registered, or its audience isn't `sts.amazonaws.com` (step 1).
+- `Not authorized to perform sts:AssumeRoleWithWebIdentity` → trust policy `sub`/`aud` conditions don't match this repo/environment (step 2).
+
 ---
 
 ## Creating a production release
