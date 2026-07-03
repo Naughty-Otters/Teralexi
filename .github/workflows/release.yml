@@ -78,7 +78,7 @@ jobs:
         run: npm run verify:signing
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-session-name: openfde-release-${{ matrix.platform }}-${{ github.run_id }}
