@@ -72,6 +72,9 @@ jobs:
           WIN_SIGN_CERTIFICATE_PASSWORD: ${{ matrix.platform == 'win' && secrets.WIN_SIGN_CERTIFICATE_PASSWORD || '' }}
         run: npm run ${{ matrix.npm_script }}
 
+      - name: Verify signed artifacts
+        run: npm run verify:signing
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
