@@ -45,7 +45,8 @@
     "version:major": "npm version major --no-git-tag-version",
     "release:mac": "npm run icons:generate && tsx .electron-vite/build.ts -m prod && tsx scripts/run-electron-builder.ts -m prod -c build.json --mac --publish never",
     "release:win": "npm run icons:generate && tsx .electron-vite/build.ts -m prod && tsx scripts/run-electron-builder.ts -m prod -c build.json --win --x64 --publish never",
-    "release:upload-s3": "node .github/scripts/upload-release-to-s3.mjs build"
+    "release:upload-s3": "node .github/scripts/upload-release-to-s3.mjs build",
+    "verify:mac-update": "node .github/scripts/verify-mac-update-manifest.mjs build"
   },
   "dependencies": {
     "@ai-sdk-tools/agents": "^1.2.0",
