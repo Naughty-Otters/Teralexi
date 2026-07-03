@@ -26,8 +26,11 @@ export function useGoogleAccount() {
     void refresh()
   }
 
-  function onGoogleAccountChanged(payload: { account: GoogleAccountSummary | null }) {
-    account.value = payload.account
+  function onGoogleAccountChanged(
+    _event: unknown,
+    payload: { account: GoogleAccountSummary | null },
+  ) {
+    account.value = payload?.account ?? null
   }
 
   onMounted(() => {
