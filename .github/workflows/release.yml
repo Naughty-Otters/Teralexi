@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: read
+  # Required for GitHub OIDC → AWS role assumption (no long-lived keys).
+  id-token: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -75,11 +77,11 @@ jobs:
       - name: Verify signed artifacts
         run: npm run verify:signing
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: openfde-release-${{ matrix.platform }}-${{ github.run_id }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Upload production release to S3
