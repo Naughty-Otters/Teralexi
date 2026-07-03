@@ -4,6 +4,7 @@ import { resolveAgentSkillId } from './workspace-required-skills'
 export type SkillGroupAgentRef = {
   id: string
   name: string
+  color?: string | null
   skillId?: string | null
   skillGroup?: string | null
   skillGroupLabel?: string | null
@@ -19,10 +20,13 @@ export type AgentPickerAgentOption = {
   id: string
   name: string
   description?: string
+  color?: string | null
   skillGroup?: string | null
   skillGroupLabel?: string | null
   skillVariant?: string | null
   skillVariantLabel?: string | null
+  /** True when this agent is the primary/default entry of its skill group. */
+  isGroupPrimary?: boolean
   /** Full label for headers and compact UI, e.g. "Coding › Review". */
   displayName: string
   /** Row label under a group header (variant only). */
@@ -30,7 +34,15 @@ export type AgentPickerAgentOption = {
 }
 
 export type AgentPickerEntry =
-  | { kind: 'header'; groupId: string; label: string }
+  | {
+      kind: 'header'
+      groupId: string
+      label: string
+      /** Accent color inherited from the group's primary agent. */
+      color?: string | null
+      /** Number of selectable variants under this group. */
+      count?: number
+    }
   | { kind: 'agent'; option: AgentPickerAgentOption }
 
 const DEFAULT_GROUP_ORDER = 999
@@ -124,10 +136,12 @@ export function toAgentPickerOption(
     id: agent.id,
     name: agent.name,
     description: agent.description,
+    color: agent.color ?? null,
     skillGroup: agent.skillGroup ?? null,
     skillGroupLabel: agent.skillGroupLabel ?? null,
     skillVariant: agent.skillVariant ?? null,
     skillVariantLabel: agent.skillVariantLabel ?? null,
+    isGroupPrimary: agent.skillGroupPrimary === true,
     displayName,
     shortLabel,
   }
@@ -196,9 +210,17 @@ export function buildAgentPickerEntries(
 
     const headerLabel =
       members[0]?.skillGroupLabel?.trim() || groupId
+    const primaryMember =
+      members.find((agent) => agent.skillGroupPrimary === true) ?? members[0]
 
     if (members.length > 1) {
-      entries.push({ kind: 'header', groupId, label: headerLabel })
+      entries.push({
+        kind: 'header',
+        groupId,
+        label: headerLabel,
+        color: primaryMember?.color ?? null,
+        count: members.length,
+      })
     }
 
     for (const agent of members) {
