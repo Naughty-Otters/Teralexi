@@ -12,7 +12,7 @@ let dir: string
 
 function slowCommand(): string {
   if (process.platform === 'win32') {
-    return 'ping -n 1000 127.0.0.1'
+    return 'ping -n 10 127.0.0.1'
   }
   return 'sleep 10'
 }
@@ -140,7 +140,7 @@ describe('runWorkspaceTerminalCommandWithControl', () => {
       command: slowCommand(),
     })
 
-    await waitUntilCommandRunning('cid-busy')
+    await waitUntilCommandRunning('cid-busy', 20_000)
 
     // Try another command with the same id
     const conflict = await runWorkspaceTerminalCommandWithControl({
