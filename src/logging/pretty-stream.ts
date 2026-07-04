@@ -7,6 +7,20 @@ export function usePrettyLogs(): boolean {
   return process.env.NODE_ENV === 'development'
 }
 
+/**
+ * File-backed pino destination that is ready before the first write or process exit.
+ * Async destinations (sync: false) can throw "sonic boom is not ready yet" when
+ * Electron exits early — common on Windows first launch or second-instance quit.
+ */
+export function createPinoFileDestination(logFilePath: string): DestinationStream {
+  return pino.destination({
+    dest: logFilePath,
+    append: true,
+    mkdir: true,
+    sync: true,
+  })
+}
+
 export function createPrettyLogStream(
   destination: DestinationStream | string,
   options?: { colorize?: boolean },
@@ -18,7 +32,8 @@ export function createPrettyLogStream(
     destination,
     mkdir: true,
     append: true,
-    sync: false,
+    // File paths need sync open so early process.exit does not race SonicBoom init.
+    sync: typeof destination === 'string',
   })
 }
 
@@ -27,10 +42,5 @@ export function createAgentRunLogDestination(logFilePath: string): DestinationSt
   if (usePrettyLogs()) {
     return createPrettyLogStream(logFilePath)
   }
-  return pino.destination({
-    dest: logFilePath,
-    append: true,
-    mkdir: true,
-    sync: false,
-  })
+  return createPinoFileDestination(logFilePath)
 }
