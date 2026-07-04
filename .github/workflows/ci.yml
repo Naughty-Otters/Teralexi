@@ -70,14 +70,14 @@ jobs:
               build/*.blockmap
               build/*.yml
               build/latest*.yml
-          # - os: windows-latest
-          #   platform: win
-          #   npm_script: build:win64:sit
-          #   artifact_path: |
-          #     build/*.exe
-          #     build/*.blockmap
-          #     build/*.yml
-          #     build/latest*.yml
+          - os: windows-latest
+            platform: win
+            npm_script: build:win64:sit
+            artifact_path: |
+              build/*.exe
+              build/*.blockmap
+              build/*.yml
+              build/latest*.yml
 
     steps:
       - name: Check out repository
