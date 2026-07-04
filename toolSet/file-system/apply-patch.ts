@@ -143,7 +143,9 @@ export const applyPatch: SkillTool = {
       for (const hunk of hunks) {
         const change = await applyHunk(sandbox.root, workspacePath, hunk)
         applied.push(change)
-        summary.push(`${change.action} ${path.relative(sandbox.root, change.path)}`)
+        summary.push(
+          `${change.action} ${path.relative(sandbox.root, change.path).replace(/\\/g, '/')}`,
+        )
 
         const oldContent =
           change.action === 'A'

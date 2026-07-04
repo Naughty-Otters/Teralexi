@@ -1,8 +1,7 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { join } from 'node:path'
+import { p, lspBinName } from '@test-paths'
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { lspBinName } from '@test-paths'
 import {
   detectWorkspaceServers,
   initBundledLspBin,
@@ -159,15 +158,15 @@ describe('detectWorkspaceServers', () => {
 
 describe('buildServerPath', () => {
   it('includes platform-specific system bin dirs', () => {
-    const path = buildServerPath('/workspace')
+    const serverPath = buildServerPath('/workspace')
     if (process.platform === 'win32') {
-      expect(path).toMatch(/nodejs|npm/i)
+      expect(serverPath).toMatch(/nodejs|npm/i)
     } else if (process.platform === 'darwin') {
-      expect(path).toContain('/opt/homebrew/bin')
-      expect(path).toContain('/usr/local/bin')
+      expect(serverPath).toContain('/opt/homebrew/bin')
+      expect(serverPath).toContain('/usr/local/bin')
     } else {
-      expect(path).toContain('/usr/local/bin')
+      expect(serverPath).toContain('/usr/local/bin')
     }
-    expect(path).toContain('/workspace/node_modules/.bin')
+    expect(p(serverPath)).toContain(p(join('/workspace', 'node_modules', '.bin')))
   })
 })
