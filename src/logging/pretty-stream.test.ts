@@ -34,7 +34,16 @@ describe('pretty-stream', () => {
     const { createAgentRunLogDestination } = await import('./pretty-stream')
     createAgentRunLogDestination('/tmp/run.log')
     expect(pino.destination).toHaveBeenCalledWith(
-      expect.objectContaining({ dest: '/tmp/run.log' }),
+      expect.objectContaining({ dest: '/tmp/run.log', sync: true }),
+    )
+  })
+
+  it('createPinoFileDestination opens log files synchronously', async () => {
+    const pino = (await import('pino')).default
+    const { createPinoFileDestination } = await import('./pretty-stream')
+    createPinoFileDestination('/tmp/main.log')
+    expect(pino.destination).toHaveBeenCalledWith(
+      expect.objectContaining({ dest: '/tmp/main.log', sync: true }),
     )
   })
 
