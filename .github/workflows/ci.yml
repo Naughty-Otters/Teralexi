@@ -40,16 +40,6 @@ jobs:
       - name: Run unit tests with coverage
         run: npm run test:unit:coverage
 
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: coverage-${{ matrix.node-version }}
-          path: |
-            coverage/
-          retention-days: 14
-          if-no-files-found: ignore
-
   build:
     name: Staging build (${{ matrix.platform }})
     needs: unit-tests
