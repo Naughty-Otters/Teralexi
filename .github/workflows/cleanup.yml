@@ -2,18 +2,31 @@ name: Cleanup
 
 on:
   schedule:
-    # Daily at 00:00 UTC (midnight).
-    - cron: '0 0 * * *'
+    # Daily at 00:00 and 12:00 UTC.
+    - cron: '0 0,12 * * *'
+  workflow_run:
+    workflows: [CI, Release]
+    types: [completed]
   workflow_dispatch:
     inputs:
       artifact_retention_days:
-        description: Delete artifacts older than this many days
+        description: Delete artifacts older than this many days (0 = delete all)
         required: false
-        default: '14'
+        default: '3'
       cache_retention_days:
-        description: Delete caches not accessed in this many days
+        description: Delete caches not accessed in this many days (0 = delete all)
         required: false
-        default: '7'
+        default: '3'
+      purge_all_artifacts:
+        description: Emergency — delete every artifact regardless of age
+        required: false
+        type: boolean
+        default: false
+      purge_all_caches:
+        description: Emergency — delete every cache regardless of age
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   actions: write
@@ -30,8 +43,10 @@ jobs:
     timeout-minutes: 30
 
     env:
-      ARTIFACT_RETENTION_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.artifact_retention_days || '14' }}
-      CACHE_RETENTION_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.cache_retention_days || '7' }}
+      ARTIFACT_RETENTION_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.artifact_retention_days || '3' }}
+      CACHE_RETENTION_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.cache_retention_days || '3' }}
+      PURGE_ALL_ARTIFACTS: ${{ github.event_name == 'workflow_dispatch' && inputs.purge_all_artifacts || 'false' }}
+      PURGE_ALL_CACHES: ${{ github.event_name == 'workflow_dispatch' && inputs.purge_all_caches || 'false' }}
 
     steps:
       - name: Delete old workflow artifacts
@@ -40,8 +55,12 @@ jobs:
           script: |
             const owner = context.repo.owner
             const repo = context.repo.repo
+            const purgeAll = process.env.PURGE_ALL_ARTIFACTS === 'true'
             const retentionDays = Number(process.env.ARTIFACT_RETENTION_DAYS)
-            const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000
+            const cutoff =
+              retentionDays <= 0 || purgeAll
+                ? Number.POSITIVE_INFINITY
+                : Date.now() - retentionDays * 24 * 60 * 60 * 1000
 
             const artifacts = []
             let page = 1
@@ -61,10 +80,11 @@ jobs:
 
             let deleted = 0
             let skipped = 0
+            let freedBytes = 0
 
             for (const artifact of artifacts) {
               const createdAt = new Date(artifact.created_at).getTime()
-              if (createdAt >= cutoff) {
+              if (!purgeAll && retentionDays > 0 && createdAt >= cutoff) {
                 skipped += 1
                 continue
               }
@@ -75,12 +95,21 @@ jobs:
                 artifact_id: artifact.id,
               })
               deleted += 1
-              core.info(`Deleted artifact ${artifact.id} (${artifact.name})`)
+              freedBytes += artifact.size_in_bytes ?? 0
+              core.info(
+                `Deleted artifact ${artifact.id} (${artifact.name}, ${artifact.size_in_bytes ?? 0} bytes)`,
+              )
             }
 
+            const freedMb = (freedBytes / (1024 * 1024)).toFixed(1)
             core.summary.addHeading('Artifact cleanup')
             core.summary.addRaw(
-              `Deleted **${deleted}** artifact(s); kept **${skipped}** newer than ${retentionDays} day(s).`,
+              purgeAll || retentionDays <= 0
+                ? `Deleted **${deleted}** artifact(s) (~${freedMb} MB).`
+                : `Deleted **${deleted}** artifact(s) (~${freedMb} MB); kept **${skipped}** newer than ${retentionDays} day(s).`,
+            )
+            core.summary.addRaw(
+              '\n\nQuota usage is recalculated every 6–12 hours after deletions.',
             )
             await core.summary.write()
 
@@ -90,8 +119,12 @@ jobs:
           script: |
             const owner = context.repo.owner
             const repo = context.repo.repo
+            const purgeAll = process.env.PURGE_ALL_CACHES === 'true'
             const retentionDays = Number(process.env.CACHE_RETENTION_DAYS)
-            const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000
+            const cutoff =
+              retentionDays <= 0 || purgeAll
+                ? Number.POSITIVE_INFINITY
+                : Date.now() - retentionDays * 24 * 60 * 60 * 1000
 
             const caches = []
             let page = 1
@@ -112,10 +145,11 @@ jobs:
 
             let deleted = 0
             let skipped = 0
+            let freedBytes = 0
 
             for (const cache of caches) {
               const lastAccessed = new Date(cache.last_accessed_at).getTime()
-              if (lastAccessed >= cutoff) {
+              if (!purgeAll && retentionDays > 0 && lastAccessed >= cutoff) {
                 skipped += 1
                 continue
               }
@@ -126,11 +160,15 @@ jobs:
                 cache_id: cache.id,
               })
               deleted += 1
+              freedBytes += cache.size_in_bytes ?? 0
               core.info(`Deleted cache ${cache.id} (${cache.key})`)
             }
 
+            const freedMb = (freedBytes / (1024 * 1024)).toFixed(1)
             core.summary.addHeading('Cache cleanup')
             core.summary.addRaw(
-              `Deleted **${deleted}** cache(s); kept **${skipped}** accessed within ${retentionDays} day(s).`,
+              purgeAll || retentionDays <= 0
+                ? `Deleted **${deleted}** cache(s) (~${freedMb} MB).`
+                : `Deleted **${deleted}** cache(s) (~${freedMb} MB); kept **${skipped}** accessed within ${retentionDays} day(s).`,
             )
             await core.summary.write()

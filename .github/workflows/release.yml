@@ -100,11 +100,8 @@ jobs:
         with:
           name: openfde-${{ matrix.platform }}-prod
           path: |
-            build/*.dmg
-            build/*.zip
-            build/*.exe
             build/*.yml
             build/latest*.yml
             build/*.blockmap
-          retention-days: 30
+          retention-days: 7
           if-no-files-found: ignore
