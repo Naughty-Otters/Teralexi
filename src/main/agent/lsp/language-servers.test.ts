@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { lspBinName } from '@test-paths'
 import {
   detectWorkspaceServers,
   initBundledLspBin,
@@ -9,6 +10,7 @@ import {
   matchLanguageServer,
   OPENFDE_LSP_BUNDLED_BIN_ENV,
   resolveServerCommand,
+  buildServerPath,
   LANGUAGE_SERVERS,
 } from './language-servers'
 
@@ -61,7 +63,7 @@ describe('resolveServerCommand', () => {
     dir = mkdtempSync(join(tmpdir(), 'openfde-lsp-bin-'))
     const binDir = join(dir, 'node_modules', '.bin')
     mkdirSync(binDir, { recursive: true })
-    const localBin = join(binDir, 'typescript-language-server')
+    const localBin = join(binDir, lspBinName('typescript-language-server'))
     writeFileSync(localBin, '#!/usr/bin/env node\n')
     expect(resolveServerCommand(tsServer, dir)).toBe(localBin)
   })
@@ -70,7 +72,7 @@ describe('resolveServerCommand', () => {
     dir = mkdtempSync(join(tmpdir(), 'openfde-lsp-bundled-'))
     const bundledBin = join(dir, '.bin')
     mkdirSync(bundledBin, { recursive: true })
-    const server = join(bundledBin, 'typescript-language-server')
+    const server = join(bundledBin, lspBinName('typescript-language-server'))
     writeFileSync(server, '#!/usr/bin/env node\n')
     process.env[OPENFDE_LSP_BUNDLED_BIN_ENV] = bundledBin
 
@@ -84,13 +86,13 @@ describe('resolveServerCommand', () => {
     dir = mkdtempSync(join(tmpdir(), 'openfde-lsp-prec-'))
     const bundledBin = join(dir, 'bundled', '.bin')
     mkdirSync(bundledBin, { recursive: true })
-    writeFileSync(join(bundledBin, 'typescript-language-server'), 'x')
+    writeFileSync(join(bundledBin, lspBinName('typescript-language-server')), 'x')
     process.env[OPENFDE_LSP_BUNDLED_BIN_ENV] = bundledBin
 
     const ws = join(dir, 'ws')
     const localBinDir = join(ws, 'node_modules', '.bin')
     mkdirSync(localBinDir, { recursive: true })
-    const localBin = join(localBinDir, 'typescript-language-server')
+    const localBin = join(localBinDir, lspBinName('typescript-language-server'))
     writeFileSync(localBin, 'x')
     expect(resolveServerCommand(tsServer, ws)).toBe(localBin)
   })
@@ -152,5 +154,20 @@ describe('detectWorkspaceServers', () => {
 
   it('returns [] for an empty path', () => {
     expect(detectWorkspaceServers('')).toEqual([])
+  })
+})
+
+describe('buildServerPath', () => {
+  it('includes platform-specific system bin dirs', () => {
+    const path = buildServerPath('/workspace')
+    if (process.platform === 'win32') {
+      expect(path).toMatch(/nodejs|npm/i)
+    } else if (process.platform === 'darwin') {
+      expect(path).toContain('/opt/homebrew/bin')
+      expect(path).toContain('/usr/local/bin')
+    } else {
+      expect(path).toContain('/usr/local/bin')
+    }
+    expect(path).toContain('/workspace/node_modules/.bin')
   })
 })

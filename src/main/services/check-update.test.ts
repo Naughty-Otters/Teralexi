@@ -1,4 +1,6 @@
+import { join, resolve } from 'node:path'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { join as joinPath, mockTesterHomedir, p } from '@test-paths'
 
 const { on, checkForUpdates, downloadUpdate, quitAndInstall, setFeedURL } =
   vi.hoisted(() => ({
@@ -49,7 +51,9 @@ vi.mock('./openfde-platform-config', () => ({
 }))
 
 vi.mock('@config/openfde-home', () => ({
-  getopenfdeConfigDir: vi.fn(() => '/Users/tester/.openfde/config'),
+  getopenfdeConfigDir: vi.fn(() =>
+    joinPath(mockTesterHomedir(), '.openfde', 'config'),
+  ),
 }))
 
 vi.mock('node:fs', () => ({
@@ -117,28 +121,30 @@ describe('check-update', () => {
     vi.mocked(getOpenFdeDesktopForceDevUpdateConfig).mockReturnValue(true)
     await prepareDesktopAutoUpdater()
     expect(autoUpdater.forceDevUpdateConfig).toBe(true)
+    const configPath = joinPath(mockTesterHomedir(), '.openfde', 'config', 'dev-app-update.yml')
     expect(writeFileSync).toHaveBeenCalledWith(
-      '/Users/tester/.openfde/config/dev-app-update.yml',
+      configPath,
       expect.stringContaining('url: http://127.0.0.1:8000/desktop/releases/stable/'),
       'utf-8',
     )
-    expect(autoUpdater.updateConfigPath).toBe(
-      '/Users/tester/.openfde/config/dev-app-update.yml',
-    )
+    expect(autoUpdater.updateConfigPath).toBe(configPath)
     Object.defineProperty(app, 'isPackaged', { value: true, configurable: true })
     await prepareDesktopAutoUpdater()
     expect(autoUpdater.forceDevUpdateConfig).toBe(false)
   })
 
   it('ensureDevAppUpdateConfig writes updater cache metadata for dev downloads', () => {
-    const configPath = ensureDevAppUpdateConfig(
+    const configDir = joinPath(mockTesterHomedir(), '.openfde', 'config')
+    const expectedPath = join(configDir, 'dev-app-update.yml')
+    const returnedPath = ensureDevAppUpdateConfig(
       'http://127.0.0.1:8000/desktop/releases/stable',
     )
-    expect(mkdirSync).toHaveBeenCalledWith('/Users/tester/.openfde/config', {
+    expect(p(returnedPath)).toBe(p(expectedPath))
+    expect(mkdirSync).toHaveBeenCalledWith(configDir, {
       recursive: true,
     })
     expect(writeFileSync).toHaveBeenCalledWith(
-      '/Users/tester/.openfde/config/dev-app-update.yml',
+      expectedPath,
       [
         'provider: generic',
         'url: http://127.0.0.1:8000/desktop/releases/stable/',
@@ -147,8 +153,7 @@ describe('check-update', () => {
       ].join('\n'),
       'utf-8',
     )
-    expect(configPath).toBe('/Users/tester/.openfde/config/dev-app-update.yml')
-    expect(autoUpdater.updateConfigPath).toBe(configPath)
+    expect(autoUpdater.updateConfigPath).toBe(expectedPath)
   })
 
   it('sends error when electron-updater returns null', async () => {

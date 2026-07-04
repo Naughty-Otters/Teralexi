@@ -1,5 +1,6 @@
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { isWin } from '@test-paths'
 import {
   assertMoveAllowed,
   getOutputResultsRelPrefix,
@@ -129,7 +130,7 @@ describe('resolvePathMustBeInside', () => {
 
 describe('resolvePathAllowingOutside', () => {
   it('allows host-absolute paths outside sandbox', () => {
-    const host = '/var/tmp/host-file'
+    const host = isWin ? 'C:\\var\\tmp\\host-file' : '/var/tmp/host-file'
     expect(resolvePathAllowingOutside(SANDBOX, host)).toBe(path.normalize(host))
   })
 })

@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { p } from '@test-paths'
 import { SKILL_FILES } from './constants'
 
 let projectRoot = ''
@@ -129,9 +130,8 @@ describe('skill-path integration', () => {
     }))
     vi.resetModules()
     const { resolveBundledSkillsDirectory } = await import('./skill-path')
-    expect(resolveBundledSkillsDirectory()).toBe(
-      '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked/skills',
-    )
+    const unpacked = '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked/skills'
+    expect(p(resolveBundledSkillsDirectory())).toBe(p(unpacked))
     vi.resetModules()
     vi.doMock('electron', () => ({
       app: { isPackaged: false, getAppPath: () => '/packaged/app' },

@@ -2,6 +2,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { p } from '@test-paths'
 import {
   OPENFDE_AGENT_SANDBOX_ROOT_ENV,
   SANDBOX_ROOT_GLOBAL_KEY,
@@ -83,7 +84,7 @@ describe('apply-patch tool', () => {
 
     expect(result.applied).toBe(true)
     expect(result.filesChanged).toBe(3)
-    expect(result.summary).toContain('M dir/sample.txt')
+    expect(result.summary).toContain(p('M dir/sample.txt'))
     expect(result.diff).toContain('+after')
     await expect(
       readFile(path.join(sandboxRoot, 'created.txt'), 'utf-8'),
@@ -107,7 +108,7 @@ describe('apply-patch tool', () => {
     })) as { applied: boolean; summary: string }
 
     expect(result.applied).toBe(true)
-    expect(result.summary).toContain('M moved/move-dest.txt')
+    expect(result.summary).toContain(p('M moved/move-dest.txt'))
     await expect(
       readFile(path.join(sandboxRoot, 'move-src.txt'), 'utf-8'),
     ).rejects.toThrow()

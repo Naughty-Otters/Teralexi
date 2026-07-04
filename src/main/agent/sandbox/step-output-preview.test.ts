@@ -1,4 +1,9 @@
+import { mkdirSync, mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { describe, expect, it, beforeEach } from 'vitest'
+import { p } from '@test-paths'
 import {
   clearStepOutputPreviewCache,
   detectStepOutputPreviewKind,
@@ -12,9 +17,12 @@ describe('step-output-preview', () => {
   })
 
   it('parses file URLs to paths', () => {
-    const p = filePathFromFileUrl('file:///tmp/out/result.html')
-    expect(p).toBeTruthy()
-    expect(p!.replace(/\\/g, '/')).toMatch(/\/tmp\/out\/result\.html$/)
+    const dir = join(mkdtempSync(join(tmpdir(), 'step-preview-')), 'out')
+    mkdirSync(dir, { recursive: true })
+    const fileUrl = pathToFileURL(join(dir, 'result.html')).href
+    const parsed = filePathFromFileUrl(fileUrl)
+    expect(parsed).toBeTruthy()
+    expect(p(parsed!)).toMatch(/\/out\/result\.html$/)
   })
 
   it('detects preview kinds by extension', () => {

@@ -1,4 +1,6 @@
+import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { fakeRepo, pathEndsWith } from '@test-paths'
 
 vi.mock('node:fs', () => ({
   existsSync: vi.fn(),
@@ -102,14 +104,14 @@ describe('code-signing-env', () => {
   })
 
   it('resolveCodeSigningEnvFilePaths points at gitignored env/.signing.env', () => {
-    expect(resolveCodeSigningEnvFilePaths('/repo')).toEqual([
-      '/repo/env/.signing.env',
+    expect(resolveCodeSigningEnvFilePaths(fakeRepo())).toEqual([
+      join(fakeRepo(), 'env', '.signing.env'),
     ])
   })
 
   it('loads signing vars from env/.signing.env', () => {
     vi.mocked(existsSync).mockImplementation((target) =>
-      String(target).endsWith('/env/.signing.env'),
+      pathEndsWith(String(target), 'env/.signing.env'),
     )
     vi.mocked(readFileSync).mockReturnValue(
       "MAC_SIGN_IDENTITY = 'Example (TEAM123)'\n",

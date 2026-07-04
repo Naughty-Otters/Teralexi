@@ -1,10 +1,14 @@
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { isWin } from '@test-paths'
 import { slugFromUrl, webScrapeOutputPath } from './paths'
+
+const SANDBOX = isWin ? 'C:\\tmp\\sandbox' : '/tmp/sandbox'
 
 describe('webScrape paths', () => {
   it('writes under sandbox/webScrape/output/', () => {
-    expect(webScrapeOutputPath('/tmp/sandbox', '001-example-com.md')).toBe(
-      '/tmp/sandbox/webScrape/output/001-example-com.md',
+    expect(webScrapeOutputPath(SANDBOX, '001-example-com.md')).toBe(
+      join(SANDBOX, 'webScrape', 'output', '001-example-com.md'),
     )
   })
 

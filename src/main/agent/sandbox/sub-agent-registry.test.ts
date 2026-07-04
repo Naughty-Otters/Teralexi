@@ -21,6 +21,7 @@ vi.mock('./sandbox-impl', () => ({
 
 import {
   clearSubAgentSandboxRegistryForTests,
+  isSubAgentSandboxRoot,
   resolveSubAgentSandboxRoot,
   sanitizeAgentIdForSandboxPath,
   getOrCreateSandboxForSubAgentRun,
@@ -53,5 +54,19 @@ describe('sub-agent-registry', () => {
       parentRunId: 'parent-1',
     })
     expect(listSubAgentSandboxRootsForConversation('conv-1')).toHaveLength(1)
+  })
+
+  it('detects sub-agent sandbox roots with posix or Windows separators', () => {
+    expect(
+      isSubAgentSandboxRoot(
+        'C:\\Users\\tester\\.openfde\\workspace\\sandbox\\sub-agents\\run-1',
+      ),
+    ).toBe(true)
+    expect(
+      isSubAgentSandboxRoot('/Users/tester/.openfde/workspace/sandbox/sub-agents/run-1'),
+    ).toBe(true)
+    expect(isSubAgentSandboxRoot('/Users/tester/.openfde/workspace/sandbox/run-1')).toBe(
+      false,
+    )
   })
 })

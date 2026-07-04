@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { isWin } from '@test-paths'
 import {
   OPENFDE_AGENT_SANDBOX_ROOT_ENV,
   OPENFDE_AGENT_WORKSPACE_PATH_ENV,
@@ -146,7 +147,7 @@ describe('shell-command tools', () => {
     expect(execFileMock).toHaveBeenCalled()
   })
 
-  it('runScript executes bash scripts', async () => {
+  it.skipIf(isWin)('runScript executes bash scripts', async () => {
     mockExecSuccess('bash-ok\n')
     const result = await runScript.execute({
       scriptType: 'bash',

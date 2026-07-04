@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
+import { p } from '@test-paths'
 
 vi.mock('electron', () => ({
   app: {
@@ -26,25 +27,20 @@ describe('app-paths', () => {
     vi.resetModules()
     const { resolveAppRoot, joinAppResourcePath, toOnDiskAppPath } =
       await import('./app-paths')
-    expect(resolveAppRoot()).toBe(
-      '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked',
-    )
-    expect(joinAppResourcePath('skills')).toBe(
-      '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked/skills',
-    )
-    expect(joinAppResourcePath('toolSet')).toBe(
-      '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked/toolSet',
-    )
-    expect(joinAppResourcePath('.openfde', 'rules')).toBe(
-      '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked/.openfde/rules',
+    const unpacked = '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked'
+    expect(p(resolveAppRoot())).toBe(p(unpacked))
+    expect(p(joinAppResourcePath('skills'))).toBe(p(join(unpacked, 'skills')))
+    expect(p(joinAppResourcePath('toolSet'))).toBe(p(join(unpacked, 'toolSet')))
+    expect(p(joinAppResourcePath('.openfde', 'rules'))).toBe(
+      p(join(unpacked, '.openfde', 'rules')),
     )
     expect(
-      toOnDiskAppPath(
-        '/Applications/OpenFDE.app/Contents/Resources/app.asar/toolSet/index.ts',
+      p(
+        toOnDiskAppPath(
+          '/Applications/OpenFDE.app/Contents/Resources/app.asar/toolSet/index.ts',
+        ),
       ),
-    ).toBe(
-      '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked/toolSet/index.ts',
-    )
+    ).toBe(p(join(unpacked, 'toolSet', 'index.ts')))
     vi.resetModules()
     vi.doMock('electron', () => ({
       app: {

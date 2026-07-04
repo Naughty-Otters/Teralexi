@@ -1,7 +1,7 @@
-import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { isWin, mockTesterHomedir } from '@test-paths'
 
 vi.mock('node:child_process', () => ({
   execFileSync: vi.fn(() => ''),
@@ -11,7 +11,7 @@ vi.mock('node:os', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:os')>()
   return {
     ...actual,
-    homedir: vi.fn(() => '/Users/tester'),
+    homedir: vi.fn(() => mockTesterHomedir()),
   }
 })
 
@@ -32,6 +32,7 @@ vi.mock('node:fs', async (importOriginal) => {
 })
 
 import { execFileSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import {
   buildMcpSpawnPath,
   checkMcpRuntimeStatus,
@@ -52,7 +53,7 @@ describe('mcp-runtime-check', () => {
     expect(buildMcpSpawnPath()).toContain('/opt/homebrew/bin')
   })
 
-  it('includes pyenv shims such as ~/.pyenv/shims/uvx', () => {
+  it.skipIf(isWin)('includes pyenv shims such as ~/.pyenv/shims/uvx', () => {
     const uvxPath = join(homedir(), '.pyenv', 'shims', 'uvx')
     vi.mocked(existsSync).mockImplementation((target) => {
       const value = String(target)
@@ -81,7 +82,7 @@ describe('mcp-runtime-check', () => {
     expect(resolveCommandOnPath('uvx', buildMcpSpawnPath())).toBe(uvxPath)
   })
 
-  it('uses login-shell PATH for GUI apps missing shell init', () => {
+  it.skipIf(isWin)('uses login-shell PATH for GUI apps missing shell init', () => {
     vi.mocked(execFileSync).mockImplementation((file, args) => {
       if (String(file).endsWith('zsh') && Array.isArray(args)) {
         return '/Users/tester/.nvm/versions/node/v22/bin:/opt/homebrew/bin'
@@ -104,7 +105,7 @@ describe('mcp-runtime-check', () => {
     expect(resolveCommandOnPath('npx', '/opt/homebrew/bin')).toBe(npxPath)
   })
 
-  it('reports npx availability when executable responds', () => {
+  it.skipIf(isWin)('reports npx availability when executable responds', () => {
     vi.mocked(existsSync).mockImplementation((target) =>
       String(target).endsWith('/opt/homebrew/bin/npx'),
     )

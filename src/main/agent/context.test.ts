@@ -1,4 +1,6 @@
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { fakeSandbox, p } from '@test-paths'
 import {
   cloneStepContextMap,
   cloneStepHistory,
@@ -86,16 +88,17 @@ describe('collectSandboxArtifactPaths', () => {
   })
 
   it('collects layout paths', () => {
+    const sandbox = fakeSandbox()
     const paths = collectSandboxArtifactPaths({
       layout: {
-        root: '/sandbox',
-        outputDir: '/sandbox/output',
-        refsDir: '/sandbox/refs',
-        scriptsDir: '/sandbox/scripts',
+        root: sandbox,
+        outputDir: join(sandbox, 'output'),
+        refsDir: join(sandbox, 'refs'),
+        scriptsDir: join(sandbox, 'scripts'),
       },
     } as never)
-    expect(paths).toContain('/sandbox')
-    expect(paths).toContain('/sandbox/output/results')
-    expect(paths).toContain('/sandbox/output/toolLoop')
+    expect(paths.map(p)).toContain(p(sandbox))
+    expect(paths.map(p)).toContain(p(join(sandbox, 'output', 'results')))
+    expect(paths.map(p)).toContain(p(join(sandbox, 'output', 'toolLoop')))
   })
 })

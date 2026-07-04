@@ -163,7 +163,10 @@ export function cancelWorkspaceTerminalCommand(conversationId: string): {
     return { ok: false, error: 'No running terminal command to cancel.' }
   }
 
-  const interrupted = active.child.kill('SIGINT')
+  const interrupted =
+    process.platform === 'win32'
+      ? active.child.kill()
+      : active.child.kill('SIGINT')
   if (!interrupted) {
     return { ok: false, error: 'Failed to send interrupt signal.' }
   }

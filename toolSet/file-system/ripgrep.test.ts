@@ -2,6 +2,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { isWin } from '@test-paths'
 import { isRipgrepAvailable, runRipgrepFiles, runRipgrepJson } from './ripgrep'
 
 describe('ripgrep helpers', () => {
@@ -59,7 +60,7 @@ describe('ripgrep helpers', () => {
     }
   })
 
-  it('falls back to unavailable=false on invalid command args', async () => {
+  it.skipIf(isWin)('falls back to unavailable=false on invalid command args', async () => {
     const result = await runRipgrepFiles(['--invalid-openfde-flag'], root)
     expect(result.available).toBe(false)
     expect(result.paths).toEqual([])

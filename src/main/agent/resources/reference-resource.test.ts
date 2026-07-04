@@ -1,4 +1,6 @@
+import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
+import { fakeSandbox, pathsEqual } from '@test-paths'
 import { existsSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { ReferenceContext } from './context'
@@ -75,92 +77,92 @@ describe('ReferenceContext.referenceLocationString', () => {
 })
 
 describe('ReferenceContext.resolveReferenceUrlToFilesystemPath', () => {
+  const sandbox = fakeSandbox()
+
   it('joins relative paths to sandbox root', () => {
     const r = refs()
-    expect(r.resolveReferenceUrlToFilesystemPath('skills/x.md', '/sandbox')).toBe(
-      '/sandbox/skills/x.md',
-    )
+    expect(
+      r.resolveReferenceUrlToFilesystemPath('skills/x.md', sandbox),
+    ).toBe(join(sandbox, 'skills', 'x.md'))
   })
 
   it('rejects remote URLs', () => {
     const r = refs()
     expect(() =>
-      r.resolveReferenceUrlToFilesystemPath('https://x.com', '/sandbox'),
+      r.resolveReferenceUrlToFilesystemPath('https://x.com', sandbox),
     ).toThrow(/remote URL/)
   })
 })
 
 describe('ReferenceContext.resolveLocalSourcePathForReferenceCopy', () => {
   it('returns existing absolute path', () => {
-    vi.mocked(existsSync).mockImplementation((p) => p === '/abs/file.md')
+    const abs = join(fakeSandbox(), 'abs', 'file.md')
+    vi.mocked(existsSync).mockImplementation((p) => pathsEqual(String(p), abs))
     const r = refs()
     expect(
-      r.resolveLocalSourcePathForReferenceCopy('/abs/file.md', {
-        skillsDir: '/skills',
-        root: '/sandbox',
+      r.resolveLocalSourcePathForReferenceCopy(abs, {
+        skillsDir: join(fakeSandbox(), 'skills'),
+        root: fakeSandbox(),
       }),
-    ).toBe('/abs/file.md')
+    ).toBe(abs)
   })
 })
 
 describe('ReferenceContext.resolveReferenceReadPathInSandbox', () => {
+  const sandbox = fakeSandbox()
   const layout = {
-    root: '/sandbox',
-    refsDir: '/sandbox/refs',
-    skillsDir: '/sandbox/skills',
+    root: sandbox,
+    refsDir: join(sandbox, 'refs'),
+    skillsDir: join(sandbox, 'skills'),
   }
 
   it('prefers sandbox root over refs and skills', () => {
-    vi.mocked(existsSync).mockImplementation(
-      (p) =>
-        p === '/sandbox/form/step.form.md' ||
-        p === '/sandbox/refs/form/step.form.md' ||
-        p === '/sandbox/skills/my-skill/form/step.form.md',
+    const primary = join(sandbox, 'form', 'step.form.md')
+    vi.mocked(existsSync).mockImplementation((p) =>
+      [primary, join(sandbox, 'refs', 'form', 'step.form.md'), join(sandbox, 'skills', 'my-skill', 'form', 'step.form.md')].some(
+        (candidate) => pathsEqual(String(p), candidate),
+      ),
     )
     const r = refs()
     expect(
       r.resolveReferenceReadPathInSandbox('form/step.form.md', layout, 'my-skill'),
-    ).toBe('/sandbox/form/step.form.md')
+    ).toBe(primary)
   })
 
   it('falls back to refs copy by relative path', () => {
-    vi.mocked(existsSync).mockImplementation(
-      (p) => p === '/sandbox/refs/form/step.form.md',
-    )
+    const refPath = join(sandbox, 'refs', 'form', 'step.form.md')
+    vi.mocked(existsSync).mockImplementation((p) => pathsEqual(String(p), refPath))
     const r = refs()
     expect(
       r.resolveReferenceReadPathInSandbox('form/step.form.md', layout, 'my-skill'),
-    ).toBe('/sandbox/refs/form/step.form.md')
+    ).toBe(refPath)
   })
 
   it('falls back to refs copy by basename after materialize', () => {
-    vi.mocked(existsSync).mockImplementation(
-      (p) => p === '/sandbox/refs/step.form.md',
-    )
+    const refPath = join(sandbox, 'refs', 'step.form.md')
+    vi.mocked(existsSync).mockImplementation((p) => pathsEqual(String(p), refPath))
     const r = refs()
     expect(
       r.resolveReferenceReadPathInSandbox('form/step.form.md', layout, 'my-skill'),
-    ).toBe('/sandbox/refs/step.form.md')
+    ).toBe(refPath)
   })
 
   it('falls back to sandbox skill folder', () => {
-    vi.mocked(existsSync).mockImplementation(
-      (p) => p === '/sandbox/skills/my-skill/hitl/step.form.md',
-    )
+    const skillPath = join(sandbox, 'skills', 'my-skill', 'hitl', 'step.form.md')
+    vi.mocked(existsSync).mockImplementation((p) => pathsEqual(String(p), skillPath))
     const r = refs()
     expect(
       r.resolveReferenceReadPathInSandbox('hitl/step.form.md', layout, 'my-skill'),
-    ).toBe('/sandbox/skills/my-skill/hitl/step.form.md')
+    ).toBe(skillPath)
   })
 
   it('falls back to skillsDir without skillId prefix', () => {
-    vi.mocked(existsSync).mockImplementation(
-      (p) => p === '/sandbox/skills/shared/step.form.md',
-    )
+    const sharedPath = join(sandbox, 'skills', 'shared', 'step.form.md')
+    vi.mocked(existsSync).mockImplementation((p) => pathsEqual(String(p), sharedPath))
     const r = refs()
     expect(
       r.resolveReferenceReadPathInSandbox('shared/step.form.md', layout),
-    ).toBe('/sandbox/skills/shared/step.form.md')
+    ).toBe(sharedPath)
   })
 })
 

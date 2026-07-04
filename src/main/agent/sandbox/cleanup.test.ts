@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { join } from 'path'
+import { join, resolve } from 'path'
+import { p } from '@test-paths'
 import os from 'os'
 
 vi.mock('fs', () => ({
@@ -38,7 +39,7 @@ describe('remove-sandbox-directories', () => {
   it('removes allowed sandbox directories', async () => {
     const p = join('/home/.openfde/workspace/sandbox', 'run-1')
     await removeSandboxDirectories([p])
-    expect(rm).toHaveBeenCalledWith(p, { recursive: true, force: true })
+    expect(rm).toHaveBeenCalledWith(resolve(p), { recursive: true, force: true })
   })
 
   it('allows legacy openfde-sandbox folders under tmpdir', () => {

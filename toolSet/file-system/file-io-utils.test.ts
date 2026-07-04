@@ -2,6 +2,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { p } from '@test-paths'
 import {
   buildFileChangePreview,
   convertToLineEnding,
@@ -51,9 +52,9 @@ describe('file-io-utils', () => {
       },
     )
 
-    expect(preview.path).toBe(path.join('dir', 'new.txt'))
+    expect(p(preview.path)).toBe(p(path.join('dir', 'new.txt')))
     expect(preview.action).toBe('rename')
-    expect(preview.moveFrom).toBe(path.join('dir', 'old.txt'))
+    expect(p(preview.moveFrom!)).toBe(p(path.join('dir', 'old.txt')))
     expect(preview.diff).toContain('+after')
   })
 

@@ -11,6 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@config': resolve(rootDir, 'config'),
+      '@test-paths': resolve(rootDir, 'config/test-path-helpers.ts'),
       '@renderer': resolve(rootDir, 'src/renderer'),
       '@main': resolve(rootDir, 'src/main'),
       '@store': resolve(rootDir, 'src/renderer/store/modules'),

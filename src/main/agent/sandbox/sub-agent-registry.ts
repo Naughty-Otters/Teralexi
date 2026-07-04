@@ -8,6 +8,10 @@ import { getopenfdeSandboxDir } from '@config/openfde-home'
 import { Sandbox } from './sandbox-impl'
 import type { SandboxPlanningAccess } from './types'
 
+function pathSegments(value: string): string[] {
+  return value.replace(/\\/g, '/').split('/').filter(Boolean)
+}
+
 export type SubAgentSandboxRecord = {
   conversationId?: string
   rootRunId?: string
@@ -36,8 +40,10 @@ export function resolveSubAgentSandboxRoot(_agentId: string, runId: string): str
 }
 
 export function isSubAgentSandboxRoot(path: string): boolean {
-  const normalized = path.replace(/\\/g, '/')
-  return normalized.includes('/sandbox/sub-agents/')
+  const segments = pathSegments(path)
+  const sandboxIdx = segments.lastIndexOf('sandbox')
+  const subAgentsIdx = segments.lastIndexOf('sub-agents')
+  return sandboxIdx >= 0 && subAgentsIdx > sandboxIdx
 }
 
 export async function getOrCreateSandboxForSubAgentRun(args: {
