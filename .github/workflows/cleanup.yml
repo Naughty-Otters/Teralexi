@@ -1,0 +1,136 @@
+name: Cleanup
+
+on:
+  schedule:
+    # Daily at 00:00 UTC (midnight).
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      artifact_retention_days:
+        description: Delete artifacts older than this many days
+        required: false
+        default: '14'
+      cache_retention_days:
+        description: Delete caches not accessed in this many days
+        required: false
+        default: '7'
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Cleanup artifacts and caches
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      ARTIFACT_RETENTION_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.artifact_retention_days || '14' }}
+      CACHE_RETENTION_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.cache_retention_days || '7' }}
+
+    steps:
+      - name: Delete old workflow artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+            const retentionDays = Number(process.env.ARTIFACT_RETENTION_DAYS)
+            const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000
+
+            const artifacts = []
+            let page = 1
+
+            while (true) {
+              const { data } = await github.rest.actions.listArtifactsForRepo({
+                owner,
+                repo,
+                per_page: 100,
+                page,
+              })
+
+              artifacts.push(...data.artifacts)
+              if (data.artifacts.length < 100) break
+              page += 1
+            }
+
+            let deleted = 0
+            let skipped = 0
+
+            for (const artifact of artifacts) {
+              const createdAt = new Date(artifact.created_at).getTime()
+              if (createdAt >= cutoff) {
+                skipped += 1
+                continue
+              }
+
+              await github.rest.actions.deleteArtifact({
+                owner,
+                repo,
+                artifact_id: artifact.id,
+              })
+              deleted += 1
+              core.info(`Deleted artifact ${artifact.id} (${artifact.name})`)
+            }
+
+            core.summary.addHeading('Artifact cleanup')
+            core.summary.addRaw(
+              `Deleted **${deleted}** artifact(s); kept **${skipped}** newer than ${retentionDays} day(s).`,
+            )
+            await core.summary.write()
+
+      - name: Delete stale workflow caches
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+            const retentionDays = Number(process.env.CACHE_RETENTION_DAYS)
+            const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000
+
+            const caches = []
+            let page = 1
+
+            while (true) {
+              const { data } = await github.rest.actions.getActionsCacheList({
+                owner,
+                repo,
+                per_page: 100,
+                page,
+              })
+
+              const batch = data.actions_caches ?? []
+              caches.push(...batch)
+              if (batch.length < 100) break
+              page += 1
+            }
+
+            let deleted = 0
+            let skipped = 0
+
+            for (const cache of caches) {
+              const lastAccessed = new Date(cache.last_accessed_at).getTime()
+              if (lastAccessed >= cutoff) {
+                skipped += 1
+                continue
+              }
+
+              await github.rest.actions.deleteActionsCacheById({
+                owner,
+                repo,
+                cache_id: cache.id,
+              })
+              deleted += 1
+              core.info(`Deleted cache ${cache.id} (${cache.key})`)
+            }
+
+            core.summary.addHeading('Cache cleanup')
+            core.summary.addRaw(
+              `Deleted **${deleted}** cache(s); kept **${skipped}** accessed within ${retentionDays} day(s).`,
+            )
+            await core.summary.write()
