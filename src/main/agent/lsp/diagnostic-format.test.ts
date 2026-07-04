@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { p } from '@test-paths'
 import { buildDiagnosticReport, formatDiagnostic } from './diagnostic-format'
 import type { LspDiagnostic } from './types'
 
@@ -48,7 +49,7 @@ describe('buildDiagnosticReport', () => {
       [err(0, 0, 'boom'), warn('nit')],
     )
     expect(report.errorCount).toBe(1)
-    expect(report.block).toContain('<diagnostics file="src/a.ts">')
+    expect(p(report.block)).toContain('<diagnostics file="src/a.ts">')
     expect(report.block).toContain('ERROR [1:1] boom')
     expect(report.block).not.toContain('nit')
     expect(report.block.endsWith('</diagnostics>')).toBe(true)

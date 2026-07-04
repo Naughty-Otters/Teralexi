@@ -1,4 +1,6 @@
+import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { fakeRepo, pathEndsWith } from '@test-paths'
 
 vi.mock('node:fs', () => ({
   existsSync: vi.fn(),
@@ -75,16 +77,16 @@ APP_DEV_PORT=3000
 
   it('resolveBuildTimeEnvFilePaths uses only repo env files', () => {
     expect(
-      resolveBuildTimeEnvFilePaths('/repo', { OPENFDE_BUILD_ENV: 'sit' }),
-    ).toEqual(['/repo/env/.sit.env'])
+      resolveBuildTimeEnvFilePaths(fakeRepo(), { OPENFDE_BUILD_ENV: 'sit' }),
+    ).toEqual([join(fakeRepo(), 'env', '.sit.env')])
     expect(
-      resolveBuildTimeEnvFilePaths('/repo', { OPENFDE_BUILD_ENV: 'prod' }),
-    ).toEqual(['/repo/env/.prod.env'])
+      resolveBuildTimeEnvFilePaths(fakeRepo(), { OPENFDE_BUILD_ENV: 'prod' }),
+    ).toEqual([join(fakeRepo(), 'env', '.prod.env')])
   })
 
   it('loads dev env file when unpackaged', () => {
     vi.mocked(existsSync).mockImplementation((target) =>
-      String(target).endsWith('/env/.dev.env'),
+      pathEndsWith(String(target), 'env/.dev.env'),
     )
     vi.mocked(readFileSync).mockReturnValue(
       "BASE_API = 'http://127.0.0.1:8000'\n",

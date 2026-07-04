@@ -9,6 +9,13 @@ import {
 
 let dir: string
 
+function slowCommand(seconds: number): string {
+  if (process.platform === 'win32') {
+    return `ping -n ${seconds + 1} 127.0.0.1`
+  }
+  return `sleep ${seconds}`
+}
+
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'moderatus-terminal-test-'))
 })
@@ -96,7 +103,7 @@ describe('runWorkspaceTerminalCommandWithControl', () => {
     const slow = runWorkspaceTerminalCommandWithControl({
       conversationId: 'cid-busy',
       workspaceCwd: dir,
-      command: 'sleep 5',
+      command: slowCommand(5),
     })
 
     // Immediately try another command with the same id
@@ -134,7 +141,7 @@ describe('cancelWorkspaceTerminalCommand', () => {
     const runPromise = runWorkspaceTerminalCommandWithControl({
       conversationId: 'cid-cancel',
       workspaceCwd: dir,
-      command: 'sleep 10',
+      command: slowCommand(10),
     })
 
     // Wait for process to start, then cancel

@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { fakeSandbox, isWin } from '@test-paths'
 import {
   ensureReferenceDoc,
   ensureReferenceScript,
@@ -17,13 +18,15 @@ import {
 import { ReferenceDoc, ReferenceScript } from './reference-resource'
 
 describe('reference-ops helpers', () => {
+  const sandbox = fakeSandbox()
+
   it('detects remote URLs and resolves local paths', () => {
     expect(isRemoteReferenceUrl('https://example.com/a.md')).toBe(true)
     expect(isRemoteReferenceUrl('./local.md')).toBe(false)
-    expect(resolveReferenceUrlToFilesystemPath('docs/a.md', '/sandbox')).toBe(
-      join('/sandbox', 'docs/a.md'),
+    expect(resolveReferenceUrlToFilesystemPath('docs/a.md', sandbox)).toBe(
+      join(sandbox, 'docs/a.md'),
     )
-    expect(() => resolveReferenceUrlToFilesystemPath('https://x', '/sandbox')).toThrow(
+    expect(() => resolveReferenceUrlToFilesystemPath('https://x', sandbox)).toThrow(
       /remote URL/,
     )
   })
@@ -47,7 +50,8 @@ describe('reference-ops helpers', () => {
   })
 
   it('resolves absolute local paths', () => {
-    expect(resolveReferenceUrlToFilesystemPath('/abs/path.md', '/sandbox')).toBe('/abs/path.md')
+    const abs = isWin ? 'C:\\abs\\path.md' : '/abs/path.md'
+    expect(resolveReferenceUrlToFilesystemPath(abs, sandbox)).toBe(abs)
   })
 })
 

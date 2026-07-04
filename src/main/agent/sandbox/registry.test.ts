@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { p } from '@test-paths'
 
 vi.mock('@config/openfde-home', () => ({
   getopenfdeSandboxDir: vi.fn(() => '/mock/sandbox'),
@@ -49,7 +50,7 @@ describe('sandbox registry', () => {
 
   it('resolveSandboxRootForConversation returns stable path before registry entry', () => {
     const stable = resolveSandboxRootForConversation('conv-stable')
-    expect(stable).toMatch(/^\/mock\/sandbox\/[a-f0-9]{64}$/)
+    expect(p(stable)).toMatch(/^\/mock\/sandbox\/[a-f0-9]{64}$/)
     expect(peekSandboxRootForConversation('conv-stable')).toBeUndefined()
   })
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { pathToFileURL } from 'node:url'
 import { join } from 'node:path'
+import { isWin, p } from '@test-paths'
 import {
   hoverToText,
   normalizeDocumentSymbols,
@@ -27,13 +28,15 @@ describe('symbolKindName', () => {
 describe('normalizeLocations', () => {
   it('handles a single Location (0-based → 1-based) and relativizes the path', () => {
     const out = normalizeLocations({ uri: uri('src/a.ts'), range: range(10, 4) }, WS)
-    expect(out).toEqual([{ path: 'src/a.ts', line: 11, character: 5, endLine: 11, endCharacter: 9 }])
+    expect(out.map((item) => ({ ...item, path: p(item.path) }))).toEqual([
+      { path: 'src/a.ts', line: 11, character: 5, endLine: 11, endCharacter: 9 },
+    ])
   })
 
   it('handles a Location[] and a LocationLink[]', () => {
     expect(normalizeLocations([{ uri: uri('a.ts'), range: range(0, 0) }], WS)).toHaveLength(1)
     const links = [{ targetUri: uri('b.ts'), targetRange: range(2, 1) }]
-    expect(normalizeLocations(links, WS)).toEqual([
+    expect(normalizeLocations(links, WS).map((item) => ({ ...item, path: p(item.path) }))).toEqual([
       { path: 'b.ts', line: 3, character: 2, endLine: 3, endCharacter: 6 },
     ])
   })
@@ -44,8 +47,9 @@ describe('normalizeLocations', () => {
   })
 
   it('keeps absolute path when outside the workspace', () => {
-    const out = normalizeLocations({ uri: pathToFileURL('/other/x.ts').toString(), range: range(0, 0) }, WS)
-    expect(out[0].path).toBe('/other/x.ts')
+    const other = isWin ? 'C:\\other\\x.ts' : '/other/x.ts'
+    const out = normalizeLocations({ uri: pathToFileURL(other).toString(), range: range(0, 0) }, WS)
+    expect(p(out[0]!.path)).toBe(p(other))
   })
 })
 
@@ -100,7 +104,7 @@ describe('normalizeWorkspaceSymbols', () => {
     const result = [
       { name: 'Widget', kind: 5, location: { uri: uri('src/w.ts'), range: range(9, 0) }, containerName: 'ui' },
     ]
-    expect(normalizeWorkspaceSymbols(result, WS)).toEqual([
+    expect(normalizeWorkspaceSymbols(result, WS).map((item) => ({ ...item, path: p(item.path) }))).toEqual([
       { name: 'Widget', kind: 'class', path: 'src/w.ts', line: 10, character: 1, container: 'ui' },
     ])
   })

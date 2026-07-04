@@ -136,6 +136,21 @@ export function resolveServerCommand(
   return def.command
 }
 
+function commonSystemBinDirs(): string[] {
+  if (process.platform === 'win32') {
+    const dirs: string[] = []
+    const programFiles = process.env.ProgramFiles?.trim()
+    if (programFiles) dirs.push(join(programFiles, 'nodejs'))
+    const appData = process.env.APPDATA?.trim()
+    if (appData) dirs.push(join(appData, 'npm'))
+    return dirs
+  }
+  if (process.platform === 'darwin') {
+    return ['/usr/local/bin', '/opt/homebrew/bin', '/usr/bin']
+  }
+  return ['/usr/local/bin', '/usr/bin']
+}
+
 /**
  * Build a PATH for the spawned server that includes the workspace's
  * `node_modules/.bin` and common bin dirs, so both the server binary and the
@@ -146,9 +161,7 @@ export function buildServerPath(workspaceRoot: string): string {
   const extra = [
     join(workspaceRoot, 'node_modules', '.bin'),
     ...(bundledDir ? [bundledDir] : []),
-    '/usr/local/bin',
-    '/opt/homebrew/bin',
-    '/usr/bin',
+    ...commonSystemBinDirs(),
     dirname(process.execPath),
   ]
   const existing = process.env.PATH ?? ''

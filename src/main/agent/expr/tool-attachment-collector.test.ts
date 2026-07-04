@@ -2,6 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { describe, expect, it, vi } from 'vitest'
+import { p } from '@test-paths'
 import { applyToolAttachmentCollection } from './tool-attachment-collector'
 
 describe('applyToolAttachmentCollection', () => {
@@ -74,13 +75,14 @@ describe('applyToolAttachmentCollection', () => {
     ).execute({})
 
     expect(onAttachments).toHaveBeenCalledTimes(1)
-    expect(onAttachments.mock.calls[0]?.[0]).toEqual([
-      expect.objectContaining({
-        path: pdfAbs,
-        toolName: 'export_research_pdf',
-        label: 'topic-research-paper.pdf',
-      }),
-    ])
+    const attachments = onAttachments.mock.calls[0]?.[0] as Array<{
+      path: string
+      toolName: string
+      label: string
+    }>
+    expect(attachments[0]?.toolName).toBe('export_research_pdf')
+    expect(attachments[0]?.label).toBe('topic-research-paper.pdf')
+    expect(p(attachments[0]?.path ?? '')).toBe(p(pdfAbs))
   })
 
   it('does not collect when execute throws', async () => {

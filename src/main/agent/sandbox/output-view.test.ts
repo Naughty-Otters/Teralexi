@@ -1,4 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 const {
   addChildView,
@@ -106,10 +110,14 @@ describe('syncSandboxOutputView', () => {
   })
 
   it('renders markdown files as html via temp file', async () => {
+    const mdDir = join(mkdtempSync(join(tmpdir(), 'output-view-')), 'output', 'results')
+    mkdirSync(mdDir, { recursive: true })
+    const mdPath = join(mdDir, 'paper.md')
+    writeFileSync(mdPath, '# Title\n\nBody', 'utf8')
     readFile.mockResolvedValue('# Title\n\nBody')
     await syncSandboxOutputView({ sender: {} } as never, {
       screenBounds: { x: 10, y: 20, width: 300, height: 200 },
-      fileUrl: 'file:///tmp/output/results/paper.md',
+      fileUrl: pathToFileURL(mdPath).href,
       markdownView: 'html',
     })
     const view = WebContentsView.mock.results.at(-1)?.value
@@ -122,10 +130,14 @@ describe('syncSandboxOutputView', () => {
   })
 
   it('shows markdown source in html when raw mode is requested', async () => {
+    const mdDir = join(mkdtempSync(join(tmpdir(), 'output-view-raw-')), 'output', 'results')
+    mkdirSync(mdDir, { recursive: true })
+    const mdPath = join(mdDir, 'paper.md')
+    writeFileSync(mdPath, '# Title\n\nBody', 'utf8')
     readFile.mockResolvedValue('# Title\n\nBody')
     await syncSandboxOutputView({ sender: {} } as never, {
       screenBounds: { x: 10, y: 20, width: 300, height: 200 },
-      fileUrl: 'file:///tmp/output/results/paper.md',
+      fileUrl: pathToFileURL(mdPath).href,
       markdownView: 'raw',
     })
     const view = WebContentsView.mock.results.at(-1)?.value

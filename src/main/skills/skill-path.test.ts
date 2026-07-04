@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { join } from 'path'
+import { mockOpenfdeDir, pathsEqual } from '@test-paths'
 
 vi.mock('fs', () => ({
   existsSync: vi.fn(),
@@ -13,8 +14,8 @@ vi.mock('electron', () => ({
 }))
 
 vi.mock('@config/openfde-home', () => ({
-  getopenfdeSkillsDir: vi.fn(() => '/mock/.openfde/skills'),
-  getopenfdeToolSetDir: vi.fn(() => '/mock/.openfde/toolSet'),
+  getopenfdeSkillsDir: vi.fn(() => mockOpenfdeDir('skills')),
+  getopenfdeToolSetDir: vi.fn(() => mockOpenfdeDir('toolSet')),
 }))
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
@@ -132,14 +133,11 @@ describe('skill-path', () => {
   })
 
   it('resolveSkillFolder prefers user skill over bundled', () => {
+    const userSkillMd = join(mockOpenfdeDir('skills', 'demo'), SKILL_FILES.SKILL_MD)
     vi.mocked(statSync).mockReturnValue({ isDirectory: () => true } as never)
-    vi.mocked(existsSync).mockImplementation((p) => {
-      const s = String(p)
-      if (s.endsWith(SKILL_FILES.SKILL_MD)) {
-        return s.includes('/mock/.openfde/skills/demo/')
-      }
-      return false
-    })
-    expect(resolveSkillFolder('demo')).toBe(join('/mock/.openfde/skills', 'demo'))
+    vi.mocked(existsSync).mockImplementation((target) =>
+      pathsEqual(String(target), userSkillMd),
+    )
+    expect(resolveSkillFolder('demo')).toBe(join(mockOpenfdeDir('skills'), 'demo'))
   })
 })

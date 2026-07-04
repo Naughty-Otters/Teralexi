@@ -48,11 +48,14 @@ function isRemovableopenfdeSandboxPathImpl(candidatePath: string): boolean {
   try {
     const absReal = realpathSync(resolve(candidatePath.trim()))
     const rel = relative(openfdeSandboxReal, absReal)
+    const relNorm = rel.replace(/\\/g, '/')
     if (
       rel &&
       !rel.startsWith('..') &&
       !rel.startsWith(`..${sep}`) &&
-      (rel.startsWith('sub-agents') || rel.includes('/sub-agents/'))
+      (relNorm === 'sub-agents' ||
+        relNorm.startsWith('sub-agents/') ||
+        relNorm.includes('/sub-agents/'))
     ) {
       return true
     }

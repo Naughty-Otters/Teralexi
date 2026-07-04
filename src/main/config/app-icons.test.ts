@@ -1,4 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { join } from 'node:path'
+import { p, pathEndsWith } from '@test-paths'
 
 const mockApp = {
   isPackaged: false,
@@ -56,13 +58,13 @@ describe('app-icons', () => {
   it('resolveBuildIconsDir prefers Resources/build/icons when packaged', async () => {
     mockApp.isPackaged = true
     mockApp.getAppPath.mockReturnValue('/OpenFDE.app/Contents/Resources/app.asar')
-    const existsSync = vi.fn((path: string) =>
-      String(path).endsWith('/Resources/build/icons/tray-icon.png'),
+    const existsSync = vi.fn((target: string) =>
+      pathEndsWith(String(target), 'Resources/build/icons/tray-icon.png'),
     )
     vi.doMock('fs', () => ({ existsSync }))
     const { resolveBuildIconsDir } = await import('./app-icons')
-    expect(resolveBuildIconsDir()).toBe(
-      '/OpenFDE.app/Contents/Resources/build/icons',
+    expect(p(resolveBuildIconsDir())).toBe(
+      p('/OpenFDE.app/Contents/Resources/build/icons'),
     )
   })
 
@@ -85,7 +87,7 @@ describe('app-icons', () => {
       })
       vi.doMock('fs', () => ({ existsSync }))
       const { getTrayIconPngPath } = await import('./app-icons')
-      expect(getTrayIconPngPath()).toMatch(/\/build\/icons\/tray-icon@2x\.png$/)
+      expect(p(getTrayIconPngPath())).toMatch(/\/build\/icons\/tray-icon@2x\.png$/)
     } finally {
       Object.defineProperty(process, 'platform', {
         value: originalPlatform,

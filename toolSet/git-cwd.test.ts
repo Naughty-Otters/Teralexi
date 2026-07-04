@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { fakeOtherRepo, fakeSandbox } from '@test-paths'
 import {
   OPENFDE_AGENT_SANDBOX_ROOT_ENV,
   OPENFDE_AGENT_WORKSPACE_PATH_ENV,
@@ -33,20 +34,22 @@ function setWorkspaceRoot(root: string | undefined) {
 }
 
 describe('resolveGitWorkingDirectory', () => {
+  const SANDBOX = fakeSandbox()
+
   it('resolves relative paths inside base root', () => {
-    const resolved = resolveGitWorkingDirectory('/sandbox', 'repo')
-    expect(resolved).toEqual({ ok: true, cwd: path.join('/sandbox', 'repo') })
+    const resolved = resolveGitWorkingDirectory(SANDBOX, 'repo')
+    expect(resolved).toEqual({ ok: true, cwd: path.join(SANDBOX, 'repo') })
   })
 
   it('defaults to base root when workingDirectory is omitted', () => {
-    expect(resolveGitWorkingDirectory('/sandbox')).toEqual({
+    expect(resolveGitWorkingDirectory(SANDBOX)).toEqual({
       ok: true,
-      cwd: '/sandbox',
+      cwd: SANDBOX,
     })
   })
 
   it('rejects relative paths that escape base root', () => {
-    const resolved = resolveGitWorkingDirectory('/sandbox', '../../etc')
+    const resolved = resolveGitWorkingDirectory(SANDBOX, '../../etc')
     expect(resolved.ok).toBe(false)
     if (!resolved.ok) {
       expect(resolved.error).toMatch(/escapes root/i)
@@ -54,8 +57,9 @@ describe('resolveGitWorkingDirectory', () => {
   })
 
   it('allows absolute paths outside base root', () => {
-    const resolved = resolveGitWorkingDirectory('/sandbox', '/other/repo')
-    expect(resolved).toEqual({ ok: true, cwd: '/other/repo' })
+    const otherRepo = fakeOtherRepo()
+    const resolved = resolveGitWorkingDirectory(SANDBOX, otherRepo)
+    expect(resolved).toEqual({ ok: true, cwd: otherRepo })
   })
 })
 

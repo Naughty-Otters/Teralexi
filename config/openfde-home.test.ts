@@ -1,7 +1,8 @@
 import { mkdirSync } from 'fs'
 import { homedir } from 'os'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { expectedOpenfdeHome, mockHomedir } from '@test-paths'
 
 vi.mock('fs', () => ({
   mkdirSync: vi.fn(),
@@ -10,7 +11,7 @@ vi.mock('fs', () => ({
 }))
 
 vi.mock('os', () => ({
-  homedir: vi.fn(() => '/mock-home'),
+  homedir: vi.fn(() => mockHomedir()),
 }))
 
 const createRequireMock = vi.fn()
@@ -27,7 +28,7 @@ describe('openfde-home', () => {
     vi.mocked(fs.existsSync).mockClear()
     vi.mocked(fs.renameSync).mockClear()
     vi.mocked(fs.existsSync).mockReturnValue(false)
-    vi.mocked(homedir).mockReturnValue('/mock-home')
+    vi.mocked(homedir).mockReturnValue(mockHomedir())
     createRequireMock.mockImplementation(() => () => {
       throw new Error('electron unavailable')
     })
@@ -40,7 +41,7 @@ describe('openfde-home', () => {
   it('initializes app dirs under homedir', async () => {
     const mod = await loadopenfdeHome()
     const home = mod.initializeopenfdeHome(null)
-    expect(home).toBe(join('/mock-home', '.openfde'))
+    expect(home).toBe(expectedOpenfdeHome())
     expect(mod.isopenfdeHomeInitialized()).toBe(true)
     expect(vi.mocked(mkdirSync)).toHaveBeenCalled()
   })
@@ -49,20 +50,20 @@ describe('openfde-home', () => {
     const mod = await loadopenfdeHome()
     mod.initializeopenfdeHome(null)
 
-    expect(mod.getopenfdeHome()).toBe(join('/mock-home', '.openfde'))
+    expect(mod.getopenfdeHome()).toBe(expectedOpenfdeHome())
     expect(mod.getopenfdeConfigDir()).toBe(
-      join('/mock-home', '.openfde', 'config'),
+      join(expectedOpenfdeHome(), 'config'),
     )
     vi.mocked(mkdirSync).mockClear()
     expect(mod.getopenfdeDbPath()).toBe(
-      join('/mock-home', '.openfde', 'db', 'openfde.db'),
+      join(expectedOpenfdeHome(), 'db', 'openfde.db'),
     )
     expect(vi.mocked(mkdirSync)).toHaveBeenCalledWith(
-      join('/mock-home', '.openfde', 'db'),
+      join(expectedOpenfdeHome(), 'db'),
       { recursive: true },
     )
     expect(mod.getopenfdeWorkspacePath()).toBe(
-      join('/mock-home', '.openfde', 'workspace'),
+      join(expectedOpenfdeHome(), 'workspace'),
     )
     expect(mod.getopenfdeSandboxDir()).toContain('sandbox')
     expect(mod.getopenfdeSkillsDir()).toContain('skills')
@@ -104,13 +105,13 @@ describe('openfde-home', () => {
     const dirs = mod.getAgentMemoryDirs('skill:default')
 
     expect(dirs.block).toBe(
-      join('/mock-home', '.openfde', 'memory', 'skill_default', 'block'),
+      join(expectedOpenfdeHome(), 'memory', 'skill_default', 'block'),
     )
     expect(vi.mocked(mkdirSync)).toHaveBeenCalledWith(dirs.block, {
       recursive: true,
     })
     expect(vi.mocked(mkdirSync)).not.toHaveBeenCalledWith(
-      join('/mock-home', '.openfde', 'channels', 'whatsapp-auth'),
+      join(expectedOpenfdeHome(), 'channels', 'whatsapp-auth'),
       expect.anything(),
     )
   })
@@ -126,8 +127,7 @@ describe('openfde-home', () => {
     mod.getopenfdeLogsDir()
 
     const channelRedirect = join(
-      '/mock-home',
-      '.openfde',
+      expectedOpenfdeHome(),
       'channels',
       'whatsapp-auth',
     )
@@ -135,11 +135,11 @@ describe('openfde-home', () => {
       expect(call[0]).not.toBe(channelRedirect)
     }
     expect(vi.mocked(mkdirSync)).toHaveBeenCalledWith(
-      join('/mock-home', '.openfde', 'db'),
+      join(expectedOpenfdeHome(), 'db'),
       { recursive: true },
     )
     expect(vi.mocked(mkdirSync)).toHaveBeenCalledWith(
-      join('/mock-home', '.openfde', 'memory'),
+      join(expectedOpenfdeHome(), 'memory'),
       { recursive: true },
     )
   })
@@ -152,7 +152,7 @@ describe('openfde-home', () => {
     mod.getopenfdeWhatsAppAuthDir()
 
     expect(vi.mocked(mkdirSync)).toHaveBeenCalledWith(
-      join('/mock-home', '.openfde', 'channels', 'whatsapp-auth'),
+      join(expectedOpenfdeHome(), 'channels', 'whatsapp-auth'),
       { recursive: true },
     )
   })
