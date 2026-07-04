@@ -1,13 +1,5 @@
 import { EventEmitter } from 'node:events'
-import {
-  describe,
-  expect,
-  it,
-  vi,
-  beforeEach,
-  afterEach,
-  type MockedFunction,
-} from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 
 class FakeStream extends EventEmitter {
   setEncoding(_enc: string) {}
@@ -17,13 +9,22 @@ type FakeChild = EventEmitter & {
   stdout: FakeStream
   stderr: FakeStream
   kill: ReturnType<typeof vi.fn>
+  pid: number
 }
 
-const spawnMock = vi.fn()
-
-vi.mock('child_process', () => ({
-  spawn: spawnMock,
+const { spawnMock, execFileSyncMock } = vi.hoisted(() => ({
+  spawnMock: vi.fn(),
+  execFileSyncMock: vi.fn(),
 }))
+
+vi.mock('child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('child_process')>()
+  return {
+    ...actual,
+    spawn: spawnMock,
+    execFileSync: execFileSyncMock,
+  }
+})
 
 vi.mock('./git-service', () => ({
   resolvePathInsideWorkspace: vi.fn((_cwd: string, relativePath: string) => {
@@ -38,13 +39,17 @@ function makeChild(): FakeChild {
   const child = new EventEmitter() as FakeChild
   child.stdout = new FakeStream()
   child.stderr = new FakeStream()
+  child.pid = 42
   child.kill = vi.fn(() => true)
   return child
 }
 
 beforeEach(() => {
   vi.useRealTimers()
+  vi.resetModules()
   spawnMock.mockReset()
+  execFileSyncMock.mockReset()
+  execFileSyncMock.mockImplementation(() => '')
 })
 
 afterEach(() => {
@@ -101,9 +106,12 @@ describe('workspace-terminal (mocked child_process)', () => {
     }
   })
 
-  it('returns cancel error when child.kill returns false', async () => {
+  it('returns cancel error when interrupt fails', async () => {
     const child = makeChild()
     child.kill = vi.fn(() => false)
+    execFileSyncMock.mockImplementation(() => {
+      throw new Error('taskkill failed')
+    })
     spawnMock.mockReturnValueOnce(child)
 
     const mod = await import('./workspace-terminal')
@@ -122,7 +130,7 @@ describe('workspace-terminal (mocked child_process)', () => {
     await pending
   })
 
-  it('sends SIGKILL after timeout if process is still active', async () => {
+  it('force-kills after timeout if process is still active', async () => {
     vi.useFakeTimers()
     const child = makeChild()
     spawnMock.mockReturnValueOnce(child)
@@ -139,9 +147,16 @@ describe('workspace-terminal (mocked child_process)', () => {
     expect(cancel.ok).toBe(true)
 
     vi.advanceTimersByTime(1600)
-    expect(child.kill).toHaveBeenCalledWith('SIGKILL')
 
-    child.emit('close', 137, 'SIGKILL')
+    if (process.platform === 'win32') {
+      expect(child.kill).toHaveBeenCalledTimes(2)
+      expect(execFileSyncMock).not.toHaveBeenCalled()
+    } else {
+      expect(child.kill).toHaveBeenNthCalledWith(1, 'SIGINT')
+      expect(child.kill).toHaveBeenNthCalledWith(2, 'SIGKILL')
+    }
+
+    child.emit('close', process.platform === 'win32' ? 1 : 137, null)
     await pending
   })
 

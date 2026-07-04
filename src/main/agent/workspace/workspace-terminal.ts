@@ -26,11 +26,19 @@ function appendWithLimit(base: string, chunk: string): string {
   return next.slice(next.length - OUTPUT_LIMIT)
 }
 
+function resolveWorkspaceShell(): string {
+  if (process.platform === 'win32') {
+    return process.env.ComSpec?.trim() || 'cmd.exe'
+  }
+  return process.env.SHELL?.trim() || '/bin/bash'
+}
+
 function interruptChildProcess(
   child: ChildProcessWithoutNullStreams,
   options?: { force?: boolean },
 ): boolean {
   if (process.platform === 'win32') {
+    if (child.kill()) return true
     const pid = child.pid
     if (!pid) return false
     try {
@@ -72,9 +80,7 @@ export async function runWorkspaceTerminalCommandWithControl(options: {
   )
   if (!resolved.ok) return resolved
 
-  const shellPath =
-    process.env.SHELL?.trim() ||
-    (process.platform === 'win32' ? 'cmd.exe' : '/bin/bash')
+  const shellPath = resolveWorkspaceShell()
   const shellArgs =
     process.platform === 'win32'
       ? ['/d', '/s', '/c', command]
@@ -92,6 +98,7 @@ export async function runWorkspaceTerminalCommandWithControl(options: {
         TERM: process.env.TERM || 'xterm-256color',
       },
       stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true,
     })
 
     activeByConversationId.set(conversationId, {
@@ -194,4 +201,9 @@ export function cancelWorkspaceTerminalCommand(conversationId: string): {
   }, FORCE_KILL_TIMEOUT_MS)
 
   return { ok: true }
+}
+
+/** Test helper: whether a conversation still has an active shell child. */
+export function isWorkspaceTerminalCommandRunning(conversationId: string): boolean {
+  return activeByConversationId.has(conversationId.trim())
 }
