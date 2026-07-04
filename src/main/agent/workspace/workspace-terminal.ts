@@ -26,7 +26,10 @@ function appendWithLimit(base: string, chunk: string): string {
   return next.slice(next.length - OUTPUT_LIMIT)
 }
 
-function interruptChildProcess(child: ChildProcessWithoutNullStreams): boolean {
+function interruptChildProcess(
+  child: ChildProcessWithoutNullStreams,
+  options?: { force?: boolean },
+): boolean {
   if (process.platform === 'win32') {
     const pid = child.pid
     if (!pid) return false
@@ -39,7 +42,7 @@ function interruptChildProcess(child: ChildProcessWithoutNullStreams): boolean {
       return child.kill()
     }
   }
-  return child.kill('SIGINT')
+  return child.kill(options?.force ? 'SIGKILL' : 'SIGINT')
 }
 
 export async function runWorkspaceTerminalCommandWithControl(options: {
@@ -187,7 +190,7 @@ export function cancelWorkspaceTerminalCommand(conversationId: string): {
   active.forceKillTimer = setTimeout(() => {
     const stillActive = activeByConversationId.get(id)
     if (!stillActive) return
-    interruptChildProcess(stillActive.child)
+    interruptChildProcess(stillActive.child, { force: true })
   }, FORCE_KILL_TIMEOUT_MS)
 
   return { ok: true }
