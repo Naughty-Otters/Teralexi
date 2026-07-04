@@ -32,9 +32,9 @@ jobs:
           - os: macos-latest
             platform: mac
             npm_script: release:mac
-          # - os: windows-latest
-          #   platform: win
-          #   npm_script: release:win
+          - os: windows-latest
+            platform: win
+            npm_script: release:win
 
     steps:
       - name: Check out repository
