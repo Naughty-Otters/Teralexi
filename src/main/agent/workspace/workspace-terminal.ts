@@ -1,4 +1,4 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'child_process'
+import { execFileSync, spawn, type ChildProcessWithoutNullStreams } from 'child_process'
 import { resolvePathInsideWorkspace } from './git-service'
 
 export type WorkspaceTerminalRunResult = {
@@ -24,6 +24,22 @@ function appendWithLimit(base: string, chunk: string): string {
   const next = base + chunk
   if (next.length <= OUTPUT_LIMIT) return next
   return next.slice(next.length - OUTPUT_LIMIT)
+}
+
+function interruptChildProcess(child: ChildProcessWithoutNullStreams): boolean {
+  if (process.platform === 'win32') {
+    const pid = child.pid
+    if (!pid) return false
+    try {
+      execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
+        stdio: 'ignore',
+      })
+      return true
+    } catch {
+      return child.kill()
+    }
+  }
+  return child.kill('SIGINT')
 }
 
 export async function runWorkspaceTerminalCommandWithControl(options: {
@@ -163,10 +179,7 @@ export function cancelWorkspaceTerminalCommand(conversationId: string): {
     return { ok: false, error: 'No running terminal command to cancel.' }
   }
 
-  const interrupted =
-    process.platform === 'win32'
-      ? active.child.kill()
-      : active.child.kill('SIGINT')
+  const interrupted = interruptChildProcess(active.child)
   if (!interrupted) {
     return { ok: false, error: 'Failed to send interrupt signal.' }
   }
@@ -174,7 +187,7 @@ export function cancelWorkspaceTerminalCommand(conversationId: string): {
   active.forceKillTimer = setTimeout(() => {
     const stillActive = activeByConversationId.get(id)
     if (!stillActive) return
-    stillActive.child.kill('SIGKILL')
+    interruptChildProcess(stillActive.child)
   }, FORCE_KILL_TIMEOUT_MS)
 
   return { ok: true }

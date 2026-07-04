@@ -11,17 +11,34 @@ let dir: string
 
 function slowCommand(seconds: number): string {
   if (process.platform === 'win32') {
-    return `ping -n ${seconds + 1} 127.0.0.1`
+    // Node stays alive until the shell is killed; ping/timeout ignore signals on Windows.
+    return `node -e "setInterval(function(){},${seconds * 1000 + 30_000})"`
   }
   return `sleep ${seconds}`
+}
+
+function waitForProcessStart(): Promise<void> {
+  const delay = process.platform === 'win32' ? 500 : 100
+  return new Promise((resolve) => setTimeout(resolve, delay))
+}
+
+function cleanupDir(dirPath: string): void {
+  try {
+    rmSync(dirPath, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+  } catch {
+    // Windows can briefly lock temp dirs while cmd/node exit.
+  }
 }
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'moderatus-terminal-test-'))
 })
 
-afterEach(() => {
-  if (dir) rmSync(dir, { recursive: true, force: true })
+afterEach(async () => {
+  cancelWorkspaceTerminalCommand('cid-busy')
+  cancelWorkspaceTerminalCommand('cid-cancel')
+  await waitForProcessStart()
+  if (dir) cleanupDir(dir)
 })
 
 // ─── runWorkspaceTerminalCommandWithControl ────────────────────────────────────
@@ -144,13 +161,11 @@ describe('cancelWorkspaceTerminalCommand', () => {
       command: slowCommand(10),
     })
 
-    // Wait for process to start, then cancel
-    await new Promise((r) => setTimeout(r, 100))
+    await waitForProcessStart()
     const cancel = cancelWorkspaceTerminalCommand('cid-cancel')
     expect(cancel.ok).toBe(true)
 
     const result = await runPromise
-    // After cancellation, result should reflect interruption or non-zero exit
     expect(result.ok).toBe(false)
-  }, 10_000)
+  }, process.platform === 'win32' ? 20_000 : 10_000)
 })
