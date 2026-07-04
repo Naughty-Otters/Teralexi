@@ -5,21 +5,38 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   runWorkspaceTerminalCommandWithControl,
   cancelWorkspaceTerminalCommand,
+  isWorkspaceTerminalCommandRunning,
 } from './workspace-terminal'
 
 let dir: string
 
-function slowCommand(seconds: number): string {
+function slowCommand(): string {
   if (process.platform === 'win32') {
-    // Node stays alive until the shell is killed; ping/timeout ignore signals on Windows.
-    return `node -e "setInterval(function(){},${seconds * 1000 + 30_000})"`
+    return 'ping -n 1000 127.0.0.1'
   }
-  return `sleep ${seconds}`
+  return 'sleep 10'
 }
 
-function waitForProcessStart(): Promise<void> {
-  const delay = process.platform === 'win32' ? 500 : 100
-  return new Promise((resolve) => setTimeout(resolve, delay))
+async function waitUntilCommandRunning(
+  conversationId: string,
+  timeoutMs = 10_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (!isWorkspaceTerminalCommandRunning(conversationId)) {
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      continue
+    }
+    // Ensure the child stays alive briefly (avoids racing a fast-failing shell).
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    if (isWorkspaceTerminalCommandRunning(conversationId)) return
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+  throw new Error(`Timed out waiting for command ${conversationId} to start`)
+}
+
+async function waitForCommandCleanup(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, process.platform === 'win32' ? 300 : 100))
 }
 
 function cleanupDir(dirPath: string): void {
@@ -37,7 +54,7 @@ beforeEach(() => {
 afterEach(async () => {
   cancelWorkspaceTerminalCommand('cid-busy')
   cancelWorkspaceTerminalCommand('cid-cancel')
-  await waitForProcessStart()
+  await waitForCommandCleanup()
   if (dir) cleanupDir(dir)
 })
 
@@ -120,10 +137,12 @@ describe('runWorkspaceTerminalCommandWithControl', () => {
     const slow = runWorkspaceTerminalCommandWithControl({
       conversationId: 'cid-busy',
       workspaceCwd: dir,
-      command: slowCommand(5),
+      command: slowCommand(),
     })
 
-    // Immediately try another command with the same id
+    await waitUntilCommandRunning('cid-busy')
+
+    // Try another command with the same id
     const conflict = await runWorkspaceTerminalCommandWithControl({
       conversationId: 'cid-busy',
       workspaceCwd: dir,
@@ -158,14 +177,14 @@ describe('cancelWorkspaceTerminalCommand', () => {
     const runPromise = runWorkspaceTerminalCommandWithControl({
       conversationId: 'cid-cancel',
       workspaceCwd: dir,
-      command: slowCommand(10),
+      command: slowCommand(),
     })
 
-    await waitForProcessStart()
+    await waitUntilCommandRunning('cid-cancel')
     const cancel = cancelWorkspaceTerminalCommand('cid-cancel')
     expect(cancel.ok).toBe(true)
 
     const result = await runPromise
     expect(result.ok).toBe(false)
-  }, process.platform === 'win32' ? 20_000 : 10_000)
+  }, 20_000)
 })
