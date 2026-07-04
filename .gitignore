@@ -43,9 +43,6 @@ next-env.d.ts
 
 dist/
 dist/**
-build/*
-!build/icons/
-!build/icons/**
 coverage/
 storage/
 skill-module-cache/*
