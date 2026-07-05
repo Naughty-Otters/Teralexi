@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { applyBuildEnvFromArgv, stripOpenFdeCliArgs } from '../.electron-vite/utils'
 import {
@@ -107,10 +108,29 @@ if (buildingWin) {
   }
 }
 
-const result = spawnSync('electron-builder', args, {
+function resolveElectronBuilderInvocation(cliArgs: string[]): {
+  command: string
+  args: string[]
+  shell: boolean
+} {
+  const cliPath = join(process.cwd(), 'node_modules', 'electron-builder', 'cli.js')
+  if (existsSync(cliPath)) {
+    // Run via Node so argv entries stay intact on Windows (shell:true splits
+    // `--config...publisherName=Zhenqi Li` into separate tokens → "Unknown argument: li").
+    return { command: process.execPath, args: [cliPath, ...cliArgs], shell: false }
+  }
+  return {
+    command: 'electron-builder',
+    args: cliArgs,
+    shell: process.platform === 'win32',
+  }
+}
+
+const electronBuilder = resolveElectronBuilderInvocation(args)
+const result = spawnSync(electronBuilder.command, electronBuilder.args, {
   stdio: 'inherit',
   env: process.env,
-  shell: process.platform === 'win32',
+  shell: electronBuilder.shell,
 })
 
 if (result.status !== 0) {

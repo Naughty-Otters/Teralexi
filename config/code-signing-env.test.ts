@@ -14,6 +14,7 @@ import {
   buildElectronBuilderExtraArgs,
   describeCodeSigningEnv,
   formatAzureTrustedSigningValidationBanner,
+  formatElectronBuilderConfigOverride,
   inspectAzureTrustedSigningEnv,
   isAzureTrustedSigningConfigured,
   isInlineCertificate,
@@ -278,7 +279,7 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
     } as NodeJS.ProcessEnv
 
     expect(buildAzureTrustedSigningExtraArgs(env)).toEqual([
-      '--config.win.azureSignOptions.publisherName=Example Dev',
+      '--config.win.azureSignOptions.publisherName="Example Dev"',
       '--config.win.azureSignOptions.endpoint=https://eus.codesigning.azure.net/',
       '--config.win.azureSignOptions.certificateProfileName=openfde-profile',
       '--config.win.azureSignOptions.codeSigningAccountName=openfde',
@@ -287,6 +288,37 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
     expect(
       buildElectronBuilderExtraArgs(new Map(), { buildingWin: true }, env),
     ).toEqual(buildAzureTrustedSigningExtraArgs(env))
+  })
+
+  it('formatElectronBuilderConfigOverride quotes values with spaces', () => {
+    expect(
+      formatElectronBuilderConfigOverride(
+        'win.azureSignOptions.publisherName',
+        'Zhenqi Li',
+      ),
+    ).toBe('--config.win.azureSignOptions.publisherName="Zhenqi Li"')
+    expect(
+      formatElectronBuilderConfigOverride(
+        'win.azureSignOptions.endpoint',
+        'https://eus.codesigning.azure.net/',
+      ),
+    ).toBe('--config.win.azureSignOptions.endpoint=https://eus.codesigning.azure.net/')
+  })
+
+  it('buildAzureTrustedSigningExtraArgs quotes publisher names with spaces', () => {
+    const env = {
+      AZURE_TENANT_ID: '11111111-1111-1111-1111-111111111111',
+      AZURE_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
+      AZURE_CLIENT_SECRET: 'secret',
+      AZURE_SIGNING_ENDPOINT: 'https://eus.codesigning.azure.net/',
+      AZURE_SIGNING_ACCOUNT_NAME: 'openfde',
+      AZURE_SIGNING_CERTIFICATE_PROFILE: 'openfde-profile',
+      AZURE_SIGNING_PUBLISHER_NAME: 'Zhenqi Li',
+    } as NodeJS.ProcessEnv
+
+    expect(buildAzureTrustedSigningExtraArgs(env)).toContain(
+      '--config.win.azureSignOptions.publisherName="Zhenqi Li"',
+    )
   })
 
   it('applyCodeSigningEnv loads Azure vars from env/.signing.env', () => {

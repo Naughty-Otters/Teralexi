@@ -373,16 +373,39 @@ export function resolveAzureTrustedSigningOptions(
   }
 }
 
+export function formatElectronBuilderConfigOverride(
+  configPath: string,
+  value: string,
+): string {
+  const needsQuotes = /[\s"]/.test(value)
+  const rendered = needsQuotes
+    ? `"${value.replace(/"/g, '\\"')}"`
+    : value
+  return `--config.${configPath}=${rendered}`
+}
+
 export function buildAzureTrustedSigningExtraArgs(
   processEnv: NodeJS.ProcessEnv = process.env,
 ): string[] {
   const options = resolveAzureTrustedSigningOptions(processEnv)
   if (!options) return []
   return [
-    `--config.win.azureSignOptions.publisherName=${options.publisherName}`,
-    `--config.win.azureSignOptions.endpoint=${options.endpoint}`,
-    `--config.win.azureSignOptions.certificateProfileName=${options.certificateProfileName}`,
-    `--config.win.azureSignOptions.codeSigningAccountName=${options.codeSigningAccountName}`,
+    formatElectronBuilderConfigOverride(
+      'win.azureSignOptions.publisherName',
+      options.publisherName,
+    ),
+    formatElectronBuilderConfigOverride(
+      'win.azureSignOptions.endpoint',
+      options.endpoint,
+    ),
+    formatElectronBuilderConfigOverride(
+      'win.azureSignOptions.certificateProfileName',
+      options.certificateProfileName,
+    ),
+    formatElectronBuilderConfigOverride(
+      'win.azureSignOptions.codeSigningAccountName',
+      options.codeSigningAccountName,
+    ),
   ]
 }
 

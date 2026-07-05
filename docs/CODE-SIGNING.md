@@ -125,6 +125,7 @@ Look for this block near the top of the Windows build log (`[code-sign]` lines),
 | Wrong endpoint region | Certificate profile not found |
 | App Registration name instead of Artifact Signing account name | Signing account not found |
 | Publisher name does not match identity validation CN | Signature rejected or publisher mismatch |
+| Publisher name contains spaces (e.g. `Zhenqi Li`) | Must be quoted in electron-builder args — OpenFDE handles this automatically; if you see `Unknown argument: li`, update to latest `run-electron-builder.ts` |
 
 **Local debug**
 
