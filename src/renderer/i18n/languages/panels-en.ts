@@ -171,6 +171,7 @@ export const settingsPanelsEn: SettingsPanelLabels = {
   googleWorkspace: {
     intro:
       'Connect Gmail, Calendar, and Drive for the Google Workspace skill. Use your own Google Cloud OAuth app (Desktop client) and sign in below.',
+    signInSectionTitle: 'Google account',
     clientIdLabel: 'OAuth client ID',
     clientIdPlaceholder: 'Google Cloud OAuth 2.0 Desktop client ID',
     clientIdHint:
@@ -314,12 +315,16 @@ export const settingsPanelsEn: SettingsPanelLabels = {
   agents: {
     tabs: {
       general: 'General',
+      configurations: 'Configurations',
       prompt: 'Instructions',
       toolset: 'ToolSet',
       subagents: 'Sub-agents',
       mcp: 'MCP',
     },
     promptTabs: { skill: 'Instructions', attachments: 'Attachments' },
+    configurationsIntro:
+      'Values are saved to ~/.openfde/config/config.properties and shared across sessions.',
+    configurationsEmpty: 'This agent has no configurable properties.',
     preview: 'Preview',
     edit: 'Edit',
     llmRouting: 'LLM routing',

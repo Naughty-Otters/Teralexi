@@ -1,13 +1,6 @@
 import type { SkillCompiledArtifact } from './skill-compiled-schema'
 import type { SkillCompilationStatus } from './skill-compiled-schema'
-import type {
-  ExecutionSteps,
-  SkillColor,
-  SkillProperties,
-  SkillProvider,
-  SkillSections,
-  SkillTool,
-} from './types'
+import type { SkillSystemPropertySpec } from '@shared/skills/skill-system-properties'
 
 export interface SkillDefinition {
   /** Folder name – used as stable id */
@@ -58,6 +51,8 @@ export interface SkillAgent {
   skillGroupOrder?: number
   skillVariantOrder?: number
   skillGroupPrimary?: boolean
+  /** config.properties keys + form metadata required before chat use. */
+  systemProperties?: SkillSystemPropertySpec[]
   compiledArtifact?: SkillCompiledArtifact
   compilationStatus?: SkillCompilationStatus | 'missing'
 }

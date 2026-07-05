@@ -167,4 +167,35 @@ describe('parseSkillMarkdown', () => {
     )
     expect(parsed?.properties.allowedTools).toEqual(['read_file', 'git_status'])
   })
+
+  it('parses system_properties into systemProperties specs', () => {
+    const properties = [
+      'name: Demo',
+      'model: llama',
+      'provider: ollama',
+      'system_properties: app.google.clientId, app.google.clientSecret',
+      'system_property.app.google.clientId.label: Client ID',
+      'system_property.app.google.clientId.type: string',
+      'system_property.app.google.clientSecret.label: Client secret',
+      'system_property.app.google.clientSecret.type: secret',
+    ].join('\n')
+    const parsed = parseSkillMarkdown(
+      'demo',
+      '/tmp/demo',
+      properties,
+      '## Instructions\nRun',
+    )
+    expect(parsed?.properties.systemProperties).toEqual([
+      {
+        key: 'app.google.clientId',
+        label: 'Client ID',
+        type: 'string',
+      },
+      {
+        key: 'app.google.clientSecret',
+        label: 'Client secret',
+        type: 'secret',
+      },
+    ])
+  })
 })

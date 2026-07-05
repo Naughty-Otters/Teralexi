@@ -215,6 +215,7 @@ export async function buildChildAgentResponseOpts(
       agent.executionSteps?.toolLoop?.maxIterations ?? agent.toolLoopMaxIterations,
     todoMaxRetries: agent.todoMaxRetries,
     skillId: agent.skillId,
+    systemProperties: agent.systemProperties,
     compiledArtifact: agent.compiledArtifact,
     agentId: agent.id,
     availableSet: enabledSkillTools,

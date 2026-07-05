@@ -2,7 +2,7 @@
  * Google Workspace OAuth – loopback flow for Gmail, Calendar, and Drive.
  *
  * End users configure their own Google Cloud OAuth app under
- * Settings → General → Google Workspace (client ID + secret).
+ * Settings → Agents → Google Workspace → Configurations (client ID + secret).
  * Tokens are stored in ~/.openfde/accounts/google-workspace-account.json.
  */
 
@@ -18,7 +18,6 @@ import { getopenfdeAccountsDir } from '@config/openfde-home'
 import {
   GoogleWorkspaceOAuthNotConfiguredError,
   GOOGLE_WORKSPACE_PROP_KEYS,
-  LEGACY_GOOGLE_WORKSPACE_PROP_KEYS,
   isGoogleWorkspaceOAuthConfigured,
 } from '@shared/google-workspace-settings'
 import { createLogger, traceFunction } from '@main/logger'
@@ -75,12 +74,14 @@ export function resolveGoogleWorkspaceOAuthCredentials(): {
   clientId: string
   clientSecret?: string
 } {
-  const clientId =
-    getSystemPropValue(GOOGLE_WORKSPACE_PROP_KEYS.clientId, '').trim() ||
-    getSystemPropValue(LEGACY_GOOGLE_WORKSPACE_PROP_KEYS.clientId, '').trim()
-  const clientSecret =
-    getSystemPropValue(GOOGLE_WORKSPACE_PROP_KEYS.clientSecret, '').trim() ||
-    getSystemPropValue(LEGACY_GOOGLE_WORKSPACE_PROP_KEYS.clientSecret, '').trim()
+  const clientId = getSystemPropValue(
+    GOOGLE_WORKSPACE_PROP_KEYS.clientId,
+    '',
+  ).trim()
+  const clientSecret = getSystemPropValue(
+    GOOGLE_WORKSPACE_PROP_KEYS.clientSecret,
+    '',
+  ).trim()
 
   return {
     clientId,

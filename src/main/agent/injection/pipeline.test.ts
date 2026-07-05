@@ -56,6 +56,13 @@ vi.mock('@main/cache/app-cache', () => ({
   },
 }))
 
+vi.mock('@config/system-prop', () => ({
+  getSystemPropValues: vi.fn(() => ({
+    'app.google.clientId': '123.apps.googleusercontent.com',
+    'app.google.clientSecret': 'secret',
+  })),
+}))
+
 import { appCache } from '@main/cache/app-cache'
 
 function makeToolLoopCtx(overrides: Record<string, unknown> = {}) {
@@ -131,6 +138,32 @@ describe('injector pipeline', () => {
     )
     expect(out).toContain('### Validation rules')
     expect(out).toContain('use run_script for host metrics')
+  })
+
+  it('includes skill system properties when declared on the agent', () => {
+    const out = assembleInstructions(
+      makeToolLoopCtx({
+        opts: {
+          systemProperties: [
+            {
+              key: 'app.google.clientId',
+              label: 'Google OAuth client ID',
+              type: 'string',
+            },
+            {
+              key: 'app.google.clientSecret',
+              label: 'Google OAuth client secret',
+              type: 'secret',
+            },
+          ],
+        },
+      }) as never,
+      'toolLoop',
+    )
+    expect(out).toContain('### Skill configuration properties')
+    expect(out).toContain('`app.google.clientId`')
+    expect(out).toContain('123.apps.googleusercontent.com')
+    expect(out).toContain('configured (value hidden)')
   })
 
   it('includes diagram output instructions for tool loop', () => {

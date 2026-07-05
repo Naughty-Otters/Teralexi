@@ -165,6 +165,7 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
   googleWorkspace: {
     intro:
       '为 Google Workspace 技能连接 Gmail、Calendar 与 Drive。使用您自己的 Google Cloud OAuth 应用（桌面客户端），并在下方登录。',
+    signInSectionTitle: 'Google 账户',
     clientIdLabel: 'OAuth 客户端 ID',
     clientIdPlaceholder: 'Google Cloud OAuth 2.0 桌面客户端 ID',
     clientIdHint: '请在 Google Cloud Console 创建桌面 OAuth 客户端，登录前必填。',
@@ -302,12 +303,16 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
   agents: {
     tabs: {
       general: '常规',
+      configurations: '配置',
       prompt: '指令',
       toolset: 'ToolSet',
       subagents: '子 Agent',
       mcp: 'MCP',
     },
     promptTabs: { skill: '指令', attachments: '附件' },
+    configurationsIntro:
+      '设置会保存到 ~/.openfde/config/config.properties，并在各会话间共享。',
+    configurationsEmpty: '此 Agent 没有可配置项。',
     preview: '预览',
     edit: '编辑',
     llmRouting: 'LLM 路由',

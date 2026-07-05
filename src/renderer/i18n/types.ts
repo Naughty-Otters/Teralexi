@@ -151,6 +151,10 @@ export type AppLabels = {
     copyBubbleContentSuccess: string
     copyBubbleContentFailed: string
     printBubbleContent: string
+    skillSetupTitle: string
+    skillSetupIntro: string
+    skillSetupSave: string
+    skillSetupSaving: string
   }
   monitor: {
     title: string

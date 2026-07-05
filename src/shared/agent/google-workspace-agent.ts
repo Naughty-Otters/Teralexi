@@ -26,10 +26,10 @@ export function googleWorkspaceComposerHint(options: {
 }): string | null {
   if (!options.agentIsGoogleWorkspace) return null
   if (!options.isSignedIn) {
-    return 'Sign in with Google Workspace in Settings → General → Google Workspace to use Gmail, Calendar, and Drive.'
+    return 'Sign in with Google Workspace under Settings → Agents → Google Workspace → Configurations.'
   }
   if (!options.hasWorkspaceAccess) {
-    return 'Google Workspace permissions are missing. Sign out and sign in again in Settings → General → Google Workspace.'
+    return 'Google Workspace permissions are missing. Sign out and sign in again under Settings → Agents → Google Workspace → Configurations.'
   }
   return null
 }

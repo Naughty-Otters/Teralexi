@@ -60,6 +60,9 @@ export function skillToAgent(skill: SkillDefinition): SkillAgent {
           skillGroupPrimary: skill.properties.skillGroupPrimary,
         }
       : {}),
+    ...(skill.properties.systemProperties?.length
+      ? { systemProperties: [...skill.properties.systemProperties] }
+      : {}),
     skillsPrompt: skillsText,
     executionSteps: needsExecutionSteps
       ? {

@@ -132,6 +132,7 @@ export type SettingsPanelLabels = {
   }
   googleWorkspace: {
     intro: string
+    signInSectionTitle: string
     clientIdLabel: string
     clientIdPlaceholder: string
     clientIdHint: string
@@ -253,12 +254,15 @@ export type SettingsPanelLabels = {
   agents: {
     tabs: {
       general: string
+      configurations: string
       prompt: string
       toolset: string
       subagents: string
       mcp: string
     }
     promptTabs: { skill: string; attachments: string }
+    configurationsIntro: string
+    configurationsEmpty: string
     preview: string
     edit: string
     llmRouting: string

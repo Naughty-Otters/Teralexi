@@ -159,6 +159,11 @@ export const lang: AppLocaleBundle = {
     copyBubbleContentSuccess: '已复制到剪贴板',
     copyBubbleContentFailed: '无法复制内容',
     printBubbleContent: '打印内容',
+    skillSetupTitle: '配置 {skillName}',
+    skillSetupIntro:
+      '此技能需要先保存本地配置才能开始聊天。设置会写入 ~/.openfde/config/config.properties，不会加入对话记录。',
+    skillSetupSave: '保存并继续',
+    skillSetupSaving: '保存中…',
   },
   monitor: {
     title: 'Token 监控',
