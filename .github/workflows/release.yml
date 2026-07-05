@@ -29,9 +29,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - os: macos-latest
-          #   platform: mac
-          #   npm_script: release:mac
+          - os: macos-latest
+            platform: mac
+            npm_script: release:mac
           - os: windows-latest
             platform: win
             npm_script: release:win
@@ -61,8 +61,8 @@ jobs:
         if: runner.os == 'Windows'
         run: npm install --include=optional sharp
 
-      # - name: Run unit tests
-      #   run: npm run test:unit
+      - name: Run unit tests
+        run: npm run test:unit
 
       - name: Build production installers (env/.prod.env)
         env:
