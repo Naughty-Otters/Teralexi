@@ -90,7 +90,7 @@ AZURE_SIGNING_PUBLISHER_NAME = 'Your Legal Name'
 ```
 
 - `AZURE_SIGNING_PUBLISHER_NAME` must match the **Common Name** from your identity validation (your legal name or company).
-- `AZURE_SIGNING_ENDPOINT` is the regional endpoint you chose when creating the certificate profile (e.g. `https://neu.codesigning.azure.net/`, `https://eus.codesigning.azure.net/`).
+- `AZURE_SIGNING_ENDPOINT` is the **Account URI** for your Artifact Signing account — shown on the account **Overview** page after you create it. It is tied to the Azure **region** you picked when creating the account (not something you invent). Examples: `https://eus.codesigning.azure.net/`, `https://wus2.codesigning.azure.net/`, `https://neu.codesigning.azure.net/`.
 - `AZURE_SIGNING_ACCOUNT_NAME` is the **Artifact Signing account** name (not the App Registration name).
 - `AZURE_SIGNING_CERTIFICATE_PROFILE` is the **certificate profile** name inside that account.
 
@@ -103,7 +103,7 @@ When all Azure variables are set, OpenFDE passes `win.azureSignOptions` to elect
 | `AZURE_TENANT_ID` | `AZURE_TENANT_ID` | Microsoft Entra ID → Overview → **Tenant ID** (directory ID) |
 | `AZURE_CLIENT_ID` | `AZURE_CLIENT_ID` | App Registration → Overview → **Application (client) ID** |
 | `AZURE_CLIENT_SECRET` | `AZURE_CLIENT_SECRET` | App Registration → Certificates & secrets → secret **Value** |
-| `AZURE_SIGNING_ENDPOINT` | `AZURE_SIGNING_ENDPOINT` | e.g. `https://eus.codesigning.azure.net/` |
+| `AZURE_SIGNING_ENDPOINT` | `AZURE_SIGNING_ENDPOINT` | Artifact Signing account → **Overview** → **Account URI** (see below) |
 | `AZURE_SIGNING_ACCOUNT_NAME` | `AZURE_SIGNING_ACCOUNT_NAME` | Artifact Signing **account** resource name |
 | `AZURE_SIGNING_CERTIFICATE_PROFILE` | `AZURE_SIGNING_CERTIFICATE_PROFILE` | Certificate **profile** name inside that account |
 | `AZURE_SIGNING_PUBLISHER_NAME` | `AZURE_SIGNING_PUBLISHER_NAME` | Legal name from identity validation (certificate CN) |
@@ -127,15 +127,123 @@ Look for this block near the top of the Windows build log (`[code-sign]` lines),
 | Publisher name does not match identity validation CN | Signature rejected or publisher mismatch |
 | Publisher name contains spaces (e.g. `Zhenqi Li`) | Must be quoted in electron-builder args — OpenFDE handles this automatically; if you see `Unknown argument: li`, update to latest `run-electron-builder.ts` |
 
+#### Troubleshooting: `403 (Forbidden)` on `Submitting digest for signing...`
+
+If the build log shows Trusted Signing reached `Submitting digest for signing...` then failed with:
+
+```
+Azure.RequestFailedException: Service request failed.
+Status: 403 (Forbidden)
+...
+SignTool Error: An unexpected internal error has occurred.
+```
+
+**Authentication worked** (tenant/client/secret are valid), but Azure **rejected the sign request**. This is almost always IAM or resource metadata — not an OpenFDE/electron-builder bug.
+
+**Checklist (in order):**
+
+1. **Role on the App Registration, not your user account**  
+   GitHub Actions signs as the **App Registration service principal** (`AZURE_CLIENT_ID` + `AZURE_CLIENT_SECRET`). That app must have the role — not only your personal Microsoft account.
+
+   - Azure Portal → **Artifact Signing account** (the resource, not Entra ID)
+   - **Access control (IAM)** → **Role assignments**
+   - Confirm an assignment exists for role **Artifact Signing Certificate Profile Signer** (formerly *Trusted Signing Certificate Profile Signer*)
+   - **Member** must be your **App Registration** (search by app name under *User, group, or service principal* — apps only appear after you type the name)
+
+   If the role is only on your user account, local portal tests may work but CI will 403.
+
+2. **Role scope = Artifact Signing account**  
+   The Signer role must be assigned **on the Artifact Signing account resource**. Assigning it only at subscription or resource-group scope is often insufficient.
+
+3. **Endpoint region matches the account**  
+   Compare the `Endpoint` in the build log metadata with the region shown on the certificate profile in Azure Portal. Examples:
+   - East US → `https://eus.codesigning.azure.net/`
+   - West US 2 → `https://wus2.codesigning.azure.net/`
+   - North Europe → `https://neu.codesigning.azure.net/`  
+   A region mismatch commonly produces **403** (not 404).
+
+4. **Account and profile names are exact (case-sensitive)**  
+   In the log metadata block, verify:
+   - `CodeSigningAccountName` = Artifact Signing **account** resource name (Azure Portal → account → Overview → name)
+   - `CertificateProfileName` = **Certificate profiles** tab → profile name  
+   Do **not** use the App Registration name, email, or display name.
+
+5. **Identity validation + profile status**  
+   Artifact Signing account → **Identity validations** → status **Completed**  
+   **Certificate profiles** → profile status **Active** (not pending / expired)
+
+6. **Client secret not expired**  
+   App Registration → Certificates & secrets → secret still valid; recreate and update `AZURE_CLIENT_SECRET` in GitHub if expired.
+
+**Portal verification**
+
+```
+Artifact Signing account
+  → Access control (IAM)
+  → Role assignments
+  → Filter: "Artifact Signing Certificate Profile Signer"
+  → Member column should show your App Registration name (e.g. openfde-code-sign-app)
+```
+
+**Still 403?** In Azure Portal, open the App Registration → **Enterprise applications** → find the service principal → copy its **Object ID** and confirm that exact principal appears in the IAM role assignment on the signing account. Re-assign the Signer role to the app if needed, wait a few minutes for propagation, then re-run the workflow.
+
 **Local debug**
 
 ```bash
-# Dry-run: run a Windows build locally on a machine with env/.signing.env filled in
+# 1) Verify all AZURE_* vars + Entra token (+ optional ARM profile check; works on Mac/Linux/Windows)
+npm run verify:azure-signing
+
+# 2) Dry-run Windows build config banner (Mac cannot sign; only checks env wiring)
 npm run build:win64:sit
 # Scan output for the AZURE TRUSTED SIGNING banner
 ```
 
+`npm run verify:azure-signing` loads `env/.signing.env` (or exported env vars) and checks:
+
+| Step | What it proves |
+| --- | --- |
+| Local banner | All 7 vars present; GUID/endpoint format valid |
+| Entra token (required) | `AZURE_TENANT_ID` + `AZURE_CLIENT_ID` + `AZURE_CLIENT_SECRET` are valid |
+| ARM profile lookup (optional) | Account + profile exist when `AZURE_SUBSCRIPTION_ID` + `AZURE_RESOURCE_GROUP` are set |
+
+The signing data plane has no public “GET profile” API, so step 2 does **not** call `eus.codesigning.azure.net` directly (that used to return HTTP 400 and falsely fail). After the codesigning token passes, confirm **Account URI**, account name, and profile name in Azure Portal.
+
+It does **not** sign an `.exe` — TrustedSigning/signtool only runs on Windows. After `verify:azure-signing` passes on Mac, CI signing failures are usually IAM (403) or publisher-name mismatch, not missing secrets.
+
+**Optional: curl token test (no repo script)**
+
+```bash
+source env/.signing.env  # or export vars manually
+curl -sS -X POST "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
+  -d "client_id=${AZURE_CLIENT_ID}" \
+  -d "client_secret=${AZURE_CLIENT_SECRET}" \
+  -d "scope=https://codesigning.azure.net/.default" \
+  -d "grant_type=client_credentials" | jq -r '.access_token // .error_description'
+```
+
+A non-empty `access_token` means tenant/client/secret are good.
+
 On GitHub Actions, confirm each `AZURE_*` secret exists in the job environment (`mac_signs` for CI staging builds, `release` for production releases) and that the Windows matrix job receives non-empty values (secrets are only injected on `matrix.platform == 'win'`).
+
+#### Where to find the Endpoint (`AZURE_SIGNING_ENDPOINT`)
+
+1. [Azure Portal](https://portal.azure.com) → search **Artifact Signing** (or *Trusted Signing*)
+2. Open your **Artifact Signing account** (the resource you created, e.g. `openfde`)
+3. On **Overview**, find **Account URI** — that is your endpoint
+
+Copy it exactly into `AZURE_SIGNING_ENDPOINT` / GitHub secret `AZURE_SIGNING_ENDPOINT`. A trailing slash is fine (`https://eus.codesigning.azure.net/`).
+
+If you no longer see Overview, the URI is also in the resource **JSON** view as `accountUri`, or you can infer it from the **Location/Region** where you created the account:
+
+| Azure region (examples) | Endpoint URI |
+| --- | --- |
+| East US | `https://eus.codesigning.azure.net/` |
+| West US 2 | `https://wus2.codesigning.azure.net/` |
+| West Central US | `https://wcus.codesigning.azure.net/` |
+| North Europe | `https://neu.codesigning.azure.net/` |
+| West Europe | `https://weu.codesigning.azure.net/` |
+
+The endpoint **must match** the region where the account and certificate profile were created. A wrong region often causes **403 Forbidden** during signing.
 
 ## Friendly alias reference
 
