@@ -29,6 +29,208 @@ export const ELECTRON_BUILDER_SIGNING_KEYS = [
 export type ElectronBuilderSigningKey =
   (typeof ELECTRON_BUILDER_SIGNING_KEYS)[number]
 
+/** Azure Trusted Signing (Windows) — see docs/CODE-SIGNING.md. */
+export const AZURE_TRUSTED_SIGNING_ENV_KEYS = [
+  'AZURE_TENANT_ID',
+  'AZURE_CLIENT_ID',
+  'AZURE_CLIENT_SECRET',
+  'AZURE_SIGNING_ENDPOINT',
+  'AZURE_SIGNING_ACCOUNT_NAME',
+  'AZURE_SIGNING_CERTIFICATE_PROFILE',
+  'AZURE_SIGNING_PUBLISHER_NAME',
+] as const
+
+export type AzureTrustedSigningEnvKey =
+  (typeof AZURE_TRUSTED_SIGNING_ENV_KEYS)[number]
+
+export type AzureTrustedSigningOptions = {
+  publisherName: string
+  endpoint: string
+  certificateProfileName: string
+  codeSigningAccountName: string
+}
+
+export type AzureTrustedSigningFieldStatus = {
+  key: AzureTrustedSigningEnvKey
+  label: string
+  hint: string
+  present: boolean
+  formatWarning?: string
+}
+
+export type AzureTrustedSigningInspection = {
+  configured: boolean
+  anyPresent: boolean
+  fields: AzureTrustedSigningFieldStatus[]
+  missingKeys: AzureTrustedSigningEnvKey[]
+  formatWarnings: string[]
+}
+
+const AZURE_TRUSTED_SIGNING_FIELD_META: Record<
+  AzureTrustedSigningEnvKey,
+  { label: string; hint: string }
+> = {
+  AZURE_TENANT_ID: {
+    label: 'Entra tenant ID',
+    hint: 'Azure Portal → Microsoft Entra ID → Overview → Tenant ID (directory ID, not subscription ID)',
+  },
+  AZURE_CLIENT_ID: {
+    label: 'App Registration client ID',
+    hint: 'Azure Portal → App registrations → your app → Overview → Application (client) ID — not Object ID',
+  },
+  AZURE_CLIENT_SECRET: {
+    label: 'App Registration client secret',
+    hint: 'App registrations → Certificates & secrets → client secret Value (copy at creation; Secret ID is wrong)',
+  },
+  AZURE_SIGNING_ENDPOINT: {
+    label: 'Artifact Signing endpoint',
+    hint: 'Regional URL from certificate profile setup, e.g. https://eus.codesigning.azure.net/ or https://neu.codesigning.azure.net/',
+  },
+  AZURE_SIGNING_ACCOUNT_NAME: {
+    label: 'Artifact Signing account name',
+    hint: 'Azure Portal → Artifact Signing account resource name (not the App Registration name)',
+  },
+  AZURE_SIGNING_CERTIFICATE_PROFILE: {
+    label: 'Certificate profile name',
+    hint: 'Artifact Signing account → Certificate profiles → profile name',
+  },
+  AZURE_SIGNING_PUBLISHER_NAME: {
+    label: 'Publisher name (certificate CN)',
+    hint: 'Exact legal name from completed identity validation (Common Name on the certificate)',
+  },
+}
+
+function validateAzureTrustedSigningFieldFormat(
+  key: AzureTrustedSigningEnvKey,
+  value: string,
+): string | undefined {
+  if (key === 'AZURE_SIGNING_ENDPOINT') {
+    if (!/^https:\/\/[a-z0-9-]+\.codesigning\.azure\.net\/?$/i.test(value)) {
+      return 'Expected https://<region>.codesigning.azure.net/ (trailing slash optional)'
+    }
+  }
+  if (key === 'AZURE_TENANT_ID' || key === 'AZURE_CLIENT_ID') {
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        value,
+      )
+    ) {
+      return 'Expected a GUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+    }
+  }
+  return undefined
+}
+
+export function inspectAzureTrustedSigningEnv(
+  processEnv: NodeJS.ProcessEnv = process.env,
+): AzureTrustedSigningInspection {
+  const azure = getAzureTrustedSigningEnv(processEnv)
+  const fields: AzureTrustedSigningFieldStatus[] = []
+  const missingKeys: AzureTrustedSigningEnvKey[] = []
+  const formatWarnings: string[] = []
+
+  for (const key of AZURE_TRUSTED_SIGNING_ENV_KEYS) {
+    const value = azure[key]?.trim() ?? ''
+    const present = Boolean(value)
+    const meta = AZURE_TRUSTED_SIGNING_FIELD_META[key]
+    const formatWarning = present
+      ? validateAzureTrustedSigningFieldFormat(key, value)
+      : undefined
+
+    fields.push({
+      key,
+      label: meta.label,
+      hint: meta.hint,
+      present,
+      formatWarning,
+    })
+    if (!present) missingKeys.push(key)
+    if (formatWarning) {
+      formatWarnings.push(`${key}: ${formatWarning}`)
+    }
+  }
+
+  const anyPresent = fields.some((field) => field.present)
+  const configured =
+    missingKeys.length === 0 && formatWarnings.length === 0
+
+  return {
+    configured,
+    anyPresent,
+    fields,
+    missingKeys,
+    formatWarnings,
+  }
+}
+
+export function formatAzureTrustedSigningValidationBanner(
+  report: AzureTrustedSigningInspection,
+): string {
+  const lines: string[] = []
+  const rule = '='.repeat(72)
+
+  if (report.configured) {
+    lines.push(rule)
+    lines.push('AZURE TRUSTED SIGNING: all required variables are present')
+    lines.push(rule)
+    for (const field of report.fields) {
+      lines.push(`  OK  ${field.key} (${field.label})`)
+    }
+    lines.push(rule)
+    return lines.join('\n')
+  }
+
+  lines.push(rule)
+  lines.push('AZURE TRUSTED SIGNING: configuration incomplete — signing will NOT use Azure')
+  lines.push(rule)
+  for (const field of report.fields) {
+    const status = field.present ? 'OK ' : 'MISSING'
+    lines.push(`  ${status}  ${field.key}`)
+    lines.push(`         ${field.label}`)
+    lines.push(`         Where: ${field.hint}`)
+    if (field.formatWarning) {
+      lines.push(`         Format warning: ${field.formatWarning}`)
+    }
+  }
+  if (report.missingKeys.length > 0) {
+    lines.push('')
+    lines.push(
+      `Missing (${report.missingKeys.length}/${AZURE_TRUSTED_SIGNING_ENV_KEYS.length}): ${report.missingKeys.join(', ')}`,
+    )
+  }
+  lines.push('')
+  lines.push(
+    'Fix: add every AZURE_* variable to env/.signing.env or GitHub Actions secrets',
+  )
+  lines.push('     (release + mac_signs environments for CI). See docs/CODE-SIGNING.md')
+  lines.push(
+    'Fallback: build continues with WIN_SIGN_CERTIFICATE (.pfx) if set, otherwise self-signed/unsigned.',
+  )
+  lines.push(rule)
+  return lines.join('\n')
+}
+
+/** Log a prominent Azure validation report before the Windows build continues. */
+export function logAzureTrustedSigningValidation(
+  processEnv: NodeJS.ProcessEnv = process.env,
+  logger: {
+    info: (msg: string) => void
+    warn: (msg: string) => void
+  } = { info: (m) => console.log(m), warn: (m) => console.warn(m) },
+): boolean {
+  const report = inspectAzureTrustedSigningEnv(processEnv)
+  if (!report.anyPresent) return false
+
+  const banner = formatAzureTrustedSigningValidationBanner(report)
+  if (report.configured) {
+    logger.info(`[code-sign]\n${banner}`)
+    return true
+  }
+
+  logger.warn(`[code-sign]\n${banner}`)
+  return false
+}
+
 /** Friendly aliases for `env/.signing.env` and shell env (build-time only). */
 export const CODE_SIGNING_ENV_ALIASES: Record<string, ElectronBuilderSigningKey> =
   {
@@ -112,9 +314,76 @@ export function parseCodeSigningEnvFile(content: string): Map<string, string> {
       )
     ) {
       entries.set(rawKey, rawValue)
+      continue
+    }
+    if (
+      AZURE_TRUSTED_SIGNING_ENV_KEYS.includes(
+        rawKey as AzureTrustedSigningEnvKey,
+      )
+    ) {
+      entries.set(rawKey, rawValue)
     }
   }
   return entries
+}
+
+function loadAzureTrustedSigningEnvFromFile(
+  cwd = process.cwd(),
+): Map<string, string> {
+  const merged = new Map<string, string>()
+  for (const filePath of resolveCodeSigningEnvFilePaths(cwd)) {
+    if (!existsSync(filePath)) continue
+    const parsed = parseCodeSigningEnvFile(readFileSync(filePath, 'utf-8'))
+    for (const key of AZURE_TRUSTED_SIGNING_ENV_KEYS) {
+      const value = parsed.get(key)?.trim()
+      if (value) merged.set(key, value)
+    }
+  }
+  return merged
+}
+
+export function getAzureTrustedSigningEnv(
+  processEnv: NodeJS.ProcessEnv = process.env,
+): Partial<Record<AzureTrustedSigningEnvKey, string>> {
+  const fromFile = loadAzureTrustedSigningEnvFromFile()
+  const merged: Partial<Record<AzureTrustedSigningEnvKey, string>> = {}
+  for (const key of AZURE_TRUSTED_SIGNING_ENV_KEYS) {
+    const value = processEnv[key]?.trim() || fromFile.get(key)?.trim()
+    if (value) merged[key] = stripEnvValue(value)
+  }
+  return merged
+}
+
+export function isAzureTrustedSigningConfigured(
+  processEnv: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return inspectAzureTrustedSigningEnv(processEnv).configured
+}
+
+export function resolveAzureTrustedSigningOptions(
+  processEnv: NodeJS.ProcessEnv = process.env,
+): AzureTrustedSigningOptions | null {
+  if (!isAzureTrustedSigningConfigured(processEnv)) return null
+  const azure = getAzureTrustedSigningEnv(processEnv)
+  return {
+    publisherName: azure.AZURE_SIGNING_PUBLISHER_NAME!.trim(),
+    endpoint: azure.AZURE_SIGNING_ENDPOINT!.trim(),
+    certificateProfileName: azure.AZURE_SIGNING_CERTIFICATE_PROFILE!.trim(),
+    codeSigningAccountName: azure.AZURE_SIGNING_ACCOUNT_NAME!.trim(),
+  }
+}
+
+export function buildAzureTrustedSigningExtraArgs(
+  processEnv: NodeJS.ProcessEnv = process.env,
+): string[] {
+  const options = resolveAzureTrustedSigningOptions(processEnv)
+  if (!options) return []
+  return [
+    `--config.win.azureSignOptions.publisherName=${options.publisherName}`,
+    `--config.win.azureSignOptions.endpoint=${options.endpoint}`,
+    `--config.win.azureSignOptions.certificateProfileName=${options.certificateProfileName}`,
+    `--config.win.azureSignOptions.codeSigningAccountName=${options.codeSigningAccountName}`,
+  ]
 }
 
 export function loadCodeSigningEnv(
@@ -148,12 +417,22 @@ export function isMacCodeSigningConfigured(
   return Boolean(env.get('CSC_NAME')?.trim() || env.get('CSC_LINK')?.trim())
 }
 
-export function isWindowsCodeSigningConfigured(
+export function isWindowsPfxSigningConfigured(
   env: Map<string, string> = loadCodeSigningEnv(),
 ): boolean {
   return Boolean(
     env.get('WIN_CSC_LINK')?.trim() ||
       (process.platform === 'win32' && env.get('CSC_LINK')?.trim()),
+  )
+}
+
+export function isWindowsCodeSigningConfigured(
+  env: Map<string, string> = loadCodeSigningEnv(),
+  processEnv: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return (
+    isWindowsPfxSigningConfigured(env) ||
+    isAzureTrustedSigningConfigured(processEnv)
   )
 }
 
@@ -219,6 +498,13 @@ export function applyCodeSigningEnv(
     if (winPass) processEnv.CSC_KEY_PASSWORD = winPass
   }
 
+  const azureFromFile = loadAzureTrustedSigningEnvFromFile()
+  for (const key of AZURE_TRUSTED_SIGNING_ENV_KEYS) {
+    if (processEnv[key]?.trim()) continue
+    const value = azureFromFile.get(key)?.trim()
+    if (value) processEnv[key] = stripEnvValue(value)
+  }
+
   return signingEnv
 }
 
@@ -250,6 +536,9 @@ const WIN_SIGNING_VARS: SigningVarSpec[] = [
   { alias: 'WIN_SIGN_CERTIFICATE_PASSWORD', key: 'WIN_CSC_KEY_PASSWORD' },
 ]
 
+const AZURE_SIGNING_VARS: { alias: AzureTrustedSigningEnvKey }[] =
+  AZURE_TRUSTED_SIGNING_ENV_KEYS.map((alias) => ({ alias }))
+
 /**
  * Inspect the resolved signing env and produce human-readable diagnostics that
  * report which required variables are present/missing per target platform.
@@ -258,6 +547,7 @@ const WIN_SIGNING_VARS: SigningVarSpec[] = [
 export function describeCodeSigningEnv(
   env: Map<string, string> = loadCodeSigningEnv(),
   options: { buildingMac?: boolean; buildingWin?: boolean } = {},
+  processEnv: NodeJS.ProcessEnv = process.env,
 ): CodeSigningDiagnostic[] {
   const out: CodeSigningDiagnostic[] = []
   const has = (key: string): boolean => Boolean(env.get(key)?.trim())
@@ -318,20 +608,49 @@ export function describeCodeSigningEnv(
   }
 
   if (options.buildingWin) {
-    out.push({ level: 'info', message: 'Windows signing variables:' })
+    out.push({ level: 'info', message: 'Windows Authenticode (.pfx) variables:' })
     for (const spec of WIN_SIGNING_VARS) out.push(line(spec))
 
-    if (!isWindowsCodeSigningConfigured(env)) {
+    out.push({ level: 'info', message: 'Azure Trusted Signing variables:' })
+    const azure = getAzureTrustedSigningEnv(processEnv)
+    for (const spec of AZURE_SIGNING_VARS) {
+      out.push({
+        level: 'info',
+        message: `  ${spec.alias}: ${azure[spec.alias]?.trim() ? 'present' : 'MISSING'}`,
+      })
+    }
+
+    if (!isWindowsCodeSigningConfigured(env, processEnv)) {
       out.push({
         level: 'warn',
         message:
-          'Windows signing NOT configured (set WIN_SIGN_CERTIFICATE); build will use a self-signed certificate or be unsigned.',
+          'Windows signing NOT configured (set WIN_SIGN_CERTIFICATE or Azure Trusted Signing env vars); build will use a self-signed certificate or be unsigned.',
+      })
+    } else if (
+      isAzureTrustedSigningConfigured(processEnv) &&
+      isWindowsPfxSigningConfigured(env)
+    ) {
+      out.push({
+        level: 'warn',
+        message:
+          'Both Azure Trusted Signing and WIN_SIGN_CERTIFICATE are configured; Azure Trusted Signing will be used.',
       })
     } else if (has('WIN_CSC_LINK') && !has('WIN_CSC_KEY_PASSWORD')) {
       out.push({
         level: 'warn',
         message:
           'WIN_SIGN_CERTIFICATE provided but WIN_SIGN_CERTIFICATE_PASSWORD is MISSING; signing may fail.',
+      })
+    } else if (
+      !isAzureTrustedSigningConfigured(processEnv) &&
+      AZURE_SIGNING_VARS.some((spec) => azure[spec.alias]?.trim())
+    ) {
+      const missing = AZURE_SIGNING_VARS.filter(
+        (spec) => !azure[spec.alias]?.trim(),
+      ).map((spec) => spec.alias)
+      out.push({
+        level: 'warn',
+        message: `Azure Trusted Signing PARTIALLY configured; missing: ${missing.join(', ')}. Falling back to .pfx or unsigned.`,
       })
     }
   }
@@ -347,8 +666,9 @@ export function logCodeSigningEnv(
     info: (msg: string) => void
     warn: (msg: string) => void
   } = { info: (m) => console.log(m), warn: (m) => console.warn(m) },
+  processEnv: NodeJS.ProcessEnv = process.env,
 ): CodeSigningDiagnostic[] {
-  const diagnostics = describeCodeSigningEnv(env, options)
+  const diagnostics = describeCodeSigningEnv(env, options, processEnv)
   for (const d of diagnostics) {
     const message = `[code-sign] ${d.message}`
     if (d.level === 'warn') logger.warn(message)
@@ -360,6 +680,7 @@ export function logCodeSigningEnv(
 export function buildElectronBuilderExtraArgs(
   env: Map<string, string> = loadCodeSigningEnv(),
   options?: { buildingMac?: boolean; buildingWin?: boolean },
+  processEnv: NodeJS.ProcessEnv = process.env,
 ): string[] {
   const args: string[] = []
   if (isMacNotarizeConfigured(env)) {
@@ -376,8 +697,11 @@ export function buildElectronBuilderExtraArgs(
   if (options?.buildingMac && !isMacCodeSigningConfigured(env)) {
     args.push('--config.mac.hardenedRuntime=false')
   }
+  if (options?.buildingWin && isAzureTrustedSigningConfigured(processEnv)) {
+    args.push(...buildAzureTrustedSigningExtraArgs(processEnv))
+  }
   // Unsigned Windows builds must skip Authenticode signing (build.json default is true).
-  if (options?.buildingWin && !isWindowsCodeSigningConfigured(env)) {
+  if (options?.buildingWin && !isWindowsCodeSigningConfigured(env, processEnv)) {
     args.push('--config.win.signAndEditExecutable=false')
   }
   return args
@@ -395,7 +719,7 @@ export function applyUnsignedPlatformBuildPolicy(
   if (options.buildingMac && !isMacCodeSigningConfigured(signingEnv)) {
     processEnv.CSC_IDENTITY_AUTO_DISCOVERY = 'false'
   }
-  if (options.buildingWin && !isWindowsCodeSigningConfigured(signingEnv)) {
+  if (options.buildingWin && !isWindowsCodeSigningConfigured(signingEnv, processEnv)) {
     processEnv.CSC_IDENTITY_AUTO_DISCOVERY = 'false'
   }
 }

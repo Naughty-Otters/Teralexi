@@ -62,7 +62,7 @@ MAC_APPLE_TEAM_ID = 'TEAMID'
 
 When all three Apple vars are set, builds pass `--config.mac.notarize=true` automatically.
 
-### Windows (Authenticode)
+### Windows (Authenticode `.pfx`)
 
 ```properties
 WIN_SIGN_CERTIFICATE = '~/certs/openfde.pfx'
@@ -70,6 +70,71 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'your-pfx-password'
 ```
 
 On Windows runners / local Windows builds, `WIN_SIGN_*` is mapped to `CSC_LINK` for electron-builder. When cross-building Windows from macOS, electron-builder uses `WIN_CSC_LINK` directly.
+
+### Windows (Azure Trusted Signing — remote, no `.pfx`)
+
+Use [Azure Artifact Signing](https://learn.microsoft.com/en-us/azure/trusted-signing/) (formerly Trusted Signing) when you do not want to store a `.pfx` in CI. electron-builder 26+ signs via the `TrustedSigning` PowerShell module and Microsoft Entra app credentials.
+
+**One-time Azure setup** (portal): register `Microsoft.CodeSigning`, create an Artifact Signing account + certificate profile, complete identity validation, create an App Registration with the **Artifact Signing Certificate Profile Signer** role, and create a client secret. See [Hendrik Erz’s guide](https://hendrik-erz.de/post/code-signing-with-azure-trusted-signing-on-github-actions).
+
+**Local `env/.signing.env`:**
+
+```properties
+AZURE_TENANT_ID = 'your-entra-tenant-id'
+AZURE_CLIENT_ID = 'your-app-registration-client-id'
+AZURE_CLIENT_SECRET = 'your-client-secret-value'
+AZURE_SIGNING_ENDPOINT = 'https://eus.codesigning.azure.net/'
+AZURE_SIGNING_ACCOUNT_NAME = 'your-artifact-signing-account'
+AZURE_SIGNING_CERTIFICATE_PROFILE = 'your-certificate-profile'
+AZURE_SIGNING_PUBLISHER_NAME = 'Your Legal Name'
+```
+
+- `AZURE_SIGNING_PUBLISHER_NAME` must match the **Common Name** from your identity validation (your legal name or company).
+- `AZURE_SIGNING_ENDPOINT` is the regional endpoint you chose when creating the certificate profile (e.g. `https://neu.codesigning.azure.net/`, `https://eus.codesigning.azure.net/`).
+- `AZURE_SIGNING_ACCOUNT_NAME` is the **Artifact Signing account** name (not the App Registration name).
+- `AZURE_SIGNING_CERTIFICATE_PROFILE` is the **certificate profile** name inside that account.
+
+When all Azure variables are set, OpenFDE passes `win.azureSignOptions` to electron-builder and skips the `.pfx` / self-signed paths. If both Azure and `WIN_SIGN_*` are configured, **Azure takes precedence**.
+
+#### Required variables (all 7 must be present)
+
+| Variable | Secret name (GitHub) | Where to find it |
+| --- | --- | --- |
+| `AZURE_TENANT_ID` | `AZURE_TENANT_ID` | Microsoft Entra ID → Overview → **Tenant ID** (directory ID) |
+| `AZURE_CLIENT_ID` | `AZURE_CLIENT_ID` | App Registration → Overview → **Application (client) ID** |
+| `AZURE_CLIENT_SECRET` | `AZURE_CLIENT_SECRET` | App Registration → Certificates & secrets → secret **Value** |
+| `AZURE_SIGNING_ENDPOINT` | `AZURE_SIGNING_ENDPOINT` | e.g. `https://eus.codesigning.azure.net/` |
+| `AZURE_SIGNING_ACCOUNT_NAME` | `AZURE_SIGNING_ACCOUNT_NAME` | Artifact Signing **account** resource name |
+| `AZURE_SIGNING_CERTIFICATE_PROFILE` | `AZURE_SIGNING_CERTIFICATE_PROFILE` | Certificate **profile** name inside that account |
+| `AZURE_SIGNING_PUBLISHER_NAME` | `AZURE_SIGNING_PUBLISHER_NAME` | Legal name from identity validation (certificate CN) |
+
+If **any** `AZURE_*` variable is set, the build script validates **all seven** before signing and prints a prominent banner in the log:
+
+- **All present** → `AZURE TRUSTED SIGNING: all required variables are present` (each field listed as `OK`)
+- **Any missing** → `AZURE TRUSTED SIGNING: configuration incomplete` with per-field `OK` / `MISSING`, where to find each value, and which secrets are absent. The build **continues** but falls back to `.pfx` or self-signed/unsigned signing.
+
+Look for this block near the top of the Windows build log (`[code-sign]` lines), right after dependency install and before `electron-builder` runs.
+
+**Common mistakes**
+
+| Mistake | Symptom |
+| --- | --- |
+| Using subscription ID instead of tenant ID | Auth fails in electron-builder / `Invoke-TrustedSigning` |
+| Using App Registration **Object ID** instead of client ID | Auth fails |
+| Copying secret **ID** instead of secret **Value** | Auth fails |
+| Wrong endpoint region | Certificate profile not found |
+| App Registration name instead of Artifact Signing account name | Signing account not found |
+| Publisher name does not match identity validation CN | Signature rejected or publisher mismatch |
+
+**Local debug**
+
+```bash
+# Dry-run: run a Windows build locally on a machine with env/.signing.env filled in
+npm run build:win64:sit
+# Scan output for the AZURE TRUSTED SIGNING banner
+```
+
+On GitHub Actions, confirm each `AZURE_*` secret exists in the job environment (`mac_signs` for CI staging builds, `release` for production releases) and that the Windows matrix job receives non-empty values (secrets are only injected on `matrix.platform == 'win'`).
 
 ## Friendly alias reference
 
@@ -84,6 +149,13 @@ On Windows runners / local Windows builds, `WIN_SIGN_*` is mapped to `CSC_LINK` 
 | `MAC_APPLE_TEAM_ID`               | `APPLE_TEAM_ID`                          |
 | `WIN_SIGN_CERTIFICATE`            | `WIN_CSC_LINK` (`.pfx`, or base64 in CI) |
 | `WIN_SIGN_CERTIFICATE_PASSWORD`   | `WIN_CSC_KEY_PASSWORD`                   |
+| `AZURE_TENANT_ID`                 | (electron-builder env credential)        |
+| `AZURE_CLIENT_ID`                 | (electron-builder env credential)        |
+| `AZURE_CLIENT_SECRET`             | (electron-builder env credential)        |
+| `AZURE_SIGNING_ENDPOINT`          | → `win.azureSignOptions.endpoint`        |
+| `AZURE_SIGNING_ACCOUNT_NAME`      | → `win.azureSignOptions.codeSigningAccountName` |
+| `AZURE_SIGNING_CERTIFICATE_PROFILE` | → `win.azureSignOptions.certificateProfileName` |
+| `AZURE_SIGNING_PUBLISHER_NAME`    | → `win.azureSignOptions.publisherName`   |
 
 
 You can also set `CSC_*`, `WIN_CSC_*`, and `APPLE_*` directly.
@@ -124,16 +196,23 @@ Encode macOS certificate:
 base64 -i openfde.p12 | pbcopy
 ```
 
-### Windows secrets
+### Windows secrets (`.pfx` **or** Azure Trusted Signing)
 
-
-| Secret                          | Maps to                         | Purpose         |
-| ------------------------------- | ------------------------------- | --------------- |
-| `WIN_SIGN_CERTIFICATE_BASE64`   | `WIN_SIGN_CERTIFICATE`          | Base64 `.pfx`   |
+| Secret | Maps to | Purpose |
+| --- | --- | --- |
+| `WIN_SIGN_CERTIFICATE_BASE64` | `WIN_SIGN_CERTIFICATE` | Base64 `.pfx` (optional if using Azure) |
 | `WIN_SIGN_CERTIFICATE_PASSWORD` | `WIN_SIGN_CERTIFICATE_PASSWORD` | `.pfx` password |
+| `AZURE_TENANT_ID` | `AZURE_TENANT_ID` | Microsoft Entra tenant ID (Azure portal → Microsoft Entra ID) |
+| `AZURE_CLIENT_ID` | `AZURE_CLIENT_ID` | App Registration **Application (client) ID** — not Object ID |
+| `AZURE_CLIENT_SECRET` | `AZURE_CLIENT_SECRET` | App Registration client secret **Value** (shown once at creation) |
+| `AZURE_SIGNING_ENDPOINT` | `AZURE_SIGNING_ENDPOINT` | Regional signing endpoint, e.g. `https://eus.codesigning.azure.net/` |
+| `AZURE_SIGNING_ACCOUNT_NAME` | `AZURE_SIGNING_ACCOUNT_NAME` | Artifact Signing account name |
+| `AZURE_SIGNING_CERTIFICATE_PROFILE` | `AZURE_SIGNING_CERTIFICATE_PROFILE` | Certificate profile name |
+| `AZURE_SIGNING_PUBLISHER_NAME` | `AZURE_SIGNING_PUBLISHER_NAME` | Publisher CN from identity validation |
 
+Store Windows signing secrets in the **`release`** environment (Release workflow) and **`mac_signs`** environment (CI build job), alongside the macOS secrets. The Windows runner receives only the `win` matrix secrets.
 
-Encode Windows certificate:
+Encode Windows `.pfx` certificate:
 
 ```bash
 # macOS / Linux
@@ -161,7 +240,7 @@ OpenFDE defaults to **unsigned builds that launch locally** when no signing cred
 | Platform | Unsigned (no keys) | Signed (keys provided) |
 | --- | --- | --- |
 | **macOS** | `hardenedRuntime` disabled; app is ad-hoc re-signed in `afterSign` (before dmg/zip) and again post-build | `MAC_SIGN_IDENTITY` / `MAC_SIGN_CERTIFICATE` → Developer ID signing; `hardenedRuntime` stays enabled |
-| **Windows** | `signAndEditExecutable` disabled → unsigned `.exe` / NSIS installer | `WIN_SIGN_CERTIFICATE` → Authenticode signing |
+| **Windows** | `signAndEditExecutable` disabled → unsigned `.exe` / NSIS installer | `WIN_SIGN_*` → Authenticode, or Azure Trusted Signing env vars → remote signing |
 
 Friendly env vars (see table above) map to electron-builder `CSC_*` / `WIN_CSC_*` / `APPLE_*`. Auto-discovery of keychain certificates is **disabled** for unsigned platform builds so macOS does not partially sign with a stray cert.
 
@@ -263,7 +342,10 @@ A real cert prints `Successfully verified`. A self-signed cert fails chain-of-tr
 The build log already reports the chosen path via `scripts/run-electron-builder.ts`:
 
 - `[code-sign] macOS signing configured` / `Apple notarization enabled`
-- `[code-sign] Windows Authenticode signing configured`
+- `[code-sign] Windows Authenticode signing configured (.pfx)`
+- `[code-sign] Windows Azure Trusted Signing configured`
+- `[code-sign] AZURE TRUSTED SIGNING: all required variables are present` (per-field OK list)
+- `[code-sign] AZURE TRUSTED SIGNING: configuration incomplete` (per-field MISSING list — fix secrets before release)
 - `[code-sign] Windows: … using generated self-signed certificate …`
 - `[code-sign] … unsigned build …`
 

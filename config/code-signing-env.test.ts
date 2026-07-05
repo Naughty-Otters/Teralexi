@@ -10,8 +10,12 @@ vi.mock('node:fs', () => ({
 import { existsSync, readFileSync } from 'node:fs'
 import {
   applyCodeSigningEnv,
+  buildAzureTrustedSigningExtraArgs,
   buildElectronBuilderExtraArgs,
   describeCodeSigningEnv,
+  formatAzureTrustedSigningValidationBanner,
+  inspectAzureTrustedSigningEnv,
+  isAzureTrustedSigningConfigured,
   isInlineCertificate,
   isMacCodeSigningConfigured,
   isMacNotarizeConfigured,
@@ -36,6 +40,13 @@ describe('code-signing-env', () => {
     delete process.env.APPLE_TEAM_ID
     delete process.env.MAC_SIGN_IDENTITY
     delete process.env.WIN_SIGN_CERTIFICATE
+    delete process.env.AZURE_TENANT_ID
+    delete process.env.AZURE_CLIENT_ID
+    delete process.env.AZURE_CLIENT_SECRET
+    delete process.env.AZURE_SIGNING_ENDPOINT
+    delete process.env.AZURE_SIGNING_ACCOUNT_NAME
+    delete process.env.AZURE_SIGNING_CERTIFICATE_PROFILE
+    delete process.env.AZURE_SIGNING_PUBLISHER_NAME
   })
 
   it('normalizeMacSignIdentity strips Keychain prefix for electron-builder', () => {
@@ -162,6 +173,138 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
 
     const env = loadCodeSigningEnv()
     expect(env.get('CSC_NAME')).toBe('Developer ID Application: From Shell')
+  })
+
+  it('inspectAzureTrustedSigningEnv reports each missing field', () => {
+    const report = inspectAzureTrustedSigningEnv({
+      AZURE_TENANT_ID: '11111111-1111-1111-1111-111111111111',
+      AZURE_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
+    })
+
+    expect(report.anyPresent).toBe(true)
+    expect(report.configured).toBe(false)
+    expect(report.missingKeys).toEqual([
+      'AZURE_CLIENT_SECRET',
+      'AZURE_SIGNING_ENDPOINT',
+      'AZURE_SIGNING_ACCOUNT_NAME',
+      'AZURE_SIGNING_CERTIFICATE_PROFILE',
+      'AZURE_SIGNING_PUBLISHER_NAME',
+    ])
+
+    const banner = formatAzureTrustedSigningValidationBanner(report)
+    expect(banner).toContain('configuration incomplete')
+    expect(banner).toContain('MISSING  AZURE_CLIENT_SECRET')
+    expect(report.fields.find((f) => f.key === 'AZURE_TENANT_ID')?.present).toBe(
+      true,
+    )
+    expect(banner).toContain('AZURE_TENANT_ID')
+  })
+
+  it('inspectAzureTrustedSigningEnv flags invalid endpoint and GUID formats', () => {
+    const report = inspectAzureTrustedSigningEnv({
+      AZURE_TENANT_ID: 'not-a-guid',
+      AZURE_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
+      AZURE_CLIENT_SECRET: 'secret',
+      AZURE_SIGNING_ENDPOINT: 'https://example.com/',
+      AZURE_SIGNING_ACCOUNT_NAME: 'openfde',
+      AZURE_SIGNING_CERTIFICATE_PROFILE: 'openfde-profile',
+      AZURE_SIGNING_PUBLISHER_NAME: 'Example Dev',
+    })
+
+    expect(report.configured).toBe(false)
+    expect(report.formatWarnings.some((w) => w.includes('AZURE_TENANT_ID'))).toBe(
+      true,
+    )
+    expect(report.formatWarnings.some((w) => w.includes('AZURE_SIGNING_ENDPOINT'))).toBe(
+      true,
+    )
+  })
+
+  it('formatAzureTrustedSigningValidationBanner lists all fields when configured', () => {
+    const report = inspectAzureTrustedSigningEnv({
+      AZURE_TENANT_ID: '11111111-1111-1111-1111-111111111111',
+      AZURE_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
+      AZURE_CLIENT_SECRET: 'secret',
+      AZURE_SIGNING_ENDPOINT: 'https://eus.codesigning.azure.net/',
+      AZURE_SIGNING_ACCOUNT_NAME: 'openfde',
+      AZURE_SIGNING_CERTIFICATE_PROFILE: 'openfde-profile',
+      AZURE_SIGNING_PUBLISHER_NAME: 'Example Dev',
+    })
+
+    expect(report.configured).toBe(true)
+    const banner = formatAzureTrustedSigningValidationBanner(report)
+    expect(banner).toContain('all required variables are present')
+    expect(banner).toContain('AZURE_SIGNING_PUBLISHER_NAME')
+  })
+
+  it('detects Azure Trusted Signing configuration', () => {
+    expect(isAzureTrustedSigningConfigured({})).toBe(false)
+    expect(
+      isAzureTrustedSigningConfigured({
+        AZURE_TENANT_ID: '11111111-1111-1111-1111-111111111111',
+        AZURE_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
+        AZURE_CLIENT_SECRET: 'secret',
+        AZURE_SIGNING_ENDPOINT: 'https://eus.codesigning.azure.net/',
+        AZURE_SIGNING_ACCOUNT_NAME: 'openfde',
+        AZURE_SIGNING_CERTIFICATE_PROFILE: 'openfde-profile',
+        AZURE_SIGNING_PUBLISHER_NAME: 'Example Dev',
+      }),
+    ).toBe(true)
+    expect(
+      isWindowsCodeSigningConfigured(
+        new Map(),
+        {
+          AZURE_TENANT_ID: '11111111-1111-1111-1111-111111111111',
+          AZURE_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
+          AZURE_CLIENT_SECRET: 'secret',
+          AZURE_SIGNING_ENDPOINT: 'https://eus.codesigning.azure.net/',
+          AZURE_SIGNING_ACCOUNT_NAME: 'openfde',
+          AZURE_SIGNING_CERTIFICATE_PROFILE: 'openfde-profile',
+          AZURE_SIGNING_PUBLISHER_NAME: 'Example Dev',
+        },
+      ),
+    ).toBe(true)
+  })
+
+  it('buildAzureTrustedSigningExtraArgs injects win.azureSignOptions for electron-builder', () => {
+    const env = {
+      AZURE_TENANT_ID: '11111111-1111-1111-1111-111111111111',
+      AZURE_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
+      AZURE_CLIENT_SECRET: 'secret',
+      AZURE_SIGNING_ENDPOINT: 'https://eus.codesigning.azure.net/',
+      AZURE_SIGNING_ACCOUNT_NAME: 'openfde',
+      AZURE_SIGNING_CERTIFICATE_PROFILE: 'openfde-profile',
+      AZURE_SIGNING_PUBLISHER_NAME: 'Example Dev',
+    } as NodeJS.ProcessEnv
+
+    expect(buildAzureTrustedSigningExtraArgs(env)).toEqual([
+      '--config.win.azureSignOptions.publisherName=Example Dev',
+      '--config.win.azureSignOptions.endpoint=https://eus.codesigning.azure.net/',
+      '--config.win.azureSignOptions.certificateProfileName=openfde-profile',
+      '--config.win.azureSignOptions.codeSigningAccountName=openfde',
+    ])
+
+    expect(
+      buildElectronBuilderExtraArgs(new Map(), { buildingWin: true }, env),
+    ).toEqual(buildAzureTrustedSigningExtraArgs(env))
+  })
+
+  it('applyCodeSigningEnv loads Azure vars from env/.signing.env', () => {
+    vi.mocked(existsSync).mockReturnValue(true)
+    vi.mocked(readFileSync).mockReturnValue(`
+AZURE_TENANT_ID = 'tenant-from-file'
+AZURE_CLIENT_ID = 'client-from-file'
+AZURE_CLIENT_SECRET = 'secret-from-file'
+AZURE_SIGNING_ENDPOINT = 'https://eus.codesigning.azure.net/'
+AZURE_SIGNING_ACCOUNT_NAME = 'openfde'
+AZURE_SIGNING_CERTIFICATE_PROFILE = 'openfde-profile'
+AZURE_SIGNING_PUBLISHER_NAME = 'Example Dev'
+`)
+
+    const env = { ...process.env } as NodeJS.ProcessEnv
+    applyCodeSigningEnv(env)
+    expect(env.AZURE_TENANT_ID).toBe('tenant-from-file')
+    expect(env.AZURE_CLIENT_ID).toBe('client-from-file')
   })
 
   it('detects signing and notarization configuration', () => {
@@ -318,6 +461,7 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
       (d) => d.level === 'warn',
     )
     expect(messages(warnings).join('\n')).toContain('Windows signing NOT configured')
+    expect(messages(warnings).join('\n')).toContain('Azure Trusted Signing')
   })
 
   it('describeCodeSigningEnv warns when .p12 password is missing', () => {
