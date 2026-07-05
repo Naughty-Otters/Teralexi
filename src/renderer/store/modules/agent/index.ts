@@ -33,6 +33,7 @@ import {
   expandSkillWorkspaceAvailableSet,
   mergeSkillWorkspaceApprovalOverrides,
 } from '@shared/agent/skill-workspace-tool-defaults'
+import type { SkillSystemPropertySpec } from '@shared/skills/skill-system-properties'
 import { withMandatoryToolsInCatalog } from '@shared/agent/mandatory-tools'
 import { isAbortError } from '@shared/utils/abort-error'
 import {
@@ -2672,6 +2673,7 @@ export const useAgentStore = defineStore('agent', () => {
       skillGroupOrder?: number
       skillVariantOrder?: number
       skillGroupPrimary?: boolean
+      systemProperties?: SkillSystemPropertySpec[]
       compiledArtifact?: {
         thinking?: { instructions?: string }
         instructions?: { instructions?: string }
@@ -2786,6 +2788,7 @@ export const useAgentStore = defineStore('agent', () => {
           skillGroupOrder: s.skillGroupOrder,
           skillVariantOrder: s.skillVariantOrder,
           skillGroupPrimary: s.skillGroupPrimary,
+          systemProperties: s.systemProperties,
           skillsPrompt: resolved.skillsPrompt,
           availableSkillTools,
           availableSet,

@@ -42,7 +42,7 @@ describe('system-prop', () => {
 
   it('validates dotted config keys', () => {
     expect(isValidSystemPropKey('app.dev.port')).toBe(true)
-    expect(isValidSystemPropKey('app.google.workspace.clientId')).toBe(true)
+    expect(isValidSystemPropKey('app.google.clientId')).toBe(true)
     expect(isValidSystemPropKey('bad')).toBe(false)
   })
 

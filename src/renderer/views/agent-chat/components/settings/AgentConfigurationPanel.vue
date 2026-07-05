@@ -95,6 +95,7 @@
         class="acp-form-tabs"
         :model-value="agentFormData"
         :agent-id="selectedAgent.id"
+        :system-properties="selectedAgent.systemProperties ?? []"
         :available-models="
           agentStore.availableModelsByProvider[
             selectedAgent.provider ?? 'ollama'

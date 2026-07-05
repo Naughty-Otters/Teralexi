@@ -224,6 +224,14 @@
       </div>
     </div>
 
+    <!-- Configurations tab (skill system properties + skill-specific setup) -->
+    <AgentConfigurationsTab
+      v-else-if="activeTab === 'configurations'"
+      :system-properties="systemProperties"
+      :skill-id="effectiveSkillId"
+      :disabled="disabled"
+    />
+
     <!-- ToolSet tab -->
     <div
       v-else-if="activeTab === 'toolset'"
@@ -500,6 +508,9 @@
 import { computed, ref, watch } from 'vue'
 import MarkdownIt from 'markdown-it'
 import type { ProviderType } from '@store/agent'
+import { skillIsGoogleWorkspaceAgent } from '@shared/agent/google-workspace-agent'
+import type { SkillSystemPropertySpec } from '@shared/skills/skill-system-properties'
+import AgentConfigurationsTab from './AgentConfigurationsTab.vue'
 import { useAgentStore } from '@store/agent'
 import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
 import { useI18n } from '@renderer/composables/useI18n'
@@ -594,6 +605,8 @@ const props = defineProps<{
   resetKey?: string | null
   /** Skill folder id when configuring a skill-backed agent */
   skillId?: string | null
+  /** Declared config.properties fields from the skill's properties.md */
+  systemProperties?: readonly SkillSystemPropertySpec[]
   /** Catalog agent id being edited (for sub-agent targeting). */
   agentId?: string | null
 }>()
@@ -618,7 +631,13 @@ function onTodoMaxRetriesInput(event: Event) {
   })
 }
 
-type RootTabId = 'general' | 'toolset' | 'mcp' | 'subagents' | 'prompt'
+type RootTabId =
+  | 'general'
+  | 'configurations'
+  | 'toolset'
+  | 'mcp'
+  | 'subagents'
+  | 'prompt'
 type PromptTabId = 'skill' | 'attachments'
 type PromptTextTabId = 'skill'
 
@@ -687,13 +706,30 @@ function updateStageLlm(stage: AgentLlmStage, choice: AgentLlmChoice) {
   })
 }
 
-const tabs = computed((): { id: RootTabId; label: string }[] => [
-  { id: 'general', label: p.value.agents.tabs.general },
-  { id: 'prompt', label: p.value.agents.tabs.prompt },
-  { id: 'toolset', label: p.value.agents.tabs.toolset },
-  { id: 'subagents', label: p.value.agents.tabs.subagents },
-  { id: 'mcp', label: p.value.agents.tabs.mcp },
-])
+const hasConfigurationsTab = computed(
+  () =>
+    (props.systemProperties?.length ?? 0) > 0 ||
+    skillIsGoogleWorkspaceAgent(props.skillId),
+)
+
+const tabs = computed((): { id: RootTabId; label: string }[] => {
+  const next: { id: RootTabId; label: string }[] = [
+    { id: 'general', label: p.value.agents.tabs.general },
+  ]
+  if (hasConfigurationsTab.value) {
+    next.push({
+      id: 'configurations',
+      label: p.value.agents.tabs.configurations,
+    })
+  }
+  next.push(
+    { id: 'prompt', label: p.value.agents.tabs.prompt },
+    { id: 'toolset', label: p.value.agents.tabs.toolset },
+    { id: 'subagents', label: p.value.agents.tabs.subagents },
+    { id: 'mcp', label: p.value.agents.tabs.mcp },
+  )
+  return next
+})
 
 const delegatableAgents = computed(() =>
   agentStore.agents
@@ -946,6 +982,12 @@ watch(
     activePromptTab.value = 'skill'
   },
 )
+
+watch(hasConfigurationsTab, (visible) => {
+  if (!visible && activeTab.value === 'configurations') {
+    activeTab.value = 'general'
+  }
+})
 
 watch(
   () => [activeTab.value, effectiveSkillId.value] as const,

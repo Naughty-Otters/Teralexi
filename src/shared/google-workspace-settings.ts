@@ -1,11 +1,5 @@
-/** Google Workspace OAuth credentials (Settings → General → Google Workspace). */
+/** Canonical Google Workspace OAuth keys — keep in sync with skills/google-workspace/properties.md */
 export const GOOGLE_WORKSPACE_PROP_KEYS = {
-  clientId: 'app.google.workspace.clientId',
-  clientSecret: 'app.google.workspace.clientSecret',
-} as const
-
-/** @deprecated Read fallback when migrating from pre-workspace key names. */
-export const LEGACY_GOOGLE_WORKSPACE_PROP_KEYS = {
   clientId: 'app.google.clientId',
   clientSecret: 'app.google.clientSecret',
 } as const
@@ -31,13 +25,17 @@ export class GoogleWorkspaceOAuthNotConfiguredError extends Error {
 export function resolveGoogleWorkspaceCredentialsFromMap(
   values: Record<string, string>,
 ): { clientId: string; clientSecret: string } {
-  const clientId =
-    (values[GOOGLE_WORKSPACE_PROP_KEYS.clientId] ??
-      values[LEGACY_GOOGLE_WORKSPACE_PROP_KEYS.clientId] ??
-      '').trim()
-  const clientSecret =
-    (values[GOOGLE_WORKSPACE_PROP_KEYS.clientSecret] ??
-      values[LEGACY_GOOGLE_WORKSPACE_PROP_KEYS.clientSecret] ??
-      '').trim()
+  const clientId = (values[GOOGLE_WORKSPACE_PROP_KEYS.clientId] ?? '').trim()
+  const clientSecret = (
+    values[GOOGLE_WORKSPACE_PROP_KEYS.clientSecret] ?? ''
+  ).trim()
   return { clientId, clientSecret }
+}
+
+export function googleWorkspaceOAuthConfiguredFromMap(
+  values: Record<string, string>,
+): boolean {
+  return isGoogleWorkspaceOAuthConfigured(
+    resolveGoogleWorkspaceCredentialsFromMap(values),
+  )
 }

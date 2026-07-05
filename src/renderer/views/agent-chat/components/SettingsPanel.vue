@@ -50,7 +50,6 @@
         <AppearanceSetting />
         <FontSetting />
         <EditorSetting />
-        <GoogleWorkspaceSetting />
       </div>
       <section v-else-if="settingsTab === 'llm'" class="sp-section sp-panel-view">
         <p v-if="!isSignedIn" class="sp-sign-in-hint">{{ t.signInGate.llmCloud }}</p>
@@ -190,7 +189,6 @@ import SignInRequiredPanel from './SignInRequiredPanel.vue'
 import FontSetting from './settings/FontSetting.vue'
 import AppearanceSetting from './settings/AppearanceSetting.vue'
 import EditorSetting from './settings/EditorSetting.vue'
-import GoogleWorkspaceSetting from './settings/GoogleWorkspaceSetting.vue'
 import LanguageSetting from './settings/LanguageSetting.vue'
 import OllamaSetting from './settings/OllamaSetting.vue'
 import LlamaCppSetting from './settings/LlamaCppSetting.vue'

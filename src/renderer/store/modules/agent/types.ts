@@ -1,4 +1,4 @@
-import type { ExecutionSteps, SkillTool } from '@main/skills/types'
+import type { SkillSystemPropertySpec } from '@shared/skills/skill-system-properties'
 import type { StepAttachment } from '@shared/agent/step-attachment'
 import type { ProviderType } from '@shared/agent/llm-provider-registry'
 import type {
@@ -51,6 +51,8 @@ export interface Agent {
   skillGroupOrder?: number
   skillVariantOrder?: number
   skillGroupPrimary?: boolean
+  /** config.properties keys + form metadata the skill requires before chat use. */
+  systemProperties?: SkillSystemPropertySpec[]
   /** Multi-step execution configuration */
   executionSteps?: AgentExecutionSteps
   /** Editable instructions (skill.md) prompt */

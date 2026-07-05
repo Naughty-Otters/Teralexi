@@ -6,6 +6,10 @@ import {
   validationRulesInjector,
 } from './injectors/validation-rules'
 import {
+  buildSkillSystemPropertiesBlock,
+  skillSystemPropertiesInjector,
+} from './injectors/skill-system-properties'
+import {
   buildTaskTrackingBlock,
   taskTrackingInjector,
 } from './injectors/task-tracking'
@@ -40,8 +44,54 @@ vi.mock('../coding/plan-mode-active-tools', () => ({
     resolvePlanModeActiveToolNames(...args),
 }))
 
+vi.mock('@config/system-prop', () => ({
+  getSystemPropValues: vi.fn(() => ({
+    'app.google.clientId': '123.apps.googleusercontent.com',
+    'app.google.clientSecret': 'secret',
+  })),
+}))
+
 beforeEach(() => {
   vi.clearAllMocks()
+})
+
+describe('skill system properties injector', () => {
+  const specs = [
+    {
+      key: 'app.google.clientId',
+      label: 'Google OAuth client ID',
+      type: 'string' as const,
+    },
+    {
+      key: 'app.google.clientSecret',
+      label: 'Google OAuth client secret',
+      type: 'secret' as const,
+    },
+  ]
+
+  it('builds a configuration block from declared specs', () => {
+    const block = buildSkillSystemPropertiesBlock({
+      opts: { systemProperties: specs },
+    } as never)
+    expect(block).toContain('### Skill configuration properties')
+    expect(block).toContain('`app.google.clientId`')
+    expect(block).toContain('configured (value hidden)')
+  })
+
+  it('applies only in tool loop when specs exist', () => {
+    expect(
+      skillSystemPropertiesInjector.applies({
+        profile: { stage: 'toolLoop' },
+        ctx: { opts: { systemProperties: specs } },
+      } as never),
+    ).toBe(true)
+    expect(
+      skillSystemPropertiesInjector.applies({
+        profile: { stage: 'toolLoop' },
+        ctx: { opts: {} },
+      } as never),
+    ).toBe(false)
+  })
 })
 
 describe('validation rules injector', () => {

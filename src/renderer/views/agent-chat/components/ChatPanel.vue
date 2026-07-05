@@ -159,6 +159,7 @@
           :workspace-disabled="isBusy"
           :workspace-hint="workspaceComposerHint"
           :google-workspace-hint="googleWorkspaceComposerHint"
+          :skill-setup="composerSkillSetup"
           :show-coding-mode-bar="selectedAgentIsCoding"
           :coding-agent="selectedAgentIsCoding"
           :coding-mode="codingMode"
@@ -249,6 +250,8 @@ import { agentRequiresWorkspace } from '@shared/agent/workspace-required-skills'
 import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
 import { collectConversationWorkspaceAttachments } from '@shared/agent/conversation-workspace-attachments'
 import { useGoogleWorkspaceAccount } from '@renderer/composables/useGoogleWorkspaceAccount'
+import { useSkillSystemProperties } from '@renderer/composables/useSkillSystemProperties'
+import { useI18n } from '@renderer/composables/useI18n'
 import { DEFAULT_USER_ID } from '@store/agent/config'
 import { setTitleBarChatControls } from '@renderer/composables/useTitleBarChatControls'
 import { useChatAttachments } from '@renderer/composables/useChatAttachments'
@@ -364,6 +367,9 @@ const emit = defineEmits<{ 'toggle-sidebar': [] }>()
 const agentStore = useAgentStore()
 const workspaceStore = useWorkspaceStore()
 const workspaceNavStore = useWorkspaceNavigationStore()
+const { t } = useI18n()
+const selectedAgentRef = computed(() => agentStore.selectedAgent)
+const skillSystemProperties = useSkillSystemProperties(selectedAgentRef)
 const {
   isSignedIn: googleWorkspaceSignedIn,
   hasWorkspaceAccess: googleWorkspaceHasAccess,
@@ -843,6 +849,29 @@ const googleWorkspaceComposerHint = computed(() =>
   }),
 )
 
+const composerSkillSetup = computed(() => {
+  if (!skillSystemProperties.needsSetup.value) return null
+  const skillName =
+    agentStore.selectedAgent?.name?.trim() || 'this skill'
+  return {
+    needsSetup: true,
+    title: t.value.chat.skillSetupTitle.replace('{skillName}', skillName),
+    intro: t.value.chat.skillSetupIntro,
+    loadingLabel: t.value.common.loading,
+    saveLabel: t.value.chat.skillSetupSave,
+    savingLabel: t.value.chat.skillSetupSaving,
+    fields: skillSystemProperties.fields.value,
+    loading: skillSystemProperties.loading.value,
+    saving: skillSystemProperties.saving.value,
+    canSave: skillSystemProperties.canSave.value,
+    error: skillSystemProperties.error.value,
+    onUpdateField: skillSystemProperties.setDraft,
+    onSave: () => {
+      void skillSystemProperties.save()
+    },
+  }
+})
+
 watch(selectedAgentIsGoogleWorkspace, (active) => {
   if (active) void refreshGoogleWorkspaceAccount()
 })
@@ -863,6 +892,7 @@ const canSend = computed(() => {
     return true
   }
   if (!agentStore.selectedAgentId) return false
+  if (skillSystemProperties.needsSetup.value) return false
   if (
     selectedAgentRequiresWorkspace.value &&
     !workspaceStore.activeWorkspacePath

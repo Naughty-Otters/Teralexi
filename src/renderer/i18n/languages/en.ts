@@ -166,6 +166,11 @@ export const lang: AppLocaleBundle = {
     copyBubbleContentSuccess: 'Copied to clipboard',
     copyBubbleContentFailed: 'Could not copy content',
     printBubbleContent: 'Print content',
+    skillSetupTitle: 'Configure {skillName}',
+    skillSetupIntro:
+      'This skill needs settings saved to your local config before you can chat. They are stored in ~/.openfde/config/config.properties and are not added to the conversation.',
+    skillSetupSave: 'Save and continue',
+    skillSetupSaving: 'Saving…',
   },
   monitor: {
     title: 'Token monitor',

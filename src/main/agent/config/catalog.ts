@@ -26,6 +26,7 @@ import {
 import { DEFAULT_TOOL_LOOP_MAX_ITERATIONS, DEFAULT_TODO_MAX_RETRIES } from '@shared/agent/tool-loop'
 import { applyCodingDirectToolLoopPolicy } from '@shared/agent/coding-agent-pipeline'
 import { resolveSkillAgentConfiguration } from '@shared/agent/skill-prompts'
+import type { SkillSystemPropertySpec } from '@shared/skills/skill-system-properties'
 import type { SkillCompiledArtifact } from '@main/skills/skill-compiled-schema'
 import {
   loadSkills,
@@ -77,6 +78,7 @@ export type EngineAgent = {
   skillVariant?: string
   skillVariantLabel?: string
   skillVariantOrder?: number
+  systemProperties?: SkillSystemPropertySpec[]
 }
 
 function buildStageLlmSettings(
@@ -179,6 +181,9 @@ function mergeSkillAgentWithStoredConfig(
       saved,
     ),
     enabled: saved?.enabled ?? skillAgent.enabled,
+    ...(skillAgent.systemProperties?.length
+      ? { systemProperties: [...skillAgent.systemProperties] }
+      : {}),
     ...(skillAgent.skillGroup
       ? {
           skillGroup: skillAgent.skillGroup,

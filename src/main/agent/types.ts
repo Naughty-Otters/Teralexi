@@ -94,6 +94,8 @@ export type AgentResponseOpts = {
   /** Max full todo re-attempts when fallback_plan is retry (default 3). */
   todoMaxRetries?: number
   skillId?: string
+  /** Declared config.properties fields from the skill's properties.md. */
+  systemProperties?: import('@shared/skills/skill-system-properties').SkillSystemPropertySpec[]
   /** Structured skill compile output when available (planning canonical todos, etc.). */
   compiledArtifact?: import('@main/skills/skill-compiled-schema').SkillCompiledArtifact
   /** Configured agent id for this run (distinct from skill catalog id). */

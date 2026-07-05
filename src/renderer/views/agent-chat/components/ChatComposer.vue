@@ -19,6 +19,21 @@
       {{ planStatusHint }}
     </p>
     <WorkspacePathBanner :disabled="workspaceDisabled" />
+    <SkillSystemPropertiesForm
+      v-if="skillSetup?.needsSetup"
+      :title="skillSetup.title"
+      :intro="skillSetup.intro"
+      :loading-label="skillSetup.loadingLabel"
+      :save-label="skillSetup.saveLabel"
+      :saving-label="skillSetup.savingLabel"
+      :fields="skillSetup.fields"
+      :loading="skillSetup.loading"
+      :saving="skillSetup.saving"
+      :can-save="skillSetup.canSave"
+      :error="skillSetup.error"
+      @update-field="skillSetup.onUpdateField"
+      @save="skillSetup.onSave"
+    />
     <div class="composer-shell">
       <RichMessageComposer
         :model-value="modelValue"
@@ -81,7 +96,25 @@ import WorkspacePathBanner from './WorkspacePathBanner.vue'
 import BackgroundTaskPanel, {
   type BackgroundTaskView,
 } from './BackgroundTaskPanel.vue'
+import SkillSystemPropertiesForm from './SkillSystemPropertiesForm.vue'
+import type { SkillSystemPropertyFieldView } from '@renderer/composables/useSkillSystemProperties'
 import type { SkillGroupAgentRef } from '@shared/agent/skill-groups'
+
+export type ChatComposerSkillSetupState = {
+  needsSetup: boolean
+  title: string
+  intro: string
+  loadingLabel: string
+  saveLabel: string
+  savingLabel: string
+  fields: SkillSystemPropertyFieldView[]
+  loading: boolean
+  saving: boolean
+  canSave: boolean
+  error: string | null
+  onUpdateField: (key: string, value: string) => void
+  onSave: () => void
+}
 
 const props = defineProps<{
   modelValue: string
@@ -103,6 +136,7 @@ const props = defineProps<{
   subAgentSlashEnabled?: boolean
   stagedAttachments?: StagedChatAttachment[]
   canAddAttachments?: boolean
+  skillSetup?: ChatComposerSkillSetupState | null
 }>()
 
 const emit = defineEmits<{

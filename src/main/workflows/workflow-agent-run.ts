@@ -94,6 +94,7 @@ export async function runWorkflowViaAgentFlow(
       agent.toolLoopMaxIterations,
     todoMaxRetries: agent.todoMaxRetries,
     skillId: agent.skillId,
+    systemProperties: agent.systemProperties,
     compiledArtifact: agent.compiledArtifact,
     agentId: agent.id,
     availableSet: enabledSkillTools,

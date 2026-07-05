@@ -10,6 +10,7 @@ import type { SkillDefinition } from './skill-models'
 import { normalizeSkillFileText } from './skill-path'
 import { parseSkillVisibility } from './skill-visibility'
 import { parseSkillGroupFromFrontmatter } from '@shared/agent/skill-groups'
+import { parseSkillSystemPropertySpecs } from '@shared/skills/skill-system-properties'
 import { SKILL_MARKDOWN_LLM, SKILL_MARKDOWN_SECTIONS } from './llm-constants'
 
 /** Parse simple `key: value` frontmatter (no nested YAML needed) */
@@ -148,6 +149,7 @@ export function parseSkillMarkdown(
   const allowedTools = parseCommaSeparatedToolList(
     fm.allowed_tools as string | undefined,
   )
+  const systemProperties = parseSkillSystemPropertySpecs(propertiesRaw)
 
   const rawMaxIterations = Number(
     (fm as Record<string, unknown>).max_iterations,
@@ -165,6 +167,7 @@ export function parseSkillMarkdown(
     enabled: fm.enabled !== false,
     visibility: parseSkillVisibility(fm.visibility as string | undefined),
     ...(allowedTools.length > 0 ? { allowedTools } : {}),
+    ...(systemProperties.length > 0 ? { systemProperties } : {}),
     ...(maxIterations != null ? { maxIterations } : {}),
     ...parseSkillGroupFromFrontmatter(fm as Record<string, unknown>),
   }

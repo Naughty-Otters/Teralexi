@@ -1,5 +1,14 @@
 import { ensureSystemPropFile, getSystemPropValue } from './system-prop'
 
+function resolveGoogleOAuthCredentials(): {
+  clientId: string
+  clientSecret: string
+} {
+  const clientId = getSystemPropValue('app.google.clientId', '').trim()
+  const clientSecret = getSystemPropValue('app.google.clientSecret', '').trim()
+  return { clientId, clientSecret }
+}
+
 function toBoolean(raw: string, fallback: boolean): boolean {
   const normalized = raw.trim().toLowerCase()
   if (normalized === 'true') return true
@@ -13,6 +22,8 @@ function toNumber(raw: string, fallback: number): number {
 }
 
 ensureSystemPropFile()
+
+const googleOAuthCredentials = resolveGoogleOAuthCredentials()
 
 export default {
   build: {
@@ -45,11 +56,11 @@ export default {
   ),
   google: {
     workspace: {
-      clientId: getSystemPropValue('app.google.workspace.clientId', ''),
-      clientSecret: getSystemPropValue('app.google.workspace.clientSecret', ''),
+      clientId: googleOAuthCredentials.clientId,
+      clientSecret: googleOAuthCredentials.clientSecret,
     },
-    clientId: getSystemPropValue('app.google.clientId', ''),
-    clientSecret: getSystemPropValue('app.google.clientSecret', ''),
+    clientId: googleOAuthCredentials.clientId,
+    clientSecret: googleOAuthCredentials.clientSecret,
   },
   github: {
     clientId: getSystemPropValue('app.github.clientId', ''),

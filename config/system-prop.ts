@@ -18,8 +18,6 @@ const DEFAULT_SYSTEM_PROPERTIES: Record<string, string> = {
   'app.dev.removeElectronJunk': 'true',
   'app.dev.chineseLog': 'false',
   'app.dev.port': '9080',
-  'app.google.workspace.clientId': '',
-  'app.google.workspace.clientSecret': '',
   'app.google.clientId': '',
   'app.google.clientSecret': '',
   'app.github.clientId': '',

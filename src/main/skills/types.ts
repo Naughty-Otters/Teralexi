@@ -10,6 +10,7 @@ export type SkillColor =
   | 'neutral'
 
 import type { SkillProvider } from '@shared/agent/llm-provider-registry'
+import type { SkillSystemPropertySpec } from '@shared/skills/skill-system-properties'
 
 export type { SkillProvider }
 
@@ -82,6 +83,11 @@ export interface SkillProperties {
   skillVariantOrder?: number
   /** Primary/default variant when picking the group. From `group_primary`. */
   skillGroupPrimary?: boolean
+  /**
+   * config.properties keys + form metadata from properties.md (`system_properties`
+   * and `system_property.<key>.*` lines). Persisted under ~/.openfde/config/.
+   */
+  systemProperties?: SkillSystemPropertySpec[]
 }
 
 // ── Constraints ───────────────────────────────────────────────────────────

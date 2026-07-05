@@ -48,27 +48,15 @@ describe('google-workspace-oauth', () => {
     )
   })
 
-  it('resolveGoogleWorkspaceOAuthCredentials reads app.google.workspace.clientId', () => {
+  it('resolveGoogleWorkspaceOAuthCredentials reads canonical app.google.clientId', () => {
     vi.mocked(getSystemPropValue).mockImplementation((key: string) => {
-      if (key === 'app.google.workspace.clientId') return 'ws-id'
-      if (key === 'app.google.workspace.clientSecret') return 'ws-secret'
+      if (key === 'app.google.clientId') return 'canonical-id'
+      if (key === 'app.google.clientSecret') return 'canonical-secret'
       return ''
     })
     expect(resolveGoogleWorkspaceOAuthCredentials()).toEqual({
-      clientId: 'ws-id',
-      clientSecret: 'ws-secret',
-    })
-  })
-
-  it('resolveGoogleWorkspaceOAuthCredentials falls back to app.google.clientId', () => {
-    vi.mocked(getSystemPropValue).mockImplementation((key: string) => {
-      if (key === 'app.google.clientId') return 'legacy-id'
-      if (key === 'app.google.clientSecret') return 'legacy-secret'
-      return ''
-    })
-    expect(resolveGoogleWorkspaceOAuthCredentials()).toEqual({
-      clientId: 'legacy-id',
-      clientSecret: 'legacy-secret',
+      clientId: 'canonical-id',
+      clientSecret: 'canonical-secret',
     })
   })
 

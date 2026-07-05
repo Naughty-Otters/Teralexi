@@ -2,6 +2,7 @@ import type { AgentInjector } from './types'
 import { currentDatetimeInjector } from './injectors/current-datetime'
 import { baseToolLoopInjector } from './injectors/base-tool-loop'
 import { skillsInjector } from './injectors/skills'
+import { skillSystemPropertiesInjector } from './injectors/skill-system-properties'
 import { validationRulesInjector } from './injectors/validation-rules'
 import { runScriptPreferenceInjector } from './injectors/run-script-preference'
 import { taskTrackingInjector } from './injectors/task-tracking'
@@ -33,6 +34,7 @@ const ALL_INJECTORS: AgentInjector[] = [
   deepThinkingAfterAnswerInjector,
   baseToolLoopInjector,
   skillsInjector,
+  skillSystemPropertiesInjector,
   validationRulesInjector,
   runScriptPreferenceInjector,
   taskTrackingInjector,

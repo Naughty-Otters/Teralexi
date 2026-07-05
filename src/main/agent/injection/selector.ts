@@ -11,6 +11,7 @@ import { getInjectorById } from './registry'
 const TOOL_LOOP_DEFAULT_INSTRUCTIONS = [
   'base-tool-loop',
   'skills',
+  'skill-system-properties',
   'validation-rules',
   'run-script-preference',
   'memory-persona',
@@ -28,6 +29,7 @@ const TOOL_LOOP_DEFAULT_INSTRUCTIONS = [
 const TOOL_LOOP_CODING_INSTRUCTIONS = [
   'base-tool-loop',
   'skills',
+  'skill-system-properties',
   'validation-rules',
   'run-script-preference',
   'task-tracking',
