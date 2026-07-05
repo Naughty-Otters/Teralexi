@@ -5,9 +5,12 @@ import {
   applyCodeSigningEnv,
   applyUnsignedPlatformBuildPolicy,
   buildElectronBuilderExtraArgs,
+  isAzureTrustedSigningConfigured,
   isMacCodeSigningConfigured,
   isMacNotarizeConfigured,
   isWindowsCodeSigningConfigured,
+  isWindowsPfxSigningConfigured,
+  logAzureTrustedSigningValidation,
   logCodeSigningEnv,
 } from '../config/code-signing-env'
 import { detectElectronBuilderTargets } from '../config/electron-builder-targets'
@@ -24,6 +27,10 @@ const signingEnv = applyCodeSigningEnv()
 // Report presence/absence of every required signing variable up front (before
 // the self-signed fallback injects anything), so the log reflects real inputs.
 logCodeSigningEnv(signingEnv, { buildingMac, buildingWin })
+
+if (buildingWin) {
+  logAzureTrustedSigningValidation(process.env)
+}
 
 // Windows: when no real Authenticode cert is supplied, fall back to an
 // ephemeral self-signed certificate so the build still produces a signed
@@ -89,11 +96,13 @@ if (buildingMac) {
 }
 
 if (buildingWin) {
-  if (isWindowsCodeSigningConfigured(signingEnv)) {
-    console.log('[code-sign] Windows Authenticode signing configured')
+  if (isAzureTrustedSigningConfigured()) {
+    console.log('[code-sign] Windows Azure Trusted Signing configured')
+  } else if (isWindowsPfxSigningConfigured(signingEnv)) {
+    console.log('[code-sign] Windows Authenticode signing configured (.pfx)')
   } else {
     console.log(
-      '[code-sign] Windows unsigned build (signAndEditExecutable disabled). Set WIN_SIGN_CERTIFICATE to sign.',
+      '[code-sign] Windows unsigned build (signAndEditExecutable disabled). Set WIN_SIGN_CERTIFICATE or Azure Trusted Signing env vars to sign.',
     )
   }
 }
