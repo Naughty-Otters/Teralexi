@@ -4,9 +4,13 @@ import {
   LLM_PROVIDER_IDS,
   LLM_PROVIDER_LABELS,
   LLM_PROVIDER_SETTINGS_OPTIONS,
+  LOCAL_LLM_PROVIDER_IDS,
+  VENDOR_LLM_PROVIDER_IDS,
+  WHOLESALE_LLM_PROVIDER_IDS,
   emptyOpenAiCompatibleCredentials,
   isOpenAiCompatibleProvider,
   isProviderType,
+  llmProviderCategory,
   llmProviderSettingsLabel,
   normalizeProviderBaseUrl,
   openAiCompatibleProviderConfigKeys,
@@ -15,16 +19,30 @@ import {
 } from './llm-provider-registry'
 
 describe('llm-provider-registry', () => {
-  it('includes zhipu in canonical provider ids', () => {
-    expect(LLM_PROVIDER_IDS).toContain('zhipu')
-    expect(LLM_PROVIDER_LABELS.zhipu).toBe('Zhipu GLM')
-    expect(AGENT_PROVIDER_SQL_CHECK).toContain("'zhipu'")
+  it('includes fireworks and openrouter in canonical provider ids', () => {
+    expect(LLM_PROVIDER_IDS).toContain('fireworks')
+    expect(LLM_PROVIDER_IDS).toContain('openrouter')
+    expect(AGENT_PROVIDER_SQL_CHECK).toContain("'fireworks'")
+    expect(AGENT_PROVIDER_SQL_CHECK).toContain("'openrouter'")
   })
 
-  it('labels local providers distinctly', () => {
+  it('labels local and wholesale providers distinctly', () => {
     expect(llmProviderSettingsLabel('ollama')).toBe('Ollama (local)')
     expect(llmProviderSettingsLabel('llamacpp')).toBe('llama.cpp (local)')
     expect(llmProviderSettingsLabel('zhipu')).toBe('Zhipu GLM')
+    expect(llmProviderSettingsLabel('fireworks')).toBe('Fireworks (wholesale)')
+    expect(llmProviderSettingsLabel('openrouter')).toBe('OpenRouter (wholesale)')
+    expect(llmProviderSettingsLabel('custom')).toBe('Custom (OpenAI-compatible) (wholesale)')
+  })
+
+  it('categorizes providers into local, vendor, and wholesale', () => {
+    expect(LOCAL_LLM_PROVIDER_IDS).toEqual(['ollama', 'llamacpp'])
+    expect(VENDOR_LLM_PROVIDER_IDS).toContain('openai')
+    expect(VENDOR_LLM_PROVIDER_IDS).toContain('nvidia-nim')
+    expect(WHOLESALE_LLM_PROVIDER_IDS).toEqual(['fireworks', 'openrouter', 'custom'])
+    expect(llmProviderCategory('ollama')).toBe('local')
+    expect(llmProviderCategory('openai')).toBe('vendor')
+    expect(llmProviderCategory('fireworks')).toBe('wholesale')
   })
 
   it('detects provider types and openai-compatible providers', () => {
@@ -65,8 +83,14 @@ describe('llm-provider-registry', () => {
     expect(keys).toContain('settings.moonshot.apiKey')
     expect(keys).toContain('settings.nvidiaNim.baseUrl')
 
+    expect(keys).toContain('settings.fireworks.apiKey')
+    expect(keys).toContain('settings.openrouter.baseUrl')
+
     const empty = emptyOpenAiCompatibleCredentials()
     expect(empty.moonshot.baseURL).toBe('https://api.moonshot.ai/v1')
+    expect(empty.fireworks.baseURL).toBe('https://api.fireworks.ai/inference/v1')
+    expect(empty.openrouter.baseURL).toBe('https://openrouter.ai/api/v1')
+    expect(empty.custom.baseURL).toBe('')
     expect(empty.qwen.apiKey).toBe('')
   })
 })

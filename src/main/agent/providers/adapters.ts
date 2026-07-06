@@ -2,16 +2,18 @@ import {
   createAlibaba,
   createAnthropic,
   createDeepSeek,
+  createFireworks,
   createGoogleGenerativeAI,
   createHuggingFace,
   createMoonshotAI,
   createOllama,
   createOpenAI,
   createOpenAICompatible,
+  createOpenRouter,
   createZhipu,
 } from '@teralexi-ai'
 import type { ProviderCredentials, ProviderType } from '../types'
-import type { OpenAiCompatibleProviderId } from '@shared/agent/llm-provider-registry'
+import type { ApiKeyBaseUrlProviderId } from '@shared/agent/llm-provider-registry'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
 
 const log = createLogger('agent.providers.adapters')
@@ -101,10 +103,10 @@ export class HuggingFaceAdapter extends ProviderAdapter {
   }
 }
 
-/** Ark and other providers without a dedicated chat SDK in @ai-sdk. */
+/** Ark, NVIDIA NIM, and other vendors without a dedicated chat SDK in @ai-sdk. */
 export class OpenAiCompatibleProviderAdapter extends ProviderAdapter {
   constructor(
-    private readonly provider: OpenAiCompatibleProviderId,
+    private readonly provider: ApiKeyBaseUrlProviderId,
     private readonly providerName: string,
   ) {
     super()
@@ -120,8 +122,28 @@ export class OpenAiCompatibleProviderAdapter extends ProviderAdapter {
   }
 }
 
+export class FireworksAdapter extends ProviderAdapter {
+  createModel(modelId: string, creds: ProviderCredentials) {
+    const { apiKey, baseURL } = creds.openAiCompatible.fireworks
+    return createFireworks({
+      apiKey,
+      baseURL: baseURL || undefined,
+    })(modelId)
+  }
+}
+
+export class OpenRouterAdapter extends ProviderAdapter {
+  createModel(modelId: string, creds: ProviderCredentials) {
+    const { apiKey, baseURL } = creds.openAiCompatible.openrouter
+    return createOpenRouter({
+      apiKey,
+      baseURL: baseURL || undefined,
+    })(modelId)
+  }
+}
+
 function openAiCompatibleAdapter(
-  provider: OpenAiCompatibleProviderId,
+  provider: ApiKeyBaseUrlProviderId,
   providerName: string,
 ): ProviderAdapter {
   return instrumentInstanceMethods(
@@ -155,6 +177,14 @@ export const PROVIDER_ADAPTERS: Record<ProviderType, ProviderAdapter> = {
     log.child({ provider: 'huggingface' }),
   ),
   'nvidia-nim': openAiCompatibleAdapter('nvidia-nim', 'nvidia-nim'),
+  fireworks: instrumentInstanceMethods(
+    new FireworksAdapter(),
+    log.child({ provider: 'fireworks' }),
+  ),
+  openrouter: instrumentInstanceMethods(
+    new OpenRouterAdapter(),
+    log.child({ provider: 'openrouter' }),
+  ),
   custom: openAiCompatibleAdapter('custom', 'custom'),
 }
 

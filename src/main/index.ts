@@ -9,6 +9,8 @@ configureAppBranding()
 initStaticPaths()
 
 import { initializeTeralexiHome, getTeralexiRulesDir } from '@config/teralexi-home'
+import { isTeralexiTestMode } from '@config/test-mode'
+import { setSystemPropValue } from '@config/system-prop'
 import { isPackagedApp } from './config/app-paths'
 import { seedBundledDefaultRulesIfMissing } from './config/bundled-default-rules'
 import { clearSkillModuleCache, loadToolSetTools } from '@main/skills/skill-module-loader'
@@ -108,29 +110,38 @@ async function onAppReady() {
   createTray(() => initWindow.mainWindow)
   log.info('Main window and tray initialized')
 
-  // Auto-start WhatsApp channel so it's ready (or showing QR) before the user opens settings
-  void getWhatsAppChannelManager().ensureStarted()
-  log.info('WhatsApp channel manager startup requested')
+  if (isTeralexiTestMode()) {
+    setSystemPropValue('settings.onboarding.completed', 'true')
+    log.info('Test mode: seeded onboarding completion flag')
+  }
 
-  // Auto-start Telegram bot if a token is configured
-  void getTelegramChannelManager().ensureStarted()
-  log.info('Telegram channel manager startup requested')
+  if (!isTeralexiTestMode()) {
+    // Auto-start WhatsApp channel so it's ready (or showing QR) before the user opens settings
+    void getWhatsAppChannelManager().ensureStarted()
+    log.info('WhatsApp channel manager startup requested')
 
-  // Auto-start Discord bot if a token is configured
-  void getDiscordChannelManager().ensureStarted()
-  log.info('Discord channel manager startup requested')
+    // Auto-start Telegram bot if a token is configured
+    void getTelegramChannelManager().ensureStarted()
+    log.info('Telegram channel manager startup requested')
 
-  // Auto-start WeChat Work bot if credentials are configured
-  void getWeChatChannelManager().ensureStarted()
-  log.info('WeChat channel manager startup requested')
+    // Auto-start Discord bot if a token is configured
+    void getDiscordChannelManager().ensureStarted()
+    log.info('Discord channel manager startup requested')
 
-  // Auto-start Slack bot if tokens are configured
-  void getSlackChannelManager().ensureStarted()
-  log.info('Slack channel manager startup requested')
+    // Auto-start WeChat Work bot if credentials are configured
+    void getWeChatChannelManager().ensureStarted()
+    log.info('WeChat channel manager startup requested')
 
-  // Run scheduler jobs in the main process.
-  getSchedulerManager().ensureStarted()
-  log.info('Scheduler manager startup requested')
+    // Auto-start Slack bot if tokens are configured
+    void getSlackChannelManager().ensureStarted()
+    log.info('Slack channel manager startup requested')
+
+    // Run scheduler jobs in the main process.
+    getSchedulerManager().ensureStarted()
+    log.info('Scheduler manager startup requested')
+  } else {
+    log.info('Test mode: skipped external channel and scheduler auto-start')
+  }
 
   if (process.env.NODE_ENV === 'development') {
     const { VUEJS_DEVTOOLS } = require('electron-devtools-vendor')

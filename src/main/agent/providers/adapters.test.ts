@@ -11,6 +11,8 @@ const {
   createAlibaba,
   createHuggingFace,
   createOpenAICompatible,
+  createFireworks,
+  createOpenRouter,
 } = vi.hoisted(() => ({
   createOllama: vi.fn(() => vi.fn(() => ({ provider: 'ollama' }))),
   createOpenAI: vi.fn(() => vi.fn(() => ({ provider: 'openai' }))),
@@ -22,6 +24,8 @@ const {
   createAlibaba: vi.fn(() => vi.fn(() => ({ provider: 'qwen' }))),
   createHuggingFace: vi.fn(() => vi.fn(() => ({ provider: 'huggingface' }))),
   createOpenAICompatible: vi.fn(() => vi.fn(() => ({ provider: 'openai-compatible' }))),
+  createFireworks: vi.fn(() => vi.fn(() => ({ provider: 'fireworks' }))),
+  createOpenRouter: vi.fn(() => vi.fn(() => ({ provider: 'openrouter' }))),
 }))
 
 vi.mock('@teralexi-ai', () => ({
@@ -35,9 +39,13 @@ vi.mock('@teralexi-ai', () => ({
   createAlibaba,
   createHuggingFace,
   createOpenAICompatible,
+  createFireworks,
+  createOpenRouter,
 }))
 
 import {
+  FireworksAdapter,
+  OpenRouterAdapter,
   AnthropicAdapter,
   DeepSeekAdapter,
   GeminiAdapter,
@@ -188,6 +196,36 @@ describe('ProviderAdapter', () => {
     })
   })
 
+  it('FireworksAdapter uses fireworks provider', () => {
+    new FireworksAdapter().createModel('accounts/fireworks/models/llama-v3p1-70b-instruct', {
+      openAiCompatible: {
+        fireworks: {
+          apiKey: 'fw-key',
+          baseURL: 'https://api.fireworks.ai/inference/v1',
+        },
+      },
+    } as never)
+    expect(createFireworks).toHaveBeenCalledWith({
+      apiKey: 'fw-key',
+      baseURL: 'https://api.fireworks.ai/inference/v1',
+    })
+  })
+
+  it('OpenRouterAdapter uses openrouter provider', () => {
+    new OpenRouterAdapter().createModel('openai/gpt-4o', {
+      openAiCompatible: {
+        openrouter: {
+          apiKey: 'or-key',
+          baseURL: 'https://openrouter.ai/api/v1',
+        },
+      },
+    } as never)
+    expect(createOpenRouter).toHaveBeenCalledWith({
+      apiKey: 'or-key',
+      baseURL: 'https://openrouter.ai/api/v1',
+    })
+  })
+
   it('OpenAiCompatibleProviderAdapter wires bytedance credentials', () => {
     new OpenAiCompatibleProviderAdapter('bytedance', 'bytedance').createModel('doubao', {
       openAiCompatible: {
@@ -212,6 +250,7 @@ describe('PROVIDER_ADAPTERS', () => {
       'bytedance',
       'custom',
       'deepseek',
+      'fireworks',
       'gemini',
       'huggingface',
       'llamacpp',
@@ -219,6 +258,7 @@ describe('PROVIDER_ADAPTERS', () => {
       'nvidia-nim',
       'ollama',
       'openai',
+      'openrouter',
       'qwen',
       'zhipu',
     ])

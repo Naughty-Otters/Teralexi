@@ -1,4 +1,5 @@
 import config from '@config/index'
+import { isTeralexiTestMode } from '@config/test-mode'
 import { getSystemPropValue } from '@config/system-prop'
 import {
   parseAppAppearance,
@@ -130,10 +131,12 @@ class MainInit {
   }
   // Initialize window
   initWindow() {
+    const useStartupChart = config.UseStartupChart && !isTeralexiTestMode()
     log.info('Initializing window flow', {
-      useStartupChart: config.UseStartupChart,
+      useStartupChart,
+      testMode: isTeralexiTestMode(),
     })
-    if (config.UseStartupChart) {
+    if (useStartupChart) {
       return this.loadingWindow(this.shartURL)
     }
     void warmAppCacheOnStartup(DEFAULT_USER_ID)

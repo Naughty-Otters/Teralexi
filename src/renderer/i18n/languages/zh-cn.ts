@@ -62,6 +62,11 @@ export const lang: AppLocaleBundle = {
       installed: '已安装技能',
       clawhub: 'ClawHub',
     },
+    llmGroups: {
+      local: '本地',
+      vendor: '厂商',
+      wholesale: '批发',
+    },
     sections: {
       language: '语言',
       appearance: '外观',

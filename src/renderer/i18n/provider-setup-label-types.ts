@@ -10,7 +10,13 @@ export type ProviderSetupLabels = {
     chooseMode: string
     localTitle: string
     localDesc: string
+    vendorTitle: string
+    vendorDesc: string
+    wholesaleTitle: string
+    wholesaleDesc: string
+    /** @deprecated Use vendorTitle / wholesaleTitle */
     cloudTitle: string
+    /** @deprecated Use vendorDesc / wholesaleDesc */
     cloudDesc: string
     pickProvider: string
     back: string

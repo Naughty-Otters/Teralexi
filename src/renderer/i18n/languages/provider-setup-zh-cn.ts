@@ -8,6 +8,10 @@ export const providerSetupZhCn: ProviderSetupLabels = {
     chooseMode: '你想如何运行模型？',
     localTitle: '本地（Ollama / llama.cpp）',
     localDesc: '在本机运行模型，无需云端 API 密钥。',
+    vendorTitle: '厂商 API',
+    vendorDesc: '直接连接 OpenAI、Anthropic、DeepSeek、Moonshot、Qwen 等模型厂商。',
+    wholesaleTitle: '批发 / 路由',
+    wholesaleDesc: '使用 Fireworks、OpenRouter 或其他 OpenAI 兼容的多模型网关。',
     cloudTitle: '云端 API',
     cloudDesc: '使用 OpenAI、Anthropic、DeepSeek、Gemini 等托管 API。',
     pickProvider: '选择提供商',
@@ -155,13 +159,27 @@ export const providerSetupZhCn: ProviderSetupLabels = {
         '粘贴到下方并点击「测试并保存」。',
       ],
     },
+    fireworks: {
+      intro: 'Fireworks AI 通过统一推理 API 托管多种开源与专有模型。',
+      steps: [
+        '在 Fireworks 控制台创建 API 密钥。',
+        '粘贴到下方，并在智能体模型名中使用 Fireworks 的 model id。',
+      ],
+    },
+    openrouter: {
+      intro: 'OpenRouter 通过一个 API 密钥路由到多家厂商的模型。',
+      steps: [
+        '在 openrouter.ai/keys 创建 API 密钥。',
+        '粘贴到下方，并使用 OpenRouter 目录中的 provider/model id。',
+      ],
+    },
     custom: {
       intro:
-        '连接任意 OpenAI 兼容提供商。默认 Base URL 为 OpenRouter；请按实际服务商修改。',
+        '连接其他 OpenAI 兼容端点。请填写对应服务商的 Base URL 与 API 密钥。',
       steps: [
         '在 models.dev 浏览提供商与 model id（见下方「文档」链接）。',
-        '在提供商控制台创建 API 密钥（「管理你的 LLM API 密钥」以 Fireworks 为例）。',
-        '粘贴密钥、按需修改 Base URL，并在智能体模型名中使用提供商的 model id。',
+        '在服务商控制台创建 API 密钥。',
+        '粘贴密钥、设置 Base URL，并在智能体模型名中使用提供商的 model id。',
       ],
     },
   },

@@ -61,6 +61,11 @@ export type AppLabels = {
       installed: string
       clawhub: string
     }
+    llmGroups: {
+      local: string
+      vendor: string
+      wholesale: string
+    }
     sections: {
       language: string
       appearance: string

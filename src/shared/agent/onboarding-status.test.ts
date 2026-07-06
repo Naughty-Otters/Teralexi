@@ -22,6 +22,8 @@ function emptyCreds(
       bytedance: { apiKey: '' },
       huggingface: { apiKey: '' },
       'nvidia-nim': { apiKey: '' },
+      fireworks: { apiKey: '' },
+      openrouter: { apiKey: '' },
       custom: { apiKey: '' },
     },
     ...overrides,

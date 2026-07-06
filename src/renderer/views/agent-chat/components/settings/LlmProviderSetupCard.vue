@@ -212,7 +212,7 @@ const testMessage = ref('')
 const testModelCount = ref<number | undefined>()
 
 const showBaseUrl = computed(() => {
-  if (meta.value.category !== 'cloud') return false
+  if (meta.value.category === 'local') return false
   if (props.provider === 'custom') return true
   return Boolean(meta.value.defaultBaseUrl)
 })
@@ -340,7 +340,7 @@ async function runTest() {
   testOk.value = null
   testMessage.value = ''
   try {
-    if (meta.value.category === 'cloud') {
+    if (meta.value.category !== 'local') {
       persistDraftCredentials()
     }
     const result = await agentStore.testProviderConnection(props.provider)
