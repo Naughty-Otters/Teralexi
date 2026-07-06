@@ -64,11 +64,17 @@ function metaForApiKeyBaseUrlProvider(id: ProviderType): ProviderSetupMeta | und
     'nvidia-nim': 'https://build.nvidia.com/settings/api-key',
     fireworks: 'https://app.fireworks.ai/settings/users/api-keys',
     openrouter: 'https://openrouter.ai/keys',
+    togetherai: 'https://api.together.ai/settings/api-keys',
+    groq: 'https://console.groq.com/keys',
+    deepinfra: 'https://deepinfra.com/dash/api_keys',
     custom: 'https://models.dev',
   }
   const docsUrls: Partial<Record<string, string>> = {
     fireworks: 'https://docs.fireworks.ai/getting-started/quickstart',
     openrouter: 'https://openrouter.ai/docs/quickstart',
+    togetherai: 'https://docs.together.ai/docs/quickstart',
+    groq: 'https://console.groq.com/docs/quickstart',
+    deepinfra: 'https://deepinfra.com/docs',
     custom: 'https://models.dev',
   }
   return {
@@ -138,6 +144,9 @@ export const PROVIDER_SETUP_META: Record<ProviderType, ProviderSetupMeta> = {
   'nvidia-nim': metaForApiKeyBaseUrlProvider('nvidia-nim')!,
   fireworks: metaForApiKeyBaseUrlProvider('fireworks')!,
   openrouter: metaForApiKeyBaseUrlProvider('openrouter')!,
+  togetherai: metaForApiKeyBaseUrlProvider('togetherai')!,
+  groq: metaForApiKeyBaseUrlProvider('groq')!,
+  deepinfra: metaForApiKeyBaseUrlProvider('deepinfra')!,
   custom: metaForApiKeyBaseUrlProvider('custom')!,
 }
 

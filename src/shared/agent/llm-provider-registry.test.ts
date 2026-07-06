@@ -19,11 +19,17 @@ import {
 } from './llm-provider-registry'
 
 describe('llm-provider-registry', () => {
-  it('includes fireworks and openrouter in canonical provider ids', () => {
+  it('includes wholesale providers in canonical provider ids', () => {
     expect(LLM_PROVIDER_IDS).toContain('fireworks')
     expect(LLM_PROVIDER_IDS).toContain('openrouter')
+    expect(LLM_PROVIDER_IDS).toContain('togetherai')
+    expect(LLM_PROVIDER_IDS).toContain('groq')
+    expect(LLM_PROVIDER_IDS).toContain('deepinfra')
     expect(AGENT_PROVIDER_SQL_CHECK).toContain("'fireworks'")
     expect(AGENT_PROVIDER_SQL_CHECK).toContain("'openrouter'")
+    expect(AGENT_PROVIDER_SQL_CHECK).toContain("'togetherai'")
+    expect(AGENT_PROVIDER_SQL_CHECK).toContain("'groq'")
+    expect(AGENT_PROVIDER_SQL_CHECK).toContain("'deepinfra'")
   })
 
   it('labels local and wholesale providers distinctly', () => {
@@ -32,6 +38,9 @@ describe('llm-provider-registry', () => {
     expect(llmProviderSettingsLabel('zhipu')).toBe('Zhipu GLM')
     expect(llmProviderSettingsLabel('fireworks')).toBe('Fireworks (wholesale)')
     expect(llmProviderSettingsLabel('openrouter')).toBe('OpenRouter (wholesale)')
+    expect(llmProviderSettingsLabel('togetherai')).toBe('Together AI (wholesale)')
+    expect(llmProviderSettingsLabel('groq')).toBe('Groq (wholesale)')
+    expect(llmProviderSettingsLabel('deepinfra')).toBe('DeepInfra (wholesale)')
     expect(llmProviderSettingsLabel('custom')).toBe('Custom (OpenAI-compatible) (wholesale)')
   })
 
@@ -39,7 +48,14 @@ describe('llm-provider-registry', () => {
     expect(LOCAL_LLM_PROVIDER_IDS).toEqual(['ollama', 'llamacpp'])
     expect(VENDOR_LLM_PROVIDER_IDS).toContain('openai')
     expect(VENDOR_LLM_PROVIDER_IDS).toContain('nvidia-nim')
-    expect(WHOLESALE_LLM_PROVIDER_IDS).toEqual(['fireworks', 'openrouter', 'custom'])
+    expect(WHOLESALE_LLM_PROVIDER_IDS).toEqual([
+      'fireworks',
+      'openrouter',
+      'togetherai',
+      'groq',
+      'deepinfra',
+      'custom',
+    ])
     expect(llmProviderCategory('ollama')).toBe('local')
     expect(llmProviderCategory('openai')).toBe('vendor')
     expect(llmProviderCategory('fireworks')).toBe('wholesale')
@@ -85,11 +101,17 @@ describe('llm-provider-registry', () => {
 
     expect(keys).toContain('settings.fireworks.apiKey')
     expect(keys).toContain('settings.openrouter.baseUrl')
+    expect(keys).toContain('settings.togetherai.apiKey')
+    expect(keys).toContain('settings.groq.apiKey')
+    expect(keys).toContain('settings.deepinfra.baseUrl')
 
     const empty = emptyOpenAiCompatibleCredentials()
     expect(empty.moonshot.baseURL).toBe('https://api.moonshot.ai/v1')
     expect(empty.fireworks.baseURL).toBe('https://api.fireworks.ai/inference/v1')
     expect(empty.openrouter.baseURL).toBe('https://openrouter.ai/api/v1')
+    expect(empty.togetherai.baseURL).toBe('https://api.together.xyz/v1')
+    expect(empty.groq.baseURL).toBe('https://api.groq.com/openai/v1')
+    expect(empty.deepinfra.baseURL).toBe('https://api.deepinfra.com/v1')
     expect(empty.custom.baseURL).toBe('')
     expect(empty.qwen.apiKey).toBe('')
   })

@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia, type Pinia } from 'pinia'
-import { createRouter, createWebHashHistory, type Router } from 'vue-router'
+import { createRouter, createMemoryHistory, type Router } from 'vue-router'
 import {
   markOnboardingCompleteInRouteCache,
   resetOnboardingRouteCache,
@@ -22,7 +22,7 @@ const nuxtUiStub = {
 
 export function createTestRouter(): Router {
   return createRouter({
-    history: createWebHashHistory(),
+    history: createMemoryHistory(),
     routes: [
       { path: '/', name: 'home', component: { template: '<div />' } },
       {

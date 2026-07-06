@@ -135,8 +135,17 @@ describe('runMigrations agent_configurations', () => {
 
     expect(row.sql).toContain("'fireworks'")
     expect(row.sql).toContain("'openrouter'")
+    expect(row.sql).toContain("'togetherai'")
+    expect(row.sql).toContain("'groq'")
+    expect(row.sql).toContain("'deepinfra'")
 
-    for (const provider of ['fireworks', 'openrouter'] as const) {
+    for (const provider of [
+      'fireworks',
+      'openrouter',
+      'togetherai',
+      'groq',
+      'deepinfra',
+    ] as const) {
       expect(() =>
         db
           .prepare(

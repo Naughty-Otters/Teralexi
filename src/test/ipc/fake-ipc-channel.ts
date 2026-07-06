@@ -143,14 +143,18 @@ export function installFakeIpcChannel(
 ): FakeIpcChannel {
   ;(globalThis as typeof globalThis & { ipcRendererChannel?: FakeIpcChannel }).ipcRendererChannel =
     channel
-  ;(window as typeof window & { ipcRendererChannel?: FakeIpcChannel }).ipcRendererChannel =
-    channel
+  if (typeof window !== 'undefined') {
+    ;(window as typeof window & { ipcRendererChannel?: FakeIpcChannel }).ipcRendererChannel =
+      channel
+  }
   return channel
 }
 
 export function uninstallFakeIpcChannel(): void {
   delete (globalThis as typeof globalThis & { ipcRendererChannel?: FakeIpcChannel })
     .ipcRendererChannel
-  delete (window as typeof window & { ipcRendererChannel?: FakeIpcChannel })
-    .ipcRendererChannel
+  if (typeof window !== 'undefined') {
+    delete (window as typeof window & { ipcRendererChannel?: FakeIpcChannel })
+      .ipcRendererChannel
+  }
 }

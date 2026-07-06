@@ -13,6 +13,9 @@ const {
   createOpenAICompatible,
   createFireworks,
   createOpenRouter,
+  createTogetherAI,
+  createGroq,
+  createDeepInfra,
 } = vi.hoisted(() => ({
   createOllama: vi.fn(() => vi.fn(() => ({ provider: 'ollama' }))),
   createOpenAI: vi.fn(() => vi.fn(() => ({ provider: 'openai' }))),
@@ -26,6 +29,9 @@ const {
   createOpenAICompatible: vi.fn(() => vi.fn(() => ({ provider: 'openai-compatible' }))),
   createFireworks: vi.fn(() => vi.fn(() => ({ provider: 'fireworks' }))),
   createOpenRouter: vi.fn(() => vi.fn(() => ({ provider: 'openrouter' }))),
+  createTogetherAI: vi.fn(() => vi.fn(() => ({ provider: 'togetherai' }))),
+  createGroq: vi.fn(() => vi.fn(() => ({ provider: 'groq' }))),
+  createDeepInfra: vi.fn(() => vi.fn(() => ({ provider: 'deepinfra' }))),
 }))
 
 vi.mock('@teralexi-ai', () => ({
@@ -41,11 +47,17 @@ vi.mock('@teralexi-ai', () => ({
   createOpenAICompatible,
   createFireworks,
   createOpenRouter,
+  createTogetherAI,
+  createGroq,
+  createDeepInfra,
 }))
 
 import {
   FireworksAdapter,
   OpenRouterAdapter,
+  TogetherAiAdapter,
+  GroqAdapter,
+  DeepInfraAdapter,
   AnthropicAdapter,
   DeepSeekAdapter,
   GeminiAdapter,
@@ -226,6 +238,51 @@ describe('ProviderAdapter', () => {
     })
   })
 
+  it('TogetherAiAdapter uses togetherai provider', () => {
+    new TogetherAiAdapter().createModel('meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', {
+      openAiCompatible: {
+        togetherai: {
+          apiKey: 'tg-key',
+          baseURL: 'https://api.together.xyz/v1',
+        },
+      },
+    } as never)
+    expect(createTogetherAI).toHaveBeenCalledWith({
+      apiKey: 'tg-key',
+      baseURL: 'https://api.together.xyz/v1',
+    })
+  })
+
+  it('GroqAdapter uses groq provider', () => {
+    new GroqAdapter().createModel('llama-3.3-70b-versatile', {
+      openAiCompatible: {
+        groq: {
+          apiKey: 'groq-key',
+          baseURL: 'https://api.groq.com/openai/v1',
+        },
+      },
+    } as never)
+    expect(createGroq).toHaveBeenCalledWith({
+      apiKey: 'groq-key',
+      baseURL: 'https://api.groq.com/openai/v1',
+    })
+  })
+
+  it('DeepInfraAdapter uses deepinfra provider', () => {
+    new DeepInfraAdapter().createModel('meta-llama/Meta-Llama-3.1-70B-Instruct', {
+      openAiCompatible: {
+        deepinfra: {
+          apiKey: 'di-key',
+          baseURL: 'https://api.deepinfra.com/v1',
+        },
+      },
+    } as never)
+    expect(createDeepInfra).toHaveBeenCalledWith({
+      apiKey: 'di-key',
+      baseURL: 'https://api.deepinfra.com/v1',
+    })
+  })
+
   it('OpenAiCompatibleProviderAdapter wires bytedance credentials', () => {
     new OpenAiCompatibleProviderAdapter('bytedance', 'bytedance').createModel('doubao', {
       openAiCompatible: {
@@ -249,9 +306,11 @@ describe('PROVIDER_ADAPTERS', () => {
       'anthropic',
       'bytedance',
       'custom',
+      'deepinfra',
       'deepseek',
       'fireworks',
       'gemini',
+      'groq',
       'huggingface',
       'llamacpp',
       'moonshot',
@@ -260,6 +319,7 @@ describe('PROVIDER_ADAPTERS', () => {
       'openai',
       'openrouter',
       'qwen',
+      'togetherai',
       'zhipu',
     ])
   })

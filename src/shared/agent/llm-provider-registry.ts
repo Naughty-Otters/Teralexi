@@ -15,6 +15,9 @@ export const LLM_PROVIDER_IDS = [
   'nvidia-nim',
   'fireworks',
   'openrouter',
+  'togetherai',
+  'groq',
+  'deepinfra',
   'custom',
 ] as const
 
@@ -43,6 +46,9 @@ export const VENDOR_LLM_PROVIDER_IDS = [
 export const WHOLESALE_LLM_PROVIDER_IDS = [
   'fireworks',
   'openrouter',
+  'togetherai',
+  'groq',
+  'deepinfra',
   'custom',
 ] as const satisfies readonly ProviderType[]
 
@@ -60,6 +66,9 @@ export type ApiKeyBaseUrlProviderId =
   | 'nvidia-nim'
   | 'fireworks'
   | 'openrouter'
+  | 'togetherai'
+  | 'groq'
+  | 'deepinfra'
   | 'custom'
 
 /** @deprecated Use {@link ApiKeyBaseUrlProviderId}. */
@@ -163,6 +172,42 @@ export const API_KEY_BASE_URL_LLM_PROVIDERS: Record<
     defaultModels: ['openai/gpt-4o', 'anthropic/claude-sonnet-4', 'google/gemini-2.5-pro'],
     hint: 'OpenRouter routes requests to many hosted models. Use provider/model ids from openrouter.ai.',
   },
+  togetherai: {
+    id: 'togetherai',
+    label: 'Together AI',
+    category: 'wholesale',
+    apiKeyConfigKey: 'settings.togetherai.apiKey',
+    baseUrlConfigKey: 'settings.togetherai.baseUrl',
+    defaultBaseUrl: 'https://api.together.xyz/v1',
+    defaultModels: [
+      'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
+      'deepseek-ai/DeepSeek-V3',
+    ],
+    hint: 'Together AI wholesale inference. Use model ids from the Together model catalog.',
+  },
+  groq: {
+    id: 'groq',
+    label: 'Groq',
+    category: 'wholesale',
+    apiKeyConfigKey: 'settings.groq.apiKey',
+    baseUrlConfigKey: 'settings.groq.baseUrl',
+    defaultBaseUrl: 'https://api.groq.com/openai/v1',
+    defaultModels: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768'],
+    hint: 'Groq LPU inference API. Use model ids from the Groq console.',
+  },
+  deepinfra: {
+    id: 'deepinfra',
+    label: 'DeepInfra',
+    category: 'wholesale',
+    apiKeyConfigKey: 'settings.deepinfra.apiKey',
+    baseUrlConfigKey: 'settings.deepinfra.baseUrl',
+    defaultBaseUrl: 'https://api.deepinfra.com/v1',
+    defaultModels: [
+      'meta-llama/Meta-Llama-3.1-70B-Instruct',
+      'Qwen/Qwen2.5-72B-Instruct',
+    ],
+    hint: 'DeepInfra hosted inference. Use model ids from the DeepInfra model catalog.',
+  },
   custom: {
     id: 'custom',
     label: 'Custom (OpenAI-compatible)',
@@ -201,6 +246,9 @@ export const LLM_PROVIDER_LABELS: Record<ProviderType, string> = {
   'nvidia-nim': 'NVIDIA NIM',
   fireworks: 'Fireworks',
   openrouter: 'OpenRouter',
+  togetherai: 'Together AI',
+  groq: 'Groq',
+  deepinfra: 'DeepInfra',
   custom: 'Custom (OpenAI-compatible)',
 }
 

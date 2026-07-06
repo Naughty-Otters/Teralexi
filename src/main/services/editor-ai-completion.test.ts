@@ -41,6 +41,9 @@ const baseCreds = {
     'nvidia-nim': { apiKey: '', baseURL: 'https://integrate.api.nvidia.com/v1' },
     fireworks: { apiKey: '', baseURL: 'https://api.fireworks.ai/inference/v1' },
     openrouter: { apiKey: '', baseURL: 'https://openrouter.ai/api/v1' },
+    togetherai: { apiKey: '', baseURL: 'https://api.together.xyz/v1' },
+    groq: { apiKey: '', baseURL: 'https://api.groq.com/openai/v1' },
+    deepinfra: { apiKey: '', baseURL: 'https://api.deepinfra.com/v1' },
     custom: { apiKey: '', baseURL: '' },
   },
 }
