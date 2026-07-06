@@ -25,6 +25,7 @@ export default defineConfig({
         'src/teralexi-ai/llm-adapter.ts',
       ),
       '@teralexi-ai': resolve(rootDir, 'src/teralexi-ai/index.ts'),
+      '@test': resolve(rootDir, 'src/test'),
       '@toolSet': resolve(rootDir, 'toolSet'),
       '@skills': resolve(rootDir, 'skills'),
       '@teralexi/skill-sdk': resolve(rootDir, 'skill-sdk'),

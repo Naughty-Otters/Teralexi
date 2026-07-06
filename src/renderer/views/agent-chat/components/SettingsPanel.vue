@@ -51,50 +51,66 @@
         <FontSetting />
         <EditorSetting />
       </div>
-      <section v-else-if="settingsTab === 'llm'" class="sp-section sp-panel-view">
+      <section v-else-if="settingsTab === 'llm'" class="sp-llm-section sp-panel-view">
         <p v-if="!isSignedIn" class="sp-sign-in-hint">{{ t.signInGate.llmCloud }}</p>
-        <div class="sp-tabs sp-tabs--nested">
-          <button
-            v-for="vendor in llmVendorTabs"
-            :key="vendor.id"
-            class="sp-tab"
-            :class="{ 'sp-tab--active': llmVendorTab === vendor.id }"
-            @click="switchLlmVendor(vendor.id)"
-          >
-            {{ vendor.label }}
-          </button>
-        </div>
+        <div class="sp-llm-layout">
+          <aside class="sp-llm-sidebar" aria-label="LLM providers">
+            <template
+              v-for="entry in llmSidebarEntries"
+              :key="entry.kind === 'header' ? entry.id : entry.id"
+            >
+              <div
+                v-if="entry.kind === 'header'"
+                class="sp-llm-group-header"
+                :class="`sp-llm-group-header--${entry.category}`"
+              >
+                {{ entry.label }}
+              </div>
+              <button
+                v-else
+                type="button"
+                class="sp-llm-item"
+                :class="{ 'sp-llm-item--active': llmVendorTab === entry.id }"
+                @click="switchLlmVendor(entry.id)"
+              >
+                {{ entry.label }}
+              </button>
+            </template>
+          </aside>
 
-        <OllamaSetting v-if="llmVendorTab === 'ollama'" class="sp-panel-view" />
-        <LlamaCppSetting
-          v-else-if="llmVendorTab === 'llamacpp'"
-          class="sp-panel-view"
-        />
-        <OpenAISetting
-          v-else-if="llmVendorTab === 'openai'"
-          class="sp-panel-view"
-        />
-        <AnthropicSetting
-          v-else-if="llmVendorTab === 'anthropic'"
-          class="sp-panel-view"
-        />
-        <GeminiSetting
-          v-else-if="llmVendorTab === 'gemini'"
-          class="sp-panel-view"
-        />
-        <DeepSeekSetting
-          v-else-if="llmVendorTab === 'deepseek'"
-          class="sp-panel-view"
-        />
-        <ZhipuSetting
-          v-else-if="llmVendorTab === 'zhipu'"
-          class="sp-panel-view"
-        />
-        <OpenAiCompatibleProviderSetting
-          v-else-if="isOpenAiCompatibleProvider(llmVendorTab)"
-          :provider="llmVendorTab"
-          class="sp-panel-view"
-        />
+          <div class="sp-llm-content">
+            <OllamaSetting v-if="llmVendorTab === 'ollama'" class="sp-panel-view" />
+            <LlamaCppSetting
+              v-else-if="llmVendorTab === 'llamacpp'"
+              class="sp-panel-view"
+            />
+            <OpenAISetting
+              v-else-if="llmVendorTab === 'openai'"
+              class="sp-panel-view"
+            />
+            <AnthropicSetting
+              v-else-if="llmVendorTab === 'anthropic'"
+              class="sp-panel-view"
+            />
+            <GeminiSetting
+              v-else-if="llmVendorTab === 'gemini'"
+              class="sp-panel-view"
+            />
+            <DeepSeekSetting
+              v-else-if="llmVendorTab === 'deepseek'"
+              class="sp-panel-view"
+            />
+            <ZhipuSetting
+              v-else-if="llmVendorTab === 'zhipu'"
+              class="sp-panel-view"
+            />
+            <OpenAiCompatibleProviderSetting
+              v-else-if="isOpenAiCompatibleProvider(llmVendorTab)"
+              :provider="llmVendorTab"
+              class="sp-panel-view"
+            />
+          </div>
+        </div>
       </section>
       <McpSetting v-else-if="settingsTab === 'mcp'" class="sp-panel-view" />
       <ToolSetSetting
@@ -177,13 +193,16 @@ import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue
 import { useI18n } from '@renderer/composables/useI18n'
 import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { useAgentStore } from '@store/agent'
-import type { ProviderType } from '@store/agent'
 import {
   isOpenAiCompatibleProvider,
-  LLM_PROVIDER_IDS,
-  llmProviderSettingsLabel,
+  LLM_PROVIDER_LABELS,
+  type ProviderType,
 } from '@shared/agent/llm-provider-registry'
-import { LOCAL_LLM_PROVIDER_IDS } from '@shared/agent/provider-setup-guides'
+import {
+  LOCAL_LLM_PROVIDER_IDS,
+  VENDOR_LLM_PROVIDER_IDS,
+  WHOLESALE_LLM_PROVIDER_IDS,
+} from '@shared/agent/provider-setup-guides'
 import { isSignedInOnlySettingsTab } from '@shared/auth/signed-in-features'
 import SignInRequiredPanel from './SignInRequiredPanel.vue'
 import FontSetting from './settings/FontSetting.vue'
@@ -274,6 +293,64 @@ type SettingsTab =
 const settingsTab = ref<SettingsTab>('general')
 const llmVendorTab = ref<ProviderType>('ollama')
 
+type LlmProviderGroupId = 'local' | 'vendor' | 'wholesale'
+
+type LlmSidebarEntry =
+  | { kind: 'header'; id: string; category: LlmProviderGroupId; label: string }
+  | { kind: 'provider'; id: ProviderType; label: string }
+
+const llmSidebarEntries = computed((): LlmSidebarEntry[] => {
+  const groups = isSignedIn.value
+    ? [
+        {
+          id: 'local',
+          label: t.value.settings.llmGroups.local,
+          ids: LOCAL_LLM_PROVIDER_IDS,
+        },
+        {
+          id: 'vendor',
+          label: t.value.settings.llmGroups.vendor,
+          ids: VENDOR_LLM_PROVIDER_IDS,
+        },
+        {
+          id: 'wholesale',
+          label: t.value.settings.llmGroups.wholesale,
+          ids: WHOLESALE_LLM_PROVIDER_IDS,
+        },
+      ]
+    : [
+        {
+          id: 'local',
+          label: t.value.settings.llmGroups.local,
+          ids: LOCAL_LLM_PROVIDER_IDS,
+        },
+      ]
+
+  const entries: LlmSidebarEntry[] = []
+  for (const group of groups) {
+    entries.push({
+      kind: 'header',
+      id: `header-${group.id}`,
+      category: group.id,
+      label: group.label,
+    })
+    for (const id of group.ids) {
+      entries.push({
+        kind: 'provider',
+        id,
+        label: LLM_PROVIDER_LABELS[id],
+      })
+    }
+  }
+  return entries
+})
+
+const llmProviderIds = computed(() =>
+  llmSidebarEntries.value
+    .filter((entry): entry is Extract<LlmSidebarEntry, { kind: 'provider' }> => entry.kind === 'provider')
+    .map((entry) => entry.id),
+)
+
 type ChannelTab = 'whatsapp' | 'telegram' | 'discord' | 'wechat' | 'slack'
 const channelTab = ref<ChannelTab>('whatsapp')
 type SkillTab = 'clawhub' | 'installed'
@@ -313,14 +390,6 @@ const activeTabRequiresSignIn = computed(
 
 const signInGateDescription = computed(() => t.value.signInGate.settings)
 
-const llmVendorTabs = computed(() => {
-  const ids = isSignedIn.value ? LLM_PROVIDER_IDS : LOCAL_LLM_PROVIDER_IDS
-  return ids.map((id) => ({
-    id,
-    label: llmProviderSettingsLabel(id),
-  }))
-})
-
 function openLocalLlmSettings() {
   settingsTab.value = 'llm'
   llmVendorTab.value = 'ollama'
@@ -331,9 +400,9 @@ function switchTab(tab: SettingsTab) {
   settingsTab.value = tab
   if (tab === 'llm') {
     const vendor = llmVendorTab.value
-    const allowed = llmVendorTabs.value.some((entry) => entry.id === vendor)
+    const allowed = llmProviderIds.value.includes(vendor)
     if (!allowed) {
-      llmVendorTab.value = llmVendorTabs.value[0]?.id ?? 'ollama'
+      llmVendorTab.value = llmProviderIds.value[0] ?? 'ollama'
     }
     agentStore.fetchModelsForProvider(llmVendorTab.value)
   }
@@ -491,6 +560,134 @@ onUnmounted(() => {
   color: var(--ui-text-muted);
   background: color-mix(in srgb, var(--color-primary-500) 6%, var(--ui-bg));
   border: 1px solid color-mix(in srgb, var(--color-primary-500) 18%, var(--ui-border));
+}
+
+.sp-llm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+}
+
+.sp-llm-layout {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.sp-llm-sidebar {
+  width: 188px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--ui-border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 6px;
+  overflow-y: auto;
+  background: var(--ui-bg-elevated);
+}
+
+.sp-llm-group-header {
+  display: flex;
+  align-items: center;
+  margin: 8px 4px 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: inset 3px 0 0 var(--sp-llm-group-accent, var(--color-primary-500));
+  color: var(--sp-llm-group-text, var(--color-primary-700));
+  background: color-mix(
+    in srgb,
+    var(--sp-llm-group-accent, var(--color-primary-500)) 14%,
+    var(--ui-bg-elevated)
+  );
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--sp-llm-group-accent, var(--color-primary-500)) 28%,
+      var(--ui-border)
+    );
+}
+
+.sp-llm-group-header:first-child {
+  margin-top: 2px;
+}
+
+.sp-llm-group-header--local {
+  --sp-llm-group-accent: var(--color-success-500, #22c55e);
+  --sp-llm-group-text: var(--color-success-700, #15803d);
+}
+
+.sp-llm-group-header--vendor {
+  --sp-llm-group-accent: var(--color-info-500, #0ea5e9);
+  --sp-llm-group-text: var(--color-info-700, #0369a1);
+}
+
+.sp-llm-group-header--wholesale {
+  --sp-llm-group-accent: var(--color-secondary-500, #8b5cf6);
+  --sp-llm-group-text: var(--color-secondary-700, #6d28d9);
+}
+
+:global(html.dark .sp-llm-group-header--local) {
+  --sp-llm-group-text: var(--color-success-300, #86efac);
+}
+
+:global(html.dark .sp-llm-group-header--vendor) {
+  --sp-llm-group-text: var(--color-info-300, #7dd3fc);
+}
+
+:global(html.dark .sp-llm-group-header--wholesale) {
+  --sp-llm-group-text: var(--color-secondary-300, #c4b5fd);
+}
+
+.sp-llm-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ui-text);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.sp-llm-item:hover {
+  background: var(--ui-bg-accented);
+}
+
+.sp-llm-item--active {
+  background: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
+  color: var(--color-primary-600);
+  font-weight: 600;
+}
+
+:global(html.dark .sp-llm-item--active) {
+  color: var(--color-primary-400);
+}
+
+.sp-llm-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+  overflow-y: auto;
 }
 
 .sp-section {

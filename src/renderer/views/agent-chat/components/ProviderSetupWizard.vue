@@ -67,7 +67,7 @@
           </button>
         </div>
 
-        <!-- Step: choose local vs cloud -->
+        <!-- Step: choose local / vendor / wholesale -->
         <div v-else-if="llmStep === 'mode'" class="provider-setup-body">
           <p class="provider-setup-prompt">{{ ps.wizard.chooseMode }}</p>
           <div class="provider-setup-mode-grid">
@@ -79,10 +79,19 @@
               v-if="!localOnly"
               type="button"
               class="provider-setup-mode-card"
-              @click="pickMode('cloud')"
+              @click="pickMode('vendor')"
             >
-              <span class="provider-setup-mode-title">{{ ps.wizard.cloudTitle }}</span>
-              <span class="provider-setup-mode-desc">{{ ps.wizard.cloudDesc }}</span>
+              <span class="provider-setup-mode-title">{{ ps.wizard.vendorTitle }}</span>
+              <span class="provider-setup-mode-desc">{{ ps.wizard.vendorDesc }}</span>
+            </button>
+            <button
+              v-if="!localOnly"
+              type="button"
+              class="provider-setup-mode-card"
+              @click="pickMode('wholesale')"
+            >
+              <span class="provider-setup-mode-title">{{ ps.wizard.wholesaleTitle }}</span>
+              <span class="provider-setup-mode-desc">{{ ps.wizard.wholesaleDesc }}</span>
             </button>
           </div>
         </div>
@@ -169,6 +178,8 @@ import { useI18n } from '@renderer/composables/useI18n'
 import {
   CLOUD_LLM_PROVIDER_IDS,
   LOCAL_LLM_PROVIDER_IDS,
+  VENDOR_LLM_PROVIDER_IDS,
+  WHOLESALE_LLM_PROVIDER_IDS,
   type ProviderSetupCategory,
 } from '@shared/agent/provider-setup-guides'
 import {
@@ -208,7 +219,7 @@ type WizardPhase = 'llm' | 'agents'
 
 const phase = ref<WizardPhase>('llm')
 const llmStep = ref<LlmStep>('mode')
-const mode = ref<ProviderSetupCategory>('cloud')
+const mode = ref<ProviderSetupCategory>('vendor')
 const selectedProvider = ref<ProviderType | null>(null)
 const setupVerified = ref(false)
 const verifiedProvider = ref<ProviderType | null>(null)
@@ -221,7 +232,9 @@ const configuredProviderIds = computed(() => agentStore.configuredLlmProviderIds
 
 const providerChoices = computed(() => {
   if (props.localOnly) return LOCAL_LLM_PROVIDER_IDS
-  return mode.value === 'local' ? LOCAL_LLM_PROVIDER_IDS : CLOUD_LLM_PROVIDER_IDS
+  if (mode.value === 'local') return LOCAL_LLM_PROVIDER_IDS
+  if (mode.value === 'vendor') return VENDOR_LLM_PROVIDER_IDS
+  return WHOLESALE_LLM_PROVIDER_IDS
 })
 
 const canProceedFromLlm = computed(() => {
@@ -289,7 +302,7 @@ function markProviderReady(id: ProviderType) {
 
 async function resetWizard() {
   phase.value = 'llm'
-  mode.value = props.localOnly ? 'local' : 'cloud'
+  mode.value = props.localOnly ? 'local' : 'vendor'
   selectedProvider.value = null
   setupVerified.value = false
   verifiedProvider.value = null

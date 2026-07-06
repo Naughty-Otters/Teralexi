@@ -8,6 +8,12 @@ export const providerSetupEn: ProviderSetupLabels = {
     chooseMode: 'How do you want to run models?',
     localTitle: 'Local (Ollama / llama.cpp)',
     localDesc: 'Run models on this machine — no cloud API key required.',
+    vendorTitle: 'Vendor APIs',
+    vendorDesc:
+      'Connect directly to model vendors such as OpenAI, Anthropic, DeepSeek, Moonshot, and Qwen.',
+    wholesaleTitle: 'Wholesale / routers',
+    wholesaleDesc:
+      'Use multi-model gateways such as Fireworks, OpenRouter, or any other OpenAI-compatible endpoint.',
     cloudTitle: 'Cloud API',
     cloudDesc: 'Use OpenAI, Anthropic, DeepSeek, Gemini, and other hosted APIs.',
     pickProvider: 'Choose a provider',
@@ -157,13 +163,29 @@ export const providerSetupEn: ProviderSetupLabels = {
         'Paste the key below and click Test & save.',
       ],
     },
+    fireworks: {
+      intro:
+        'Fireworks AI hosts many open and proprietary models through a single inference API.',
+      steps: [
+        'Create an API key in the Fireworks console.',
+        'Paste the key below and use a Fireworks model id as the agent model name.',
+      ],
+    },
+    openrouter: {
+      intro:
+        'OpenRouter routes requests to models from many vendors through one API key.',
+      steps: [
+        'Create an API key at openrouter.ai/keys.',
+        'Paste the key below and use provider/model ids from the OpenRouter catalog.',
+      ],
+    },
     custom: {
       intro:
-        'Connect any OpenAI-compatible provider. Default base URL is OpenRouter; change it to match your vendor.',
+        'Connect any other OpenAI-compatible endpoint. Set the base URL and API key for your vendor.',
       steps: [
         'Browse providers and model ids on models.dev (Documentation link below).',
-        'Create an API key in your provider console (Manage your own LLM API key opens Fireworks as an example).',
-        'Paste the key below, adjust the base URL if needed, and use the provider model id as the agent model name.',
+        'Create an API key in your provider console.',
+        'Paste the key below, set the base URL, and use the provider model id as the agent model name.',
       ],
     },
   },

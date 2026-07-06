@@ -1,0 +1,71 @@
+name: Integration tests
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: integration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ui-integration:
+    name: UI integration (renderer + IPC)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run UI integration tests
+        run: npm run test:integration:ui
+
+  e2e-smoke:
+    name: Electron smoke (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: ui-integration
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build unpacked sit app
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+          TERALEXI_BUILD_ENV: sit
+        run: npm run build:dir:sit
+
+      - name: Run Electron smoke tests
+        env:
+          TERALEXI_TEST_MODE: '1'
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 7

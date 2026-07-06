@@ -123,6 +123,43 @@ describe('runMigrations agent_configurations', () => {
     ).not.toThrow()
   })
 
+  it('fresh schema allows wholesale providers in agent_configurations', () => {
+    const db = createMigrationTestDatabase()
+    runMigrations(db)
+
+    const row = db
+      .prepare(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'agent_configurations'",
+      )
+      .get() as { sql: string }
+
+    expect(row.sql).toContain("'fireworks'")
+    expect(row.sql).toContain("'openrouter'")
+
+    for (const provider of ['fireworks', 'openrouter'] as const) {
+      expect(() =>
+        db
+          .prepare(
+            `INSERT INTO agent_configurations (
+            agent_id, user_id, name, model, provider, color, enabled,
+            created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .run(
+            `agent-${provider}`,
+            'user-1',
+            provider,
+            'model-1',
+            provider,
+            'primary',
+            1,
+            '2020-01-01',
+            '2020-01-01',
+          ),
+      ).not.toThrow()
+    }
+  })
+
   it('enables allow_sub_agents for existing agent rows', () => {
     const db = createMigrationTestDatabase()
     db.exec(`

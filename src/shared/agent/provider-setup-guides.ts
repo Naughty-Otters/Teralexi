@@ -1,7 +1,15 @@
 import type { ProviderType } from './llm-provider-registry'
-import { OPENAI_COMPATIBLE_LLM_PROVIDERS } from './llm-provider-registry'
+import {
+  API_KEY_BASE_URL_LLM_PROVIDERS,
+  CLOUD_LLM_PROVIDER_IDS,
+  LOCAL_LLM_PROVIDER_IDS,
+  llmProviderCategory,
+  type LlmProviderCategory,
+  VENDOR_LLM_PROVIDER_IDS,
+  WHOLESALE_LLM_PROVIDER_IDS,
+} from './llm-provider-registry'
 
-export type ProviderSetupCategory = 'local' | 'cloud'
+export type ProviderSetupCategory = LlmProviderCategory
 
 export type ProviderSetupMeta = {
   id: ProviderType
@@ -45,22 +53,30 @@ const CLOUD_DEFAULTS: Partial<
   },
 }
 
-function metaForOpenAiCompatible(id: ProviderType): ProviderSetupMeta | undefined {
-  if (!(id in OPENAI_COMPATIBLE_LLM_PROVIDERS)) return undefined
-  const m = OPENAI_COMPATIBLE_LLM_PROVIDERS[id as keyof typeof OPENAI_COMPATIBLE_LLM_PROVIDERS]
+function metaForApiKeyBaseUrlProvider(id: ProviderType): ProviderSetupMeta | undefined {
+  if (!(id in API_KEY_BASE_URL_LLM_PROVIDERS)) return undefined
+  const m = API_KEY_BASE_URL_LLM_PROVIDERS[id as keyof typeof API_KEY_BASE_URL_LLM_PROVIDERS]
   const consoleUrls: Partial<Record<string, string>> = {
     moonshot: 'https://platform.moonshot.cn/console/api-keys',
     qwen: 'https://dashscope.console.aliyun.com/apiKey',
     bytedance: 'https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey',
     huggingface: 'https://huggingface.co/settings/tokens',
     'nvidia-nim': 'https://build.nvidia.com/settings/api-key',
-    custom: 'https://app.fireworks.ai/settings/users/api-keys',
+    fireworks: 'https://app.fireworks.ai/settings/users/api-keys',
+    openrouter: 'https://openrouter.ai/keys',
+    custom: 'https://models.dev',
+  }
+  const docsUrls: Partial<Record<string, string>> = {
+    fireworks: 'https://docs.fireworks.ai/getting-started/quickstart',
+    openrouter: 'https://openrouter.ai/docs/quickstart',
+    custom: 'https://models.dev',
   }
   return {
     id,
-    category: 'cloud',
+    category: m.category,
     requiresApiKey: true,
     consoleUrl: consoleUrls[id],
+    docsUrl: docsUrls[id],
     keyPlaceholder: 'API key…',
     defaultBaseUrl: m.defaultBaseUrl,
   }
@@ -82,58 +98,60 @@ export const PROVIDER_SETUP_META: Record<ProviderType, ProviderSetupMeta> = {
   },
   openai: {
     id: 'openai',
-    category: 'cloud',
+    category: 'vendor',
     requiresApiKey: true,
     defaultBaseUrl: 'https://api.openai.com/v1',
     ...CLOUD_DEFAULTS.openai,
   },
   anthropic: {
     id: 'anthropic',
-    category: 'cloud',
+    category: 'vendor',
     requiresApiKey: true,
     defaultBaseUrl: 'https://api.anthropic.com/v1',
     ...CLOUD_DEFAULTS.anthropic,
   },
   gemini: {
     id: 'gemini',
-    category: 'cloud',
+    category: 'vendor',
     requiresApiKey: true,
     defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta',
     ...CLOUD_DEFAULTS.gemini,
   },
   deepseek: {
     id: 'deepseek',
-    category: 'cloud',
+    category: 'vendor',
     requiresApiKey: true,
     defaultBaseUrl: 'https://api.deepseek.com/v1',
     ...CLOUD_DEFAULTS.deepseek,
   },
   zhipu: {
     id: 'zhipu',
-    category: 'cloud',
+    category: 'vendor',
     requiresApiKey: true,
     defaultBaseUrl: 'https://api.z.ai/api/paas/v4',
     ...CLOUD_DEFAULTS.zhipu,
   },
-  moonshot: metaForOpenAiCompatible('moonshot')!,
-  qwen: metaForOpenAiCompatible('qwen')!,
-  bytedance: metaForOpenAiCompatible('bytedance')!,
-  huggingface: metaForOpenAiCompatible('huggingface')!,
-  'nvidia-nim': metaForOpenAiCompatible('nvidia-nim')!,
-  custom: {
-    ...metaForOpenAiCompatible('custom')!,
-    docsUrl: 'https://models.dev',
-  },
+  moonshot: metaForApiKeyBaseUrlProvider('moonshot')!,
+  qwen: metaForApiKeyBaseUrlProvider('qwen')!,
+  bytedance: metaForApiKeyBaseUrlProvider('bytedance')!,
+  huggingface: metaForApiKeyBaseUrlProvider('huggingface')!,
+  'nvidia-nim': metaForApiKeyBaseUrlProvider('nvidia-nim')!,
+  fireworks: metaForApiKeyBaseUrlProvider('fireworks')!,
+  openrouter: metaForApiKeyBaseUrlProvider('openrouter')!,
+  custom: metaForApiKeyBaseUrlProvider('custom')!,
 }
 
 export function providerSetupMeta(provider: ProviderType): ProviderSetupMeta {
   return PROVIDER_SETUP_META[provider]
 }
 
-export const CLOUD_LLM_PROVIDER_IDS = (
-  Object.keys(PROVIDER_SETUP_META) as ProviderType[]
-).filter((id) => PROVIDER_SETUP_META[id].category === 'cloud')
+export {
+  CLOUD_LLM_PROVIDER_IDS,
+  LOCAL_LLM_PROVIDER_IDS,
+  VENDOR_LLM_PROVIDER_IDS,
+  WHOLESALE_LLM_PROVIDER_IDS,
+  llmProviderCategory,
+}
 
-export const LOCAL_LLM_PROVIDER_IDS = (
-  Object.keys(PROVIDER_SETUP_META) as ProviderType[]
-).filter((id) => PROVIDER_SETUP_META[id].category === 'local')
+export const VENDOR_LLM_PROVIDER_IDS_LIST = [...VENDOR_LLM_PROVIDER_IDS]
+export const WHOLESALE_LLM_PROVIDER_IDS_LIST = [...WHOLESALE_LLM_PROVIDER_IDS]

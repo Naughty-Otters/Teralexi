@@ -13,6 +13,8 @@ export const LLM_PROVIDER_IDS = [
   'bytedance',
   'huggingface',
   'nvidia-nim',
+  'fireworks',
+  'openrouter',
   'custom',
 ] as const
 
@@ -21,17 +23,52 @@ export type ProviderType = (typeof LLM_PROVIDER_IDS)[number]
 /** Skill properties.md provider field — same set as agent providers. */
 export type SkillProvider = ProviderType
 
-export type OpenAiCompatibleProviderId =
+export type LlmProviderCategory = 'local' | 'vendor' | 'wholesale'
+
+export const LOCAL_LLM_PROVIDER_IDS = ['ollama', 'llamacpp'] as const satisfies readonly ProviderType[]
+
+export const VENDOR_LLM_PROVIDER_IDS = [
+  'openai',
+  'anthropic',
+  'gemini',
+  'deepseek',
+  'zhipu',
+  'moonshot',
+  'qwen',
+  'bytedance',
+  'huggingface',
+  'nvidia-nim',
+] as const satisfies readonly ProviderType[]
+
+export const WHOLESALE_LLM_PROVIDER_IDS = [
+  'fireworks',
+  'openrouter',
+  'custom',
+] as const satisfies readonly ProviderType[]
+
+/** Signed-in users can configure vendor + wholesale APIs. */
+export const CLOUD_LLM_PROVIDER_IDS = [
+  ...VENDOR_LLM_PROVIDER_IDS,
+  ...WHOLESALE_LLM_PROVIDER_IDS,
+] as const satisfies readonly ProviderType[]
+
+export type ApiKeyBaseUrlProviderId =
   | 'moonshot'
   | 'qwen'
   | 'bytedance'
   | 'huggingface'
   | 'nvidia-nim'
+  | 'fireworks'
+  | 'openrouter'
   | 'custom'
 
-export type OpenAiCompatibleProviderMeta = {
-  id: OpenAiCompatibleProviderId
+/** @deprecated Use {@link ApiKeyBaseUrlProviderId}. */
+export type OpenAiCompatibleProviderId = ApiKeyBaseUrlProviderId
+
+export type ApiKeyBaseUrlProviderMeta = {
+  id: ApiKeyBaseUrlProviderId
   label: string
+  category: LlmProviderCategory
   apiKeyConfigKey: string
   baseUrlConfigKey: string
   defaultBaseUrl: string
@@ -39,13 +76,17 @@ export type OpenAiCompatibleProviderMeta = {
   hint: string
 }
 
-export const OPENAI_COMPATIBLE_LLM_PROVIDERS: Record<
-  OpenAiCompatibleProviderId,
-  OpenAiCompatibleProviderMeta
+/** @deprecated Use {@link ApiKeyBaseUrlProviderMeta}. */
+export type OpenAiCompatibleProviderMeta = ApiKeyBaseUrlProviderMeta
+
+export const API_KEY_BASE_URL_LLM_PROVIDERS: Record<
+  ApiKeyBaseUrlProviderId,
+  ApiKeyBaseUrlProviderMeta
 > = {
   moonshot: {
     id: 'moonshot',
     label: 'Moonshot',
+    category: 'vendor',
     apiKeyConfigKey: 'settings.moonshot.apiKey',
     baseUrlConfigKey: 'settings.moonshot.baseUrl',
     defaultBaseUrl: 'https://api.moonshot.ai/v1',
@@ -60,6 +101,7 @@ export const OPENAI_COMPATIBLE_LLM_PROVIDERS: Record<
   qwen: {
     id: 'qwen',
     label: 'Qwen',
+    category: 'vendor',
     apiKeyConfigKey: 'settings.qwen.apiKey',
     baseUrlConfigKey: 'settings.qwen.baseUrl',
     defaultBaseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
@@ -69,6 +111,7 @@ export const OPENAI_COMPATIBLE_LLM_PROVIDERS: Record<
   bytedance: {
     id: 'bytedance',
     label: 'ByteDance',
+    category: 'vendor',
     apiKeyConfigKey: 'settings.bytedance.apiKey',
     baseUrlConfigKey: 'settings.bytedance.baseUrl',
     defaultBaseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
@@ -79,6 +122,7 @@ export const OPENAI_COMPATIBLE_LLM_PROVIDERS: Record<
   huggingface: {
     id: 'huggingface',
     label: 'Hugging Face',
+    category: 'vendor',
     apiKeyConfigKey: 'settings.huggingface.apiKey',
     baseUrlConfigKey: 'settings.huggingface.baseUrl',
     defaultBaseUrl: 'https://router.huggingface.co/v1',
@@ -89,27 +133,58 @@ export const OPENAI_COMPATIBLE_LLM_PROVIDERS: Record<
   'nvidia-nim': {
     id: 'nvidia-nim',
     label: 'NVIDIA NIM',
+    category: 'vendor',
     apiKeyConfigKey: 'settings.nvidiaNim.apiKey',
     baseUrlConfigKey: 'settings.nvidiaNim.baseUrl',
     defaultBaseUrl: 'https://integrate.api.nvidia.com/v1',
     defaultModels: [],
     hint: 'NVIDIA NIM OpenAI-compatible API. Model list loads from /models when configured.',
   },
+  fireworks: {
+    id: 'fireworks',
+    label: 'Fireworks',
+    category: 'wholesale',
+    apiKeyConfigKey: 'settings.fireworks.apiKey',
+    baseUrlConfigKey: 'settings.fireworks.baseUrl',
+    defaultBaseUrl: 'https://api.fireworks.ai/inference/v1',
+    defaultModels: [
+      'accounts/fireworks/models/llama-v3p1-70b-instruct',
+      'accounts/fireworks/models/deepseek-v3',
+    ],
+    hint: 'Fireworks AI wholesale inference. Use model ids from the Fireworks console.',
+  },
+  openrouter: {
+    id: 'openrouter',
+    label: 'OpenRouter',
+    category: 'wholesale',
+    apiKeyConfigKey: 'settings.openrouter.apiKey',
+    baseUrlConfigKey: 'settings.openrouter.baseUrl',
+    defaultBaseUrl: 'https://openrouter.ai/api/v1',
+    defaultModels: ['openai/gpt-4o', 'anthropic/claude-sonnet-4', 'google/gemini-2.5-pro'],
+    hint: 'OpenRouter routes requests to many hosted models. Use provider/model ids from openrouter.ai.',
+  },
   custom: {
     id: 'custom',
-    label: 'Custom provider',
+    label: 'Custom (OpenAI-compatible)',
+    category: 'wholesale',
     apiKeyConfigKey: 'settings.custom.apiKey',
     baseUrlConfigKey: 'settings.custom.baseUrl',
-    defaultBaseUrl: 'https://openrouter.ai/api/v1',
+    defaultBaseUrl: '',
     defaultModels: [],
     hint:
-      'Any OpenAI-compatible API. Browse providers and model ids on models.dev; paste your API key from the provider console.',
+      'Any other OpenAI-compatible API. Browse providers and model ids on models.dev; paste your API key and base URL.',
   },
 }
 
-export const OPENAI_COMPATIBLE_PROVIDER_IDS = Object.keys(
-  OPENAI_COMPATIBLE_LLM_PROVIDERS,
-) as OpenAiCompatibleProviderId[]
+/** @deprecated Use {@link API_KEY_BASE_URL_LLM_PROVIDERS}. */
+export const OPENAI_COMPATIBLE_LLM_PROVIDERS = API_KEY_BASE_URL_LLM_PROVIDERS
+
+export const API_KEY_BASE_URL_PROVIDER_IDS = Object.keys(
+  API_KEY_BASE_URL_LLM_PROVIDERS,
+) as ApiKeyBaseUrlProviderId[]
+
+/** @deprecated Use {@link API_KEY_BASE_URL_PROVIDER_IDS}. */
+export const OPENAI_COMPATIBLE_PROVIDER_IDS = API_KEY_BASE_URL_PROVIDER_IDS
 
 export const LLM_PROVIDER_LABELS: Record<ProviderType, string> = {
   ollama: 'Ollama',
@@ -124,13 +199,23 @@ export const LLM_PROVIDER_LABELS: Record<ProviderType, string> = {
   bytedance: 'ByteDance',
   huggingface: 'Hugging Face',
   'nvidia-nim': 'NVIDIA NIM',
+  fireworks: 'Fireworks',
+  openrouter: 'OpenRouter',
   custom: 'Custom (OpenAI-compatible)',
+}
+
+export function llmProviderCategory(id: ProviderType): LlmProviderCategory {
+  if ((LOCAL_LLM_PROVIDER_IDS as readonly string[]).includes(id)) return 'local'
+  if ((WHOLESALE_LLM_PROVIDER_IDS as readonly string[]).includes(id)) return 'wholesale'
+  return 'vendor'
 }
 
 /** Canonical provider label for settings tabs and dropdowns. */
 export function llmProviderSettingsLabel(id: ProviderType): string {
   if (id === 'ollama') return 'Ollama (local)'
   if (id === 'llamacpp') return 'llama.cpp (local)'
+  const category = llmProviderCategory(id)
+  if (category === 'wholesale') return `${LLM_PROVIDER_LABELS[id]} (wholesale)`
   return LLM_PROVIDER_LABELS[id]
 }
 
@@ -139,10 +224,17 @@ export const LLM_PROVIDER_SETTINGS_OPTIONS = LLM_PROVIDER_IDS.map((id) => ({
   label: llmProviderSettingsLabel(id),
 }))
 
+export function isApiKeyBaseUrlProvider(
+  provider: ProviderType,
+): provider is ApiKeyBaseUrlProviderId {
+  return provider in API_KEY_BASE_URL_LLM_PROVIDERS
+}
+
+/** @deprecated Use {@link isApiKeyBaseUrlProvider}. */
 export function isOpenAiCompatibleProvider(
   provider: ProviderType,
-): provider is OpenAiCompatibleProviderId {
-  return provider in OPENAI_COMPATIBLE_LLM_PROVIDERS
+): provider is ApiKeyBaseUrlProviderId {
+  return isApiKeyBaseUrlProvider(provider)
 }
 
 export function isProviderType(value: string): value is ProviderType {
@@ -158,17 +250,24 @@ export function normalizeProviderBaseUrl(
   return value.replace(/\/$/, '')
 }
 
-export function openAiCompatibleProviderMeta(
-  provider: OpenAiCompatibleProviderId,
-): OpenAiCompatibleProviderMeta {
-  return OPENAI_COMPATIBLE_LLM_PROVIDERS[provider]
+export function apiKeyBaseUrlProviderMeta(
+  provider: ApiKeyBaseUrlProviderId,
+): ApiKeyBaseUrlProviderMeta {
+  return API_KEY_BASE_URL_LLM_PROVIDERS[provider]
 }
 
-export function resolveOpenAiCompatibleCredentials(
-  provider: OpenAiCompatibleProviderId,
+/** @deprecated Use {@link apiKeyBaseUrlProviderMeta}. */
+export function openAiCompatibleProviderMeta(
+  provider: ApiKeyBaseUrlProviderId,
+): ApiKeyBaseUrlProviderMeta {
+  return apiKeyBaseUrlProviderMeta(provider)
+}
+
+export function resolveApiKeyBaseUrlCredentials(
+  provider: ApiKeyBaseUrlProviderId,
   values: Record<string, string | undefined>,
 ): { apiKey: string; baseURL: string } {
-  const meta = OPENAI_COMPATIBLE_LLM_PROVIDERS[provider]
+  const meta = API_KEY_BASE_URL_LLM_PROVIDERS[provider]
   return {
     apiKey: (values[meta.apiKeyConfigKey] ?? '').trim(),
     baseURL: normalizeProviderBaseUrl(
@@ -178,27 +277,48 @@ export function resolveOpenAiCompatibleCredentials(
   }
 }
 
-export function openAiCompatibleProviderConfigKeys(): string[] {
-  return OPENAI_COMPATIBLE_PROVIDER_IDS.flatMap((id) => {
-    const meta = OPENAI_COMPATIBLE_LLM_PROVIDERS[id]
+/** @deprecated Use {@link resolveApiKeyBaseUrlCredentials}. */
+export function resolveOpenAiCompatibleCredentials(
+  provider: ApiKeyBaseUrlProviderId,
+  values: Record<string, string | undefined>,
+): { apiKey: string; baseURL: string } {
+  return resolveApiKeyBaseUrlCredentials(provider, values)
+}
+
+export function apiKeyBaseUrlProviderConfigKeys(): string[] {
+  return API_KEY_BASE_URL_PROVIDER_IDS.flatMap((id) => {
+    const meta = API_KEY_BASE_URL_LLM_PROVIDERS[id]
     return [meta.apiKeyConfigKey, meta.baseUrlConfigKey]
   })
+}
+
+/** @deprecated Use {@link apiKeyBaseUrlProviderConfigKeys}. */
+export function openAiCompatibleProviderConfigKeys(): string[] {
+  return apiKeyBaseUrlProviderConfigKeys()
 }
 
 /** SQL CHECK list for agent_configurations.provider */
 export const AGENT_PROVIDER_SQL_CHECK = `(${LLM_PROVIDER_IDS.map((id) => `'${id}'`).join(', ')})`
 
-export function emptyOpenAiCompatibleCredentials(): Record<
-  OpenAiCompatibleProviderId,
+export function emptyApiKeyBaseUrlCredentials(): Record<
+  ApiKeyBaseUrlProviderId,
   { apiKey: string; baseURL: string }
 > {
   const out = {} as Record<
-    OpenAiCompatibleProviderId,
+    ApiKeyBaseUrlProviderId,
     { apiKey: string; baseURL: string }
   >
-  for (const id of OPENAI_COMPATIBLE_PROVIDER_IDS) {
-    const meta = OPENAI_COMPATIBLE_LLM_PROVIDERS[id]
+  for (const id of API_KEY_BASE_URL_PROVIDER_IDS) {
+    const meta = API_KEY_BASE_URL_LLM_PROVIDERS[id]
     out[id] = { apiKey: '', baseURL: meta.defaultBaseUrl }
   }
   return out
+}
+
+/** @deprecated Use {@link emptyApiKeyBaseUrlCredentials}. */
+export function emptyOpenAiCompatibleCredentials(): Record<
+  ApiKeyBaseUrlProviderId,
+  { apiKey: string; baseURL: string }
+> {
+  return emptyApiKeyBaseUrlCredentials()
 }

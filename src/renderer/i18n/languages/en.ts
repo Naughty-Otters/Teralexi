@@ -62,6 +62,11 @@ export const lang: AppLocaleBundle = {
       installed: 'Installed skills',
       clawhub: 'ClawHub',
     },
+    llmGroups: {
+      local: 'Local',
+      vendor: 'Vendors',
+      wholesale: 'Wholesale',
+    },
     sections: {
       language: 'Language',
       appearance: 'Appearance',

@@ -27,6 +27,7 @@ export function runMigrations(db: Database.Database): void {
   migrateAgentProviderExtendedLlm(db)
   migrateAgentProviderZhipu(db)
   migrateAgentProviderCustom(db)
+  migrateAgentProviderWholesale(db)
   migrateAgentStageLlmColumns(db)
   migrateWorkflowsSchema(db)
   migrateSchedulersRunWorkflow(db)
@@ -363,6 +364,12 @@ function migrateAgentProviderCustom(db: Database.Database): void {
   const sql = agentConfigurationsProviderCheckSql(db)
   if (!sql || sql.includes("'custom'")) return
   rebuildAgentConfigurationsProviderCheck(db, 'provider_legacy_custom')
+}
+
+function migrateAgentProviderWholesale(db: Database.Database): void {
+  const sql = agentConfigurationsProviderCheckSql(db)
+  if (!sql || sql.includes("'fireworks'")) return
+  rebuildAgentConfigurationsProviderCheck(db, 'provider_legacy_wholesale')
 }
 
 /** Legacy DDL retained for intermediate migrations only. */
