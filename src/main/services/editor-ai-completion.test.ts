@@ -39,6 +39,7 @@ const baseCreds = {
     bytedance: { apiKey: '', baseURL: 'https://ark.cn-beijing.volces.com/api/v3' },
     huggingface: { apiKey: '', baseURL: 'https://router.huggingface.co/v1' },
     'nvidia-nim': { apiKey: '', baseURL: 'https://integrate.api.nvidia.com/v1' },
+    custom: { apiKey: '', baseURL: 'https://openrouter.ai/api/v1' },
   },
 }
 

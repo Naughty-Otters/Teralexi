@@ -13,6 +13,7 @@ export const LLM_PROVIDER_IDS = [
   'bytedance',
   'huggingface',
   'nvidia-nim',
+  'custom',
 ] as const
 
 export type ProviderType = (typeof LLM_PROVIDER_IDS)[number]
@@ -26,6 +27,7 @@ export type OpenAiCompatibleProviderId =
   | 'bytedance'
   | 'huggingface'
   | 'nvidia-nim'
+  | 'custom'
 
 export type OpenAiCompatibleProviderMeta = {
   id: OpenAiCompatibleProviderId
@@ -93,6 +95,16 @@ export const OPENAI_COMPATIBLE_LLM_PROVIDERS: Record<
     defaultModels: [],
     hint: 'NVIDIA NIM OpenAI-compatible API. Model list loads from /models when configured.',
   },
+  custom: {
+    id: 'custom',
+    label: 'Custom provider',
+    apiKeyConfigKey: 'settings.custom.apiKey',
+    baseUrlConfigKey: 'settings.custom.baseUrl',
+    defaultBaseUrl: 'https://openrouter.ai/api/v1',
+    defaultModels: [],
+    hint:
+      'Any OpenAI-compatible API. Browse providers and model ids on models.dev; paste your API key from the provider console.',
+  },
 }
 
 export const OPENAI_COMPATIBLE_PROVIDER_IDS = Object.keys(
@@ -112,6 +124,7 @@ export const LLM_PROVIDER_LABELS: Record<ProviderType, string> = {
   bytedance: 'ByteDance',
   huggingface: 'Hugging Face',
   'nvidia-nim': 'NVIDIA NIM',
+  custom: 'Custom (OpenAI-compatible)',
 }
 
 /** Canonical provider label for settings tabs and dropdowns. */

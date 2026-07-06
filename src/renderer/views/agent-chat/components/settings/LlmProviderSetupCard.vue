@@ -124,7 +124,7 @@
               <input
                 v-model="draftBaseUrl"
                 class="sp-input"
-                :placeholder="meta.defaultBaseUrl ?? ''"
+                :placeholder="baseUrlPlaceholder"
               />
             </div>
           </template>
@@ -211,9 +211,13 @@ const testOk = ref<boolean | null>(null)
 const testMessage = ref('')
 const testModelCount = ref<number | undefined>()
 
-const showBaseUrl = computed(
-  () => meta.value.category === 'cloud' && Boolean(meta.value.defaultBaseUrl),
-)
+const showBaseUrl = computed(() => {
+  if (meta.value.category !== 'cloud') return false
+  if (props.provider === 'custom') return true
+  return Boolean(meta.value.defaultBaseUrl)
+})
+
+const baseUrlPlaceholder = computed(() => meta.value.defaultBaseUrl ?? '')
 
 const baseUrlHint = computed(() => {
   switch (props.provider) {

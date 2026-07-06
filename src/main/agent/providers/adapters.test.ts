@@ -210,6 +210,7 @@ describe('PROVIDER_ADAPTERS', () => {
     expect(Object.keys(PROVIDER_ADAPTERS).sort()).toEqual([
       'anthropic',
       'bytedance',
+      'custom',
       'deepseek',
       'gemini',
       'huggingface',

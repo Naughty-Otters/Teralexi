@@ -26,6 +26,7 @@ export function runMigrations(db: Database.Database): void {
   migrateEnableAllowAsSubAgentDefault(db)
   migrateAgentProviderExtendedLlm(db)
   migrateAgentProviderZhipu(db)
+  migrateAgentProviderCustom(db)
   migrateAgentStageLlmColumns(db)
   migrateWorkflowsSchema(db)
   migrateSchedulersRunWorkflow(db)
@@ -356,6 +357,12 @@ function migrateAgentProviderZhipu(db: Database.Database): void {
   const sql = agentConfigurationsProviderCheckSql(db)
   if (!sql || sql.includes("'zhipu'")) return
   rebuildAgentConfigurationsProviderCheck(db, 'provider_legacy_zhipu')
+}
+
+function migrateAgentProviderCustom(db: Database.Database): void {
+  const sql = agentConfigurationsProviderCheckSql(db)
+  if (!sql || sql.includes("'custom'")) return
+  rebuildAgentConfigurationsProviderCheck(db, 'provider_legacy_custom')
 }
 
 /** Legacy DDL retained for intermediate migrations only. */

@@ -155,6 +155,7 @@ export const PROVIDER_ADAPTERS: Record<ProviderType, ProviderAdapter> = {
     log.child({ provider: 'huggingface' }),
   ),
   'nvidia-nim': openAiCompatibleAdapter('nvidia-nim', 'nvidia-nim'),
+  custom: openAiCompatibleAdapter('custom', 'custom'),
 }
 
 export function createModelForProvider(

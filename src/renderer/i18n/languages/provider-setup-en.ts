@@ -157,5 +157,14 @@ export const providerSetupEn: ProviderSetupLabels = {
         'Paste the key below and click Test & save.',
       ],
     },
+    custom: {
+      intro:
+        'Connect any OpenAI-compatible provider. Default base URL is OpenRouter; change it to match your vendor.',
+      steps: [
+        'Browse providers and model ids on models.dev (Documentation link below).',
+        'Create an API key in your provider console (Manage your own LLM API key opens Fireworks as an example).',
+        'Paste the key below, adjust the base URL if needed, and use the provider model id as the agent model name.',
+      ],
+    },
   },
 }
