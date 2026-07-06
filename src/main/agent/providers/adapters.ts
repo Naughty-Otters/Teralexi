@@ -10,6 +10,9 @@ import {
   createOpenAI,
   createOpenAICompatible,
   createOpenRouter,
+  createTogetherAI,
+  createGroq,
+  createDeepInfra,
   createZhipu,
 } from '@teralexi-ai'
 import type { ProviderCredentials, ProviderType } from '../types'
@@ -142,6 +145,36 @@ export class OpenRouterAdapter extends ProviderAdapter {
   }
 }
 
+export class TogetherAiAdapter extends ProviderAdapter {
+  createModel(modelId: string, creds: ProviderCredentials) {
+    const { apiKey, baseURL } = creds.openAiCompatible.togetherai
+    return createTogetherAI({
+      apiKey,
+      baseURL: baseURL || undefined,
+    })(modelId)
+  }
+}
+
+export class GroqAdapter extends ProviderAdapter {
+  createModel(modelId: string, creds: ProviderCredentials) {
+    const { apiKey, baseURL } = creds.openAiCompatible.groq
+    return createGroq({
+      apiKey,
+      baseURL: baseURL || undefined,
+    })(modelId)
+  }
+}
+
+export class DeepInfraAdapter extends ProviderAdapter {
+  createModel(modelId: string, creds: ProviderCredentials) {
+    const { apiKey, baseURL } = creds.openAiCompatible.deepinfra
+    return createDeepInfra({
+      apiKey,
+      baseURL: baseURL || undefined,
+    })(modelId)
+  }
+}
+
 function openAiCompatibleAdapter(
   provider: ApiKeyBaseUrlProviderId,
   providerName: string,
@@ -184,6 +217,15 @@ export const PROVIDER_ADAPTERS: Record<ProviderType, ProviderAdapter> = {
   openrouter: instrumentInstanceMethods(
     new OpenRouterAdapter(),
     log.child({ provider: 'openrouter' }),
+  ),
+  togetherai: instrumentInstanceMethods(
+    new TogetherAiAdapter(),
+    log.child({ provider: 'togetherai' }),
+  ),
+  groq: instrumentInstanceMethods(new GroqAdapter(), log.child({ provider: 'groq' })),
+  deepinfra: instrumentInstanceMethods(
+    new DeepInfraAdapter(),
+    log.child({ provider: 'deepinfra' }),
   ),
   custom: openAiCompatibleAdapter('custom', 'custom'),
 }

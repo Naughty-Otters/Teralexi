@@ -38,6 +38,12 @@ export default defineConfig({
     clearMocks: true,
     restoreMocks: true,
     setupFiles: ['./vitest.setup.ts'],
+    exclude: [
+      'node_modules/**',
+      'dist/**',
+      'build/**',
+      '**/*.ui.integration.test.{ts,tsx}',
+    ],
     include: [
       'src/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts}',
       'skills/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts}',

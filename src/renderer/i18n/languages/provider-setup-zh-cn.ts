@@ -173,6 +173,27 @@ export const providerSetupZhCn: ProviderSetupLabels = {
         '粘贴到下方，并使用 OpenRouter 目录中的 provider/model id。',
       ],
     },
+    togetherai: {
+      intro: 'Together AI 通过统一推理 API 托管多种开源与专有模型。',
+      steps: [
+        '在 Together AI 控制台创建 API 密钥。',
+        '粘贴到下方，并使用 Together 模型目录中的 model id。',
+      ],
+    },
+    groq: {
+      intro: 'Groq 通过 LPU 提供热门开源模型的高速推理。',
+      steps: [
+        '在 Groq 控制台创建 API 密钥。',
+        '粘贴到下方，并使用 Groq 模型列表中的 model id。',
+      ],
+    },
+    deepinfra: {
+      intro: 'DeepInfra 通过统一推理 API 托管多种开源模型。',
+      steps: [
+        '在 DeepInfra 控制台创建 API 密钥。',
+        '粘贴到下方，并使用 DeepInfra 目录中的 model id。',
+      ],
+    },
     custom: {
       intro:
         '连接其他 OpenAI 兼容端点。请填写对应服务商的 Base URL 与 API 密钥。',

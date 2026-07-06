@@ -179,6 +179,28 @@ export const providerSetupEn: ProviderSetupLabels = {
         'Paste the key below and use provider/model ids from the OpenRouter catalog.',
       ],
     },
+    togetherai: {
+      intro:
+        'Together AI hosts open-source and proprietary models through a unified inference API.',
+      steps: [
+        'Create an API key in the Together AI console.',
+        'Paste the key below and use model ids from the Together model catalog.',
+      ],
+    },
+    groq: {
+      intro: 'Groq provides fast LPU inference for popular open models.',
+      steps: [
+        'Create an API key in the Groq console.',
+        'Paste the key below and use model ids from the Groq model list.',
+      ],
+    },
+    deepinfra: {
+      intro: 'DeepInfra hosts many open models through a unified inference API.',
+      steps: [
+        'Create an API key in the DeepInfra dashboard.',
+        'Paste the key below and use model ids from the DeepInfra catalog.',
+      ],
+    },
     custom: {
       intro:
         'Connect any other OpenAI-compatible endpoint. Set the base URL and API key for your vendor.',
