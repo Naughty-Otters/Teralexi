@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3'
 import { mkdirSync, writeFileSync } from 'fs'
 import { dirname, resolve, sep } from 'path'
-import { getopenfdeDbPath, getopenfdeWorkspacePath } from '@config/openfde-home'
+import { getTeralexiDbPath, getTeralexiWorkspacePath } from '@config/teralexi-home'
 import { openAppSqliteDatabase } from '../sqlite/open-app-database'
 import { appCache } from '@main/cache/app-cache'
 
@@ -65,8 +65,8 @@ export class ConversationStore {
   private readonly messageAttachments: MessageAttachmentsRepository
 
   constructor() {
-    const dbPath = getopenfdeDbPath()
-    const defaultWorkspacePath = getopenfdeWorkspacePath()
+    const dbPath = getTeralexiDbPath()
+    const defaultWorkspacePath = getTeralexiWorkspacePath()
     this.db = openAppSqliteDatabase(dbPath)
     runMigrations(this.db)
 

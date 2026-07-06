@@ -3,8 +3,8 @@ import {
   clearAgentRunSandboxGlobals,
   getAgentRunSandboxOutputScope,
   getAgentRunSandboxRoot,
-  OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
-  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
+  TERALEXI_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
+  TERALEXI_AGENT_SANDBOX_ROOT_ENV,
   SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY,
   SANDBOX_ROOT_GLOBAL_KEY,
   setAgentRunSandboxGlobals,
@@ -23,15 +23,15 @@ describe('sandbox run-context', () => {
       root: '/sandbox/root',
       outputScope: 'output/run-1',
     })
-    expect(process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]).toBe('/sandbox/root')
-    expect(process.env[OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]).toBe('output/run-1')
+    expect(process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV]).toBe('/sandbox/root')
+    expect(process.env[TERALEXI_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]).toBe('output/run-1')
     expect((globalThis as Record<string, unknown>)[SANDBOX_ROOT_GLOBAL_KEY]).toBe(
       '/sandbox/root',
     )
 
     clearAgentRunSandboxGlobals()
-    expect(process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]).toBeUndefined()
-    expect(process.env[OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]).toBeUndefined()
+    expect(process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV]).toBeUndefined()
+    expect(process.env[TERALEXI_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]).toBeUndefined()
     expect((globalThis as Record<string, unknown>)[SANDBOX_ROOT_GLOBAL_KEY]).toBeUndefined()
   })
 
@@ -57,7 +57,7 @@ describe('sandbox run-context', () => {
     expect(getAgentRunSandboxRoot()).toBe('/global/root')
     expect(getAgentRunSandboxOutputScope()).toBe('output/global')
 
-    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = '/env/root'
+    process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV] = '/env/root'
     delete (globalThis as Record<string, unknown>)[SANDBOX_ROOT_GLOBAL_KEY]
     expect(getAgentRunSandboxRoot()).toBe('/env/root')
   })

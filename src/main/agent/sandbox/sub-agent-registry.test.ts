@@ -1,8 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { join } from 'node:path'
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeSandboxDir: vi.fn(() => '/mock/sandbox'),
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiSandboxDir: vi.fn(() => '/mock/sandbox'),
 }))
 
 vi.mock('./sandbox-impl', () => ({
@@ -59,13 +59,13 @@ describe('sub-agent-registry', () => {
   it('detects sub-agent sandbox roots with posix or Windows separators', () => {
     expect(
       isSubAgentSandboxRoot(
-        'C:\\Users\\tester\\.openfde\\workspace\\sandbox\\sub-agents\\run-1',
+        'C:\\Users\\tester\\.teralexi\\workspace\\sandbox\\sub-agents\\run-1',
       ),
     ).toBe(true)
     expect(
-      isSubAgentSandboxRoot('/Users/tester/.openfde/workspace/sandbox/sub-agents/run-1'),
+      isSubAgentSandboxRoot('/Users/tester/.teralexi/workspace/sandbox/sub-agents/run-1'),
     ).toBe(true)
-    expect(isSubAgentSandboxRoot('/Users/tester/.openfde/workspace/sandbox/run-1')).toBe(
+    expect(isSubAgentSandboxRoot('/Users/tester/.teralexi/workspace/sandbox/run-1')).toBe(
       false,
     )
   })

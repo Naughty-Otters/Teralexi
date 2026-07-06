@@ -384,7 +384,7 @@ export async function cascadeWebSearch(
 async function withEphemeralCrawler<T>(
   run: (config: Configuration) => Promise<T>,
 ): Promise<T> {
-  const storageDir = await mkdtemp(join(tmpdir(), 'openfde-crawlee-'))
+  const storageDir = await mkdtemp(join(tmpdir(), 'teralexi-crawlee-'))
   const config = createEphemeralCrawleeConfig(storageDir)
   try {
     return await run(config)

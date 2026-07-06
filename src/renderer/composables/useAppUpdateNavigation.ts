@@ -21,7 +21,7 @@ export function openAppUpdateAbout(): void {
   if (switchSettingsTabHandler) {
     switchSettingsTabHandler('about')
   } else {
-    sessionStorage.setItem('openfde.settingsTab', 'about')
+    sessionStorage.setItem('teralexi.settingsTab', 'about')
   }
   openSettingsAboutHandler?.()
 }

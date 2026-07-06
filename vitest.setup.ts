@@ -11,7 +11,7 @@ const noopLogger = {
   },
 }
 
-/** Keep unit tests hermetic: no log files under ~/.openfde and no traced side effects. */
+/** Keep unit tests hermetic: no log files under ~/.teralexi and no traced side effects. */
 vi.mock('@main/logger', () => ({
   log: noopLogger,
   createLogger: () => noopLogger,

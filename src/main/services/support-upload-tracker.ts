@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { getopenfdeLogsDir } from '@config/openfde-home'
+import { getTeralexiLogsDir } from '@config/teralexi-home'
 import { loadStoredAccount } from '@main/services/google-account-oauth'
 import { createLogger } from '@main/logger'
 
@@ -27,11 +27,11 @@ export type SupportUploadQuota = {
 }
 
 function trackerPath(): string {
-  return join(getopenfdeLogsDir(), 'support-upload-tracker.json')
+  return join(getTeralexiLogsDir(), 'support-upload-tracker.json')
 }
 
 function ensureTrackerDir(): void {
-  mkdirSync(getopenfdeLogsDir(), { recursive: true })
+  mkdirSync(getTeralexiLogsDir(), { recursive: true })
 }
 
 function emptyUserRecord(): UserUploadRecord {

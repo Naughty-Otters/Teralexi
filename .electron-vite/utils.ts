@@ -6,8 +6,8 @@ import {
   buildEnvToEnvFileName,
   buildEnvToNodeEnv,
   normalizeBuildEnv,
-  OPENFDE_BUILD_ENV_VAR,
-  type OpenFdeBuildEnv,
+  TERALEXI_BUILD_ENV_VAR,
+  type TeralexiBuildEnv,
 } from '../config/build-env'
 import minimist from 'minimist'
 
@@ -18,8 +18,8 @@ const rootResolve = (...pathSegments: string[]) =>
 export const getEnv = () => argv['m']
 export const getArgv = () => argv
 
-/** Remove OpenFDE-only flags before forwarding argv to electron-builder. */
-export function stripOpenFdeCliArgs(argv: readonly string[]): string[] {
+/** Remove Teralexi-only flags before forwarding argv to electron-builder. */
+export function stripTeralexiCliArgs(argv: readonly string[]): string[] {
   const out: string[] = []
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
@@ -34,20 +34,20 @@ export function stripOpenFdeCliArgs(argv: readonly string[]): string[] {
   return out
 }
 
-export function getBuildEnvMode(): OpenFdeBuildEnv {
+export function getBuildEnvMode(): TeralexiBuildEnv {
   const fromArgv = getEnv()
   if (fromArgv?.trim()) {
     return normalizeBuildEnv(fromArgv)
   }
-  if (process.env[OPENFDE_BUILD_ENV_VAR]?.trim()) {
-    return normalizeBuildEnv(process.env[OPENFDE_BUILD_ENV_VAR])
+  if (process.env[TERALEXI_BUILD_ENV_VAR]?.trim()) {
+    return normalizeBuildEnv(process.env[TERALEXI_BUILD_ENV_VAR])
   }
   return 'dev'
 }
 
-export function applyBuildEnvFromArgv(): OpenFdeBuildEnv {
+export function applyBuildEnvFromArgv(): TeralexiBuildEnv {
   const mode = getBuildEnvMode()
-  process.env[OPENFDE_BUILD_ENV_VAR] = mode
+  process.env[TERALEXI_BUILD_ENV_VAR] = mode
   process.env.NODE_ENV = buildEnvToNodeEnv(mode)
   return mode
 }

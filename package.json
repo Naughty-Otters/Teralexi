@@ -1,19 +1,19 @@
 {
-  "name": "openfde",
+  "name": "teralexi",
   "version": "0.0.1",
-  "productName": "OpenFDE",
+  "productName": "Teralexi",
   "main": "./dist/electron/main/main.js",
   "author": "Naughty-Otters",
-  "description": "OpenFDE project",
+  "description": "Teralexi project",
   "license": "PolyForm-Noncommercial-1.0.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Naughty-Otters/OpenFDE.git"
+    "url": "git+https://github.com/Naughty-Otters/Teralexi.git"
   },
   "bugs": {
-    "url": "https://github.com/Naughty-Otters/OpenFDE/issues"
+    "url": "https://github.com/Naughty-Otters/Teralexi/issues"
   },
-  "homepage": "https://github.com/Naughty-Otters/OpenFDE#readme",
+  "homepage": "https://github.com/Naughty-Otters/Teralexi#readme",
   "scripts": {
     "dev": "tsx .electron-vite/dev-runner.ts -m dev",
     "build": "npm run icons:generate && tsx .electron-vite/build.ts -m prod && tsx scripts/run-electron-builder.ts -m prod -c build.json --publish never",
@@ -28,7 +28,7 @@
     "build:linux:sit": "npm run icons:generate && tsx .electron-vite/build.ts -m sit && tsx scripts/run-electron-builder.ts -m sit -c build.json --linux --publish never",
     "build:dir": "npm run icons:generate && tsx .electron-vite/build.ts -m prod  && tsx scripts/run-electron-builder.ts -m prod -c build.json --dir --publish never",
     "build:dir:sit": "npm run icons:generate && tsx .electron-vite/build.ts -m sit  && tsx scripts/run-electron-builder.ts -m sit -c build.json --dir --publish never",
-    "analyze:pack-size": "du -sh build/mac-arm64/OpenFDE.app 2>/dev/null; du -sh build/mac-arm64/OpenFDE.app/Contents/Resources/app.asar build/mac-arm64/OpenFDE.app/Contents/Resources/app.asar.unpacked 2>/dev/null",
+    "analyze:pack-size": "du -sh build/mac-arm64/Teralexi.app 2>/dev/null; du -sh build/mac-arm64/Teralexi.app/Contents/Resources/app.asar build/mac-arm64/Teralexi.app/Contents/Resources/app.asar.unpacked 2>/dev/null",
     "verify:signing": "node scripts/verify-signing.mjs",
     "verify:azure-signing": "tsx scripts/verify-azure-signing.ts",
     "build:clean": "tsx .electron-vite/build.ts --clean",

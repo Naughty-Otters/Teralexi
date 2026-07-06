@@ -59,7 +59,7 @@ describe('file-io-utils', () => {
   })
 
   it('reads optional file content and handles missing files', async () => {
-    const root = await mkdtemp(path.join(tmpdir(), 'openfde-file-io-'))
+    const root = await mkdtemp(path.join(tmpdir(), 'teralexi-file-io-'))
     try {
       const file = path.join(root, 'x.txt')
       await writeFile(file, 'hello', 'utf-8')
@@ -74,7 +74,7 @@ describe('file-io-utils', () => {
   })
 
   it('moves files and honors overwrite behavior', async () => {
-    const root = await mkdtemp(path.join(tmpdir(), 'openfde-move-path-'))
+    const root = await mkdtemp(path.join(tmpdir(), 'teralexi-move-path-'))
     try {
       const src = path.join(root, 'src.txt')
       const dest = path.join(root, 'sub', 'dest.txt')
@@ -125,8 +125,8 @@ describe('file-io-utils', () => {
   })
 
   it('matchPathToDisplayPath returns absolute paths for grep/glob round-trip', async () => {
-    const ws = await mkdtemp(path.join(tmpdir(), 'openfde-display-ws-'))
-    const sb = await mkdtemp(path.join(tmpdir(), 'openfde-display-sb-'))
+    const ws = await mkdtemp(path.join(tmpdir(), 'teralexi-display-ws-'))
+    const sb = await mkdtemp(path.join(tmpdir(), 'teralexi-display-sb-'))
     const srcDir = path.join(ws, 'src')
     await mkdir(srcDir, { recursive: true })
     const absFile = path.join(srcDir, 'search.ts')

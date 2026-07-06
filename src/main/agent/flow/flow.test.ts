@@ -48,7 +48,7 @@ vi.mock('../utils', () => ({
   cloneClientUiMessages: vi.fn((m: unknown) => m),
 }))
 
-import { AgentFlow, openfde, streamAgentResponse } from './agent-flow'
+import { AgentFlow, teralexi, streamAgentResponse } from './agent-flow'
 import type { AgentFlowContext } from '../context'
 import { createModelForProvider } from '../providers/adapters'
 import {
@@ -183,7 +183,7 @@ describe('AgentFlow fluent pipeline', () => {
       .begin()
       .step(
         SUMMARY_STEP_ID,
-        openfde.expr
+        teralexi.expr
           .system_msg('Exec summary only')
           .prompt('Return JSON')
           .precondition('hasToolLoop'),
@@ -324,7 +324,7 @@ describe('AgentFlow fluent pipeline', () => {
     const flow = new AgentFlow(baseOpts, {})
     flow
       .begin()
-      .step(SUMMARY_STEP_ID, openfde.expr.precondition(() => true))
+      .step(SUMMARY_STEP_ID, teralexi.expr.precondition(() => true))
     const entries = (
       flow as unknown as { pipeline: { id: string; when?: unknown }[] }
     ).pipeline

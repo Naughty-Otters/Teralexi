@@ -19,7 +19,7 @@ describe('step-output-links', () => {
   })
 
   it('lists files under output directories only when present', () => {
-    const root = mkdtempSync(join(tmpdir(), 'openfde-links-'))
+    const root = mkdtempSync(join(tmpdir(), 'teralexi-links-'))
     const results = join(root, 'results')
     mkdirSync(results, { recursive: true })
     writeFileSync(join(results, 'top-tags.md'), '# tags', 'utf8')
@@ -29,7 +29,7 @@ describe('step-output-links', () => {
   })
 
   it('excludes capture*.txt files from output link lists', () => {
-    const root = mkdtempSync(join(tmpdir(), 'openfde-links-capture-'))
+    const root = mkdtempSync(join(tmpdir(), 'teralexi-links-capture-'))
     const results = join(root, 'results')
     mkdirSync(results, { recursive: true })
     writeFileSync(join(results, 'report.md'), '# report', 'utf8')
@@ -40,7 +40,7 @@ describe('step-output-links', () => {
   })
 
   it('formatExistingSandboxArtifactsBlock lists sandbox-relative output paths', () => {
-    const root = mkdtempSync(join(tmpdir(), 'openfde-artifacts-'))
+    const root = mkdtempSync(join(tmpdir(), 'teralexi-artifacts-'))
     const outputRoot = sandboxOutputDir(root)
     const results = join(outputRoot, 'results')
     mkdirSync(results, { recursive: true })
@@ -86,7 +86,7 @@ describe('step-output-links', () => {
   })
 
   it('restrictToDir excludes refs and scripts outside sandbox output/', () => {
-    const root = mkdtempSync(join(tmpdir(), 'openfde-sandbox-'))
+    const root = mkdtempSync(join(tmpdir(), 'teralexi-sandbox-'))
     const outputRoot = sandboxOutputDir(root)
     const results = join(outputRoot, 'results')
     const refs = join(root, 'refs')
@@ -114,7 +114,7 @@ describe('step-output-links', () => {
   })
 
   it('collectOutputLinksForStep scans shared output when tool loop rel dir is missing', () => {
-    const root = mkdtempSync(join(tmpdir(), 'openfde-toolloop-scan-'))
+    const root = mkdtempSync(join(tmpdir(), 'teralexi-toolloop-scan-'))
     const outputRoot = sandboxOutputDir(root)
     const results = join(outputRoot, 'results')
     mkdirSync(results, { recursive: true })

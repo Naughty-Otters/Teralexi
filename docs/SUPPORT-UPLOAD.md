@@ -1,6 +1,6 @@
 # Support report upload API
 
-OpenFDE uploads diagnostic bundles to your platform backend when `BASE_API` is configured.
+Teralexi uploads diagnostic bundles to your platform backend when `BASE_API` is configured.
 
 ## Configuration
 
@@ -19,11 +19,11 @@ This maps to `app.base.apiUrl` at runtime. Default endpoints (relative to `BASE_
 | Google sign-in | `/auth/login` |
 | Support upload | `/support/upload` |
 
-Optional overrides in `~/.openfde/config/config.properties` or env files:
+Optional overrides in `~/.teralexi/config/config.properties` or env files:
 
 ```properties
 app.metrics.graphqlUrl=graphql
-app.openfde.googleAuthLoginUrl=auth/login
+app.teralexi.googleAuthLoginUrl=auth/login
 app.support.uploadUrl=support/upload
 ```
 
@@ -43,7 +43,7 @@ Upload requires the user to be signed in with Google so the app can attach a ser
 | `file` | file | yes | Zip archive (`application/zip`) |
 | `reportId` | string | no | Same UUID sent in `location` |
 | `comments` | string | no | User description of the problem |
-| `appVersion` | string | no | openfde semver (e.g. `0.0.1`) |
+| `appVersion` | string | no | teralexi semver (e.g. `0.0.1`) |
 | `manifest` | string | no | JSON `SupportBundleManifest` |
 
 ## Response
@@ -60,7 +60,7 @@ Upload requires the user to be signed in with Google so the app can attach a ser
 - `logs/main.log.tail`, `logs/agents/*.log`
 - `sandbox/` — optional, size-capped
 
-Channel auth under `~/.openfde/channels/` is never included.
+Channel auth under `~/.teralexi/channels/` is never included.
 
 ## Suggested server flow
 
@@ -74,13 +74,13 @@ Channel auth under `~/.openfde/channels/` is never included.
 
 **Export bundle** saves to:
 
-`~/.openfde/logs/support-bundles/openfde-support-<reportId>.zip`
+`~/.teralexi/logs/support-bundles/teralexi-support-<reportId>.zip`
 
 ## Client upload policy
 
 Before POSTing to `/support/upload`, the desktop app:
 
 1. **Upload cooldown** — default **10 minutes** between uploads per signed-in user (`app.support.uploadCooldownMinutes` in `config.properties`).
-2. **Daily quota** — default **5 uploads per calendar day** per signed-in user (`app.support.maxUploadsPerDay`). Tracked in `~/.openfde/logs/support-upload-tracker.json`.
+2. **Daily quota** — default **5 uploads per calendar day** per signed-in user (`app.support.maxUploadsPerDay`). Tracked in `~/.teralexi/logs/support-upload-tracker.json`.
 
 Export-only (**Export bundle**) is not rate-limited.

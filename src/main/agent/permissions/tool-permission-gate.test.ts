@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
-  OPENFDE_AGENT_WORKSPACE_PATH_ENV,
+  TERALEXI_AGENT_SANDBOX_ROOT_ENV,
+  TERALEXI_AGENT_WORKSPACE_PATH_ENV,
   SANDBOX_ROOT_GLOBAL_KEY,
   WORKSPACE_PATH_GLOBAL_KEY,
 } from '@toolSet/sandbox-paths'
@@ -20,10 +20,10 @@ function setSandboxRoot(root: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (root) {
     g[SANDBOX_ROOT_GLOBAL_KEY] = root
-    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = root
+    process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV] = root
   } else {
     delete g[SANDBOX_ROOT_GLOBAL_KEY]
-    delete process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]
+    delete process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV]
   }
 }
 
@@ -31,10 +31,10 @@ function setWorkspaceRoot(root: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (root) {
     g[WORKSPACE_PATH_GLOBAL_KEY] = root
-    process.env[OPENFDE_AGENT_WORKSPACE_PATH_ENV] = root
+    process.env[TERALEXI_AGENT_WORKSPACE_PATH_ENV] = root
   } else {
     delete g[WORKSPACE_PATH_GLOBAL_KEY]
-    delete process.env[OPENFDE_AGENT_WORKSPACE_PATH_ENV]
+    delete process.env[TERALEXI_AGENT_WORKSPACE_PATH_ENV]
   }
 }
 
@@ -44,8 +44,8 @@ describe('tool-permission-gate', () => {
 
   beforeEach(async () => {
     vi.mocked(getWorkspacePath).mockReturnValue(null)
-    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'openfde-perm-test-'))
-    workspaceRoot = await mkdtemp(path.join(tmpdir(), 'openfde-perm-ws-'))
+    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'teralexi-perm-test-'))
+    workspaceRoot = await mkdtemp(path.join(tmpdir(), 'teralexi-perm-ws-'))
     await writeFile(path.join(workspaceRoot, 'project.txt'), 'ok', 'utf-8')
     setSandboxRoot(sandboxRoot)
     setWorkspaceRoot(undefined)

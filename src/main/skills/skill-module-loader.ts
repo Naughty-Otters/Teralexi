@@ -29,7 +29,7 @@ import {
 } from './skill-module-cache'
 import { createSkillModuleRequire } from './skill-sdk-require'
 
-const SKILL_SDK_MODULE_ID = '@openfde/skill-sdk'
+const SKILL_SDK_MODULE_ID = '@teralexi/skill-sdk'
 
 const log = createLogger('skills.module-loader')
 
@@ -354,7 +354,7 @@ export async function loadToolSetToolsFromDirectory(
   return []
 }
 
-/** Merges statically bundled tools with user `~/.openfde/toolSet`; user wins on name conflicts. */
+/** Merges statically bundled tools with user `~/.teralexi/toolSet`; user wins on name conflicts. */
 export async function loadToolSetTools(): Promise<SkillTool[]> {
   const merged = new Map<string, SkillTool>()
   const sources: Array<{ dir: string; count: number; exists: boolean }> = []

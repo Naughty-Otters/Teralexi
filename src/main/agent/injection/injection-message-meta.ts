@@ -1,6 +1,6 @@
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 
-export const OPENFDE_INJECTOR_META_KEY = 'openfdeInjectorMeta' as const
+export const TERALEXI_INJECTOR_META_KEY = 'teralexiInjectorMeta' as const
 
 export type InjectorMessageMeta = {
   injectorId: string
@@ -8,13 +8,13 @@ export type InjectorMessageMeta = {
 }
 
 export type ModelMessageWithInjectorMeta = ModelMessage & {
-  [OPENFDE_INJECTOR_META_KEY]?: InjectorMessageMeta
+  [TERALEXI_INJECTOR_META_KEY]?: InjectorMessageMeta
 }
 
 export function readInjectorMessageMeta(
   message: ModelMessage,
 ): InjectorMessageMeta | undefined {
-  const meta = (message as ModelMessageWithInjectorMeta)[OPENFDE_INJECTOR_META_KEY]
+  const meta = (message as ModelMessageWithInjectorMeta)[TERALEXI_INJECTOR_META_KEY]
   if (!meta || typeof meta !== 'object') return undefined
   const injectorId =
     typeof meta.injectorId === 'string' ? meta.injectorId.trim() : ''
@@ -30,14 +30,14 @@ export function attachInjectorMessageMeta(
 ): ModelMessageWithInjectorMeta {
   return {
     ...message,
-    [OPENFDE_INJECTOR_META_KEY]: meta,
+    [TERALEXI_INJECTOR_META_KEY]: meta,
   }
 }
 
 export function stripInjectorMessageMeta(messages: ModelMessage[]): ModelMessage[] {
   return messages.map((message) => {
-    if (!(OPENFDE_INJECTOR_META_KEY in message)) return message
-    const { [OPENFDE_INJECTOR_META_KEY]: _meta, ...rest } =
+    if (!(TERALEXI_INJECTOR_META_KEY in message)) return message
+    const { [TERALEXI_INJECTOR_META_KEY]: _meta, ...rest } =
       message as ModelMessageWithInjectorMeta
     return rest as ModelMessage
   })

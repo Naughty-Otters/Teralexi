@@ -36,7 +36,7 @@
         <div class="chat-scroll-area">
           <div class="chat-scroll-watermark" aria-hidden="true">
             <img
-              :src="openfdePuppy"
+              :src="teralexiPuppy"
               alt=""
               class="chat-scroll-watermark__img"
             />
@@ -221,13 +221,13 @@ import {
 } from 'vue'
 import { createStandardMarkdownIt } from '@shared/markdown/create-markdown-it'
 import './chat/markdown-preview.css'
-import { Chat } from '@openfde-ai/vue'
+import { Chat } from '@teralexi-ai/vue'
 import {
   lastAssistantMessageIsCompleteWithApprovalResponses,
   type UIMessage,
-} from '@openfde-ai'
+} from '@teralexi-ai'
 
-import { openfdePuppy } from '@renderer/assets/icons'
+import { teralexiPuppy } from '@renderer/assets/icons'
 import {
   useAgentStore,
   type Conversation,
@@ -464,7 +464,7 @@ const {
   defaultSize: 480,
   minSize: 280,
   maxSize: { fraction: 0.78 },
-  storageKey: 'openfde.agent.reportPanelWidth',
+  storageKey: 'teralexi.agent.reportPanelWidth',
   enabled: reportPanelResizeEnabled,
 })
 
@@ -483,7 +483,7 @@ const {
   defaultSize: 420,
   minSize: 320,
   maxSize: { fraction: 0.62 },
-  storageKey: 'openfde.agent.workspaceSplitPanelWidth',
+  storageKey: 'teralexi.agent.workspaceSplitPanelWidth',
   enabled: workspaceSplitPanelResizeEnabled,
 })
 

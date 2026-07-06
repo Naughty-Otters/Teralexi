@@ -249,7 +249,7 @@ export class EditorLspController {
     )
 
     this.editor?.addAction({
-      id: `openfde-go-to-definition-${languageId}-${Date.now()}`,
+      id: `teralexi-go-to-definition-${languageId}-${Date.now()}`,
       label: 'Go to Definition',
       keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.F12],
       run: async (ed) => {

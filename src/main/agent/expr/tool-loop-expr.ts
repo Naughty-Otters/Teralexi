@@ -2,7 +2,7 @@ import {
   jsonSchema,
   stepCountIs,
   type ModelMessage,
-} from '@openfde-ai'
+} from '@teralexi-ai'
 import { resolveToolLoopMaxIterations, resolveTodoMaxRetries } from '@shared/agent/tool-loop'
 import { buildRunScriptInstruction } from '@toolSet/shell-command'
 import {

@@ -1,4 +1,4 @@
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import { getLastDatetimeInjection } from './conversation-injection-state'
 import { messagesContainCurrentDatetimeBlock } from './injection-message-content'
 

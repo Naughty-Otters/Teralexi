@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Pre-push guard for OpenFDE.
+# Pre-push guard for Teralexi.
 #
 # Blocks a push unless:
 #   1. All unit tests pass.

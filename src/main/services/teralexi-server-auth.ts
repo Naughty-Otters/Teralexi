@@ -1,11 +1,11 @@
 import { decodeJwtPayload } from '@shared/google-id-token'
-import { resolveMetricsApiBaseUrl } from '@shared/openfde-platform-api'
+import { resolveMetricsApiBaseUrl } from '@shared/teralexi-platform-api'
 import { createLogger } from '@main/logger'
-import { getOpenFdeAccountGoogleIdToken } from '@main/services/google-account-oauth'
+import { getTeralexiAccountGoogleIdToken } from '@main/services/google-account-oauth'
 
 export { resolveMetricsApiBaseUrl }
 
-const log = createLogger('services.openfde-server-auth')
+const log = createLogger('services.teralexi-server-auth')
 
 type CachedServerToken = {
   accessToken: string
@@ -56,7 +56,7 @@ function getValidCachedServerAccessToken(): string | null {
   return cachedServerToken.accessToken
 }
 
-export function clearOpenFdeServerAuthCache(): void {
+export function clearTeralexiServerAuthCache(): void {
   cachedServerToken = null
   inFlightServerToken = null
 }
@@ -118,7 +118,7 @@ export async function refreshServerAccessToken(args: {
   return cacheServerAccessToken(accessToken, payload.expires_in)
 }
 
-async function resolveOpenFdeServerAccessTokenImpl(
+async function resolveTeralexiServerAccessTokenImpl(
   apiBaseUrl: string,
 ): Promise<string | null> {
   const cached = getValidCachedServerAccessToken()
@@ -137,7 +137,7 @@ async function resolveOpenFdeServerAccessTokenImpl(
     }
   }
 
-  const idToken = getOpenFdeAccountGoogleIdToken()
+  const idToken = getTeralexiAccountGoogleIdToken()
   if (!idToken) return null
 
   try {
@@ -151,7 +151,7 @@ async function resolveOpenFdeServerAccessTokenImpl(
   }
 }
 
-export async function getOpenFdeServerAccessToken(
+export async function getTeralexiServerAccessToken(
   apiBaseUrl: string,
 ): Promise<string | null> {
   if (!apiBaseUrl.trim()) return null
@@ -160,7 +160,7 @@ export async function getOpenFdeServerAccessToken(
   if (cached) return cached
 
   if (!inFlightServerToken) {
-    inFlightServerToken = resolveOpenFdeServerAccessTokenImpl(apiBaseUrl).finally(
+    inFlightServerToken = resolveTeralexiServerAccessTokenImpl(apiBaseUrl).finally(
       () => {
         inFlightServerToken = null
       },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { sanitizeMessages } from './message-sanitizer'
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 
 // ---------------------------------------------------------------------------
 // helpers

@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 import { computed } from 'vue'
 import { assistantTextPartMarkdown } from '../bubblePdfExport'
 import ChatBubbleContentActions from './ChatBubbleContentActions.vue'

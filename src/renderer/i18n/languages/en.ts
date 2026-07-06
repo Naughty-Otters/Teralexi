@@ -15,7 +15,7 @@ export const lang: AppLocaleBundle = {
     resizeConversationList: 'Resize conversation list',
   },
   app: {
-    name: 'OpenFDE',
+    name: 'Teralexi',
   },
   sidebar: {
     settings: 'Settings',
@@ -168,7 +168,7 @@ export const lang: AppLocaleBundle = {
     printBubbleContent: 'Print content',
     skillSetupTitle: 'Configure {skillName}',
     skillSetupIntro:
-      'This skill needs settings saved to your local config before you can chat. They are stored in ~/.openfde/config/config.properties and are not added to the conversation.',
+      'This skill needs settings saved to your local config before you can chat. They are stored in ~/.teralexi/config/config.properties and are not added to the conversation.',
     skillSetupSave: 'Save and continue',
     skillSetupSaving: 'Saving…',
   },
@@ -267,7 +267,7 @@ export const lang: AppLocaleBundle = {
       currentPagePath: 'Current page path:',
       currentPageName: 'Current page name:',
       vueVersion: 'Vue version:',
-      electronVersion: 'OpenFDE version:',
+      electronVersion: 'Teralexi version:',
       nodeVersion: 'Node version:',
       systemPlatform: 'System platform:',
       systemVersion: 'System version:',
@@ -289,7 +289,7 @@ export const lang: AppLocaleBundle = {
   toast: {
     updateAvailableTitle: 'Update available',
     updateAvailableDescription:
-      'OpenFDE v{version} is ready to download. Open Settings → About.',
+      'Teralexi v{version} is ready to download. Open Settings → About.',
   },
   titleBar: {
     updateAvailable: 'Update {version}',
@@ -303,7 +303,7 @@ export const lang: AppLocaleBundle = {
     signInFailed: 'Sign in was cancelled or failed. Please try again.',
     signInRequiredTitle: 'Sign in to continue',
     signInRequiredDesc:
-      'Create a free OpenFDE account to unlock cloud LLMs, agents, skills, channels, memory, and more.',
+      'Create a free Teralexi account to unlock cloud LLMs, agents, skills, channels, memory, and more.',
     localLlmHint:
       'Without an account you can still configure local models (Ollama or llama.cpp) under Settings → LLM.',
     openLocalLlmSettings: 'Configure local LLM instead',
@@ -315,12 +315,12 @@ export const lang: AppLocaleBundle = {
   },
   signInGate: {
     settings:
-      'This settings section is available after you sign in with your OpenFDE account.',
+      'This settings section is available after you sign in with your Teralexi account.',
     monitor: 'Token usage tracking is available for signed-in users.',
     wizard:
       'The full setup wizard is available after sign-in. You can still configure Ollama or llama.cpp locally in Settings → LLM.',
     llmCloud:
-      'Cloud LLM providers require an OpenFDE account. Local providers (Ollama, llama.cpp) are available below.',
+      'Cloud LLM providers require an Teralexi account. Local providers (Ollama, llama.cpp) are available below.',
   },
   providerSetup: providerSetupEn,
 }

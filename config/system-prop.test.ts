@@ -7,9 +7,9 @@ vi.mock('fs', () => ({
   mkdirSync: vi.fn(),
 }))
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeConfigDir: vi.fn(() => '/mock/.openfde/config'),
-  getopenfdeConfigPropertiesPath: vi.fn(() => '/mock/.openfde/config/config.properties'),
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiConfigDir: vi.fn(() => '/mock/.teralexi/config'),
+  getTeralexiConfigPropertiesPath: vi.fn(() => '/mock/.teralexi/config/config.properties'),
 }))
 
 vi.mock('./env-overrides', () => ({
@@ -81,7 +81,7 @@ describe('system-prop', () => {
     vi.mocked(existsSync).mockReturnValue(true)
     vi.mocked(readFileSync).mockReturnValue(
       [
-        'app.openfde.googleAuthLoginUrl=http://localhost:8000/auth/login',
+        'app.teralexi.googleAuthLoginUrl=http://localhost:8000/auth/login',
         'app.base.apiUrl=http://localhost:8000',
       ].join('\n'),
     )
@@ -90,20 +90,20 @@ describe('system-prop', () => {
     )
 
     expect(getSystemPropValue('app.base.apiUrl')).toBe('https://staging.example.com/')
-    expect(getSystemPropValue('app.openfde.googleAuthLoginUrl')).toBe('')
+    expect(getSystemPropValue('app.teralexi.googleAuthLoginUrl')).toBe('')
   })
 
   it('ensureSystemPropFile strips env-only keys from config.properties', () => {
     vi.mocked(existsSync).mockReturnValue(true)
     vi.mocked(readFileSync).mockReturnValue(
-      'app.openfde.googleAuthLoginUrl=http://localhost:8000/auth/login\napp.dev.port=3000\n',
+      'app.teralexi.googleAuthLoginUrl=http://localhost:8000/auth/login\napp.dev.port=3000\n',
     )
 
     ensureSystemPropFile()
 
     const body = String(writeFileSync.mock.calls.at(-1)?.[1])
     expect(body).toContain('app.dev.port=3000')
-    expect(body).not.toContain('app.openfde.googleAuthLoginUrl')
+    expect(body).not.toContain('app.teralexi.googleAuthLoginUrl')
     expect(body).not.toContain('localhost:8000')
   })
 

@@ -17,7 +17,7 @@ vi.mock('node:fs', () => ({
   mkdirSync: vi.fn(),
 }))
 
-vi.mock('@config/openfde-home', () => ({
+vi.mock('@config/teralexi-home', () => ({
   getAgentMemoryDirs: vi.fn(() => ({
     block: '/mem/block',
     session: '/mem/session',
@@ -28,7 +28,7 @@ vi.mock('@config/openfde-home', () => ({
   resolveAgentPersonaSnapshotPath: vi.fn(
     (agentId: string) => `/mem/${agentId}/persona/profile.json`,
   ),
-  getopenfdeMemoryDir: vi.fn(() => '/mem'),
+  getTeralexiMemoryDir: vi.fn(() => '/mem'),
 }))
 
 import {

@@ -24,7 +24,7 @@ const {
   createOpenAICompatible: vi.fn(() => vi.fn(() => ({ provider: 'openai-compatible' }))),
 }))
 
-vi.mock('@openfde-ai', () => ({
+vi.mock('@teralexi-ai', () => ({
   createOllama,
   createOpenAI,
   createAnthropic,

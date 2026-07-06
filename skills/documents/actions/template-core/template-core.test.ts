@@ -39,8 +39,8 @@ const FORM_TEMPLATE_IDS = [
   'formal-brief',
 ]
 
-vi.mock('@openfde/skill-sdk', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@openfde/skill-sdk')>()
+vi.mock('@teralexi/skill-sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@teralexi/skill-sdk')>()
   return {
     ...actual,
     readSkillAttachment: vi.fn((skillId: string, relPath: string) => {

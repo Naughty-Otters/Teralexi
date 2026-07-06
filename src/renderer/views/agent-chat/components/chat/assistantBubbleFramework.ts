@@ -3,7 +3,7 @@ import {
   type UIMessage,
   type UIMessagePart,
   type UITools,
-} from '@openfde-ai'
+} from '@teralexi-ai'
 import { isCollectFormRequestPart } from './collectFormTypes'
 import {
   classifyToolResult,

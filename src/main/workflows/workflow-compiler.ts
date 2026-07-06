@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { jsonrepair } from 'jsonrepair'
-import { getopenfdeWorkflowsDir } from '@config/openfde-home'
+import { getTeralexiWorkflowsDir } from '@config/teralexi-home'
 import { getConversationStore } from '@main/services/conversation-store'
 import type { StoredWorkflowVersion } from '@main/services/conversation-store/types'
 import { createLogger } from '@main/logger'
@@ -308,7 +308,7 @@ export async function compileWorkflow(
   } else if (request.uploadPath?.trim()) {
     try {
       const raw = readFileSync(
-        join(getopenfdeWorkflowsDir(), request.uploadPath),
+        join(getTeralexiWorkflowsDir(), request.uploadPath),
         'utf-8',
       )
       seed = { ...seed, ...parseUploadedWorkflowMarkdown(raw) }

@@ -112,7 +112,7 @@ export const settingsPanelsEn: SettingsPanelLabels = {
   },
   memory: {
     intro:
-      'After each successful assistant turn, memory is built in layers under ~/.openfde/memory/. Block is the raw source; session and persona are LLM summaries; vector index stages block text for future semantic search.',
+      'After each successful assistant turn, memory is built in layers under ~/.teralexi/memory/. Block is the raw source; session and persona are LLM summaries; vector index stages block text for future semantic search.',
     recording: 'Recording',
     retention: 'Retention',
     retentionIntro:
@@ -194,7 +194,7 @@ export const settingsPanelsEn: SettingsPanelLabels = {
   },
   about: {
     intro:
-      'OpenFDE desktop app. Installed builds check for updates from BASE_API (Settings → About).',
+      'Teralexi desktop app. Installed builds check for updates from BASE_API (Settings → About).',
     sourceHint:
       'Running from source — auto-update applies only to packaged installs.',
   },
@@ -218,9 +218,9 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     tabs: { google: 'Google', github: 'GitHub' },
     google: {
       signedInHint:
-        'Your OpenFDE Google account is linked. This is separate from Google Workspace (Gmail, Calendar, Drive).',
+        'Your Teralexi Google account is linked. This is separate from Google Workspace (Gmail, Calendar, Drive).',
       signInHint:
-        'Link your OpenFDE Google account. Your browser will open for authentication and return to the app via openfde://.',
+        'Link your Teralexi Google account. Your browser will open for authentication and return to the app via teralexi://.',
       signInWithGoogle: 'Sign in with Google',
     },
     github: {
@@ -269,11 +269,11 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     registryConfigureTitle: 'Configure server',
     requiresNpxTitle: 'Requires Node.js (npx)',
     requiresNpxHint:
-      'This server runs via npx. Install Node.js (includes npm and npx), then restart OpenFDE. On first enable, npx downloads the MCP package from npm.',
+      'This server runs via npx. Install Node.js (includes npm and npx), then restart Teralexi. On first enable, npx downloads the MCP package from npm.',
     requiresNpx: 'Requires npx',
     requiresUvTitle: 'Requires uv',
     requiresUvHint:
-      'This server runs via uvx. Install uv, then restart OpenFDE so OpenFDE can find it.',
+      'This server runs via uvx. Install uv, then restart Teralexi so Teralexi can find it.',
     requiresUv: 'Requires uv',
     installNode: 'Install Node.js',
     installUv: 'Install uv',
@@ -323,7 +323,7 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     },
     promptTabs: { skill: 'Instructions', attachments: 'Attachments' },
     configurationsIntro:
-      'Values are saved to ~/.openfde/config/config.properties and shared across sessions.',
+      'Values are saved to ~/.teralexi/config/config.properties and shared across sessions.',
     configurationsEmpty: 'This agent has no configurable properties.',
     preview: 'Preview',
     edit: 'Edit',

@@ -46,11 +46,11 @@ export function fakeOtherRepoForPlatform(platform: TestPlatform): string {
   return isWindowsPlatform(platform) ? 'C:\\other\\repo' : '/other/repo'
 }
 
-export function expectedOpenfdeHomeForPlatform(
+export function expectedTeralexiHomeForPlatform(
   platform: TestPlatform,
   home = mockHomedirForPlatform(platform),
 ): string {
-  return resolve(join(home, '.openfde'))
+  return resolve(join(home, '.teralexi'))
 }
 
 export function lspBinNameForPlatform(
@@ -60,11 +60,11 @@ export function lspBinNameForPlatform(
   return isWindowsPlatform(platform) ? `${command}.cmd` : command
 }
 
-export function mockOpenfdeDirForPlatform(
+export function mockTeralexiDirForPlatform(
   platform: TestPlatform,
   ...segments: string[]
 ): string {
-  return join(mockHomedirForPlatform(platform), '.openfde', ...segments)
+  return join(mockHomedirForPlatform(platform), '.teralexi', ...segments)
 }
 
 export function mockHomedir(): string {
@@ -87,16 +87,16 @@ export function fakeOtherRepo(): string {
   return fakeOtherRepoForPlatform(process.platform)
 }
 
-export function expectedOpenfdeHome(home = mockHomedir()): string {
-  return expectedOpenfdeHomeForPlatform(process.platform, home)
+export function expectedTeralexiHome(home = mockHomedir()): string {
+  return expectedTeralexiHomeForPlatform(process.platform, home)
 }
 
 export function lspBinName(command: string): string {
   return lspBinNameForPlatform(command, process.platform)
 }
 
-export function mockOpenfdeDir(...segments: string[]): string {
-  return mockOpenfdeDirForPlatform(process.platform, ...segments)
+export function mockTeralexiDir(...segments: string[]): string {
+  return mockTeralexiDirForPlatform(process.platform, ...segments)
 }
 
 export { join, resolve }

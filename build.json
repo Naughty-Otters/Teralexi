@@ -7,7 +7,7 @@
     "**/node_modules/esbuild/**",
     "**/node_modules/@esbuild/**",
     "config/**",
-    ".openfde/**"
+    ".teralexi/**"
   ],
   "electronLanguages": [
     "en-US"
@@ -26,15 +26,15 @@
   "publish": [
     {
       "provider": "generic",
-      "url": "https://api.openfde.com/desktop/releases/stable/"
+      "url": "https://api.teralexi.com/desktop/releases/stable/"
     }
   ],
-  "productName": "OpenFDE",
-  "appId": "app.openfde.desktop",
+  "productName": "Teralexi",
+  "appId": "app.teralexi.desktop",
   "protocols": [
     {
-      "name": "OpenFDE",
-      "schemes": ["openfde"]
+      "name": "Teralexi",
+      "schemes": ["teralexi"]
     }
   ],
   "directories": {
@@ -43,7 +43,7 @@
   "files": [
     "dist/electron/**/*",
     "config/**/*",
-    ".openfde/**/*",
+    ".teralexi/**/*",
     "!**/*.{map,tsbuildinfo}",
     "!**/*.test.{ts,tsx,js,jsx,mjs,cjs}",
     "!**/*.integration.test.{ts,tsx,js,jsx,mjs,cjs}",
@@ -102,8 +102,8 @@
     "entitlements": "scripts/entitlements.mac.plist",
     "entitlementsInherit": "scripts/entitlements.mac.plist",
     "extendInfo": {
-      "CFBundleDisplayName": "OpenFDE",
-      "CFBundleName": "OpenFDE"
+      "CFBundleDisplayName": "Teralexi",
+      "CFBundleName": "Teralexi"
     },
     "target": [
       {

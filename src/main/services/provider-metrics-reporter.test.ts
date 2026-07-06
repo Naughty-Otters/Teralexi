@@ -1,22 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getOpenFdeAccountGoogleIdToken, getOpenFdeServerAccessToken } =
+const { getTeralexiAccountGoogleIdToken, getTeralexiServerAccessToken } =
   vi.hoisted(() => ({
-    getOpenFdeAccountGoogleIdToken: vi.fn(),
-    getOpenFdeServerAccessToken: vi.fn(),
+    getTeralexiAccountGoogleIdToken: vi.fn(),
+    getTeralexiServerAccessToken: vi.fn(),
   }))
 
-vi.mock('@main/services/openfde-platform-config', () => ({
-  getOpenFdeBaseApiUrl: vi.fn(() => 'http://127.0.0.1:8000'),
-  getOpenFdeGraphqlUrl: vi.fn(() => 'http://127.0.0.1:8000/graphql'),
+vi.mock('@main/services/teralexi-platform-config', () => ({
+  getTeralexiBaseApiUrl: vi.fn(() => 'http://127.0.0.1:8000'),
+  getTeralexiGraphqlUrl: vi.fn(() => 'http://127.0.0.1:8000/graphql'),
 }))
 
 vi.mock('@main/services/google-account-oauth', () => ({
-  getOpenFdeAccountGoogleIdToken,
+  getTeralexiAccountGoogleIdToken,
 }))
 
-vi.mock('@main/services/openfde-server-auth', () => ({
-  getOpenFdeServerAccessToken,
+vi.mock('@main/services/teralexi-server-auth', () => ({
+  getTeralexiServerAccessToken,
 }))
 
 import {
@@ -26,8 +26,8 @@ import {
 
 describe('provider-metrics-reporter', () => {
   beforeEach(() => {
-    getOpenFdeAccountGoogleIdToken.mockReset()
-    getOpenFdeServerAccessToken.mockReset()
+    getTeralexiAccountGoogleIdToken.mockReset()
+    getTeralexiServerAccessToken.mockReset()
     vi.stubGlobal('fetch', vi.fn())
   })
 
@@ -105,7 +105,7 @@ describe('provider-metrics-reporter', () => {
   })
 
   it('posts addProviderMetric mutation with server JWT authorization', async () => {
-    getOpenFdeServerAccessToken.mockResolvedValue('server-access-token')
+    getTeralexiServerAccessToken.mockResolvedValue('server-access-token')
 
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
@@ -152,7 +152,7 @@ describe('provider-metrics-reporter', () => {
     })
 
     expect(metric.userId).toBe('user-from-server')
-    expect(getOpenFdeServerAccessToken).toHaveBeenCalledWith('http://127.0.0.1:8000')
+    expect(getTeralexiServerAccessToken).toHaveBeenCalledWith('http://127.0.0.1:8000')
     expect(fetch).toHaveBeenCalledWith(
       'http://127.0.0.1:8000/graphql',
       expect.objectContaining({
@@ -164,7 +164,7 @@ describe('provider-metrics-reporter', () => {
   })
 
   it('rejects when server access token is unavailable', async () => {
-    getOpenFdeServerAccessToken.mockResolvedValue(null)
+    getTeralexiServerAccessToken.mockResolvedValue(null)
 
     await expect(
       reportProviderMetric({
@@ -175,6 +175,6 @@ describe('provider-metrics-reporter', () => {
         agentId: 'agent-1',
         inputTokens: 1,
       }),
-    ).rejects.toThrow('OpenFDE server access token is not available')
+    ).rejects.toThrow('Teralexi server access token is not available')
   })
 })

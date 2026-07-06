@@ -1,9 +1,9 @@
-import { getOpenFdeAccountGoogleIdToken } from '@main/services/google-account-oauth'
+import { getTeralexiAccountGoogleIdToken } from '@main/services/google-account-oauth'
 import {
-  getOpenFdeBaseApiUrl,
-  getOpenFdeGraphqlUrl,
-} from '@main/services/openfde-platform-config'
-import { getOpenFdeServerAccessToken } from '@main/services/openfde-server-auth'
+  getTeralexiBaseApiUrl,
+  getTeralexiGraphqlUrl,
+} from '@main/services/teralexi-platform-config'
+import { getTeralexiServerAccessToken } from '@main/services/teralexi-server-auth'
 import type {
   AddProviderMetricInput,
   ProviderMetricType,
@@ -12,7 +12,7 @@ import {
   hasProviderMetricUsageData,
   mapProviderMetricFieldsFromUsage,
 } from '@shared/provider-metrics/usage-mapper'
-import type { LanguageModelUsage } from '@openfde-ai'
+import type { LanguageModelUsage } from '@teralexi-ai'
 import { createLogger } from '@main/logger'
 
 const log = createLogger('services.provider-metrics-reporter')
@@ -62,11 +62,11 @@ type GraphQlResponse = {
 }
 
 export function getProviderMetricsGraphqlUrl(): string {
-  return getOpenFdeGraphqlUrl()
+  return getTeralexiGraphqlUrl()
 }
 
 export function getProviderMetricsApiBaseUrl(): string {
-  return getOpenFdeBaseApiUrl()
+  return getTeralexiBaseApiUrl()
 }
 
 export function buildAddProviderMetricInput(args: {
@@ -119,9 +119,9 @@ export async function reportProviderMetric(
   const apiBaseUrl = getProviderMetricsApiBaseUrl()
   const bearerToken =
     serverAccessToken?.trim() ||
-    (await getOpenFdeServerAccessToken(apiBaseUrl))
+    (await getTeralexiServerAccessToken(apiBaseUrl))
   if (!bearerToken) {
-    throw new Error('OpenFDE server access token is not available')
+    throw new Error('Teralexi server access token is not available')
   }
 
   const response = await fetch(graphqlUrl, {
@@ -176,7 +176,7 @@ export function reportProviderMetricAsync(args: {
 }): void {
   const graphqlUrl = getProviderMetricsGraphqlUrl()
   if (!graphqlUrl) return
-  if (!getOpenFdeAccountGoogleIdToken()) return
+  if (!getTeralexiAccountGoogleIdToken()) return
 
   const input = buildAddProviderMetricInput(args)
   if (!input) return

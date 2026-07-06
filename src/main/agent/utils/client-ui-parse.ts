@@ -1,7 +1,7 @@
 /**
  * Client UI message parsing (no form dependencies).
  */
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 import { createLogger } from '@main/logger'
 
 const log = createLogger('agent.utils.client-ui-parse')

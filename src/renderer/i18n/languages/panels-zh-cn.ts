@@ -111,7 +111,7 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
   },
   memory: {
     intro:
-      '每次成功的助手回复后，会在 ~/.openfde/memory/ 下分层构建记忆。Block 为原始来源；session 与 persona 为 LLM 摘要；vector 为后续语义检索索引。',
+      '每次成功的助手回复后，会在 ~/.teralexi/memory/ 下分层构建记忆。Block 为原始来源；session 与 persona 为 LLM 摘要；vector 为后续语义检索索引。',
     recording: '记录',
     retention: '保留',
     retentionIntro: '启用记录时，每个 Agent 保留的文件数量上限。',
@@ -186,7 +186,7 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
   },
   about: {
     intro:
-      'OpenFDE 桌面应用。已安装版本可从 BASE_API 检查更新（设置 → 关于）。',
+      'Teralexi 桌面应用。已安装版本可从 BASE_API 检查更新（设置 → 关于）。',
     sourceHint: '当前从源码运行 — 自动更新仅适用于打包安装。',
   },
   support: {
@@ -207,9 +207,9 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     tabs: { google: 'Google', github: 'GitHub' },
     google: {
       signedInHint:
-        '您的 OpenFDE Google 账户已关联。这与 Google Workspace（Gmail、Calendar、Drive）是分开的。',
+        '您的 Teralexi Google 账户已关联。这与 Google Workspace（Gmail、Calendar、Drive）是分开的。',
       signInHint:
-        '关联 OpenFDE Google 账户。将在系统浏览器中完成认证，并通过 openfde:// 返回应用。',
+        '关联 Teralexi Google 账户。将在系统浏览器中完成认证，并通过 teralexi:// 返回应用。',
       signInWithGoogle: '使用 Google 登录',
     },
     github: {
@@ -257,11 +257,11 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     registryConfigureTitle: '配置服务器',
     requiresNpxTitle: '需要 Node.js（npx）',
     requiresNpxHint:
-      '此服务器通过 npx 启动。请先安装 Node.js（包含 npm 和 npx），然后重启 OpenFDE。首次启用时，npx 会从 npm 下载 MCP 包。',
+      '此服务器通过 npx 启动。请先安装 Node.js（包含 npm 和 npx），然后重启 Teralexi。首次启用时，npx 会从 npm 下载 MCP 包。',
     requiresNpx: '需要 npx',
     requiresUvTitle: '需要 uv',
     requiresUvHint:
-      '此服务器通过 uvx 启动。请先安装 uv，然后重启 OpenFDE 以便应用找到它。',
+      '此服务器通过 uvx 启动。请先安装 uv，然后重启 Teralexi 以便应用找到它。',
     requiresUv: '需要 uv',
     installNode: '安装 Node.js',
     installUv: '安装 uv',
@@ -311,7 +311,7 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     },
     promptTabs: { skill: '指令', attachments: '附件' },
     configurationsIntro:
-      '设置会保存到 ~/.openfde/config/config.properties，并在各会话间共享。',
+      '设置会保存到 ~/.teralexi/config/config.properties，并在各会话间共享。',
     configurationsEmpty: '此 Agent 没有可配置项。',
     preview: '预览',
     edit: '编辑',

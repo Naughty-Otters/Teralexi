@@ -1,5 +1,5 @@
-import type { ModelMessage } from '@openfde-ai'
-import { stepCountIs } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
+import { stepCountIs } from '@teralexi-ai'
 import { loadAgentRunCredentials } from '@main/agent/utils'
 import { createModelForProvider } from '@main/agent/providers/adapters'
 import { buildAgentExecutionContext } from '@main/agent/agent-memory'

@@ -1,4 +1,4 @@
-import { jsonSchema, stepCountIs, type ModelMessage } from '@openfde-ai'
+import { jsonSchema, stepCountIs, type ModelMessage } from '@teralexi-ai'
 import type { AgentStepContext } from '../context'
 import {
   applyThinkingReadonlyPolicy,

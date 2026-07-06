@@ -1,12 +1,12 @@
 # Build & Release Guide
 
-This document explains how OpenFDE selects environment configuration, how to build locally, and how CI vs production releases work on GitHub Actions.
+This document explains how Teralexi selects environment configuration, how to build locally, and how CI vs production releases work on GitHub Actions.
 
 ## Environment files
 
-OpenFDE uses three build environments. Each maps to a file under `env/`:
+Teralexi uses three build environments. Each maps to a file under `env/`:
 
-| Mode | File | `OPENFDE_BUILD_ENV` | `NODE_ENV` | Purpose |
+| Mode | File | `TERALEXI_BUILD_ENV` | `NODE_ENV` | Purpose |
 | --- | --- | --- | --- | --- |
 | **Development** | `env/.dev.env` | `dev` | `development` | Local `npm run dev` |
 | **Staging (SIT)** | `env/.sit.env` | `sit` | `sit` | CI builds, internal QA |
@@ -16,7 +16,7 @@ OpenFDE uses three build environments. Each maps to a file under `env/`:
 
 ### What each file controls
 
-Configure the OpenFDE platform backend once with `BASE_API`. At runtime it maps to `app.base.apiUrl`. Default endpoints are relative paths under that base:
+Configure the Teralexi platform backend once with `BASE_API`. At runtime it maps to `app.base.apiUrl`. Default endpoints are relative paths under that base:
 
 | Endpoint | Default path |
 | --- | --- |
@@ -58,7 +58,7 @@ npm install
 npm run dev          # uses env/.dev.env (-m dev)
 ```
 
-`npm run dev` sets `OPENFDE_BUILD_ENV=dev` and loads `env/.dev.env` for both the build tooling and the running app.
+`npm run dev` sets `TERALEXI_BUILD_ENV=dev` and loads `env/.dev.env` for both the build tooling and the running app.
 
 ---
 
@@ -102,7 +102,7 @@ tsx .electron-vite/build.ts -m sit
 tsx .electron-vite/build.ts -m prod
 ```
 
-Or set `OPENFDE_BUILD_ENV` (`dev` | `sit` | `prod`) before running a build script.
+Or set `TERALEXI_BUILD_ENV` (`dev` | `sit` | `prod`) before running a build script.
 
 ---
 
@@ -121,7 +121,7 @@ Or set `OPENFDE_BUILD_ENV` (`dev` | `sit` | `prod`) before running a build scrip
 | **Push** to `main` | Same as PR + README CI status update |
 | **Manual** | Actions → **CI** → Run workflow (full staging pipeline) |
 
-**Build env:** `OPENFDE_BUILD_ENV=sit` → loads `env/.sit.env` (staging `BASE_API` only — same update feed path as prod).
+**Build env:** `TERALEXI_BUILD_ENV=sit` → loads `env/.sit.env` (staging `BASE_API` only — same update feed path as prod).
 
 **Scripts:** `build:mac:sit`, `build:win64:sit`
 
@@ -129,7 +129,7 @@ Or set `OPENFDE_BUILD_ENV` (`dev` | `sit` | `prod`) before running a build scrip
 
 **Outputs:**
 
-- Artifacts: `openfde-<platform>-sit-<run>-<sha>` (14-day retention)
+- Artifacts: `teralexi-<platform>-sit-<run>-<sha>` (14-day retention)
 
 ### Release — production (`env/.prod.env`)
 
@@ -137,7 +137,7 @@ Or set `OPENFDE_BUILD_ENV` (`dev` | `sit` | `prod`) before running a build scrip
 
 **Trigger:** Actions → **Release** → Run workflow → confirm `release`
 
-**Build env:** `OPENFDE_BUILD_ENV=prod` → loads `env/.prod.env`
+**Build env:** `TERALEXI_BUILD_ENV=prod` → loads `env/.prod.env`
 
 **Scripts:** `release:mac`, `release:win`
 
@@ -157,7 +157,7 @@ The Release workflow authenticates to AWS with short-lived credentials via GitHu
 
 | Secret | Example | Purpose |
 | --- | --- | --- |
-| `AWS_ROLE_TO_ASSUME` | `arn:aws:iam::123456789012:role/openfde-release` | Role the workflow assumes via OIDC |
+| `AWS_ROLE_TO_ASSUME` | `arn:aws:iam::123456789012:role/teralexi-release` | Role the workflow assumes via OIDC |
 | `AWS_REGION` | `us-east-1` | Region of the release bucket (no trailing spaces/newlines) |
 | `S3_RELEASE_BUCKET` | `your-release-bucket` | Target bucket for installers |
 
@@ -187,7 +187,7 @@ aws iam add-client-id-to-open-id-connect-provider \
 
 ### 2. Create the IAM role with a trust policy
 
-Create a role (name it e.g. `openfde-release`) whose **trust policy** allows the GitHub OIDC provider to assume it. Replace `<ACCOUNT_ID>` with your 12-digit AWS account ID and `<OWNER>/<REPO>` with your GitHub repo (e.g. `zhenqili/OpenFDE`).
+Create a role (name it e.g. `teralexi-release`) whose **trust policy** allows the GitHub OIDC provider to assume it. Replace `<ACCOUNT_ID>` with your 12-digit AWS account ID and `<OWNER>/<REPO>` with your GitHub repo (e.g. `zhenqili/Teralexi`).
 
 ```json
 {
@@ -277,7 +277,7 @@ export AWS_ACCESS_KEY_ID=...
 export AWS_SECRET_ACCESS_KEY=...
 export AWS_REGION=us-east-1
 export S3_RELEASE_BUCKET=your-bucket
-export OPENFDE_BUILD_ENV=prod
+export TERALEXI_BUILD_ENV=prod
 
 npm run release:mac   # on macOS
 npm run release:upload-s3

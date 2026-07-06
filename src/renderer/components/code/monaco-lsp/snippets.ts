@@ -75,7 +75,7 @@ const SNIPPET_PACKS: Record<string, SnippetDef[]> = {
 
 let registered = false
 
-const SNIPPETS_REGISTERED_KEY = '__OPENFDE_MONACO_SNIPPETS_REGISTERED__' as const
+const SNIPPETS_REGISTERED_KEY = '__TERALEXI_MONACO_SNIPPETS_REGISTERED__' as const
 
 function registerSnippetsForLanguage(languageId: string, snippets: SnippetDef[]): void {
   monaco.languages.registerCompletionItemProvider(languageId, {

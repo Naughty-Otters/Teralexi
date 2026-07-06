@@ -24,12 +24,12 @@ describe('parseThinkingJson', () => {
       execution_mode: 'planning',
       goal: 'Ship the feature',
       task: 'Break work into steps',
-      context: ['repo: openfde'],
+      context: ['repo: teralexi'],
     })
     const parsed = parseThinkingJson(raw)
     expect(parsed.execution_mode).toBe('planning')
     expect(parsed.goal).toBe('Ship the feature')
-    expect(parsed.context).toEqual(['repo: openfde'])
+    expect(parsed.context).toEqual(['repo: teralexi'])
   })
 
   it('parses direct_answer with response', () => {

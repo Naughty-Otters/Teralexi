@@ -14,7 +14,7 @@ GitHub Actions (Release workflow)
        ├── latest.yml
        └── installers + blockmaps…
 
-Installed OpenFDE app (no auth)
+Installed Teralexi app (no auth)
   GET {BASE_API}/desktop/releases/stable/latest-mac.yml   (macOS)
   GET {BASE_API}/desktop/releases/stable/latest.yml       (Windows)
   GET {BASE_API}/desktop/releases/stable/<installer>
@@ -31,7 +31,7 @@ Edit `env/.dev.env`, `env/.sit.env`, or `env/.prod.env` for app config (`BASE_AP
 
 **Code signing** (build-time only, never packaged): copy `env/.signing.env.example` → `env/.signing.env` (gitignored). Same file is used for **both** sit and prod local builds.
 
-| File | `OPENFDE_BUILD_ENV` | Used by | Purpose |
+| File | `TERALEXI_BUILD_ENV` | Used by | Purpose |
 | --- | --- | --- | --- |
 | `env/.dev.env` | `dev` | `npm run dev` | Local development |
 | `env/.sit.env` | `sit` | CI workflow, `npm run build:*:sit` | Staging app config |
@@ -53,8 +53,8 @@ Maps to `app.base.apiUrl` at runtime.
 | Environment | Example in repo |
 | --- | --- |
 | Development | `BASE_API = 'http://localhost:8000'` in `env/.dev.env` |
-| Staging | `BASE_API = 'https://stage_api.openfde.dev/'` in `env/.sit.env` |
-| Production | `BASE_API = 'https://api.openfde.dev/'` in `env/.prod.env` |
+| Staging | `BASE_API = 'https://stage_api.teralexi.com/'` in `env/.sit.env` |
+| Production | `BASE_API = 'https://api.teralexi.com/'` in `env/.prod.env` |
 
 **Update feed URL** (default, no override):
 
@@ -80,7 +80,7 @@ Override the feed path (relative to `BASE_API` or absolute URL) in `env/*.env` o
 app.desktop.releasesUrl=desktop/releases/stable
 ```
 
-**Staging vs production:** use the same default path (`desktop/releases/stable/`). The only difference between `env/.sit.env` and `env/.prod.env` is **`BASE_API`** — staging apps check `https://stage_api.openfde.dev/desktop/releases/stable/`, production apps check `https://api.openfde.dev/desktop/releases/stable/`. Do not set a separate `app.desktop.releasesUrl` for sit.
+**Staging vs production:** use the same default path (`desktop/releases/stable/`). The only difference between `env/.sit.env` and `env/.prod.env` is **`BASE_API`** — staging apps check `https://stage_api.teralexi.com/desktop/releases/stable/`, production apps check `https://api.teralexi.com/desktop/releases/stable/`. Do not set a separate `app.desktop.releasesUrl` for sit.
 
 ---
 
@@ -97,12 +97,12 @@ DESKTOP_UPDATE_FORCE_DEV = 'true'
 | --- | --- | --- |
 | `DESKTOP_UPDATE_FORCE_DEV` | `app.desktop.forceDevUpdateConfig` | Env-only; not written to user `config.properties` |
 | `APP_DESKTOP_FORCEDEVUPDATECONFIG` | same | Alternative name |
-| `OPENFDE_APP_DESKTOP_FORCEDEVUPDATECONFIG` | same | Alternative name |
+| `TERALEXI_APP_DESKTOP_FORCEDEVUPDATECONFIG` | same | Alternative name |
 
 When enabled:
 
 1. Update checks run against whatever feed `BASE_API` resolves to (any host — not limited to localhost).
-2. The app writes `~/.openfde/config/dev-app-update.yml` (feed URL + cache dir) so **download** works — no `dev-app-update.yml` in the repo root is needed.
+2. The app writes `~/.teralexi/config/dev-app-update.yml` (feed URL + cache dir) so **download** works — no `dev-app-update.yml` in the repo root is needed.
 3. **Install** (`Restart and install`) still requires a **signed + notarized** macOS build; unsigned local zips fail Gatekeeper/ShipIt validation.
 
 Packaged installs **ignore** `DESKTOP_UPDATE_FORCE_DEV` — updates always run when `BASE_API` is set.
@@ -113,7 +113,7 @@ Serve YAML + zip from your local API, e.g.:
 
 ```
 GET http://localhost:8000/desktop/releases/stable/latest-mac.yml
-GET http://localhost:8000/desktop/releases/stable/OpenFDE-0.0.2-arm64-mac.zip
+GET http://localhost:8000/desktop/releases/stable/Teralexi-0.0.2-arm64-mac.zip
 ```
 
 Restart the dev app after changing env files.
@@ -144,7 +144,7 @@ MAC_APPLE_TEAM_ID = 'TEAMID'
 **Windows**
 
 ```properties
-WIN_SIGN_CERTIFICATE = '~/certs/openfde.pfx'
+WIN_SIGN_CERTIFICATE = '~/certs/teralexi.pfx'
 WIN_SIGN_CERTIFICATE_PASSWORD = 'your-pfx-password'
 ```
 
@@ -160,7 +160,7 @@ Two workflows: **CI** (staging) and **Release** (production). Both sign macOS an
 Pull request / push to branch
        │
        ▼
-  CI workflow (OPENFDE_BUILD_ENV=sit → env/.sit.env)
+  CI workflow (TERALEXI_BUILD_ENV=sit → env/.sit.env)
        ├── unit tests
        ├── build:mac:sit  (macOS, signed)
        ├── build:win64:sit (Windows, signed)
@@ -169,7 +169,7 @@ Pull request / push to branch
 Actions → Release → confirm "release"
        │
        ▼
-  Release workflow (OPENFDE_BUILD_ENV=prod → env/.prod.env)
+  Release workflow (TERALEXI_BUILD_ENV=prod → env/.prod.env)
        ├── verify version
        ├── unit tests
        ├── release:mac (macOS, signed + notarized)
@@ -190,8 +190,8 @@ Actions → Release → confirm "release"
 
 | Setting | Value |
 | --- | --- |
-| Build env | `OPENFDE_BUILD_ENV=sit` → `env/.sit.env` |
-| Staging API | `BASE_API` in `.sit.env` (e.g. `https://stage_api.openfde.dev/`) |
+| Build env | `TERALEXI_BUILD_ENV=sit` → `env/.sit.env` |
+| Staging API | `BASE_API` in `.sit.env` (e.g. `https://stage_api.teralexi.com/`) |
 | Update feed | Same path as prod: `{BASE_API}/desktop/releases/stable/` (no path override in `.sit.env`) |
 | macOS script | `npm run build:mac:sit` |
 | Windows script | `npm run build:win64:sit` |
@@ -205,8 +205,8 @@ Actions → Release → confirm "release"
 
 | Setting | Value |
 | --- | --- |
-| Build env | `OPENFDE_BUILD_ENV=prod` → `env/.prod.env` |
-| Production API | `BASE_API` in `.prod.env` (e.g. `https://api.openfde.dev/`) |
+| Build env | `TERALEXI_BUILD_ENV=prod` → `env/.prod.env` |
+| Production API | `BASE_API` in `.prod.env` (e.g. `https://api.teralexi.com/`) |
 | Update feed path | default `{BASE_API}/desktop/releases/stable/` |
 | macOS script | `npm run release:mac` |
 | Windows script | `npm run release:win` |
@@ -251,7 +251,7 @@ Used by **Release** (macOS job) and **CI** (macOS job). Injected as `MAC_SIGN_*`
 Encode certificate:
 
 ```bash
-base64 -i openfde.p12 | pbcopy
+base64 -i teralexi.p12 | pbcopy
 ```
 
 ### Windows code signing (Authenticode)
@@ -267,10 +267,10 @@ Encode certificate:
 
 ```bash
 # macOS / Linux
-base64 -i openfde.pfx | pbcopy
+base64 -i teralexi.pfx | pbcopy
 
 # Windows PowerShell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes('openfde.pfx')) | Set-Clipboard
+[Convert]::ToBase64String([IO.File]::ReadAllBytes('teralexi.pfx')) | Set-Clipboard
 ```
 
 If signing secrets are missing, workflows still produce **unsigned** installers (fine for internal testing; not for public auto-update install on macOS).
@@ -288,7 +288,7 @@ If signing secrets are missing, workflows still produce **unsigned** installers 
 
 The `desktop/releases/stable/` prefix must be **publicly readable** (CloudFront, API static proxy, or bucket policy on that prefix only). Keep the rest of the bucket private.
 
-Staging and production use the **same key layout** under their respective API hosts (`stage_api.openfde.dev` vs `api.openfde.dev`). CI does not publish to S3; upload staging builds to your staging bucket/API separately when you need a live staging update feed.
+Staging and production use the **same key layout** under their respective API hosts (`stage_api.teralexi.com` vs `api.teralexi.com`). CI does not publish to S3; upload staging builds to your staging bucket/API separately when you need a live staging update feed.
 
 ---
 
@@ -297,7 +297,7 @@ Staging and production use the **same key layout** under their respective API ho
 ### Local production build + S3 upload
 
 ```bash
-export OPENFDE_BUILD_ENV=prod
+export TERALEXI_BUILD_ENV=prod
 # Signing: env/.signing.env (see CODE-SIGNING.md)
 # S3:
 export AWS_ACCESS_KEY_ID=...
@@ -358,10 +358,10 @@ Example feed (generated by electron-builder — do not hand-edit):
 ```yaml
 version: 0.0.2
 files:
-  - url: OpenFDE-0.0.2-mac.zip
+  - url: Teralexi-0.0.2-mac.zip
     sha512: <base64-sha512>
     size: 198765432
-path: OpenFDE-0.0.2-mac.zip
+path: Teralexi-0.0.2-mac.zip
 sha512: <base64-sha512>
 releaseDate: '2026-06-28T10:00:00.000Z'
 ```
@@ -373,10 +373,10 @@ Local test stub:
 ```yaml
 version: 0.0.2-test
 files:
-  - url: OpenFDE-0.0.2-test-mac.zip
+  - url: Teralexi-0.0.2-test-mac.zip
     sha512: NQxPQ+Mv0cT5oOwR1rX8k4H4X6TqQSl6an99h5xH1cckgrWYVW7UavzKRQ8nu49X1duwxjqAnCLl3i3mtPQqbw==
     size: 156
-path: OpenFDE-0.0.2-test-mac.zip
+path: Teralexi-0.0.2-test-mac.zip
 sha512: NQxPQ+Mv0cT5oOwR1rX8k4H4X6TqQSl6an99h5xH1cckgrWYVW7UavzKRQ8nu49X1duwxjqAnCLl3i3mtPQqbw==
 releaseDate: '2026-06-28T10:00:00.000Z'
 ```
@@ -425,7 +425,7 @@ Never embed CI or signing credentials in the desktop app.
 | --- | --- | --- |
 | “Set BASE_API…” in packaged app | `env/.prod.env` not loaded at runtime (rebuild after env path fix) or missing `BASE_API` | Set `BASE_API` in `env/.prod.env`; rebuild |
 | Dev stuck on “Checking for updates” | `DESKTOP_UPDATE_FORCE_DEV` not set | Add to `env/.dev.env`, restart dev app |
-| Download fails: `dev-app-update.yml` ENOENT | Dev mode without generated config | Set `DESKTOP_UPDATE_FORCE_DEV=true` (app writes `~/.openfde/config/dev-app-update.yml`) |
+| Download fails: `dev-app-update.yml` ENOENT | Dev mode without generated config | Set `DESKTOP_UPDATE_FORCE_DEV=true` (app writes `~/.teralexi/config/dev-app-update.yml`) |
 | Install fails: ShipIt / code signature | Unsigned or mismatched signing | Sign + notarize macOS builds; see [CODE-SIGNING.md](./CODE-SIGNING.md) |
 | `sha512 checksum mismatch` | Feed `sha512`/`size` does not match zip | Re-upload matching artifact; use electron-builder-generated YAML |
 | Windows SmartScreen warnings | Unsigned `.exe` | Set `WIN_SIGN_*` secrets / local `.pfx` |
@@ -441,7 +441,7 @@ Never embed CI or signing credentials in the desktop app.
 | `DESKTOP_UPDATE_FORCE_DEV` | Runtime (dev only) | `app.desktop.forceDevUpdateConfig` |
 | `MAC_SIGN_*` | Build | macOS signing + notarization — see [CODE-SIGNING.md](./CODE-SIGNING.md) |
 | `WIN_SIGN_*` | Build | Windows Authenticode — see [CODE-SIGNING.md](./CODE-SIGNING.md) |
-| `OPENFDE_BUILD_ENV` | Build | `dev` / `sit` / `prod` → selects `env/.dev.env`, `.sit.env`, `.prod.env` |
+| `TERALEXI_BUILD_ENV` | Build | `dev` / `sit` / `prod` → selects `env/.dev.env`, `.sit.env`, `.prod.env` |
 | `AWS_*`, `S3_RELEASE_BUCKET` | CI / local upload | S3 publish via `npm run release:upload-s3` |
 
 ---

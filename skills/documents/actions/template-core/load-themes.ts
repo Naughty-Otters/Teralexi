@@ -1,4 +1,4 @@
-import { readSkillAttachment } from '@openfde/skill-sdk'
+import { readSkillAttachment } from '@teralexi/skill-sdk'
 import { DOCUMENTS_SKILL_ID, type ExcelThemeStyle, type PptThemeColors } from './types'
 
 const PPT_THEMES_PATH = 'templates/styles/ppt-themes.json'

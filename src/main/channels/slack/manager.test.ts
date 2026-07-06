@@ -109,7 +109,7 @@ describe('SlackChannelManager', () => {
     const { getSlackChannelManager } = await import('./manager')
     const manager = getSlackChannelManager()
     const state = manager.setBotName('  ')
-    expect(state.botName).toBe('OpenFDE Slack Bot')
+    expect(state.botName).toBe('Teralexi Slack Bot')
   })
 
   it('setTokens starts the bot and calls app.start()', async () => {

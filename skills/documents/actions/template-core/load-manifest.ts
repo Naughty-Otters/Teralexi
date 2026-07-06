@@ -1,4 +1,4 @@
-import { readSkillAttachment } from '@openfde/skill-sdk'
+import { readSkillAttachment } from '@teralexi/skill-sdk'
 import {
   DOCUMENTS_SKILL_ID,
   type TemplateManifest,

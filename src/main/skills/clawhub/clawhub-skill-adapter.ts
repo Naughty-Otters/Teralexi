@@ -137,7 +137,7 @@ function buildInstalledProperties(args: {
   )
 }
 
-/** Normalize an extracted ClawHub skill folder into openfde layout. */
+/** Normalize an extracted ClawHub skill folder into teralexi layout. */
 export function normalizeClawHubSkillFolder(args: {
   skillFolder: string
   skillId: string

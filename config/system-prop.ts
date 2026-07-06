@@ -4,7 +4,7 @@ import {
   getEnvOverrides,
   initializeEnvOverrides,
 } from './env-overrides'
-import { getopenfdeConfigDir, getopenfdeConfigPropertiesPath } from './openfde-home'
+import { getTeralexiConfigDir, getTeralexiConfigPropertiesPath } from './teralexi-home'
 import {
   CONFIG_PROPERTIES_FILENAME,
   isValidSystemPropKey,
@@ -26,19 +26,19 @@ const DEFAULT_SYSTEM_PROPERTIES: Record<string, string> = {
   'app.paths.hotUpdateFolder': 'update',
   'app.window.useStartupChart': 'true',
   'app.window.useSystemTitle': 'false',
-  'settings.whatsapp.botName': 'OpenFDE WhatsApp Bot',
+  'settings.whatsapp.botName': 'Teralexi WhatsApp Bot',
   'settings.whatsapp.targetPhone': '',
   'settings.telegram.botToken': '',
-  'settings.telegram.botName': 'OpenFDE Telegram Bot',
+  'settings.telegram.botName': 'Teralexi Telegram Bot',
   'settings.discord.botToken': '',
-  'settings.discord.botName': 'OpenFDE Discord Bot',
+  'settings.discord.botName': 'Teralexi Discord Bot',
   'settings.wechat.corpId': '',
   'settings.wechat.corpSecret': '',
   'settings.wechat.agentId': '',
-  'settings.wechat.botName': 'OpenFDE WeChat Bot',
+  'settings.wechat.botName': 'Teralexi WeChat Bot',
   'settings.slack.botToken': '',
   'settings.slack.appToken': '',
-  'settings.slack.botName': 'OpenFDE Slack Bot',
+  'settings.slack.botName': 'Teralexi Slack Bot',
   'memory.recording.block': 'true',
   'memory.recording.vector': 'false',
   'memory.recording.session': 'true',
@@ -72,7 +72,7 @@ const DEFAULT_SYSTEM_PROPERTIES: Record<string, string> = {
 /** Loaded from env files only — not written to user config.properties. */
 export const ENV_ONLY_PROPERTY_KEYS = [
   'app.base.apiUrl',
-  'app.openfde.googleAuthLoginUrl',
+  'app.teralexi.googleAuthLoginUrl',
   'app.desktop.forceDevUpdateConfig',
 ] as const
 
@@ -94,7 +94,7 @@ function ensureEnvOverridesLoaded(): void {
 }
 
 function getSystemPropPath(): string {
-  return getopenfdeConfigPropertiesPath()
+  return getTeralexiConfigPropertiesPath()
 }
 
 function parseSystemProp(content: string): Map<string, string> {
@@ -146,7 +146,7 @@ function writeAllProps(entries: Map<string, string>): void {
   const filePath = getSystemPropPath()
   const persisted = new Map(entries)
   stripEnvOnlyKeys(persisted)
-  mkdirSync(getopenfdeConfigDir(), { recursive: true })
+  mkdirSync(getTeralexiConfigDir(), { recursive: true })
   mkdirSync(dirname(filePath), { recursive: true })
   writeFileSync(filePath, stringifySystemProp(persisted), 'utf-8')
 }

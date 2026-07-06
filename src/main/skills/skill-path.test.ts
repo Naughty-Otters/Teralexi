@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { join } from 'path'
-import { mockOpenfdeDir, pathsEqual } from '@test-paths'
+import { mockTeralexiDir, pathsEqual } from '@test-paths'
 
 vi.mock('fs', () => ({
   existsSync: vi.fn(),
@@ -13,9 +13,9 @@ vi.mock('electron', () => ({
   app: { isPackaged: false },
 }))
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeSkillsDir: vi.fn(() => mockOpenfdeDir('skills')),
-  getopenfdeToolSetDir: vi.fn(() => mockOpenfdeDir('toolSet')),
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiSkillsDir: vi.fn(() => mockTeralexiDir('skills')),
+  getTeralexiToolSetDir: vi.fn(() => mockTeralexiDir('toolSet')),
 }))
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
@@ -133,11 +133,11 @@ describe('skill-path', () => {
   })
 
   it('resolveSkillFolder prefers user skill over bundled', () => {
-    const userSkillMd = join(mockOpenfdeDir('skills', 'demo'), SKILL_FILES.SKILL_MD)
+    const userSkillMd = join(mockTeralexiDir('skills', 'demo'), SKILL_FILES.SKILL_MD)
     vi.mocked(statSync).mockReturnValue({ isDirectory: () => true } as never)
     vi.mocked(existsSync).mockImplementation((target) =>
       pathsEqual(String(target), userSkillMd),
     )
-    expect(resolveSkillFolder('demo')).toBe(join(mockOpenfdeDir('skills'), 'demo'))
+    expect(resolveSkillFolder('demo')).toBe(join(mockTeralexiDir('skills'), 'demo'))
   })
 })

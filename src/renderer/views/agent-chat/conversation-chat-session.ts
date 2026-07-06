@@ -1,5 +1,5 @@
-import { Chat } from '@openfde-ai/vue'
-import type { UIMessage } from '@openfde-ai'
+import { Chat } from '@teralexi-ai/vue'
+import type { UIMessage } from '@teralexi-ai'
 
 import { chatUiPerfMark, chatUiPerfMarkEnd } from './perf/chatUiPerf'
 

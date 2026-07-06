@@ -8,14 +8,14 @@ import { resolveAppRoot } from './config/app-paths'
 configureAppBranding()
 initStaticPaths()
 
-import { initializeopenfdeHome, getopenfdeRulesDir } from '@config/openfde-home'
+import { initializeTeralexiHome, getTeralexiRulesDir } from '@config/teralexi-home'
 import { isPackagedApp } from './config/app-paths'
 import { seedBundledDefaultRulesIfMissing } from './config/bundled-default-rules'
 import { clearSkillModuleCache, loadToolSetTools } from '@main/skills/skill-module-loader'
 import { ensureClientId } from '@main/services/client-identity'
 
-initializeopenfdeHome(app)
-seedBundledDefaultRulesIfMissing(getopenfdeRulesDir())
+initializeTeralexiHome(app)
+seedBundledDefaultRulesIfMissing(getTeralexiRulesDir())
 ensureClientId()
 // Dev-only: drop stale esbuild bundles when source changes frequently.
 if (!isPackagedApp()) {
@@ -37,20 +37,20 @@ import { registerMainProcessSupportHandlers } from './services/support-event-sto
 import { getLspManager, initBundledLspBin } from './agent/lsp'
 import { createLogger } from './logger'
 import {
-  registerOpenFdeProtocolClient,
-  registerOpenFdeProtocolHandlers,
-  requestOpenFdeSingleInstanceLock,
-  setOpenFdeProtocolHandlerReady,
-} from './services/openfde-protocol-handler'
+  registerTeralexiProtocolClient,
+  registerTeralexiProtocolHandlers,
+  requestTeralexiSingleInstanceLock,
+  setTeralexiProtocolHandlerReady,
+} from './services/teralexi-protocol-handler'
 
 let isQuiting = false
 const log = createLogger('app')
 
-if (!requestOpenFdeSingleInstanceLock()) {
+if (!requestTeralexiSingleInstanceLock()) {
   app.quit()
 } else {
-  registerOpenFdeProtocolClient()
-  registerOpenFdeProtocolHandlers()
+  registerTeralexiProtocolClient()
+  registerTeralexiProtocolHandlers()
 }
 
 async function onAppReady() {
@@ -135,7 +135,7 @@ async function onAppReady() {
     log.info('Installed vue-devtools extension')
   }
 
-  setOpenFdeProtocolHandlerReady()
+  setTeralexiProtocolHandlerReady()
 }
 
 app.whenReady().then(onAppReady)

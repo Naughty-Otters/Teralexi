@@ -13,10 +13,10 @@ describe('bundled-default-rules', () => {
   let cwdSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
-    projectRoot = mkdtempSync(join(tmpdir(), 'openfde-bundled-rules-'))
-    mkdirSync(join(projectRoot, '.openfde', 'rules'), { recursive: true })
+    projectRoot = mkdtempSync(join(tmpdir(), 'teralexi-bundled-rules-'))
+    mkdirSync(join(projectRoot, '.teralexi', 'rules'), { recursive: true })
     writeFileSync(
-      join(projectRoot, '.openfde', 'rules', 'coding-standards.md'),
+      join(projectRoot, '.teralexi', 'rules', 'coding-standards.md'),
       '# Coding standards',
     )
     cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(projectRoot)
@@ -27,15 +27,15 @@ describe('bundled-default-rules', () => {
     vi.resetModules()
   })
 
-  it('resolveBundledDefaultRulesDirectory points at repo .openfde/rules in dev', async () => {
+  it('resolveBundledDefaultRulesDirectory points at repo .teralexi/rules in dev', async () => {
     const { resolveBundledDefaultRulesDirectory } = await import('./bundled-default-rules')
     expect(resolveBundledDefaultRulesDirectory()).toBe(
-      join(projectRoot, '.openfde', 'rules'),
+      join(projectRoot, '.teralexi', 'rules'),
     )
   })
 
   it('seedBundledDefaultRulesIfMissing copies missing rule files only', async () => {
-    const userRulesDir = mkdtempSync(join(tmpdir(), 'openfde-user-rules-'))
+    const userRulesDir = mkdtempSync(join(tmpdir(), 'teralexi-user-rules-'))
     writeFileSync(join(userRulesDir, 'existing.md'), '# Existing')
 
     const { seedBundledDefaultRulesIfMissing } = await import('./bundled-default-rules')
@@ -48,7 +48,7 @@ describe('bundled-default-rules', () => {
     )
 
     writeFileSync(
-      join(projectRoot, '.openfde', 'rules', 'coding-standards.md'),
+      join(projectRoot, '.teralexi', 'rules', 'coding-standards.md'),
       '# Updated bundled',
     )
     seedBundledDefaultRulesIfMissing(userRulesDir)
@@ -58,8 +58,8 @@ describe('bundled-default-rules', () => {
   })
 
   it('seedBundledDefaultRulesIfMissing is a no-op when bundled rules are absent', async () => {
-    const userRulesDir = mkdtempSync(join(tmpdir(), 'openfde-user-rules-empty-'))
-    const emptyRoot = mkdtempSync(join(tmpdir(), 'openfde-no-bundled-rules-'))
+    const userRulesDir = mkdtempSync(join(tmpdir(), 'teralexi-user-rules-empty-'))
+    const emptyRoot = mkdtempSync(join(tmpdir(), 'teralexi-no-bundled-rules-'))
     cwdSpy.mockReturnValue(emptyRoot)
 
     const { seedBundledDefaultRulesIfMissing } = await import('./bundled-default-rules')
@@ -68,7 +68,7 @@ describe('bundled-default-rules', () => {
   })
 })
 
-describe('verifyBundledOpenFdeRules', () => {
+describe('verifyBundledTeralexiRules', () => {
   let cwdSpy: ReturnType<typeof vi.spyOn> | undefined
 
   afterEach(() => {
@@ -76,26 +76,26 @@ describe('verifyBundledOpenFdeRules', () => {
     vi.resetModules()
   })
 
-  it('passes when .openfde/rules contains markdown rules', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'openfde-verify-rules-'))
-    mkdirSync(join(root, '.openfde', 'rules'), { recursive: true })
-    writeFileSync(join(root, '.openfde', 'rules', 'coding-standards.md'), '# rules')
+  it('passes when .teralexi/rules contains markdown rules', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'teralexi-verify-rules-'))
+    mkdirSync(join(root, '.teralexi', 'rules'), { recursive: true })
+    writeFileSync(join(root, '.teralexi', 'rules', 'coding-standards.md'), '# rules')
     cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(root)
 
-    const { verifyBundledOpenFdeRules } = await import(
-      '../../../.electron-vite/verify-bundled-openfde-rules'
+    const { verifyBundledTeralexiRules } = await import(
+      '../../../.electron-vite/verify-bundled-teralexi-rules'
     )
-    expect(() => verifyBundledOpenFdeRules()).not.toThrow()
+    expect(() => verifyBundledTeralexiRules()).not.toThrow()
   })
 
   it('throws when bundled rules directory is missing', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'openfde-verify-rules-missing-'))
+    const root = mkdtempSync(join(tmpdir(), 'teralexi-verify-rules-missing-'))
     cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(root)
 
-    const { verifyBundledOpenFdeRules } = await import(
-      '../../../.electron-vite/verify-bundled-openfde-rules'
+    const { verifyBundledTeralexiRules } = await import(
+      '../../../.electron-vite/verify-bundled-teralexi-rules'
     )
-    expect(() => verifyBundledOpenFdeRules()).toThrow(
+    expect(() => verifyBundledTeralexiRules()).toThrow(
       'missing bundled default rules directory',
     )
   })

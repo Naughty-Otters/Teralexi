@@ -29,9 +29,9 @@ export default defineConfig({
       '@main': resolve('src/main'),
       '@logging': resolve('src/logging'),
       '@shared': resolve('src/shared'),
-      '@openfde-ai/vue': resolve('src/openfde-ai/vue.ts'),
-      '@openfde-ai/mcp': resolve('src/openfde-ai/mcp.ts'),
-      '@openfde-ai': resolve('src/openfde-ai/renderer.ts'),
+      '@teralexi-ai/vue': resolve('src/teralexi-ai/vue.ts'),
+      '@teralexi-ai/mcp': resolve('src/teralexi-ai/mcp.ts'),
+      '@teralexi-ai': resolve('src/teralexi-ai/renderer.ts'),
     },
   },
 
@@ -50,7 +50,7 @@ export default defineConfig({
       // Avoid HMR on DB/logs/shiki churn; reduces @vitejs/plugin-vue early HMR races.
       ignored: [
         '**/.git/**',
-        '**/.openfde/**',
+        '**/.teralexi/**',
         '**/dist/**',
         '**/*.db',
         '**/*.db-wal',

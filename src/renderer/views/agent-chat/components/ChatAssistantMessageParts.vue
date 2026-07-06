@@ -147,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 import { useI18n } from '@renderer/composables/useI18n'
 import ChatAssistantConversationView from './ChatAssistantConversationView.vue'
 import ChatBriefMarkdownBubble from './ChatBriefMarkdownBubble.vue'

@@ -37,7 +37,7 @@ export const providerSetupEn: ProviderSetupLabels = {
     agentsIncomplete: 'Configure every agent before continuing.',
     finishSetup: 'Finish setup',
     continueToAgents: 'Next: configure agents',
-    rampUpTitle: 'Welcome to OpenFDE',
+    rampUpTitle: 'Welcome to Teralexi',
     rampUpSubtitle: 'Connect an LLM and assign models to your agents to get started.',
     configuredProvidersHint:
       'These providers are already set up. Pick one to use for your agents, or add another below.',
@@ -54,12 +54,12 @@ export const providerSetupEn: ProviderSetupLabels = {
   landing: {
     title: 'Connect your first model',
     subtitle:
-      'Step-by-step help to get API keys from OpenAI, Anthropic, DeepSeek, and more — then test and save in OpenFDE.',
+      'Step-by-step help to get API keys from OpenAI, Anthropic, DeepSeek, and more — then test and save in Teralexi.',
     cta: 'Start setup wizard',
   },
   providers: {
     ollama: {
-      intro: 'Ollama runs open models locally. Install it, pull a model, then point OpenFDE at the server URL.',
+      intro: 'Ollama runs open models locally. Install it, pull a model, then point Teralexi at the server URL.',
       steps: [
         'Download Ollama for your OS and install it.',
         'Open a terminal and run: ollama pull llama3.2 (or another model).',

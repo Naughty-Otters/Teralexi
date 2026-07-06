@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import { ensureParentDirForFile } from '@config/openfde-home'
+import { ensureParentDirForFile } from '@config/teralexi-home'
 
 /**
  * Opens an app-owned SQLite database, creating parent directories first.

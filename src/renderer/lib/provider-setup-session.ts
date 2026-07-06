@@ -1,5 +1,5 @@
 /** Set before navigating to `/` to open the LLM provider setup wizard once. */
-export const PROVIDER_SETUP_SESSION_KEY = 'openfde.showProviderSetup'
+export const PROVIDER_SETUP_SESSION_KEY = 'teralexi.showProviderSetup'
 
 export function requestProviderSetupWizardOnNextChatLoad(): void {
   try {

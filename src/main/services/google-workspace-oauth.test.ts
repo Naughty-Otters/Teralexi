@@ -20,8 +20,8 @@ vi.mock('@config/system-prop', () => ({
   getSystemPropValue: vi.fn((_key: string, fallback = '') => fallback),
 }))
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeAccountsDir: vi.fn(() => '/accounts'),
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiAccountsDir: vi.fn(() => '/accounts'),
 }))
 
 vi.mock('@main/services/google-workspace-account-notify', () => ({

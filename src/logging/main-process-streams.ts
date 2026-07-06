@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { getopenfdeLogsDir } from '@config/openfde-home'
+import { getTeralexiLogsDir } from '@config/teralexi-home'
 import type { LogStreamSpec } from './pino-framework'
 import { createPinoFileDestination, createPrettyLogStream, usePrettyLogs } from './pretty-stream'
 
@@ -9,7 +9,7 @@ let mainLogStreams: LogStreamSpec[] | null = null
 export function buildMainProcessLogStreams(): LogStreamSpec[] {
   if (mainLogStreams) return mainLogStreams
 
-  const logsDir = getopenfdeLogsDir()
+  const logsDir = getTeralexiLogsDir()
   mkdirSync(logsDir, { recursive: true })
 
   const mainLogPath = join(logsDir, 'main.log')

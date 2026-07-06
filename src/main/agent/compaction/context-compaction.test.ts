@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import {
   buildCompactionNote,
   compactConversationIfNeeded,

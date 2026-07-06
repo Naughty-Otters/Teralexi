@@ -3,13 +3,13 @@ import { app, BrowserWindow } from 'electron'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import semver from 'semver'
-import { getopenfdeConfigDir } from '@config/openfde-home'
+import { getTeralexiConfigDir } from '@config/teralexi-home'
 import type { AppUpdateMessage, AppUpdatePhase } from '@shared/app-update'
 import { resolveAppVersion } from '@main/config/app-version'
 import {
-  getOpenFdeDesktopForceDevUpdateConfig,
-  getOpenFdeDesktopReleasesFeedUrl,
-} from './openfde-platform-config'
+  getTeralexiDesktopForceDevUpdateConfig,
+  getTeralexiDesktopReleasesFeedUrl,
+} from './teralexi-platform-config'
 import { webContentSend } from './web-content-send'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
 
@@ -17,7 +17,7 @@ const log = createLogger('services.check-update')
 
 const STARTUP_CHECK_DELAY_MS = 30_000
 const PERIODIC_CHECK_MS = 6 * 60 * 60 * 1000
-const UPDATER_CACHE_DIR_NAME = 'openfde-updater'
+const UPDATER_CACHE_DIR_NAME = 'teralexi-updater'
 const DEV_APP_UPDATE_CONFIG_FILENAME = 'dev-app-update.yml'
 
 let managerInstance: AppUpdateManager | null = null
@@ -28,7 +28,7 @@ export type PrepareDesktopAutoUpdaterResult =
   | { ok: false; error: string }
 
 export async function prepareDesktopAutoUpdater(): Promise<PrepareDesktopAutoUpdaterResult> {
-  const feedUrl = getOpenFdeDesktopReleasesFeedUrl()
+  const feedUrl = getTeralexiDesktopReleasesFeedUrl()
   if (!feedUrl) {
     return {
       ok: false,
@@ -49,7 +49,7 @@ export async function prepareDesktopAutoUpdater(): Promise<PrepareDesktopAutoUpd
 
 /** electron-updater reads dev-app-update.yml for updaterCacheDirName when downloading in dev. */
 export function ensureDevAppUpdateConfig(feedUrl: string): string {
-  const configDir = getopenfdeConfigDir()
+  const configDir = getTeralexiConfigDir()
   mkdirSync(configDir, { recursive: true })
   const configPath = join(configDir, DEV_APP_UPDATE_CONFIG_FILENAME)
   const normalizedUrl = feedUrl.endsWith('/') ? feedUrl : `${feedUrl}/`
@@ -71,7 +71,7 @@ function configureDesktopAutoUpdaterRuntime(feedUrl: string): void {
     return
   }
 
-  const forceDev = getOpenFdeDesktopForceDevUpdateConfig()
+  const forceDev = getTeralexiDesktopForceDevUpdateConfig()
   autoUpdater.forceDevUpdateConfig = forceDev
   if (!forceDev) return
 
@@ -88,8 +88,8 @@ function configureDesktopAutoUpdaterRuntime(feedUrl: string): void {
 /** Packaged builds always; unpackaged dev requires explicit DESKTOP_UPDATE_FORCE_DEV. */
 export function canRunDesktopUpdateCheck(): boolean {
   if (app.isPackaged) return true
-  if (!getOpenFdeDesktopForceDevUpdateConfig()) return false
-  return Boolean(getOpenFdeDesktopReleasesFeedUrl())
+  if (!getTeralexiDesktopForceDevUpdateConfig()) return false
+  return Boolean(getTeralexiDesktopReleasesFeedUrl())
 }
 
 function desktopUpdateCheckBlockedMessage(): string {

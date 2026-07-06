@@ -515,7 +515,7 @@ You are a document-generation specialist. You create professional Excel spreadsh
 - **Workspace promotion:** when the user wants a generated file in their project, use \`promote_artifact\` (sandbox \`from\` → workspace \`to\`). Do not write deliverables directly into the user repo via scripts.
 - **Templates:** bundled under \`templates/\` (manifest, schemas, styles, HTML). Selected via \`template_id\` in step 1.
 - **User data files:** when the user gives a path to CSV/JSON/TXT in their project, use \`read_file\` on that workspace path — read only; do not edit their repo for document generation.
-- **Scratch / transforms:** \`run_script\` when a dedicated doc tool is not enough. Scripts run in the sandbox step folder — read user data via \`OPENFDE_WORKSPACE_PATH\` or workspace paths in \`scriptArgs\`; write temp/output under \`./results/\` or \`results/scratch/\`; use \`promote_artifact\` for final workspace deliverables.
+- **Scratch / transforms:** \`run_script\` when a dedicated doc tool is not enough. Scripts run in the sandbox step folder — read user data via \`TERALEXI_WORKSPACE_PATH\` or workspace paths in \`scriptArgs\`; write temp/output under \`./results/\` or \`results/scratch/\`; use \`promote_artifact\` for final workspace deliverables.
 - Prefer \`render_document\` in step 3 over calling \`create_*\` tools directly.
 
 ### Trigger
@@ -1886,11 +1886,11 @@ system_property.app.google.clientSecret.placeholder: Client secret
       "refs/google-workspace-setup.md": {
         category: "ref",
         encoding: "utf8",
-        content: `# Google Workspace setup (openfde)
+        content: `# Google Workspace setup (teralexi)
 
-The **Google Workspace** skill calls Gmail, Calendar, and Drive via Google OAuth. Tokens are stored locally at \`~/.openfde/accounts/google-workspace-account.json\`.
+The **Google Workspace** skill calls Gmail, Calendar, and Drive via Google OAuth. Tokens are stored locally at \`~/.teralexi/accounts/google-workspace-account.json\`.
 
-Before first use you must configure a **Google Cloud OAuth app** and sign in. Credential keys are declared in this skill’s \`properties.md\` and saved to \`~/.openfde/config/config.properties\`:
+Before first use you must configure a **Google Cloud OAuth app** and sign in. Credential keys are declared in this skill’s \`properties.md\` and saved to \`~/.teralexi/config/config.properties\`:
 
 | Property | Purpose |
 |----------|---------|
@@ -1906,7 +1906,7 @@ These are the single source of truth — the chat setup form and agent settings 
 3. Create an OAuth client of type **Desktop app**.
 4. Add authorized redirect URI: \`http://127.0.0.1:7779\`
 
-## 2. Enter credentials in openfde
+## 2. Enter credentials in teralexi
 
 Use either path (both persist to the same \`config.properties\` keys):
 
@@ -1925,7 +1925,7 @@ Use either path (both persist to the same \`config.properties\` keys):
 **Manual edit**
 
 \`\`\`properties
-# ~/.openfde/config/config.properties
+# ~/.teralexi/config/config.properties
 app.google.clientId=YOUR_CLIENT_ID.apps.googleusercontent.com
 app.google.clientSecret=YOUR_CLIENT_SECRET
 \`\`\`
@@ -1965,7 +1965,7 @@ After editing bundled skills, regenerate the manifest: \`npx tsx .electron-vite/
 
 ## Security
 
-- OAuth client secrets and tokens stay on the user’s machine (\`config.properties\` and \`~/.openfde/accounts/\`).
+- OAuth client secrets and tokens stay on the user’s machine (\`config.properties\` and \`~/.teralexi/accounts/\`).
 - Agents cannot read config secrets via tools; only API calls using the stored account.
 - Write tools (send mail, create event, download to sandbox) require **user approval** in the UI.
 `,

@@ -25,7 +25,7 @@ function checkUploadAllowed(): SupportReportResult | null {
       ok: false,
       reportId: '',
       error:
-        'Sign in with your OpenFDE Google account before uploading a support report.',
+        'Sign in with your Teralexi Google account before uploading a support report.',
     }
   }
 
@@ -103,7 +103,7 @@ export async function submitSupportReport(
         reportId: built.reportId,
         zipPath: built.zipPath,
         error:
-          'Sign in with your OpenFDE Google account before uploading a support report.',
+          'Sign in with your Teralexi Google account before uploading a support report.',
       }
     }
 

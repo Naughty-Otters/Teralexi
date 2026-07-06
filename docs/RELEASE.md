@@ -1,9 +1,9 @@
-# Releasing OpenFDE
+# Releasing Teralexi
 
 > **See also:** [BUILD-AND-RELEASE.md](../BUILD-AND-RELEASE.md) — environment files, local builds, and GitHub Actions (CI vs Release).  
 > **Desktop updates:** [DESKTOP-RELEASES.md](./DESKTOP-RELEASES.md) — S3 publish + public update feed.
 
-OpenFDE uses [Semantic Versioning](https://semver.org/). Installers are built from a **private GitHub repo** and published to **private S3**. Installed apps check for updates via `electron-updater` against `{BASE_API}/desktop/releases/stable/` (no sign-in required).
+Teralexi uses [Semantic Versioning](https://semver.org/). Installers are built from a **private GitHub repo** and published to **private S3**. Installed apps check for updates via `electron-updater` against `{BASE_API}/desktop/releases/stable/` (no sign-in required).
 
 ## Version source of truth
 
@@ -102,7 +102,7 @@ If the workflow runs on a version tag (`v0.0.2`), it verifies the tag matches `p
 
 | Step | Detail |
 | --- | --- |
-| Env | `OPENFDE_BUILD_ENV=sit` → `env/.sit.env` |
+| Env | `TERALEXI_BUILD_ENV=sit` → `env/.sit.env` |
 | Builds | Signed `build:mac:sit` + `build:win64:sit` |
 | Artifacts | GitHub Actions (every PR/push) |
 
@@ -115,7 +115,7 @@ export AWS_ACCESS_KEY_ID=...
 export AWS_SECRET_ACCESS_KEY=...
 export AWS_REGION=us-east-1
 export S3_RELEASE_BUCKET=your-bucket
-export OPENFDE_BUILD_ENV=prod
+export TERALEXI_BUILD_ENV=prod
 
 npm run release:mac   # on macOS
 npm run release:upload-s3

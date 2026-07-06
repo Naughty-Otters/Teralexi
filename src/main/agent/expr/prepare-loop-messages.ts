@@ -1,4 +1,4 @@
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import type { AgentStepContext } from '../context'
 import { compactConversationIfNeeded } from '../compaction'
 import { loadChatContextWindowMessages } from '../utils/chat-context-settings'

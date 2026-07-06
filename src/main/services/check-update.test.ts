@@ -43,16 +43,16 @@ vi.mock('./web-content-send', () => ({
   webContentSend: { updateMsg: vi.fn() },
 }))
 
-vi.mock('./openfde-platform-config', () => ({
-  getOpenFdeDesktopReleasesFeedUrl: vi.fn(
+vi.mock('./teralexi-platform-config', () => ({
+  getTeralexiDesktopReleasesFeedUrl: vi.fn(
     () => 'http://127.0.0.1:8000/desktop/releases/stable/',
   ),
-  getOpenFdeDesktopForceDevUpdateConfig: vi.fn(() => false),
+  getTeralexiDesktopForceDevUpdateConfig: vi.fn(() => false),
 }))
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeConfigDir: vi.fn(() =>
-    joinPath(mockTesterHomedir(), '.openfde', 'config'),
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiConfigDir: vi.fn(() =>
+    joinPath(mockTesterHomedir(), '.teralexi', 'config'),
   ),
 }))
 
@@ -65,9 +65,9 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { app } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import {
-  getOpenFdeDesktopForceDevUpdateConfig,
-  getOpenFdeDesktopReleasesFeedUrl,
-} from './openfde-platform-config'
+  getTeralexiDesktopForceDevUpdateConfig,
+  getTeralexiDesktopReleasesFeedUrl,
+} from './teralexi-platform-config'
 import { webContentSend } from './web-content-send'
 import {
   AppUpdateManager,
@@ -84,8 +84,8 @@ describe('check-update', () => {
     vi.mocked(quitAndInstall).mockClear()
     vi.mocked(setFeedURL).mockClear()
     vi.mocked(webContentSend.updateMsg).mockClear()
-    vi.mocked(getOpenFdeDesktopForceDevUpdateConfig).mockReturnValue(false)
-    vi.mocked(getOpenFdeDesktopReleasesFeedUrl).mockReturnValue(
+    vi.mocked(getTeralexiDesktopForceDevUpdateConfig).mockReturnValue(false)
+    vi.mocked(getTeralexiDesktopReleasesFeedUrl).mockReturnValue(
       'http://127.0.0.1:8000/desktop/releases/stable/',
     )
     Object.defineProperty(app, 'isPackaged', { value: true, configurable: true })
@@ -108,7 +108,7 @@ describe('check-update', () => {
   })
 
   it('prepareDesktopAutoUpdater requires BASE_API feed URL', async () => {
-    vi.mocked(getOpenFdeDesktopReleasesFeedUrl).mockReturnValue('')
+    vi.mocked(getTeralexiDesktopReleasesFeedUrl).mockReturnValue('')
     const prepared = await prepareDesktopAutoUpdater()
     expect(prepared.ok).toBe(false)
     if (!prepared.ok) {
@@ -118,10 +118,10 @@ describe('check-update', () => {
 
   it('prepareDesktopAutoUpdater enables dev update config when DESKTOP_UPDATE_FORCE_DEV is set', async () => {
     Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
-    vi.mocked(getOpenFdeDesktopForceDevUpdateConfig).mockReturnValue(true)
+    vi.mocked(getTeralexiDesktopForceDevUpdateConfig).mockReturnValue(true)
     await prepareDesktopAutoUpdater()
     expect(autoUpdater.forceDevUpdateConfig).toBe(true)
-    const configPath = joinPath(mockTesterHomedir(), '.openfde', 'config', 'dev-app-update.yml')
+    const configPath = joinPath(mockTesterHomedir(), '.teralexi', 'config', 'dev-app-update.yml')
     expect(writeFileSync).toHaveBeenCalledWith(
       configPath,
       expect.stringContaining('url: http://127.0.0.1:8000/desktop/releases/stable/'),
@@ -134,7 +134,7 @@ describe('check-update', () => {
   })
 
   it('ensureDevAppUpdateConfig writes updater cache metadata for dev downloads', () => {
-    const configDir = joinPath(mockTesterHomedir(), '.openfde', 'config')
+    const configDir = joinPath(mockTesterHomedir(), '.teralexi', 'config')
     const expectedPath = join(configDir, 'dev-app-update.yml')
     const returnedPath = ensureDevAppUpdateConfig(
       'http://127.0.0.1:8000/desktop/releases/stable',
@@ -148,7 +148,7 @@ describe('check-update', () => {
       [
         'provider: generic',
         'url: http://127.0.0.1:8000/desktop/releases/stable/',
-        'updaterCacheDirName: openfde-updater',
+        'updaterCacheDirName: teralexi-updater',
         '',
       ].join('\n'),
       'utf-8',
@@ -184,21 +184,21 @@ describe('check-update', () => {
 
   it('canRunDesktopUpdateCheck allows unpackaged dev when force-dev flag is enabled', () => {
     Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
-    vi.mocked(getOpenFdeDesktopForceDevUpdateConfig).mockReturnValue(true)
+    vi.mocked(getTeralexiDesktopForceDevUpdateConfig).mockReturnValue(true)
     expect(canRunDesktopUpdateCheck()).toBe(true)
     Object.defineProperty(app, 'isPackaged', { value: true, configurable: true })
   })
 
   it('canRunDesktopUpdateCheck blocks unpackaged dev without force-dev flag', () => {
     Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
-    vi.mocked(getOpenFdeDesktopForceDevUpdateConfig).mockReturnValue(false)
+    vi.mocked(getTeralexiDesktopForceDevUpdateConfig).mockReturnValue(false)
     expect(canRunDesktopUpdateCheck()).toBe(false)
     Object.defineProperty(app, 'isPackaged', { value: true, configurable: true })
   })
 
   it('skips update check when running unpackaged without force-dev flag', async () => {
     Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
-    vi.mocked(getOpenFdeDesktopForceDevUpdateConfig).mockReturnValue(false)
+    vi.mocked(getTeralexiDesktopForceDevUpdateConfig).mockReturnValue(false)
     const mainWindow = {
       webContents: {},
       isDestroyed: () => false,

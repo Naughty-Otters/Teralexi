@@ -3,8 +3,8 @@ import path from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
-  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
+  TERALEXI_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
+  TERALEXI_AGENT_SANDBOX_ROOT_ENV,
   SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY,
   SANDBOX_ROOT_GLOBAL_KEY,
 } from './sandbox-paths'
@@ -15,10 +15,10 @@ function setSandboxRoot(root: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (root) {
     g[SANDBOX_ROOT_GLOBAL_KEY] = root
-    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = root
+    process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV] = root
   } else {
     delete g[SANDBOX_ROOT_GLOBAL_KEY]
-    delete process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]
+    delete process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV]
   }
 }
 
@@ -26,10 +26,10 @@ function setSandboxOutputScope(scope: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (scope) {
     g[SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY] = scope
-    process.env[OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV] = scope
+    process.env[TERALEXI_AGENT_SANDBOX_OUTPUT_SCOPE_ENV] = scope
   } else {
     delete g[SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY]
-    delete process.env[OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]
+    delete process.env[TERALEXI_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]
   }
 }
 
@@ -37,7 +37,7 @@ describe('todo tools', () => {
   let sandboxRoot: string
 
   beforeEach(async () => {
-    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'openfde-todos-'))
+    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'teralexi-todos-'))
     setSandboxRoot(sandboxRoot)
     setSandboxOutputScope(undefined)
   })

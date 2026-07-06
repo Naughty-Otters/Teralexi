@@ -15,7 +15,7 @@ export const lang: AppLocaleBundle = {
     resizeConversationList: '调整会话列表宽度',
   },
   app: {
-    name: 'OpenFDE',
+    name: 'Teralexi',
   },
   sidebar: {
     settings: '设置',
@@ -161,7 +161,7 @@ export const lang: AppLocaleBundle = {
     printBubbleContent: '打印内容',
     skillSetupTitle: '配置 {skillName}',
     skillSetupIntro:
-      '此技能需要先保存本地配置才能开始聊天。设置会写入 ~/.openfde/config/config.properties，不会加入对话记录。',
+      '此技能需要先保存本地配置才能开始聊天。设置会写入 ~/.teralexi/config/config.properties，不会加入对话记录。',
     skillSetupSave: '保存并继续',
     skillSetupSaving: '保存中…',
   },
@@ -260,7 +260,7 @@ export const lang: AppLocaleBundle = {
       currentPagePath: '当前页面路径：',
       currentPageName: '当前页面名称：',
       vueVersion: 'Vue 版本：',
-      electronVersion: 'OpenFDE 版本：',
+      electronVersion: 'Teralexi 版本：',
       nodeVersion: 'Node 版本：',
       systemPlatform: '系统平台：',
       systemVersion: '系统版本：',
@@ -282,7 +282,7 @@ export const lang: AppLocaleBundle = {
   toast: {
     updateAvailableTitle: '有可用更新',
     updateAvailableDescription:
-      'OpenFDE v{version} 已可下载。请打开 设置 → 关于。',
+      'Teralexi v{version} 已可下载。请打开 设置 → 关于。',
   },
   titleBar: {
     updateAvailable: '更新 {version}',
@@ -296,7 +296,7 @@ export const lang: AppLocaleBundle = {
     signInFailed: '登录已取消或失败，请重试。',
     signInRequiredTitle: '登录后继续',
     signInRequiredDesc:
-      '注册免费的 OpenFDE 账户即可使用云端 LLM、Agent、技能、频道、记忆等功能。',
+      '注册免费的 Teralexi 账户即可使用云端 LLM、Agent、技能、频道、记忆等功能。',
     localLlmHint:
       '未登录时仍可在 设置 → LLM 中配置本地模型（Ollama 或 llama.cpp）。',
     openLocalLlmSettings: '改为配置本地 LLM',
@@ -307,11 +307,11 @@ export const lang: AppLocaleBundle = {
     selected: '已选择',
   },
   signInGate: {
-    settings: '此设置项需要登录 OpenFDE 账户后使用。',
+    settings: '此设置项需要登录 Teralexi 账户后使用。',
     monitor: 'Token 用量统计仅对登录用户开放。',
     wizard:
       '完整设置向导需要登录。未登录时可在 设置 → LLM 中配置 Ollama 或 llama.cpp。',
-    llmCloud: '云端 LLM 提供商需要 OpenFDE 账户。下方仍可使用本地提供商（Ollama、llama.cpp）。',
+    llmCloud: '云端 LLM 提供商需要 Teralexi 账户。下方仍可使用本地提供商（Ollama、llama.cpp）。',
   },
   providerSetup: providerSetupZhCn,
 }

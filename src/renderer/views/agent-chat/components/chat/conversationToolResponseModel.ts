@@ -3,7 +3,7 @@ import {
   type UIMessage,
   type UIMessagePart,
   type UITools,
-} from '@openfde-ai'
+} from '@teralexi-ai'
 import { parseToolFileChanges } from '@shared/file-change/parse-tool-file-changes'
 import {
   classifyToolResult,

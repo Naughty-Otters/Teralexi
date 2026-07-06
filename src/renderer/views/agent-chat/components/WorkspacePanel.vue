@@ -181,7 +181,7 @@ const {
   defaultSize: 220,
   minSize: 160,
   maxSize: { fraction: 0.58 },
-  storageKey: 'openfde.agent.workspaceFileBrowserWidth',
+  storageKey: 'teralexi.agent.workspaceFileBrowserWidth',
   enabled: fileBrowserResizeEnabled,
 })
 

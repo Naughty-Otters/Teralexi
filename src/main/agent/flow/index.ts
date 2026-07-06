@@ -2,7 +2,7 @@ export {
   AgentFlow,
   AgentFlowBase,
   streamAgentResponse,
-  openfde,
+  teralexi,
   type StreamAgentResponseResult,
   ReactAgentPipeline,
   DefaultAgentRunPipeline,

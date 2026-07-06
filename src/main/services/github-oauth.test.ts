@@ -25,8 +25,8 @@ vi.mock('@config/github-oauth-defaults', () => ({
   BUNDLED_GITHUB_OAUTH_CLIENT_SECRET: '',
 }))
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeAccountsDir: vi.fn(() => '/accounts'),
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiAccountsDir: vi.fn(() => '/accounts'),
 }))
 
 import {

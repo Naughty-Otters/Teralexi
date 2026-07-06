@@ -1,4 +1,4 @@
-import type { UIMessage, TextUIPart } from '@openfde-ai'
+import type { UIMessage, TextUIPart } from '@teralexi-ai'
 import type MarkdownIt from 'markdown-it'
 import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
 import { rewriteSandboxPreviewLinksInHtml } from '@shared/markdown/sandbox-preview-links'

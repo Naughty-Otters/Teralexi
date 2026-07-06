@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
-import { getopenfdeSkillsDir, getopenfdeToolSetDir } from '@config/openfde-home'
+import { getTeralexiSkillsDir, getTeralexiToolSetDir } from '@config/teralexi-home'
 import { joinAppResourcePath } from '@main/config/app-paths'
 import type { SkillToolOs } from './types'
 import { SKILL_FILES, SKILLS_RESERVED_DIR_NAMES } from './constants'
@@ -11,7 +11,7 @@ const RESERVED_SKILL_DIR_NAMES = new Set(SKILLS_RESERVED_DIR_NAMES)
 export type SkillsSources = {
   /** Shipped defaults (repo or app bundle). */
   bundled: string
-  /** User overrides under `~/.openfde/skills`. */
+  /** User overrides under `~/.teralexi/skills`. */
   user: string
 }
 
@@ -65,9 +65,9 @@ export function resolveBundledToolSetDirectory(): string {
   return joinAppResourcePath(SKILL_FILES.TOOL_SET_DIR)
 }
 
-/** `~/.openfde/skills` — user-installed skills; wins on id conflicts. */
+/** `~/.teralexi/skills` — user-installed skills; wins on id conflicts. */
 export function resolveUserSkillsDirectory(): string {
-  return getopenfdeSkillsDir()
+  return getTeralexiSkillsDir()
 }
 
 export function resolveSkillsSources(): SkillsSources {
@@ -85,9 +85,9 @@ export function resolveSkillsSourceRoots(): string[] {
   return [bundled, user]
 }
 
-/** User overrides: `~/.openfde/toolSet`. */
+/** User overrides: `~/.teralexi/toolSet`. */
 export function resolveUserToolSetDirectory(): string {
-  return getopenfdeToolSetDir()
+  return getTeralexiToolSetDir()
 }
 
 /**

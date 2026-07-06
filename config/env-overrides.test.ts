@@ -77,10 +77,10 @@ APP_DEV_PORT=3000
 
   it('resolveBuildTimeEnvFilePaths uses only repo env files', () => {
     expect(
-      resolveBuildTimeEnvFilePaths(fakeRepo(), { OPENFDE_BUILD_ENV: 'sit' }),
+      resolveBuildTimeEnvFilePaths(fakeRepo(), { TERALEXI_BUILD_ENV: 'sit' }),
     ).toEqual([join(fakeRepo(), 'env', '.sit.env')])
     expect(
-      resolveBuildTimeEnvFilePaths(fakeRepo(), { OPENFDE_BUILD_ENV: 'prod' }),
+      resolveBuildTimeEnvFilePaths(fakeRepo(), { TERALEXI_BUILD_ENV: 'prod' }),
     ).toEqual([join(fakeRepo(), 'env', '.prod.env')])
   })
 
@@ -94,8 +94,8 @@ APP_DEV_PORT=3000
 
     const overrides = loadEnvOverrides({
       knownKeys: ['app.base.apiUrl'],
-      searchRoots: ['/Users/tester/code/OpenFDE'],
-      processEnv: { OPENFDE_BUILD_ENV: 'dev' },
+      searchRoots: ['/Users/tester/code/Teralexi'],
+      processEnv: { TERALEXI_BUILD_ENV: 'dev' },
     })
 
     expect(overrides.get('app.base.apiUrl')).toBe('http://127.0.0.1:8000')

@@ -1,5 +1,5 @@
 /**
- * AI SDK core runtime — re-exported for app code. Import from `@openfde-ai`, not `ai`.
+ * AI SDK core runtime — re-exported for app code. Import from `@teralexi-ai`, not `ai`.
  */
 export {
   convertToModelMessages,

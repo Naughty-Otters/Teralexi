@@ -1,4 +1,4 @@
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 
 /**
  * After form submit user message, auto-continue agent run (same idea as tool approval).

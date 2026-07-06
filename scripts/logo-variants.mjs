@@ -1,5 +1,5 @@
 /**
- * Derives light-background and menu-bar tray variants from openfde-logo.png.
+ * Derives light-background and menu-bar tray variants from teralexi-logo.png.
  */
 import sharp from 'sharp'
 
@@ -70,7 +70,7 @@ export async function createLightBackgroundLogo(sourcePath, outputPath) {
 }
 
 /**
- * Black template icon for macOS menu bar / system tray, derived from openfde-logo.png.
+ * Black template icon for macOS menu bar / system tray, derived from teralexi-logo.png.
  * No stroke dilation — keeps the logo's natural line weight at menu-bar size.
  */
 export async function createTrayTemplateIcon(

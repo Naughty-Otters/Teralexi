@@ -2,7 +2,7 @@ import { realpathSync } from 'fs'
 import { rm } from 'fs/promises'
 import os from 'os'
 import { basename, dirname, relative, resolve, sep } from 'path'
-import { getopenfdeSandboxDir } from '@config/openfde-home'
+import { getTeralexiSandboxDir } from '@config/teralexi-home'
 import { isSubAgentSandboxRoot } from './sub-agent-registry'
 import { createLogger, traceFunction } from '@main/logger'
 
@@ -22,11 +22,11 @@ function realpathSafe(p: string): string {
 }
 
 /**
- * Allows removal for sandboxes under `~/.openfde/workspace/sandbox/`, or legacy
- * `openfde-sandbox-*` folders directly under the OS tmpdir.
+ * Allows removal for sandboxes under `~/.teralexi/workspace/sandbox/`, or legacy
+ * `teralexi-sandbox-*` folders directly under the OS tmpdir.
  */
-function isRemovableopenfdeSandboxPathImpl(candidatePath: string): boolean {
-  const openfdeSandboxReal = realpathSafe(getopenfdeSandboxDir())
+function isRemovableteralexiSandboxPathImpl(candidatePath: string): boolean {
+  const teralexiSandboxReal = realpathSafe(getTeralexiSandboxDir())
   const tmpReal = realpathSafe(os.tmpdir())
 
   let parentReal: string
@@ -42,12 +42,12 @@ function isRemovableopenfdeSandboxPathImpl(candidatePath: string): boolean {
     parentReal = realpathSafe(dirname(abs))
   }
 
-  if (parentReal === openfdeSandboxReal) return true
+  if (parentReal === teralexiSandboxReal) return true
 
-  // sandbox/sub-agents/sub-agent-<id>/ — nested under openfde sandbox dir
+  // sandbox/sub-agents/sub-agent-<id>/ — nested under teralexi sandbox dir
   try {
     const absReal = realpathSync(resolve(candidatePath.trim()))
-    const rel = relative(openfdeSandboxReal, absReal)
+    const rel = relative(teralexiSandboxReal, absReal)
     const relNorm = rel.replace(/\\/g, '/')
     if (
       rel &&
@@ -63,7 +63,7 @@ function isRemovableopenfdeSandboxPathImpl(candidatePath: string): boolean {
     if (isSubAgentSandboxRoot(candidatePath)) return true
   }
 
-  if (!name.startsWith('openfde-sandbox-')) return false
+  if (!name.startsWith('teralexi-sandbox-')) return false
 
   return parentReal === tmpReal
 }
@@ -71,10 +71,10 @@ function isRemovableopenfdeSandboxPathImpl(candidatePath: string): boolean {
 async function removeSandboxDirectoriesImpl(paths: string[]): Promise<void> {
   for (const p of paths) {
     const abs = resolve(p.trim())
-    if (!isRemovableopenfdeSandboxPath(abs)) {
+    if (!isRemovableteralexiSandboxPath(abs)) {
       log.warn('Skipped sandbox removal outside allowed sandbox roots', {
         path: p,
-        openfdeSandbox: getopenfdeSandboxDir(),
+        teralexiSandbox: getTeralexiSandboxDir(),
         tmpdir: os.tmpdir(),
       })
       continue
@@ -91,10 +91,10 @@ async function removeSandboxDirectoriesImpl(paths: string[]): Promise<void> {
   }
 }
 
-export const isRemovableopenfdeSandboxPath = traceFunction(
+export const isRemovableteralexiSandboxPath = traceFunction(
   log,
-  'isRemovableopenfdeSandboxPath',
-  isRemovableopenfdeSandboxPathImpl,
+  'isRemovableteralexiSandboxPath',
+  isRemovableteralexiSandboxPathImpl,
 )
 
 export const removeSandboxDirectories = traceFunction(

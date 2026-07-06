@@ -922,11 +922,11 @@ export class IpcChannelMainClass {
     }
   > = null
   /**
-   * Sign out and clear stored OpenFDE Google account tokens
+   * Sign out and clear stored Teralexi Google account tokens
    */
   GoogleSignOut: IpcMainEventListener<void, void> = null
   /**
-   * Return the currently stored OpenFDE Google account info, or null if not signed in
+   * Return the currently stored Teralexi Google account info, or null if not signed in
    */
   GetGoogleAccount: IpcMainEventListener<
     void,
@@ -1524,7 +1524,7 @@ export class IpcChannelMainClass {
     void
   > = null
   /**
-   * Delete on-disk sandbox directories (validated under `~/.openfde/workspace/sandbox/` or legacy tmpdir).
+   * Delete on-disk sandbox directories (validated under `~/.teralexi/workspace/sandbox/` or legacy tmpdir).
    */
   RemoveSandboxDirectories: IpcMainEventListener<{ paths: string[] }, void> =
     null
@@ -1809,7 +1809,7 @@ export class IpcChannelMainClass {
     { taskId: string },
     { ok: boolean }
   > = null
-  /** Install a skill from a GitHub URL into ~/.openfde/skills. */
+  /** Install a skill from a GitHub URL into ~/.teralexi/skills. */
   InstallSkillFromGithub: IpcMainEventListener<
     { url: string; skillId?: string },
     { ok: boolean; skillId?: string; error?: string }
@@ -1829,7 +1829,7 @@ export class IpcChannelMainClass {
     { slug: string; path?: string },
     { content: string }
   > = null
-  /** Install a skill from ClawHub into ~/.openfde/skills. */
+  /** Install a skill from ClawHub into ~/.teralexi/skills. */
   InstallClawHubSkill: IpcMainEventListener<
     { slug: string; localSkillId?: string; version?: string },
     import('@shared/skills/clawhub-types').ClawHubInstallResult
@@ -2053,7 +2053,7 @@ export class IpcChannelRendererClass {
     method: string
     params: unknown
   }> = null
-  /** OpenFDE Google account linked or cleared (browser OAuth callback). */
+  /** Teralexi Google account linked or cleared (browser OAuth callback). */
   GoogleAccountChanged: IpcRendererEventListener<{
     account: {
       email: string

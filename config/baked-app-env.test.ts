@@ -7,8 +7,8 @@ import {
 
 describe('baked-app-env', () => {
   it('detects unresolved rollup placeholders', () => {
-    expect(isUnresolvedBakedPlaceholder('__OPENFDE_BASE_API__')).toBe(true)
-    expect(isUnresolvedBakedPlaceholder('https://staging.openfde.dev/')).toBe(
+    expect(isUnresolvedBakedPlaceholder('__TERALEXI_BASE_API__')).toBe(true)
+    expect(isUnresolvedBakedPlaceholder('https://staging.teralexi.com/')).toBe(
       false,
     )
   })

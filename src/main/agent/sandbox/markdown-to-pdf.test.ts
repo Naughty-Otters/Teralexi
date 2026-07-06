@@ -21,7 +21,7 @@ describe('exportMarkdownBodyToPdf', () => {
   })
 
   it('writes research-report PDF with print-oriented HTML', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'openfde-pdf-'))
+    const dir = await mkdtemp(join(tmpdir(), 'teralexi-pdf-'))
     const pdfPath = join(dir, 'research-report.pdf')
     const markdown = '# AI Safety\n\n## Abstract\n\nThis report reviews key themes.'
 

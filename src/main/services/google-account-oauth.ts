@@ -1,10 +1,10 @@
 /**
- * OpenFDE Google Account OAuth – platform account linking via browser + openfde://
+ * Teralexi Google Account OAuth – platform account linking via browser + teralexi://
  *
  * Separate from Google Workspace (Gmail/Calendar/Drive). The web app redirects
- * with `openfde://open?token=<google_id_token>`; sign-in opens the OpenFDE auth URL.
+ * with `teralexi://open?token=<google_id_token>`; sign-in opens the Teralexi auth URL.
  *
- * Tokens are persisted under ~/.openfde/accounts/google-account.json.
+ * Tokens are persisted under ~/.teralexi/accounts/google-account.json.
  */
 
 import { shell } from 'electron'
@@ -12,15 +12,15 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { request as httpsRequest } from 'node:https'
 import { parse as parseUrl } from 'url'
-import { getopenfdeAccountsDir } from '@config/openfde-home'
+import { getTeralexiAccountsDir } from '@config/teralexi-home'
 import { isPackagedRuntime } from '@config/env-overrides'
 import {
-  DEFAULT_OPENFDE_GOOGLE_AUTH_LOGIN_URL_DEV,
+  DEFAULT_TERALEXI_GOOGLE_AUTH_LOGIN_URL_DEV,
   GoogleAccountNotConfiguredError,
-  isOpenFdeGoogleAccountSignInConfigured,
+  isTeralexiGoogleAccountSignInConfigured,
 } from '@shared/google-account-settings'
-import { getOpenFdeGoogleAuthLoginUrl as resolveConfiguredGoogleAuthLoginUrl } from '@main/services/openfde-platform-config'
-import { OPENFDE_CALLBACK_URL } from '@shared/openfde-protocol'
+import { getTeralexiGoogleAuthLoginUrl as resolveConfiguredGoogleAuthLoginUrl } from '@main/services/teralexi-platform-config'
+import { TERALEXI_CALLBACK_URL } from '@shared/teralexi-protocol'
 import {
   googleProfileFromIdToken,
   isGoogleIdToken,
@@ -66,15 +66,15 @@ const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
 const SIGN_IN_TIMEOUT_MS = 5 * 60 * 1000
 const log = createLogger('services.google-account-oauth')
 
-export function resolveOpenFdeGoogleAuthLoginUrl(): string {
+export function resolveTeralexiGoogleAuthLoginUrl(): string {
   const resolved = resolveConfiguredGoogleAuthLoginUrl()
   if (resolved) return resolved
   if (isPackagedRuntime()) return ''
-  return DEFAULT_OPENFDE_GOOGLE_AUTH_LOGIN_URL_DEV
+  return DEFAULT_TERALEXI_GOOGLE_AUTH_LOGIN_URL_DEV
 }
 
 export function googleAccountSignInIsConfigured(): boolean {
-  return isOpenFdeGoogleAccountSignInConfigured(resolveOpenFdeGoogleAuthLoginUrl())
+  return isTeralexiGoogleAccountSignInConfigured(resolveTeralexiGoogleAuthLoginUrl())
 }
 
 function assertGoogleAccountSignInConfigured(): void {
@@ -92,14 +92,14 @@ export function googleAccountInfoForUi(account: GoogleAccount): GoogleAccountUiI
 }
 
 function buildAuthLoginUrl(): string {
-  const base = resolveOpenFdeGoogleAuthLoginUrl()
+  const base = resolveTeralexiGoogleAuthLoginUrl()
   const url = new URL(base)
-  url.searchParams.set('redirect_uri', OPENFDE_CALLBACK_URL)
+  url.searchParams.set('redirect_uri', TERALEXI_CALLBACK_URL)
   return url.toString()
 }
 
 function getTokenFilePath(): string {
-  const dir = getopenfdeAccountsDir()
+  const dir = getTeralexiAccountsDir()
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
   return join(dir, 'google-account.json')
 }
@@ -214,7 +214,7 @@ async function resolveGoogleUserInfo(
 async function applyGoogleAccountOAuthCallbackImpl(
   params: GoogleAccountOAuthCallbackParams,
 ): Promise<GoogleAccount> {
-  log.info('Applying OpenFDE Google account OAuth callback')
+  log.info('Applying Teralexi Google account OAuth callback')
   const bearerToken = params.accessToken
   const idTokenProfile = isGoogleIdToken(bearerToken)
     ? googleProfileFromIdToken(bearerToken)
@@ -284,7 +284,7 @@ async function startGoogleAccountSignInImpl(): Promise<GoogleAccount> {
 
 async function runGoogleAccountSignInFlow(): Promise<GoogleAccount> {
   assertGoogleAccountSignInConfigured()
-  log.info('Starting OpenFDE Google account sign-in via browser')
+  log.info('Starting Teralexi Google account sign-in via browser')
   clearPendingGoogleSignIn('Starting a new Google account sign-in')
 
   const loginUrl = buildAuthLoginUrl()
@@ -297,7 +297,7 @@ async function runGoogleAccountSignInFlow(): Promise<GoogleAccount> {
         clearPendingGoogleSignIn()
         reject(
           new Error(
-            'Sign-in timed out. Complete authentication in the browser, then return to OpenFDE.',
+            'Sign-in timed out. Complete authentication in the browser, then return to Teralexi.',
           ),
         )
       }, SIGN_IN_TIMEOUT_MS),
@@ -339,8 +339,8 @@ export const startGoogleAccountSignIn = traceFunction(
   startGoogleAccountSignInImpl,
 )
 
-/** Google id_token from the linked OpenFDE account (for server JWT exchange). */
-export function getOpenFdeAccountGoogleIdToken(): string | null {
+/** Google id_token from the linked Teralexi account (for server JWT exchange). */
+export function getTeralexiAccountGoogleIdToken(): string | null {
   const account = loadStoredAccount()
   if (!account) return null
   if (Date.now() >= account.tokens.expires_at - 60_000) return null

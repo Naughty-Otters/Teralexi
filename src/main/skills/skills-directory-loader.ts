@@ -163,7 +163,7 @@ export async function loadSkillsFromDirectory(
 }
 
 /**
- * Loads skills from statically bundled defaults and `~/.openfde/skills`, merged by id.
+ * Loads skills from statically bundled defaults and `~/.teralexi/skills`, merged by id.
  * User skills overwrite bundled skills with the same folder name.
  */
 export async function loadSkills(): Promise<SkillDefinition[]> {

@@ -1,7 +1,7 @@
 /**
- * Built-in Google OAuth Desktop client for openfde.
+ * Built-in Google OAuth Desktop client for teralexi.
  * Users can override via `app.google.clientId` / `app.google.clientSecret` in
- * `~/.openfde/config/config.properties` or `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
+ * `~/.teralexi/config/config.properties` or `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
  */
 export const BUNDLED_GOOGLE_OAUTH_CLIENT_ID = ''
 

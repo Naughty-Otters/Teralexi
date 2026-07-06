@@ -1,5 +1,5 @@
 import { ref, shallowRef } from 'vue'
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 
 export type StreamingTextTarget = {
   messageId: string

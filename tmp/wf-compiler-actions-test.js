@@ -987,7 +987,7 @@ async function readTextFileIfExists(filePath) {
 }
 
 // src/main/workflows/workflow-compile-context.ts
-var CONTEXT_STACK_KEY = /* @__PURE__ */ Symbol.for("openfde.workflowCompileContextStack");
+var CONTEXT_STACK_KEY = /* @__PURE__ */ Symbol.for("teralexi.workflowCompileContextStack");
 function contextStack() {
   const g = globalThis;
   if (!g[CONTEXT_STACK_KEY]) {
@@ -1013,17 +1013,17 @@ function requireWorkflowCompileContext() {
 var import_fs3 = require("fs");
 var import_path3 = require("path");
 
-// config/openfde-home.ts
+// config/teralexi-home.ts
 var import_module = require("module");
 var import_fs2 = require("fs");
 var import_os = require("os");
 var import_path2 = require("path");
 var import_meta = {};
-var openfde_HOME_DIRNAME = ".openfde";
-var openfde_DB_FILENAME = "openfde.db";
+var TERALEXI_HOME_DIRNAME = ".teralexi";
+var TERALEXI_DB_FILENAME = "teralexi.db";
 var LEGACY_OTTERS_HOME_DIRNAME = ".otters";
 var LEGACY_OTTERS_DB_FILENAME = "otters.db";
-var openfde_APP_DIRS = [
+var TERALEXI_APP_DIRS = [
   "config",
   "db",
   "logs",
@@ -1035,18 +1035,18 @@ var openfde_APP_DIRS = [
   "toolSet",
   "workflows"
 ];
-var openfde_CHANNEL_DATA_DIRS = [
+var TERALEXI_CHANNEL_DATA_DIRS = [
   "whatsapp-auth",
   "telegram-data",
   "discord-data",
   "wechat-data",
   "slack-data"
 ];
-var openfde_DB_DIRNAME = "db";
+var TERALEXI_DB_DIRNAME = "db";
 var initialized = false;
-var openfdeHomePath = null;
-function resolveopenfdeHomePath() {
-  return (0, import_path2.join)((0, import_os.homedir)(), openfde_HOME_DIRNAME);
+var teralexiHomePath = null;
+function resolveTeralexiHomePath() {
+  return (0, import_path2.join)((0, import_os.homedir)(), TERALEXI_HOME_DIRNAME);
 }
 function migrateLegacyHomeIfNeeded(newHome) {
   const legacyHome = (0, import_path2.resolve)((0, import_path2.join)((0, import_os.homedir)(), LEGACY_OTTERS_HOME_DIRNAME));
@@ -1054,28 +1054,28 @@ function migrateLegacyHomeIfNeeded(newHome) {
   if (legacyHome !== resolvedNew && !(0, import_fs2.existsSync)(resolvedNew) && (0, import_fs2.existsSync)(legacyHome)) {
     (0, import_fs2.renameSync)(legacyHome, resolvedNew);
   }
-  const legacyDb = (0, import_path2.join)(resolvedNew, openfde_DB_DIRNAME, LEGACY_OTTERS_DB_FILENAME);
-  const newDb = (0, import_path2.join)(resolvedNew, openfde_DB_DIRNAME, openfde_DB_FILENAME);
+  const legacyDb = (0, import_path2.join)(resolvedNew, TERALEXI_DB_DIRNAME, LEGACY_OTTERS_DB_FILENAME);
+  const newDb = (0, import_path2.join)(resolvedNew, TERALEXI_DB_DIRNAME, TERALEXI_DB_FILENAME);
   if ((0, import_fs2.existsSync)(legacyDb) && !(0, import_fs2.existsSync)(newDb)) {
     (0, import_fs2.renameSync)(legacyDb, newDb);
   }
 }
-function getopenfdeHome() {
-  if (!openfdeHomePath) {
-    openfdeHomePath = resolveopenfdeHomePath();
+function getTeralexiHome() {
+  if (!teralexiHomePath) {
+    teralexiHomePath = resolveTeralexiHomePath();
   }
   if (!initialized) {
-    initializeopenfdeHome(getElectronApp());
+    initializeTeralexiHome(getElectronApp());
   }
-  return openfdeHomePath;
+  return teralexiHomePath;
 }
-function getopenfdeWorkflowsDir() {
-  const dir = (0, import_path2.join)(getopenfdeHome(), "workflows");
+function getTeralexiWorkflowsDir() {
+  const dir = (0, import_path2.join)(getTeralexiHome(), "workflows");
   ensureDir(dir);
   return dir;
 }
 function getWorkflowSourceDir(workflowId) {
-  const dir = (0, import_path2.join)(getopenfdeWorkflowsDir(), workflowId, "source");
+  const dir = (0, import_path2.join)(getTeralexiWorkflowsDir(), workflowId, "source");
   ensureDir(dir);
   return dir;
 }
@@ -1089,10 +1089,10 @@ function getElectronApp() {
   }
 }
 function redirectLegacyChannelDataPath(targetPath) {
-  const home = (0, import_path2.resolve)(resolveopenfdeHomePath());
+  const home = (0, import_path2.resolve)(resolveTeralexiHomePath());
   const resolved = (0, import_path2.resolve)(targetPath);
   const channelsRoot = (0, import_path2.join)(home, "channels");
-  for (const name of openfde_CHANNEL_DATA_DIRS) {
+  for (const name of TERALEXI_CHANNEL_DATA_DIRS) {
     const legacyRoot = (0, import_path2.join)(home, name);
     if (resolved === legacyRoot || resolved.startsWith(`${legacyRoot}${import_path2.sep}`)) {
       const relative2 = resolved.slice(legacyRoot.length).replace(/^[/\\]+/, "");
@@ -1104,20 +1104,20 @@ function redirectLegacyChannelDataPath(targetPath) {
 function ensureDir(path2) {
   (0, import_fs2.mkdirSync)(redirectLegacyChannelDataPath(path2), { recursive: true });
 }
-function initializeopenfdeHome(app) {
-  const home = (0, import_path2.resolve)(resolveopenfdeHomePath());
+function initializeTeralexiHome(app) {
+  const home = (0, import_path2.resolve)(resolveTeralexiHomePath());
   if (initialized) {
-    return openfdeHomePath ?? home;
+    return teralexiHomePath ?? home;
   }
   migrateLegacyHomeIfNeeded(home);
-  openfdeHomePath = home;
+  teralexiHomePath = home;
   initialized = true;
   ensureDir(home);
-  for (const dir of openfde_APP_DIRS) {
+  for (const dir of TERALEXI_APP_DIRS) {
     ensureDir((0, import_path2.join)(home, dir));
   }
   ensureDir((0, import_path2.join)(home, "workspace", "sandbox"));
-  for (const name of openfde_CHANNEL_DATA_DIRS) {
+  for (const name of TERALEXI_CHANNEL_DATA_DIRS) {
     ensureDir((0, import_path2.join)(home, "channels", name));
   }
   return home;

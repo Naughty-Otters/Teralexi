@@ -5,7 +5,7 @@
  * predefined form file can be found. The LLM generates a {@link ParsedCollectFormSchema}
  * from the todo's name, description, and optional form name hint.
  */
-import { Output } from '@openfde-ai'
+import { Output } from '@teralexi-ai'
 import type { StreamTextParams } from '../llm/runtime'
 import { z } from 'zod'
 import type { AgentStepContext } from '../context'

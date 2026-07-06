@@ -187,7 +187,7 @@ function verifyWinExe(exePath) {
     const subjectMatch = ps.stdout.match(/SUBJECT=(.+)/)
     const status = statusMatch?.[1]?.trim()
     const subject = subjectMatch?.[1]?.trim() ?? ''
-    const isSelfSigned = /CN=OpenFDE \(Self-Signed\)/i.test(subject)
+    const isSelfSigned = /CN=Teralexi \(Self-Signed\)/i.test(subject)
 
     if (status === 'Valid') {
       record(rel, 'Authenticode', RESULT.OK, `Valid — ${subject}`)

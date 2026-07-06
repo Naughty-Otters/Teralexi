@@ -318,9 +318,9 @@ onMounted(() => {
     }
   })
 
-  const pendingTab = sessionStorage.getItem('openfde.settingsTab')
+  const pendingTab = sessionStorage.getItem('teralexi.settingsTab')
   if (pendingTab === 'llm' || pendingTab === 'about') {
-    sessionStorage.removeItem('openfde.settingsTab')
+    sessionStorage.removeItem('teralexi.settingsTab')
     switchTab(pendingTab as SettingsTab)
   }
 })

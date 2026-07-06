@@ -3,7 +3,7 @@
  * {@link AgentResponseOpts.clientUiMessages}. Parsing and conversion to
  * {@link ModelMessage} for tool-loop {@link Agent.stream}.
  */
-import { convertToModelMessages, type ModelMessage } from '@openfde-ai'
+import { convertToModelMessages, type ModelMessage } from '@teralexi-ai'
 import { createLogger } from '@main/logger'
 import {
   convertCollectFormDataUIPartToText,

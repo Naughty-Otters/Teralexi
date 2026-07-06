@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
-import { getWorkflowSandboxDir } from '@config/openfde-home'
+import { getWorkflowSandboxDir } from '@config/teralexi-home'
 import { ConfigContext } from '@main/agent/config/context'
 import { createLogger } from '@main/logger'
 import { getConversationStore } from '@main/services/conversation-store'

@@ -94,7 +94,7 @@ jobs:
       - name: Build desktop app (staging / env/.sit.env)
         env:
           NODE_OPTIONS: --max-old-space-size=6144
-          OPENFDE_BUILD_ENV: sit
+          TERALEXI_BUILD_ENV: sit
           MAC_SIGN_CERTIFICATE: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_CERTIFICATE_BASE64 || '' }}
           MAC_SIGN_CERTIFICATE_PASSWORD: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_CERTIFICATE_PASSWORD || '' }}
           MAC_SIGN_IDENTITY: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_IDENTITY || '' }}
@@ -116,7 +116,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v5
         with:
-          name: openfde-${{ matrix.platform }}-sit-${{ github.run_number }}-${{ github.sha }}
+          name: teralexi-${{ matrix.platform }}-sit-${{ github.run_number }}-${{ github.sha }}
           path: ${{ matrix.artifact_path }}
           retention-days: 14
           if-no-files-found: error

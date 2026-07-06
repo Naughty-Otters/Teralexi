@@ -65,14 +65,14 @@ describe('resolveWorkspaceCwd', () => {
   })
 
   it('returns validated cwd when workspace is set', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-ws-ipc-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-ws-ipc-'))
     setWorkspacePath('conv-y', dir)
     expect(resolveWorkspaceCwd('conv-y')).toEqual({ ok: true, cwd: dir })
   })
 
   it('resolveWorkspaceCwd blocks when agent run is in flight', () => {
     vi.mocked(isConversationRunInFlight).mockReturnValue(true)
-    dir = mkdtempSync(join(tmpdir(), 'openfde-ws-ipc-run-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-ws-ipc-run-'))
     setWorkspacePath('conv-run', dir)
     expect(resolveWorkspaceCwd('conv-run', { blockIfRunInFlight: true })).toEqual({
       ok: false,
@@ -82,14 +82,14 @@ describe('resolveWorkspaceCwd', () => {
   })
 
   it('resolveWorkspaceFileOpen rejects empty relative path', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-ws-ipc-open-empty-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-ws-ipc-open-empty-'))
     setWorkspacePath('conv-empty-path', dir)
     const result = resolveWorkspaceFileOpen('conv-empty-path', '   ')
     expect(result.ok).toBe(false)
   })
 
   it('resolveWorkspaceFileOpen rejects paths outside workspace', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-ws-ipc-open-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-ws-ipc-open-'))
     setWorkspacePath('conv-z', dir)
     const ok = resolveWorkspaceFileOpen('conv-z', 'README.md')
     expect(ok.ok).toBe(true)
@@ -119,7 +119,7 @@ describe('resolveFilesCwd', () => {
   })
 
   it('errors when sandbox folder does not exist yet', () => {
-    sandboxDirRef.current = join(tmpdir(), `openfde-missing-${Date.now()}`)
+    sandboxDirRef.current = join(tmpdir(), `teralexi-missing-${Date.now()}`)
     getConversationSettings.mockReturnValue({ workspacePath: null })
 
     expect(resolveFilesCwd('conv-missing')).toEqual({
@@ -130,7 +130,7 @@ describe('resolveFilesCwd', () => {
   })
 
   it('falls back to sandbox when no workspace is configured', () => {
-    sandboxDir = mkdtempSync(join(tmpdir(), 'openfde-sandbox-files-'))
+    sandboxDir = mkdtempSync(join(tmpdir(), 'teralexi-sandbox-files-'))
     sandboxDirRef.current = sandboxDir
     getConversationSettings.mockReturnValue({ workspacePath: null })
     writeFileSync(join(sandboxDir, 'output.txt'), 'sandbox file\n')
@@ -143,8 +143,8 @@ describe('resolveFilesCwd', () => {
   })
 
   it('prefers workspace over sandbox when both exist', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-ws-files-'))
-    sandboxDir = mkdtempSync(join(tmpdir(), 'openfde-sandbox-pref-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-ws-files-'))
+    sandboxDir = mkdtempSync(join(tmpdir(), 'teralexi-sandbox-pref-'))
     sandboxDirRef.current = sandboxDir
     setWorkspacePath('conv-pref', dir)
 
@@ -156,7 +156,7 @@ describe('resolveFilesCwd', () => {
   })
 
   it('ensureFilesCwd returns existing sandbox cwd without creating', async () => {
-    sandboxDir = mkdtempSync(join(tmpdir(), 'openfde-sandbox-existing-'))
+    sandboxDir = mkdtempSync(join(tmpdir(), 'teralexi-sandbox-existing-'))
     sandboxDirRef.current = sandboxDir
     writeFileSync(join(sandboxDir, 'note.txt'), 'x\n')
     getConversationSettings.mockReturnValue({ workspacePath: null })
@@ -170,11 +170,11 @@ describe('resolveFilesCwd', () => {
   })
 
   it('ensureFilesCwd creates sandbox when directory is missing', async () => {
-    const missing = join(tmpdir(), `openfde-missing-${Date.now()}`)
+    const missing = join(tmpdir(), `teralexi-missing-${Date.now()}`)
     sandboxDirRef.current = missing
     getConversationSettings.mockReturnValue({ workspacePath: null })
 
-    const created = join(tmpdir(), 'openfde-created-sandbox')
+    const created = join(tmpdir(), 'teralexi-created-sandbox')
     vi.mocked(getOrCreateSandboxForConversation).mockResolvedValueOnce({
       layout: { root: created },
     } as never)
@@ -188,10 +188,10 @@ describe('resolveFilesCwd', () => {
   })
 
   it('ensureFilesCwd does not create sandbox when workspace path is still configured', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-ws-invalid-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-ws-invalid-'))
     setWorkspacePath('conv-invalid', dir)
     rmSync(dir, { recursive: true, force: true })
-    sandboxDirRef.current = join(tmpdir(), `openfde-missing-${Date.now()}`)
+    sandboxDirRef.current = join(tmpdir(), `teralexi-missing-${Date.now()}`)
 
     await expect(ensureFilesCwd('conv-invalid')).resolves.toEqual({
       ok: false,
@@ -202,11 +202,11 @@ describe('resolveFilesCwd', () => {
   })
 
   it('falls back to sandbox when configured workspace path is invalid', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-ws-stale-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-ws-stale-'))
     setWorkspacePath('conv-stale', dir)
     rmSync(dir, { recursive: true, force: true })
 
-    sandboxDir = mkdtempSync(join(tmpdir(), 'openfde-sandbox-stale-'))
+    sandboxDir = mkdtempSync(join(tmpdir(), 'teralexi-sandbox-stale-'))
     sandboxDirRef.current = sandboxDir
     writeFileSync(join(sandboxDir, 'fallback.txt'), 'ok\n')
 
@@ -218,7 +218,7 @@ describe('resolveFilesCwd', () => {
   })
 
   it('resolveFilesFileOpen rejects paths outside root', () => {
-    sandboxDir = mkdtempSync(join(tmpdir(), 'openfde-sandbox-escape-'))
+    sandboxDir = mkdtempSync(join(tmpdir(), 'teralexi-sandbox-escape-'))
     sandboxDirRef.current = sandboxDir
     getConversationSettings.mockReturnValue({ workspacePath: null })
 
@@ -227,7 +227,7 @@ describe('resolveFilesCwd', () => {
   })
 
   it('resolveFilesFileOpen resolves paths inside sandbox', () => {
-    sandboxDir = mkdtempSync(join(tmpdir(), 'openfde-sandbox-open-'))
+    sandboxDir = mkdtempSync(join(tmpdir(), 'teralexi-sandbox-open-'))
     sandboxDirRef.current = sandboxDir
     getConversationSettings.mockReturnValue({ workspacePath: null })
     mkdirSync(join(sandboxDir, 'output'), { recursive: true })

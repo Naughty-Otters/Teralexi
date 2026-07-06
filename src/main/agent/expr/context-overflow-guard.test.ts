@@ -8,7 +8,7 @@ import {
   DEFAULT_PRESERVE_RECENT_ROUNDS,
   READ_FILE_PRUNE_PREVIEW_CHARS,
 } from './context-overflow-guard'
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 
 // ---------------------------------------------------------------------------
 // helpers

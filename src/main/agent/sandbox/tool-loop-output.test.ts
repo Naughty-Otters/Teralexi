@@ -100,7 +100,7 @@ describe('tool-loop per-step sandbox output', () => {
 
   beforeEach(async () => {
     execFileMock.mockReset()
-    sandboxRoot = await mkdtemp(join(tmpdir(), 'openfde-tool-loop-out-'))
+    sandboxRoot = await mkdtemp(join(tmpdir(), 'teralexi-tool-loop-out-'))
     setSandboxRoot(sandboxRoot)
     await mkdir(join(sandboxRoot, 'refs'), { recursive: true })
     await mkdir(join(sandboxRoot, 'scripts'), { recursive: true })

@@ -6,7 +6,7 @@ import { applyRunScopedReadCache, ToolReadCache } from './tool-read-cache'
 
 describe('ToolReadCache', () => {
   it('caches successful read_file results for the same normalized path', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'openfde-read-cache-'))
+    const root = mkdtempSync(join(tmpdir(), 'teralexi-read-cache-'))
     const filePath = join(root, 'a.ts')
     writeFileSync(filePath, 'export const x = 1\n')
 
@@ -35,7 +35,7 @@ describe('ToolReadCache', () => {
   })
 
   it('invalidates cache when file mtime changes', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'openfde-read-cache-mtime-'))
+    const root = mkdtempSync(join(tmpdir(), 'teralexi-read-cache-mtime-'))
     const filePath = join(root, 'b.ts')
     writeFileSync(filePath, 'v1\n')
 

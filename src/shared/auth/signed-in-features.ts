@@ -1,4 +1,4 @@
-/** Settings tabs that require an OpenFDE account (Google sign-in). */
+/** Settings tabs that require an Teralexi account (Google sign-in). */
 export const SIGNED_IN_ONLY_SETTINGS_TABS = [
   'skills',
   'agents',

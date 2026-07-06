@@ -42,7 +42,7 @@ describe('explore-manifest storage operations', () => {
   let manifestPath: string
 
   beforeEach(() => {
-    sandboxRoot = mkdtempSync(join(tmpdir(), 'openfde-explore-manifest-'))
+    sandboxRoot = mkdtempSync(join(tmpdir(), 'teralexi-explore-manifest-'))
     plansDirAbs = join(sandboxRoot, 'plans')
     manifestPath = join(plansDirAbs, 'manifest.json')
     getWorkspacePathMock.mockReturnValue(join(sandboxRoot, 'workspace'))

@@ -3,10 +3,10 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const logsDir = join(tmpdir(), `openfde-logs-test-${process.pid}`)
+const logsDir = join(tmpdir(), `teralexi-logs-test-${process.pid}`)
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeLogsDir: () => logsDir,
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiLogsDir: () => logsDir,
 }))
 
 vi.mock('@main/services/google-account-oauth', () => ({

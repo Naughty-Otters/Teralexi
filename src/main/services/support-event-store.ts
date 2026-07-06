@@ -1,6 +1,6 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { getopenfdeLogsDir } from '@config/openfde-home'
+import { getTeralexiLogsDir } from '@config/teralexi-home'
 import type { SupportClientErrorPayload } from '@shared/support-bundle'
 import { createLogger } from '@main/logger'
 
@@ -17,11 +17,11 @@ export type SupportEventRecord = SupportClientErrorPayload & {
 const ring: SupportEventRecord[] = []
 
 function eventsPath(): string {
-  return join(getopenfdeLogsDir(), 'support-events.jsonl')
+  return join(getTeralexiLogsDir(), 'support-events.jsonl')
 }
 
 function ensureLogDir(): void {
-  mkdirSync(getopenfdeLogsDir(), { recursive: true })
+  mkdirSync(getTeralexiLogsDir(), { recursive: true })
 }
 
 export function recordSupportEvent(

@@ -60,7 +60,7 @@ const pathAliases = {
       replacement: path.join(__dirname, '..', 'src', 'main'),
     },
     {
-      find: '@openfde/skill-sdk',
+      find: '@teralexi/skill-sdk',
       replacement: path.join(__dirname, '..', 'skill-sdk'),
     },
     {
@@ -99,30 +99,30 @@ const pathAliases = {
       ),
     },
     {
-      find: '@openfde-ai/vue',
-      replacement: path.join(__dirname, '..', 'src', 'openfde-ai', 'vue.ts'),
+      find: '@teralexi-ai/vue',
+      replacement: path.join(__dirname, '..', 'src', 'teralexi-ai', 'vue.ts'),
     },
     {
-      find: '@openfde-ai/mcp',
-      replacement: path.join(__dirname, '..', 'src', 'openfde-ai', 'mcp.ts'),
+      find: '@teralexi-ai/mcp',
+      replacement: path.join(__dirname, '..', 'src', 'teralexi-ai', 'mcp.ts'),
     },
     {
-      find: '@openfde-ai/llm-adapter',
+      find: '@teralexi-ai/llm-adapter',
       replacement: path.join(
         __dirname,
         '..',
         'src',
-        'openfde-ai',
+        'teralexi-ai',
         'llm-adapter.ts',
       ),
     },
     {
-      find: '@openfde-ai',
+      find: '@teralexi-ai',
       replacement: path.join(
         __dirname,
         '..',
         'src',
-        'openfde-ai',
+        'teralexi-ai',
         'index.ts',
       ),
     },
@@ -153,14 +153,14 @@ export default (env = 'production', type = 'main') => {
       replace({
         preventAssignment: true,
         'process.env.userConfig': config ? JSON.stringify(config) : '{}',
-        'process.env.OPENFDE_BUILD_ENV': JSON.stringify(
-          process.env.OPENFDE_BUILD_ENV ?? 'dev',
+        'process.env.TERALEXI_BUILD_ENV': JSON.stringify(
+          process.env.TERALEXI_BUILD_ENV ?? 'dev',
         ),
-        __OPENFDE_BUILD_ENV__: JSON.stringify(
-          process.env.OPENFDE_BUILD_ENV ?? 'dev',
+        __TERALEXI_BUILD_ENV__: JSON.stringify(
+          process.env.TERALEXI_BUILD_ENV ?? 'dev',
         ),
-        __OPENFDE_BASE_API__: JSON.stringify(config?.BASE_API ?? ''),
-        __OPENFDE_DESKTOP_UPDATE_FORCE_DEV__: JSON.stringify(
+        __TERALEXI_BASE_API__: JSON.stringify(config?.BASE_API ?? ''),
+        __TERALEXI_DESKTOP_UPDATE_FORCE_DEV__: JSON.stringify(
           config?.DESKTOP_UPDATE_FORCE_DEV ?? '',
         ),
       }),

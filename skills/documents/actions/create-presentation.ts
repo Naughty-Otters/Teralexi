@@ -6,11 +6,11 @@
 import pptxgen from 'pptxgenjs'
 import path from 'path'
 import fs from 'fs'
-import type { SkillTool } from '@openfde/skill-sdk'
+import type { SkillTool } from '@teralexi/skill-sdk'
 import {
   getOutputResultsRelPrefix,
   requireActiveSandbox,
-} from '@openfde/skill-sdk'
+} from '@teralexi/skill-sdk'
 import { resolvePptTheme, type PptThemeEntry } from './template-core/load-themes'
 
 function resolveThemeFromInput(input: Record<string, unknown>): {

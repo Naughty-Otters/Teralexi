@@ -46,7 +46,7 @@ describe('electron-after-pack', () => {
   })
 
   it('prunes shipped source test files and directories', () => {
-    const appDir = mkdtempSync(join(tmpdir(), 'openfde-after-pack-'))
+    const appDir = mkdtempSync(join(tmpdir(), 'teralexi-after-pack-'))
     const distMain = join(appDir, 'dist', 'electron', 'main')
     mkdirSync(distMain, { recursive: true })
     writeFileSync(join(distMain, 'main.js'), 'export {}')
@@ -64,7 +64,7 @@ describe('electron-after-pack', () => {
 
   it('removes legacy shipped src trees', () => {
     const { pruneShippedSourceTrees } = require('../scripts/electron-after-pack.cjs')
-    const appDir = mkdtempSync(join(tmpdir(), 'openfde-after-pack-src-'))
+    const appDir = mkdtempSync(join(tmpdir(), 'teralexi-after-pack-src-'))
     mkdirSync(join(appDir, 'src', 'main'), { recursive: true })
     writeFileSync(join(appDir, 'src', 'main', 'index.ts'), 'export {}')
 

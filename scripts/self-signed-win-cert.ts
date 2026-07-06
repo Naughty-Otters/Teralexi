@@ -10,7 +10,7 @@ export interface GeneratedWinCert {
   password: string
 }
 
-const SUBJECT_CN = 'OpenFDE (Self-Signed)'
+const SUBJECT_CN = 'Teralexi (Self-Signed)'
 
 function randomPassword(): string {
   return randomBytes(18).toString('base64url')
@@ -118,7 +118,7 @@ export function generateSelfSignedWindowsCert(
   try {
     const outDir = join(cwd, 'build', '.self-signed')
     mkdirSync(outDir, { recursive: true })
-    const pfxPath = join(outDir, 'openfde-win-self-signed.pfx')
+    const pfxPath = join(outDir, 'teralexi-win-self-signed.pfx')
     rmSync(pfxPath, { force: true })
 
     const password = randomPassword()

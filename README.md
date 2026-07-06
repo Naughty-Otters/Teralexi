@@ -1,17 +1,17 @@
-# OpenFDE
+# Teralexi
 
 <!-- ci-status-start -->
-[![CI](https://github.com/Naughty-Otters/OpenFDE/actions/workflows/ci.yml/badge.svg)](https://github.com/Naughty-Otters/OpenFDE/actions/workflows/ci.yml)
+[![CI](https://github.com/Naughty-Otters/Teralexi/actions/workflows/ci.yml/badge.svg)](https://github.com/Naughty-Otters/Teralexi/actions/workflows/ci.yml)
 
 | | |
 | --- | --- |
 | **Last successful build** | 2026-06-22T22:48:17Z |
 | **Branch** | `main` |
-| **Commit** | [`1a7f6a5`](https://github.com/Naughty-Otters/OpenFDE/commit/1a7f6a5c86fd11712a64d017606198b261e25a78) |
-| **Workflow run** | [View logs](https://github.com/Naughty-Otters/OpenFDE/actions/runs/27987884966) |
+| **Commit** | [`1a7f6a5`](https://github.com/Naughty-Otters/Teralexi/commit/1a7f6a5c86fd11712a64d017606198b261e25a78) |
+| **Workflow run** | [View logs](https://github.com/Naughty-Otters/Teralexi/actions/runs/27987884966) |
 <!-- ci-status-end -->
 
-OpenFDE is an Electron desktop app for running and managing AI agents in a local desktop workspace. It combines a Vue 3 renderer, Electron main process services, persisted conversations, tool execution, MCP integrations, scheduled jobs, and channel/account integrations inside one desktop app.
+Teralexi is an Electron desktop app for running and managing AI agents in a local desktop workspace. It combines a Vue 3 renderer, Electron main process services, persisted conversations, tool execution, MCP integrations, scheduled jobs, and channel/account integrations inside one desktop app.
 
 [For Chinese Developers](./README_ZH.md)
 
@@ -20,7 +20,7 @@ OpenFDE is an Electron desktop app for running and managing AI agents in a local
 - Provider support for Ollama, OpenAI, Anthropic, and Gemini
 - Tool approvals, collect-form interactions, and sandbox result/report panels
 - MCP server management and shared tool-set integrations
-- Extensible agent skills (bundled defaults + user skills under `~/.openfde/skills/`)
+- Extensible agent skills (bundled defaults + user skills under `~/.teralexi/skills/`)
 - Scheduler support for recurring actions
 - Desktop integrations including tray behavior, updates, downloads, and Google/WhatsApp flows
 
@@ -103,7 +103,7 @@ Both workflows are triggered manually from the **Actions** tab. See **[BUILD-AND
 **CI** (manual `workflow_dispatch`):
 
 1. **Unit tests** (Ubuntu) — `npm run test:unit:coverage`; uploads the `coverage/` artifact.
-2. **Staging build** (macOS + Windows) — `build:mac:sit` / `build:win64:sit`; uploads `openfde-<platform>-sit-<run>-<sha>` artifacts (14-day retention).
+2. **Staging build** (macOS + Windows) — `build:mac:sit` / `build:win64:sit`; uploads `teralexi-<platform>-sit-<run>-<sha>` artifacts (14-day retention).
 3. **Update README** — refreshes the CI status table at the top of this file.
 
 **Release** (manual `workflow_dispatch`, confirm input `release`):
@@ -122,7 +122,7 @@ skills/           Skill and tool-set definitions used by agents (see [Skill deve
 
 ## Skill development
 
-Agent skills are markdown folders that define workflows, tools, forms, and reference assets. Bundled skills ship in [`skills/`](./skills/) (including **default** and **github**); install your own under `~/.openfde/skills/` (same folder id overrides bundled defaults).
+Agent skills are markdown folders that define workflows, tools, forms, and reference assets. Bundled skills ship in [`skills/`](./skills/) (including **default** and **github**); install your own under `~/.teralexi/skills/` (same folder id overrides bundled defaults).
 
 **[→ Step-by-step skill development guide](./skills/SKILL-DEVELOPMENT.md)**
 
@@ -144,8 +144,8 @@ Environment files (`env/.dev.env`, `env/.sit.env`, `env/.prod.env`), local build
 
 ## License
 
-OpenFDE is licensed under the [PolyForm Noncommercial License 1.0.0](./LICENSE).
+Teralexi is licensed under the [PolyForm Noncommercial License 1.0.0](./LICENSE).
 
 You may use, modify, and distribute the software for **noncommercial purposes**, including personal use, learning, hobby projects, and noncommercial use by educational and nonprofit organizations.
 
-**Commercial use** (including commercial distribution, SaaS/hosted services, resale, or integration into commercial products) and **any other use beyond the noncommercial terms** require a separate written license from the copyright holder. Contact the project owner via [GitHub Issues](https://github.com/Naughty-Otters/OpenFDE/issues).
+**Commercial use** (including commercial distribution, SaaS/hosted services, resale, or integration into commercial products) and **any other use beyond the noncommercial terms** require a separate written license from the copyright holder. Contact the project owner via [GitHub Issues](https://github.com/Naughty-Otters/Teralexi/issues).

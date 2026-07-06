@@ -9,7 +9,7 @@ describe('ripgrep helpers', () => {
   let root: string
 
   beforeEach(async () => {
-    root = await mkdtemp(path.join(tmpdir(), 'openfde-rg-'))
+    root = await mkdtemp(path.join(tmpdir(), 'teralexi-rg-'))
     await mkdir(path.join(root, 'nested'), { recursive: true })
     await writeFile(path.join(root, 'a.ts'), 'const needle = 1\n', 'utf-8')
     await writeFile(
@@ -61,9 +61,9 @@ describe('ripgrep helpers', () => {
   })
 
   it.skipIf(isWin)('falls back to unavailable=false on invalid command args', async () => {
-    const result = await runRipgrepFiles(['--invalid-openfde-flag'], root)
+    const result = await runRipgrepFiles(['--invalid-teralexi-flag'], root)
     expect(result.available).toBe(false)
     expect(result.paths).toEqual([])
-    expect(result.error).toContain('invalid-openfde-flag')
+    expect(result.error).toContain('invalid-teralexi-flag')
   })
 })

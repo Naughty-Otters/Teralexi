@@ -14,7 +14,7 @@ import {
 import { WORKFLOW_RUNTIME_AGENT_ID } from '@shared/skills/workflow-panel-skills'
 import { readFileSync } from 'fs'
 import { join, resolve } from 'path'
-import { getWorkflowSourceDir } from '@config/openfde-home'
+import { getWorkflowSourceDir } from '@config/teralexi-home'
 import { validateWorkflowDefinition } from './workflow-validator'
 
 export type WorkflowSourceValidation = {

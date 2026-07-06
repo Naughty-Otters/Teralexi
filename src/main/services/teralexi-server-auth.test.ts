@@ -1,20 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getOpenFdeAccountGoogleIdToken } = vi.hoisted(() => ({
-  getOpenFdeAccountGoogleIdToken: vi.fn(),
+const { getTeralexiAccountGoogleIdToken } = vi.hoisted(() => ({
+  getTeralexiAccountGoogleIdToken: vi.fn(),
 }))
 
 vi.mock('@main/services/google-account-oauth', () => ({
-  getOpenFdeAccountGoogleIdToken,
+  getTeralexiAccountGoogleIdToken,
 }))
 
 import {
-  clearOpenFdeServerAuthCache,
+  clearTeralexiServerAuthCache,
   exchangeGoogleIdTokenForServerAccessToken,
-  getOpenFdeServerAccessToken,
+  getTeralexiServerAccessToken,
   refreshServerAccessToken,
   resolveMetricsApiBaseUrl,
-} from './openfde-server-auth'
+} from './teralexi-server-auth'
 
 function makeTestJwt(expSeconds: number): string {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
@@ -24,10 +24,10 @@ function makeTestJwt(expSeconds: number): string {
   return `${header}.${body}.signature`
 }
 
-describe('openfde-server-auth', () => {
+describe('teralexi-server-auth', () => {
   beforeEach(() => {
-    clearOpenFdeServerAuthCache()
-    getOpenFdeAccountGoogleIdToken.mockReset()
+    clearTeralexiServerAuthCache()
+    getTeralexiAccountGoogleIdToken.mockReset()
     vi.stubGlobal('fetch', vi.fn())
   })
 
@@ -82,19 +82,19 @@ describe('openfde-server-auth', () => {
     )
   })
 
-  it('getOpenFdeServerAccessToken caches exchange result', async () => {
+  it('getTeralexiServerAccessToken caches exchange result', async () => {
     const serverJwt = makeTestJwt(Math.floor(Date.now() / 1000) + 3600)
-    getOpenFdeAccountGoogleIdToken.mockReturnValue('google-id-token')
+    getTeralexiAccountGoogleIdToken.mockReturnValue('google-id-token')
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
       json: async () => ({ access_token: serverJwt }),
     } as Response)
 
     await expect(
-      getOpenFdeServerAccessToken('http://127.0.0.1:8000'),
+      getTeralexiServerAccessToken('http://127.0.0.1:8000'),
     ).resolves.toBe(serverJwt)
     await expect(
-      getOpenFdeServerAccessToken('http://127.0.0.1:8000'),
+      getTeralexiServerAccessToken('http://127.0.0.1:8000'),
     ).resolves.toBe(serverJwt)
     expect(fetch).toHaveBeenCalledTimes(1)
   })

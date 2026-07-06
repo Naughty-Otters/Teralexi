@@ -3,7 +3,7 @@ import { join } from 'path'
 import { mkdir, rm } from 'fs/promises'
 import { createRequire } from 'module'
 import QRCode from 'qrcode'
-import { getopenfdeWhatsAppAuthDir } from '@config/openfde-home'
+import { getTeralexiWhatsAppAuthDir } from '@config/teralexi-home'
 import { getSystemPropValue, setSystemPropValue } from '@config/system-prop'
 import { getChannelRegistry } from '@main/channels/framework/channel-registry'
 import { getChannelConversationBridge } from '@main/channels/framework/conversation-bridge'
@@ -39,7 +39,7 @@ const baileys = require('@whiskeysockets/baileys') as BaileysModule
 
 const WHATSAPP_BOT_NAME_KEY = 'settings.whatsapp.botName'
 const WHATSAPP_TARGET_PHONE_KEY = 'settings.whatsapp.targetPhone'
-const DEFAULT_BOT_NAME = 'OpenFDE WhatsApp Bot'
+const DEFAULT_BOT_NAME = 'Teralexi WhatsApp Bot'
 const DEFAULT_WHATSAPP_AGENT_ID = 'skill:default'
 const CHANNEL_ID = 'whatsapp'
 const log = createLogger('channels.whatsapp.manager')
@@ -151,7 +151,7 @@ class WhatsAppChannelManager {
   private bootPromise: Promise<void> | null = null
   private conflictRecoveryPromise: Promise<void> | null = null
   private get authDir(): string {
-    return getopenfdeWhatsAppAuthDir()
+    return getTeralexiWhatsAppAuthDir()
   }
   private suppressReconnectOnce = false
   private chatMessages: WhatsAppChatMessage[] = []

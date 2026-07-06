@@ -3,7 +3,7 @@
  *
  * Opens a Chromium window to the GitHub consent screen, listens on a
  * temporary localhost port for the redirect callback, exchanges the
- * auth code for a token, and persists it under ~/.openfde/accounts/.
+ * auth code for a token, and persists it under ~/.teralexi/accounts/.
  *
  * Configure a GitHub OAuth App with callback URL `http://127.0.0.1:7780`.
  * Optional overrides:
@@ -26,7 +26,7 @@ import {
   BUNDLED_GITHUB_OAUTH_CLIENT_ID,
   BUNDLED_GITHUB_OAUTH_CLIENT_SECRET,
 } from '@config/github-oauth-defaults'
-import { getopenfdeAccountsDir } from '@config/openfde-home'
+import { getTeralexiAccountsDir } from '@config/teralexi-home'
 import { createLogger, traceFunction } from '@main/logger'
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token'
 const GITHUB_USER_URL = 'https://api.github.com/user'
 const GITHUB_EMAILS_URL = 'https://api.github.com/user/emails'
 const LOOPBACK_PORT = 7780
-const USER_AGENT = 'OpenFDE'
+const USER_AGENT = 'Teralexi'
 
 const log = createLogger('services.github-oauth')
 
@@ -129,12 +129,12 @@ function getCredentials(): { clientId: string; clientSecret: string } {
   const { clientId, clientSecret } = resolveGitHubOAuthCredentials()
   if (!clientId.trim()) {
     throw new Error(
-      'GitHub OAuth is not configured. Add app.github.clientId and app.github.clientSecret to ~/.openfde/config/config.properties (OAuth App callback: http://127.0.0.1:7780).',
+      'GitHub OAuth is not configured. Add app.github.clientId and app.github.clientSecret to ~/.teralexi/config/config.properties (OAuth App callback: http://127.0.0.1:7780).',
     )
   }
   if (!clientSecret.trim()) {
     throw new Error(
-      'GitHub OAuth client secret is missing. Add app.github.clientSecret to ~/.openfde/config/config.properties.',
+      'GitHub OAuth client secret is missing. Add app.github.clientSecret to ~/.teralexi/config/config.properties.',
     )
   }
   return { clientId, clientSecret }
@@ -151,7 +151,7 @@ function base64Url(input: Buffer): string {
 // ── Token persistence ─────────────────────────────────────────────────────
 
 function getTokenFilePath(): string {
-  const dir = getopenfdeAccountsDir()
+  const dir = getTeralexiAccountsDir()
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
   return join(dir, 'github-account.json')
 }

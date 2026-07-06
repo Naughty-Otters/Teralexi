@@ -99,7 +99,7 @@ describe('WebScrapeOrchestrator', () => {
       fetchMode: 'cheerio',
     })
 
-    const sandboxRoot = await mkdtemp(join(tmpdir(), 'openfde-scrape-'))
+    const sandboxRoot = await mkdtemp(join(tmpdir(), 'teralexi-scrape-'))
     const ctx = makeCtx(sandboxRoot)
     const step = new WebScrapeOrchestrator(ctx)
     await step.execute()
@@ -119,7 +119,7 @@ describe('WebScrapeOrchestrator', () => {
   it('continues when scrapePage fails for a URL', async () => {
     vi.mocked(scrapePage).mockRejectedValue(new Error('timeout'))
 
-    const sandboxRoot = await mkdtemp(join(tmpdir(), 'openfde-scrape-fail-'))
+    const sandboxRoot = await mkdtemp(join(tmpdir(), 'teralexi-scrape-fail-'))
     const ctx = makeCtx(sandboxRoot)
     const step = new WebScrapeOrchestrator(ctx)
     await expect(step.execute()).resolves.toBeUndefined()

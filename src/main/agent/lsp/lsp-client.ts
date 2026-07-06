@@ -139,7 +139,7 @@ export class LspClient {
             symbol: { dynamicRegistration: false },
           },
         },
-        clientInfo: { name: 'OpenFDE', version: '1.0.0' },
+        clientInfo: { name: 'Teralexi', version: '1.0.0' },
       },
       INITIALIZE_TIMEOUT_MS,
     )

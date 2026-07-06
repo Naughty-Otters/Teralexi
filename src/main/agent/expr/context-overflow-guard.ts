@@ -19,7 +19,7 @@
  */
 
 import { createLogger } from '@main/logger'
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import { scoreThreadTags } from './thread-tagger'
 
 const log = createLogger('agent.expr.context-overflow-guard')

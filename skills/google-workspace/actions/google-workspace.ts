@@ -1,13 +1,13 @@
 import { mkdirSync, writeFileSync } from 'fs'
 import { dirname } from 'path'
 import { z } from 'zod'
-import type { SkillTool } from '@openfde/skill-sdk'
+import type { SkillTool } from '@teralexi/skill-sdk'
 import {
   getValidAccessToken,
   loadStoredAccount,
   requireActiveSandbox,
   resolveSandboxRelativePath,
-} from '@openfde/skill-sdk'
+} from '@teralexi/skill-sdk'
 
 const GMAIL_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me'
 const CALENDAR_BASE = 'https://www.googleapis.com/calendar/v3'

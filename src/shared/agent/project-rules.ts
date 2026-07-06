@@ -49,11 +49,11 @@ export function loadProjectRules(options: {
 }): ProjectRule[] {
   const user = loadRulesFromDirectory(
     options.userRulesDir?.trim() ?? '',
-    '~/.openfde/rules',
+    '~/.teralexi/rules',
   )
   const workspace = loadRulesFromDirectory(
     options.workspaceRulesDir?.trim() ?? '',
-    '.openfde/rules',
+    '.teralexi/rules',
   )
   return [...user, ...workspace]
 }

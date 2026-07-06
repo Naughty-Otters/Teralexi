@@ -5,7 +5,7 @@ import {
   type IdGenerator,
   type UIMessage,
   type UIMessageChunk,
-} from '@openfde-ai'
+} from '@teralexi-ai'
 import { randomShortUuid } from '@shared/utils/short-uuid'
 import {
   AGENT_ERROR_TEXT_PREFIX,

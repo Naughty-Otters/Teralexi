@@ -137,8 +137,8 @@ import {
   watchEffect,
 } from 'vue'
 import MarkdownIt from 'markdown-it'
-import { Chat } from '@openfde-ai/vue'
-import type { UIMessage } from '@openfde-ai'
+import { Chat } from '@teralexi-ai/vue'
+import type { UIMessage } from '@teralexi-ai'
 import { useI18n } from '@renderer/composables/useI18n'
 import RichMessageComposer from '@renderer/views/agent-chat/components/RichMessageComposer.vue'
 import ChatUserMessage from '@renderer/views/agent-chat/components/ChatUserMessage.vue'

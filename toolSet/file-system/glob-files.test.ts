@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
+  TERALEXI_AGENT_SANDBOX_ROOT_ENV,
   SANDBOX_ROOT_GLOBAL_KEY,
 } from '../sandbox-paths'
 
@@ -21,10 +21,10 @@ function setSandboxRoot(root: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (root) {
     g[SANDBOX_ROOT_GLOBAL_KEY] = root
-    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = root
+    process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV] = root
   } else {
     delete g[SANDBOX_ROOT_GLOBAL_KEY]
-    delete process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]
+    delete process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV]
   }
 }
 
@@ -33,7 +33,7 @@ describe('glob-files tool', () => {
 
   beforeEach(async () => {
     runRipgrepFilesMock.mockReset()
-    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'openfde-glob-'))
+    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'teralexi-glob-'))
     await mkdir(path.join(sandboxRoot, 'sub'), { recursive: true })
     await writeFile(path.join(sandboxRoot, 'a.ts'), 'a', 'utf-8')
     await writeFile(path.join(sandboxRoot, 'sub', 'b.ts'), 'b', 'utf-8')

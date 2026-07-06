@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
+  TERALEXI_AGENT_SANDBOX_ROOT_ENV,
   SANDBOX_ROOT_GLOBAL_KEY,
 } from '../sandbox-paths'
 import { editFile } from './edit-file'
@@ -12,10 +12,10 @@ function setSandboxRoot(root: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (root) {
     g[SANDBOX_ROOT_GLOBAL_KEY] = root
-    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = root
+    process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV] = root
   } else {
     delete g[SANDBOX_ROOT_GLOBAL_KEY]
-    delete process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]
+    delete process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV]
   }
 }
 
@@ -23,7 +23,7 @@ describe('edit-file tool', () => {
   let sandboxRoot: string
 
   beforeEach(async () => {
-    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'openfde-edit-file-'))
+    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'teralexi-edit-file-'))
     await writeFile(
       path.join(sandboxRoot, 'hello.txt'),
       'hello world\n',

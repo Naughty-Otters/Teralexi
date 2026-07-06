@@ -1,4 +1,4 @@
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import { ConfigContext } from '../config/context'
 import { AgentFlowContext } from '../context'
 import { compactConversationIfNeeded } from './context-compaction'

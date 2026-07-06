@@ -29,7 +29,7 @@ describe('support-bundle-uploader', () => {
 
   it('builds multipart form with sanitized location and file fields', () => {
     const form = buildSupportUploadFormData({
-      zipPath: '/tmp/openfde-support-test.zip',
+      zipPath: '/tmp/teralexi-support-test.zip',
       zipBuffer: Buffer.from('zip-bytes'),
       reportId: '550e8400-e29b-41d4-a716-446655440000',
       comments: 'App crashed after sending a message',

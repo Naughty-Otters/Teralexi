@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 import {
   AGENTIC_RUN_CONVERSATION_SECTION_IDS,
   conversationSectionExpandedByDefault,

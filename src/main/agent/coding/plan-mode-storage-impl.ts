@@ -16,7 +16,7 @@ import {
   replaceTodos,
   type TodoList,
 } from '@shared/agent/todos'
-import { getopenfdeSandboxDir } from '@config/openfde-home'
+import { getTeralexiSandboxDir } from '@config/teralexi-home'
 import { getSandboxRootFromEnv, remapLegacyPlanRelativePath } from '@toolSet/sandbox-paths'
 import { peekSandboxRootForConversation } from '../sandbox/registry'
 import { getAgentRunSandboxRoot } from '../sandbox/run-context'
@@ -62,7 +62,7 @@ export function stableSandboxRootForConversation(conversationId: string): string
   const dirName = createHash('sha256')
     .update(conversationId.trim(), 'utf8')
     .digest('hex')
-  return join(getopenfdeSandboxDir(), dirName)
+  return join(getTeralexiSandboxDir(), dirName)
 }
 
 /** Single resolver for the conversation sandbox root used by all plan-mode I/O. */

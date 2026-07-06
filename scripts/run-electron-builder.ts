@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { applyBuildEnvFromArgv, stripOpenFdeCliArgs } from '../.electron-vite/utils'
+import { applyBuildEnvFromArgv, stripTeralexiCliArgs } from '../.electron-vite/utils'
 import {
   applyCodeSigningEnv,
   applyUnsignedPlatformBuildPolicy,
@@ -20,7 +20,7 @@ import { generateSelfSignedWindowsCert } from './self-signed-win-cert'
 
 applyBuildEnvFromArgv()
 
-const userArgs = stripOpenFdeCliArgs(process.argv.slice(2))
+const userArgs = stripTeralexiCliArgs(process.argv.slice(2))
 const { buildingMac, buildingWin } = detectElectronBuilderTargets(userArgs)
 
 const signingEnv = applyCodeSigningEnv()

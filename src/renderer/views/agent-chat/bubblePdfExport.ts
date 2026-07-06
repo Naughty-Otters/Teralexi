@@ -1,4 +1,4 @@
-import type { UIMessage, TextUIPart } from '@openfde-ai'
+import type { UIMessage, TextUIPart } from '@teralexi-ai'
 
 export type BubblePdfDocumentKind = 'default' | 'research-report'
 

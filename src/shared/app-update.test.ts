@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
-  OPENFDE_DESKTOP_RELEASES_DEFAULT_PATH,
+  TERALEXI_DESKTOP_RELEASES_DEFAULT_PATH,
   type AppUpdateMessage,
 } from './app-update'
 
 describe('app-update', () => {
   it('exports desktop release feed default path', () => {
-    expect(OPENFDE_DESKTOP_RELEASES_DEFAULT_PATH).toBe(
+    expect(TERALEXI_DESKTOP_RELEASES_DEFAULT_PATH).toBe(
       'desktop/releases/stable',
     )
   })

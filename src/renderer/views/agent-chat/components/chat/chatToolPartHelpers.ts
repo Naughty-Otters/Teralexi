@@ -2,7 +2,7 @@ import {
   isToolOrDynamicToolUIPart,
   type UIMessagePart,
   type UITools,
-} from '@openfde-ai'
+} from '@teralexi-ai'
 import { isFileChangeToolName } from '@shared/file-change/types'
 import { parseToolFileChanges } from '@shared/file-change/parse-tool-file-changes'
 import { normalizeTodos, type TrackedTodo } from '@shared/agent/todos'

@@ -33,9 +33,9 @@ vi.mock('electron', () => ({
   },
 }))
 
-vi.mock('@config/openfde-home', () => ({
-  initializeopenfdeHome: vi.fn(),
-  getopenfdeRulesDir: vi.fn(() => '/mock/.openfde/rules'),
+vi.mock('@config/teralexi-home', () => ({
+  initializeTeralexiHome: vi.fn(),
+  getTeralexiRulesDir: vi.fn(() => '/mock/.teralexi/rules'),
 }))
 
 vi.mock('./config/bundled-default-rules', () => ({
@@ -110,11 +110,11 @@ vi.mock('./services/scheduler-manager', () => ({
   getSchedulerManager: () => ({ ensureStarted: vi.fn() }),
 }))
 
-vi.mock('./services/openfde-protocol-handler', () => ({
-  registerOpenFdeProtocolClient: vi.fn(),
-  registerOpenFdeProtocolHandlers: vi.fn(),
-  requestOpenFdeSingleInstanceLock: vi.fn(() => true),
-  setOpenFdeProtocolHandlerReady: vi.fn(),
+vi.mock('./services/teralexi-protocol-handler', () => ({
+  registerTeralexiProtocolClient: vi.fn(),
+  registerTeralexiProtocolHandlers: vi.fn(),
+  requestTeralexiSingleInstanceLock: vi.fn(() => true),
+  setTeralexiProtocolHandlerReady: vi.fn(),
 }))
 
 describe('main index', () => {

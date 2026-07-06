@@ -7,7 +7,7 @@ import {
 } from './build-env'
 import { isValidSystemPropKey } from './system-prop-keys'
 
-const OPENFDE_ENV_PREFIX = 'OPENFDE_'
+const TERALEXI_ENV_PREFIX = 'TERALEXI_'
 
 let cachedEnvOverrides: Map<string, string> | null = null
 let envOverridesInitialized = false
@@ -34,8 +34,8 @@ export function envNameToSystemPropKey(
   if (!normalized) return null
   if (isValidSystemPropKey(normalized)) return normalized
 
-  if (normalized.toUpperCase().startsWith(OPENFDE_ENV_PREFIX)) {
-    normalized = normalized.slice(OPENFDE_ENV_PREFIX.length)
+  if (normalized.toUpperCase().startsWith(TERALEXI_ENV_PREFIX)) {
+    normalized = normalized.slice(TERALEXI_ENV_PREFIX.length)
   }
 
   const upper = normalized.toUpperCase()
@@ -141,7 +141,7 @@ export function loadEnvOverrides(args: {
   for (const key of args.knownKeys) {
     for (const envName of [
       systemPropKeyToEnvName(key),
-      `${OPENFDE_ENV_PREFIX}${systemPropKeyToEnvName(key)}`,
+      `${TERALEXI_ENV_PREFIX}${systemPropKeyToEnvName(key)}`,
       key,
     ]) {
       const value = env[envName]

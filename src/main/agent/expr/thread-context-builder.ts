@@ -13,7 +13,7 @@
 import { createLogger } from '@main/logger'
 import { getConversationStore } from '@main/services/conversation-store'
 import type { StoredMessage } from '@main/services/conversation-store/types'
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import { extractThreadTag, type ThreadTag } from './thread-tagger'
 
 const log = createLogger('agent.expr.thread-context-builder')

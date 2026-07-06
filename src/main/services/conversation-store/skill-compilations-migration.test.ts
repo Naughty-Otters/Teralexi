@@ -43,9 +43,9 @@ vi.mock('fs', () => ({
   writeFileSync: vi.fn(),
 }))
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeDbPath: () => '/mock/openfde.db',
-  getopenfdeWorkspacePath: () => '/mock/workspace',
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiDbPath: () => '/mock/teralexi.db',
+  getTeralexiWorkspacePath: () => '/mock/workspace',
   ensureParentDirForFile: vi.fn(),
 }))
 

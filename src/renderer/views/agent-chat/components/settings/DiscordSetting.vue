@@ -7,7 +7,7 @@
         <input
           class="sp-input"
           :value="state.botName"
-          placeholder="OpenFDE Discord Bot"
+          placeholder="Teralexi Discord Bot"
           @blur="saveBotName"
         />
       </div>
@@ -149,7 +149,7 @@ type DiscordChatMessage = {
 }
 
 const state = ref<DiscordState>({
-  botName: 'OpenFDE Discord Bot',
+  botName: 'Teralexi Discord Bot',
   botToken: '',
   botUsername: null,
   status: 'idle',

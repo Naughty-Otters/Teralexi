@@ -20,7 +20,7 @@ vi.mock('@main/agent/providers/adapters', () => ({
 
 const streamTextMock = vi.fn()
 
-vi.mock('@openfde-ai', () => ({
+vi.mock('@teralexi-ai', () => ({
   streamText: (...args: unknown[]) => streamTextMock(...args),
 }))
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest'
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import {
   DEEP_THINKING_AFTER_MARKER,
   DEEP_THINKING_BEFORE_MARKER,

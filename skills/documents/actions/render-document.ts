@@ -6,13 +6,13 @@
 import Mustache from 'mustache'
 import fs from 'fs'
 import path from 'path'
-import type { SkillTool } from '@openfde/skill-sdk'
+import type { SkillTool } from '@teralexi/skill-sdk'
 import {
   exportHtmlFileToPdf,
   getOutputResultsRelPrefix,
   readSkillAttachment,
   requireActiveSandbox,
-} from '@openfde/skill-sdk'
+} from '@teralexi/skill-sdk'
 import { createSpreadsheet } from './create-spreadsheet'
 import { createPresentation } from './create-presentation'
 import { createWordDoc } from './create-word-doc'

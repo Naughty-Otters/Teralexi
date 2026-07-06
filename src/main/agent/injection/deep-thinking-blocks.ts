@@ -1,4 +1,4 @@
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import { findLastInjectorMessageMeta } from './injection-message-meta'
 import { getLastDeepThinkingInjection } from './deep-thinking-injection-state'
 import { readUserMessageText } from './injection-message-content'

@@ -590,7 +590,7 @@ class LspManager {
  * their own language servers, and `closeAll()` on quit would only reap one set
  * (the others would leak as orphan processes). Mirrors the sandbox-root global.
  */
-const LSP_MANAGER_GLOBAL_KEY = '__OPENFDE_LSP_MANAGER__' as const
+const LSP_MANAGER_GLOBAL_KEY = '__TERALEXI_LSP_MANAGER__' as const
 
 export function getLspManager(): LspManager {
   const g = globalThis as unknown as Record<string, unknown>

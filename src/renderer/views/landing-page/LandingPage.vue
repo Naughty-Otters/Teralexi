@@ -1,6 +1,6 @@
 <template>
   <div id="wrapper">
-    <img id="logo" :src="openfdeLogo" alt="OpenFDE" />
+    <img id="logo" :src="teralexiLogo" alt="Teralexi" />
     <main>
       <div class="left-side">
         <span class="title">
@@ -37,7 +37,7 @@
 
 <script setup lang="ts">
 import SystemInformation from './components/system-info-mation.vue'
-import { openfdeLogo } from '@renderer/assets/icons'
+import { teralexiLogo } from '@renderer/assets/icons'
 import { i18nt, setLanguage, globalLang, getSupportedLocales } from '@renderer/i18n'
 import { useRouter } from 'vue-router'
 import { requestProviderSetupWizardOnNextChatLoad } from '@renderer/lib/provider-setup-session'

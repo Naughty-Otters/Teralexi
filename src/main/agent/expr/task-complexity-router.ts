@@ -1,6 +1,6 @@
 import type { AgentStepContext } from '../context'
 import type { AgentMessage } from '../types'
-import { Output } from '@openfde-ai'
+import { Output } from '@teralexi-ai'
 import { z } from 'zod'
 import { runExpressionLlmObject } from './run-expression-llm'
 import type { StepExpressionPlan } from './expression-plan'

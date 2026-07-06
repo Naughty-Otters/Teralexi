@@ -35,7 +35,7 @@ describe('extractJsonArrayFromContent', () => {
 
 describe('findSandboxArtifactContent', () => {
   it('finds newest top-tags file under output/toolLoop', async () => {
-    const root = join(tmpdir(), `openfde-form-resolve-${Date.now()}`)
+    const root = join(tmpdir(), `teralexi-form-resolve-${Date.now()}`)
     const path = join(
       root,
       'output',
@@ -58,7 +58,7 @@ describe('findSandboxArtifactContent', () => {
 
 describe('resolveFormFieldsFromMarkdown', () => {
   it('injects select options from prior-step artifact', async () => {
-    const root = join(tmpdir(), `openfde-form-resolve2-${Date.now()}`)
+    const root = join(tmpdir(), `teralexi-form-resolve2-${Date.now()}`)
     const artifactPath = join(
       root,
       'output',
@@ -105,7 +105,7 @@ describe('resolveFormFieldsFromMarkdown', () => {
   })
 
   it('resolves title, message, and select options from form-projection.json', async () => {
-    const root = join(tmpdir(), `openfde-form-projection-${Date.now()}`)
+    const root = join(tmpdir(), `teralexi-form-projection-${Date.now()}`)
     const artifactPath = join(
       root,
       'output',
@@ -154,7 +154,7 @@ describe('resolveFormFieldsFromMarkdown', () => {
   })
 
   it('reads title and options from custom projectionArtifact file', async () => {
-    const root = join(tmpdir(), `openfde-form-custom-proj-${Date.now()}`)
+    const root = join(tmpdir(), `teralexi-form-custom-proj-${Date.now()}`)
     const artifactPath = join(
       root,
       'output',

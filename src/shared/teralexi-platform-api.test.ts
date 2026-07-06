@@ -1,27 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import {
-  joinOpenFdePlatformUrl,
-  normalizeOpenFdeBaseApiUrl,
-  resolveOpenFdePlatformEndpoint,
+  joinTeralexiPlatformUrl,
+  normalizeTeralexiBaseApiUrl,
+  resolveTeralexiPlatformEndpoint,
   resolveMetricsApiBaseUrl,
-} from './openfde-platform-api'
+} from './teralexi-platform-api'
 
-describe('openfde-platform-api', () => {
+describe('teralexi-platform-api', () => {
   it('normalizes base API trailing slashes', () => {
-    expect(normalizeOpenFdeBaseApiUrl('http://127.0.0.1:8000/')).toBe(
+    expect(normalizeTeralexiBaseApiUrl('http://127.0.0.1:8000/')).toBe(
       'http://127.0.0.1:8000',
     )
   })
 
   it('joins relative platform paths to BASE_API', () => {
     expect(
-      joinOpenFdePlatformUrl('http://127.0.0.1:8000', 'support/upload'),
+      joinTeralexiPlatformUrl('http://127.0.0.1:8000', 'support/upload'),
     ).toBe('http://127.0.0.1:8000/support/upload')
   })
 
   it('resolves default relative endpoints from BASE_API', () => {
     expect(
-      resolveOpenFdePlatformEndpoint({
+      resolveTeralexiPlatformEndpoint({
         baseApi: 'http://127.0.0.1:8000',
         configured: '',
         defaultPath: 'graphql',
@@ -31,7 +31,7 @@ describe('openfde-platform-api', () => {
 
   it('supports relative overrides under BASE_API', () => {
     expect(
-      resolveOpenFdePlatformEndpoint({
+      resolveTeralexiPlatformEndpoint({
         baseApi: 'http://127.0.0.1:8000',
         configured: 'custom/graphql',
         defaultPath: 'graphql',
@@ -41,7 +41,7 @@ describe('openfde-platform-api', () => {
 
   it('keeps legacy absolute override URLs', () => {
     expect(
-      resolveOpenFdePlatformEndpoint({
+      resolveTeralexiPlatformEndpoint({
         baseApi: 'http://127.0.0.1:8000',
         configured: 'https://metrics.example/graphql',
         defaultPath: 'graphql',

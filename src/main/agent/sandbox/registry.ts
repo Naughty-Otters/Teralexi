@@ -1,12 +1,12 @@
 /**
  * Reuses one {@link Sandbox} per conversation so multiple agent turns in the same
  * chat share the same working directory. Ephemeral runs (no conversation id) keep
- * a fresh directory under `~/.openfde/workspace/sandbox/`.
+ * a fresh directory under `~/.teralexi/workspace/sandbox/`.
  */
 
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
-import { getopenfdeSandboxDir } from '@config/openfde-home'
+import { getTeralexiSandboxDir } from '@config/teralexi-home'
 import { Sandbox } from './sandbox-impl'
 import type { SandboxPlanningAccess } from './types'
 
@@ -33,7 +33,7 @@ function stableRootForConversation(conversationId: string): string {
   const dirName = createHash('sha256')
     .update(conversationId, 'utf8')
     .digest('hex')
-  return join(getopenfdeSandboxDir(), dirName)
+  return join(getTeralexiSandboxDir(), dirName)
 }
 
 /**

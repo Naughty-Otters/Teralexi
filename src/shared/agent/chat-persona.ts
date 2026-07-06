@@ -1,5 +1,5 @@
 /** Display name for the assistant in conversation bubbles (persona, not agent id). */
-export const ASSISTANT_CHAT_DISPLAY_NAME = 'OpenFDE'
+export const ASSISTANT_CHAT_DISPLAY_NAME = 'Teralexi'
 
 const SECTION_ID_ALIASES: Record<string, string> = {
   thinking: 'ThinkingStep',

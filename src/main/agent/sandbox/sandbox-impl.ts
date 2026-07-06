@@ -5,7 +5,7 @@
  *
  * Note: `skills/` holds a filesystem mirror for introspection / prompt context.
  * TypeScript skill actions are executed from the user skills directory
- * (`~/.openfde/skills`) in-repo, not by bundling copied files here (isolated
+ * (`~/.teralexi/skills`) in-repo, not by bundling copied files here (isolated
  *
  * Layout:
  *   <root>/
@@ -26,7 +26,7 @@ import {
 import { existsSync } from 'fs'
 import { mkdir, cp, copyFile, rm } from 'fs/promises'
 import { basename, extname, isAbsolute, join, normalize, sep } from 'path'
-import { getopenfdeSandboxDir } from '@config/openfde-home'
+import { getTeralexiSandboxDir } from '@config/teralexi-home'
 import { resolveUserSkillsDirectory } from '@main/skills/skill-path'
 import {
   resolveSkillFolder,
@@ -83,7 +83,7 @@ export function referencePathAlreadyInSandbox(
 function uniqueSandboxRoot(): string {
   const stamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)
   const rand = Math.random().toString(36).slice(2, 8)
-  return join(getopenfdeSandboxDir(), `openfde-sandbox-${stamp}-${rand}`)
+  return join(getTeralexiSandboxDir(), `teralexi-sandbox-${stamp}-${rand}`)
 }
 
 function uniqueDestPath(dir: string, srcPath: string, taken: Set<string>) {

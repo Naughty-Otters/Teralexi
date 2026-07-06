@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generates Electron app icons in build/icons/ from openfde-logo.png.
+ * Generates Electron app icons in build/icons/ from teralexi-logo.png.
  * App icon PNGs use a branded gradient background; favicon and in-app logos are unchanged.
  */
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs'
@@ -12,9 +12,9 @@ import png2icons from 'png2icons'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const assets = join(root, 'src/renderer/assets/icons')
 const out = join(root, 'build/icons')
-const logoPng = join(assets, 'openfde-logo.png')
-const brightLogoPng = join(assets, 'open-fde-logo-bright.png')
-const trayLogoPng = join(assets, 'openfde-tray-icon.png')
+const logoPng = join(assets, 'teralexi-logo.png')
+const brightLogoPng = join(assets, 'teralexi-logo-bright.png')
+const trayLogoPng = join(assets, 'teralexi-tray-icon.png')
 const publicDir = join(root, 'src/renderer/public')
 
 function hasPrebuiltIcons() {

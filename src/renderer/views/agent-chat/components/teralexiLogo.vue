@@ -2,19 +2,19 @@
   <img
     :src="logoSrc"
     class="brand-logo-img"
-    alt="OpenFDE"
+    alt="Teralexi"
   />
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useAppIsDark } from '@renderer/composables/appColorMode'
-import { openfdeLogo, openfdeLogoBright } from '@renderer/assets/icons'
+import { teralexiLogo, teralexiLogoBright } from '@renderer/assets/icons'
 
 const isDark = useAppIsDark()
 
 /** Sidebar brand: bright logo on light UI, standard logo on dark UI. */
-const logoSrc = computed(() => (isDark.value ? openfdeLogo : openfdeLogoBright))
+const logoSrc = computed(() => (isDark.value ? teralexiLogo : teralexiLogoBright))
 </script>
 
 <style scoped>

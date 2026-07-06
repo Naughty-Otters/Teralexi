@@ -107,7 +107,7 @@ import {
   googleWorkspaceAccountInfoForUi,
 } from './google-workspace-oauth'
 import { notifyGoogleWorkspaceAccountChanged } from './google-workspace-account-notify'
-import { clearOpenFdeServerAuthCache } from './openfde-server-auth'
+import { clearTeralexiServerAuthCache } from './teralexi-server-auth'
 import {
   startGitHubSignIn,
   loadStoredAccount as loadStoredGitHubAccount,
@@ -1375,15 +1375,15 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     name: string
     picture: string
   }> = async () => {
-    clearOpenFdeServerAuthCache()
+    clearTeralexiServerAuthCache()
     const account = await startGoogleAccountSignIn()
-    clearOpenFdeServerAuthCache()
+    clearTeralexiServerAuthCache()
     return googleAccountInfoForUi(account)
   }
 
   GoogleSignOut: (_event: Electron.IpcMainInvokeEvent) => void = () => {
     clearStoredAccount()
-    clearOpenFdeServerAuthCache()
+    clearTeralexiServerAuthCache()
     notifyGoogleAccountChanged(null)
   }
 

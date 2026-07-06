@@ -3,7 +3,7 @@
  *
  * End users configure their own Google Cloud OAuth app under
  * Settings → Agents → Google Workspace → Configurations (client ID + secret).
- * Tokens are stored in ~/.openfde/accounts/google-workspace-account.json.
+ * Tokens are stored in ~/.teralexi/accounts/google-workspace-account.json.
  */
 
 import { BrowserWindow } from 'electron'
@@ -14,7 +14,7 @@ import { request as httpsRequest } from 'node:https'
 import { parse as parseUrl } from 'url'
 import { randomBytes, createHash } from 'crypto'
 import { getSystemPropValue } from '@config/system-prop'
-import { getopenfdeAccountsDir } from '@config/openfde-home'
+import { getTeralexiAccountsDir } from '@config/teralexi-home'
 import {
   GoogleWorkspaceOAuthNotConfiguredError,
   GOOGLE_WORKSPACE_PROP_KEYS,
@@ -130,7 +130,7 @@ function base64Url(input: Buffer): string {
 }
 
 function getTokenFilePath(): string {
-  const dir = getopenfdeAccountsDir()
+  const dir = getTeralexiAccountsDir()
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
   return join(dir, 'google-workspace-account.json')
 }

@@ -1,4 +1,4 @@
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 
 /** Plain text parts only (excludes form-response meta parts for layout). */
 export function userMessagePlainText(m: UIMessage): string {

@@ -1,5 +1,5 @@
-import { streamText } from '@openfde-ai/llm-adapter'
-import type { LanguageModelUsage } from '@openfde-ai'
+import { streamText } from '@teralexi-ai/llm-adapter'
+import type { LanguageModelUsage } from '@teralexi-ai'
 import { createLogger } from '@main/logger'
 import type { AgentEventBus } from '../bus/agent-event-bus'
 import {

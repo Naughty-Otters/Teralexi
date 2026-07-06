@@ -1,4 +1,4 @@
-import type { LanguageModelUsage } from '@openfde-ai'
+import type { LanguageModelUsage } from '@teralexi-ai'
 import type { AgentStepContext } from '../context'
 import type { AgentLlmStage } from '@shared/agent/stage-llm-settings'
 import type {

@@ -76,7 +76,7 @@ export async function installSkillFromGithub(args: {
   const skillId = (args.skillId?.trim() || parsed.defaultId).replace(/[^a-zA-Z0-9_-]/g, '-')
   if (!skillId) return { ok: false, error: 'skillId is required' }
 
-  const tempDir = await mkdtemp(join(tmpdir(), 'openfde-skill-'))
+  const tempDir = await mkdtemp(join(tmpdir(), 'teralexi-skill-'))
   try {
     await execFileAsync('git', ['clone', '--depth', '1', parsed.cloneUrl, tempDir], {
       timeout: 120_000,

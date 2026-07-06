@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { getopenfdeRulesDir } from '@config/openfde-home'
+import { getTeralexiRulesDir } from '@config/teralexi-home'
 import { loadConversationWorkspace } from '../../workspace/conversation-workspace'
 import {
   formatProjectRulesBlock,
@@ -19,9 +19,9 @@ export const projectRulesInjector: AgentInjector = {
       ? loadConversationWorkspace(ctx.opts.conversationId)
       : null
     const rules = loadProjectRules({
-      userRulesDir: getopenfdeRulesDir(),
+      userRulesDir: getTeralexiRulesDir(),
       workspaceRulesDir: workspacePath
-        ? join(workspacePath, '.openfde', 'rules')
+        ? join(workspacePath, '.teralexi', 'rules')
         : null,
     })
     const block = formatProjectRulesBlock(rules)

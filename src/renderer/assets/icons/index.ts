@@ -1,6 +1,6 @@
-/** openfde brand assets. */
+/** teralexi brand assets. */
 
-export { default as openfdeLogo } from './openfde-logo.png'
-export { default as openfdeLogoBright } from './open-fde-logo-bright.png'
-export { default as openfdeHero } from './openfde-hero.png'
-export { default as openfdePuppy } from './puppy.png'
+export { default as teralexiLogo } from './teralexi-logo.png'
+export { default as teralexiLogoBright } from './teralexi-logo-bright.png'
+export { default as teralexiHero } from './teralexi-hero.png'
+export { default as teralexiPuppy } from './puppy.png'

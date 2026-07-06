@@ -12,11 +12,11 @@ import {
 } from './skill-module-cache'
 
 vi.mock('electron', () => ({
-  app: { isPackaged: false, getAppPath: () => '/Applications/OpenFDE.app/Contents/Resources/app.asar' },
+  app: { isPackaged: false, getAppPath: () => '/Applications/Teralexi.app/Contents/Resources/app.asar' },
 }))
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeHome: () => '/Users/test/.openfde',
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiHome: () => '/Users/test/.teralexi',
 }))
 
 vi.mock('@main/config/app-paths', () => ({
@@ -104,7 +104,7 @@ describe('skill-module-cache', () => {
     vi.doMock('@main/config/app-paths', () => ({
       isPackagedApp: () => true,
       resolveAppRoot: () =>
-        '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked',
+        '/Applications/Teralexi.app/Contents/Resources/app.asar.unpacked',
       toOnDiskAppPath: (filePath: string) =>
         filePath.replace(/app\.asar(?=\/|$)/i, 'app.asar.unpacked'),
     }))
@@ -113,12 +113,12 @@ describe('skill-module-cache', () => {
       './skill-module-cache'
     )
     expect(appRoot()).toBe(
-      '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked',
+      '/Applications/Teralexi.app/Contents/Resources/app.asar.unpacked',
     )
     expect(
-      mapPath('/Applications/OpenFDE.app/Contents/Resources/app.asar/skills/demo/actions/index.ts'),
+      mapPath('/Applications/Teralexi.app/Contents/Resources/app.asar/skills/demo/actions/index.ts'),
     ).toBe(
-      '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked/skills/demo/actions/index.ts',
+      '/Applications/Teralexi.app/Contents/Resources/app.asar.unpacked/skills/demo/actions/index.ts',
     )
     vi.resetModules()
     vi.doMock('@main/config/app-paths', () => ({

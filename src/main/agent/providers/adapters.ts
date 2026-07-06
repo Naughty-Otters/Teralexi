@@ -9,7 +9,7 @@ import {
   createOpenAI,
   createOpenAICompatible,
   createZhipu,
-} from '@openfde-ai'
+} from '@teralexi-ai'
 import type { ProviderCredentials, ProviderType } from '../types'
 import type { OpenAiCompatibleProviderId } from '@shared/agent/llm-provider-registry'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'

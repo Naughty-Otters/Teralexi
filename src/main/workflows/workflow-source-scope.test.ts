@@ -22,7 +22,7 @@ import {
 } from '@shared/workflows/source-files'
 import { buildBlankWorkflowDefinition } from './workflow-store'
 
-const CONTEXT_STACK_KEY = Symbol.for('openfde.workflowCompileContextStack')
+const CONTEXT_STACK_KEY = Symbol.for('teralexi.workflowCompileContextStack')
 const workflowCompilerSkillFolder = join(
   resolveBundledSkillsDirectory(),
   'workflow-compiler',
@@ -34,9 +34,9 @@ const workflowCompilerIt = hasBundledWorkflowCompilerSkill ? it : it.skip
 
 let testWorkflowsRoot = ''
 
-vi.mock('@config/openfde-home', () => ({
+vi.mock('@config/teralexi-home', () => ({
   getWorkflowSourceDir: (workflowId: string) => join(testWorkflowsRoot, workflowId, 'source'),
-  getopenfdeWorkflowsDir: () => testWorkflowsRoot,
+  getTeralexiWorkflowsDir: () => testWorkflowsRoot,
 }))
 
 function validWorkflowDefinitionJson(workflowId: string): string {
@@ -106,7 +106,7 @@ describe('workflow compiler skill actions', () => {
   }
 
   beforeEach(async () => {
-    testWorkflowsRoot = await mkdtemp(join(tmpdir(), 'openfde-wf-scope-'))
+    testWorkflowsRoot = await mkdtemp(join(tmpdir(), 'teralexi-wf-scope-'))
     workflowId = `wf-scope-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     sourceDir = join(testWorkflowsRoot, workflowId, 'source')
     toolCtx = {

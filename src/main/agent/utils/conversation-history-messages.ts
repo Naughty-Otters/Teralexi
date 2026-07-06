@@ -1,5 +1,5 @@
 import { DEFAULT_CHAT_UI_SETTINGS } from '@shared/agent/chat-ui-settings'
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import type { AgentMessage } from '../types'
 import { truncateString } from './str-utils'
 

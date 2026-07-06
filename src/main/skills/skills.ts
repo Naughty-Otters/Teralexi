@@ -3,8 +3,8 @@
  *
  *   <bundled>/skills/       ← shipped defaults (repo or app bundle)
  *   <bundled>/toolSet/      ← shared tools merged into every skill (sibling of skills/)
- *   ~/.openfde/skills/       ← user skill overrides (`getSkillsDir()`)
- *   ~/.openfde/toolSet/      ← user tool overrides (`getopenfdeToolSetDir()`)
+ *   ~/.teralexi/skills/       ← user skill overrides (`getSkillsDir()`)
+ *   ~/.teralexi/toolSet/      ← user tool overrides (`getTeralexiToolSetDir()`)
  *     my-skill/             ← one folder = one skill when `skill.md` exists
  *       skill.md              ← required marker file
  *       properties.md         ← optional: key:value skill metadata
@@ -55,7 +55,7 @@ export {
 
 const log = createLogger('skills.skills')
 
-/** User skills install path (`~/.openfde/skills`). Use {@link loadSkills} for merged catalog. */
+/** User skills install path (`~/.teralexi/skills`). Use {@link loadSkills} for merged catalog. */
 export const getSkillsDir = traceFunction(
   log,
   'getSkillsDir',

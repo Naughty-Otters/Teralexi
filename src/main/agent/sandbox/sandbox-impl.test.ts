@@ -10,8 +10,8 @@ vi.mock('fs/promises', () => ({
   readFile: vi.fn(),
 }))
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeSandboxDir: vi.fn(() => '/mock/sandbox-root'),
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiSandboxDir: vi.fn(() => '/mock/sandbox-root'),
 }))
 
 vi.mock('@main/skills/skill-path', () => ({
