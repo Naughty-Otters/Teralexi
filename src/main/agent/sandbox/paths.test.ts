@@ -22,8 +22,8 @@ describe('resolvePathInContext', () => {
   })
 
   it('resolves relative paths in workspace when set', () => {
-    sandboxRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-sb-'))
-    workspaceRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-ws-'))
+    sandboxRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-sb-'))
+    workspaceRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-ws-'))
     mkdirSync(join(workspaceRoot, 'src'), { recursive: true })
     writeFileSync(join(workspaceRoot, 'src', 'index.ts'), 'export {}')
 
@@ -36,8 +36,8 @@ describe('resolvePathInContext', () => {
   })
 
   it('routes sandbox artifact relative paths to sandbox', () => {
-    sandboxRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-sb2-'))
-    workspaceRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-ws2-'))
+    sandboxRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-sb2-'))
+    workspaceRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-ws2-'))
     mkdirSync(join(sandboxRoot, 'output', 'results'), { recursive: true })
     writeFileSync(join(sandboxRoot, 'output', 'results', 'cap.txt'), 'ok')
 
@@ -48,8 +48,8 @@ describe('resolvePathInContext', () => {
   })
 
   it('routes plans/ to sandbox even when workspace is set', () => {
-    sandboxRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-sb-plans-'))
-    workspaceRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-ws-plans-'))
+    sandboxRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-sb-plans-'))
+    workspaceRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-ws-plans-'))
     mkdirSync(join(sandboxRoot, 'plans'), { recursive: true })
     writeFileSync(join(sandboxRoot, 'plans', 'feature.md'), '# plan')
 
@@ -60,7 +60,7 @@ describe('resolvePathInContext', () => {
   })
 
   it('rejects host absolute paths when workspace is not set', () => {
-    sandboxRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-sb-nows-'))
+    sandboxRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-sb-nows-'))
     const hostFile = join(tmpdir(), 'outside-ws.txt')
     writeFileSync(hostFile, 'x')
     expect(() =>
@@ -69,8 +69,8 @@ describe('resolvePathInContext', () => {
   })
 
   it('accepts absolute paths in either root', () => {
-    sandboxRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-sb3-'))
-    workspaceRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-ws3-'))
+    sandboxRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-sb3-'))
+    workspaceRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-ws3-'))
     const wsFile = join(workspaceRoot, 'README.md')
     writeFileSync(wsFile, '# hi')
 
@@ -78,8 +78,8 @@ describe('resolvePathInContext', () => {
   })
 
   it('resolveScopedPathInContext matches resolvePathInContext for workspace files', () => {
-    sandboxRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-sb4-'))
-    workspaceRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-ws4-'))
+    sandboxRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-sb4-'))
+    workspaceRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-ws4-'))
     mkdirSync(join(workspaceRoot, 'lib'), { recursive: true })
     writeFileSync(join(workspaceRoot, 'lib', 'a.ts'), '')
 
@@ -89,8 +89,8 @@ describe('resolvePathInContext', () => {
   })
 
   it('treats pseudo-absolute paths like /src/foo.ts as workspace-relative', () => {
-    sandboxRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-sb-pseudo-'))
-    workspaceRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-ws-pseudo-'))
+    sandboxRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-sb-pseudo-'))
+    workspaceRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-ws-pseudo-'))
     mkdirSync(join(workspaceRoot, 'src'), { recursive: true })
     writeFileSync(join(workspaceRoot, 'src', 'search.ts'), 'export {}')
 
@@ -104,8 +104,8 @@ describe('resolvePathInContext', () => {
   })
 
   it('strips redundant workspace basename when workspace is a subfolder', () => {
-    sandboxRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-sb-srcws-'))
-    const repoRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-repo-'))
+    sandboxRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-sb-srcws-'))
+    const repoRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-repo-'))
     workspaceRoot = join(repoRoot, 'src')
     mkdirSync(workspaceRoot, { recursive: true })
     writeFileSync(join(workspaceRoot, 'mcp-server.ts'), 'export {}')
@@ -125,8 +125,8 @@ describe('resolvePathInContext', () => {
   })
 
   it('does not strip src prefix when workspace is repo root', () => {
-    sandboxRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-sb-repo-'))
-    workspaceRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-ws-repo-'))
+    sandboxRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-sb-repo-'))
+    workspaceRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-ws-repo-'))
     mkdirSync(join(workspaceRoot, 'src'), { recursive: true })
     writeFileSync(join(workspaceRoot, 'src', 'mcp-server.ts'), 'export {}')
 
@@ -148,9 +148,9 @@ describe('resolvePathAllowingOutside', () => {
   })
 
   it('allows absolute paths outside both roots', () => {
-    sandboxRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-sb5-'))
-    workspaceRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-ws5-'))
-    externalRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-ext-'))
+    sandboxRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-sb5-'))
+    workspaceRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-ws5-'))
+    externalRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-ext-'))
     const extFile = join(externalRoot, 'outside.txt')
     writeFileSync(extFile, 'x')
 
@@ -170,8 +170,8 @@ describe('assertMoveAllowed', () => {
   })
 
   it('allows move between workspace and sandbox', () => {
-    sandboxRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-sb6-'))
-    workspaceRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-ws6-'))
+    sandboxRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-sb6-'))
+    workspaceRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-ws6-'))
     const src = join(workspaceRoot, 'a.txt')
     const dest = join(sandboxRoot, 'b.txt')
     writeFileSync(src, 'a')
@@ -182,8 +182,8 @@ describe('assertMoveAllowed', () => {
   })
 
   it('blocks move destination outside both roots', () => {
-    sandboxRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-sb7-'))
-    workspaceRoot = mkdtempSync(join(tmpdir(), 'openfde-paths-ws7-'))
+    sandboxRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-sb7-'))
+    workspaceRoot = mkdtempSync(join(tmpdir(), 'teralexi-paths-ws7-'))
     const src = join(sandboxRoot, 'inside.txt')
     writeFileSync(src, 'x')
     const dest = join(tmpdir(), 'escaped.txt')

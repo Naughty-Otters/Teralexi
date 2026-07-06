@@ -4,10 +4,10 @@ import { join } from 'node:path'
 const RULE_FILE_RE = /\.(?:md|mdc)$/i
 
 /** Fail the build when shipped default project rules are missing. */
-export function verifyBundledOpenFdeRules(): void {
-  const rulesDir = join(process.cwd(), '.openfde', 'rules')
+export function verifyBundledTeralexiRules(): void {
+  const rulesDir = join(process.cwd(), '.teralexi', 'rules')
   if (!existsSync(rulesDir)) {
-    throw new Error('missing bundled default rules directory: .openfde/rules')
+    throw new Error('missing bundled default rules directory: .teralexi/rules')
   }
 
   let entries: string[]
@@ -26,5 +26,5 @@ export function verifyBundledOpenFdeRules(): void {
     throw new Error('bundled default rules directory has no .md or .mdc files')
   }
 
-  console.log(`verify: ${ruleFiles.length} bundled default rule(s) in .openfde/rules`)
+  console.log(`verify: ${ruleFiles.length} bundled default rule(s) in .teralexi/rules`)
 }

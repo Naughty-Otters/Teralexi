@@ -7,7 +7,7 @@ import {
 describe('preview-navigation', () => {
   const devShell = 'http://localhost:5173/'
   const prodShell =
-    'file:///Applications/OpenFDE.app/Contents/Resources/app/dist/electron/renderer/index.html'
+    'file:///Applications/Teralexi.app/Contents/Resources/app/dist/electron/renderer/index.html'
 
   it('allows dev shell http navigation', () => {
     expect(
@@ -39,7 +39,7 @@ describe('preview-navigation', () => {
   it('blocks sandbox file navigation in packaged app', () => {
     expect(
       shouldInterceptSandboxPreviewNavigation(
-        'file:///Users/me/Library/Application Support/OpenFDE/sandbox/output/report.html',
+        'file:///Users/me/Library/Application Support/Teralexi/sandbox/output/report.html',
         prodShell,
       ),
     ).toBe(true)

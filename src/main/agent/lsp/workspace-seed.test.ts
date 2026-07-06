@@ -7,7 +7,7 @@ import { findWorkspaceSeedFile } from './workspace-seed'
 
 describe('findWorkspaceSeedFile', () => {
   it('prefers known entry points for TypeScript workspaces', async () => {
-    const root = await mkdtemp(path.join(tmpdir(), 'openfde-seed-'))
+    const root = await mkdtemp(path.join(tmpdir(), 'teralexi-seed-'))
     await mkdir(path.join(root, 'src', 'main'), { recursive: true })
     await writeFile(path.join(root, 'package.json'), '{}', 'utf-8')
     const entry = path.join(root, 'src', 'main', 'index.ts')
@@ -19,7 +19,7 @@ describe('findWorkspaceSeedFile', () => {
   })
 
   it('walks the tree when no preferred entry exists', async () => {
-    const root = await mkdtemp(path.join(tmpdir(), 'openfde-seed-walk-'))
+    const root = await mkdtemp(path.join(tmpdir(), 'teralexi-seed-walk-'))
     await mkdir(path.join(root, 'lib'), { recursive: true })
     const py = path.join(root, 'lib', 'util.py')
     await writeFile(py, 'def x(): pass', 'utf-8')

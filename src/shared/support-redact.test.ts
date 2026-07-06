@@ -16,11 +16,11 @@ describe('support-redact', () => {
     expect(
       redactRecord({
         'llm.openai.apiKey': 'sk-test-key-1234567890',
-        'user.displayName': 'openfde User',
+        'user.displayName': 'teralexi User',
       }),
     ).toEqual({
       'llm.openai.apiKey': '[REDACTED]',
-      'user.displayName': 'openfde User',
+      'user.displayName': 'teralexi User',
     })
 
     const redacted = redactPropertiesFile(

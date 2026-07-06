@@ -41,8 +41,8 @@ const hostEl = ref<HTMLElement | null>(null)
 const editor = shallowRef<monaco.editor.IStandaloneCodeEditor | null>(null)
 const isDark = useAppIsDark()
 
-const MONACO_THEME_LIGHT = 'openfde-vs'
-const MONACO_THEME_DARK = 'openfde-vs-dark'
+const MONACO_THEME_LIGHT = 'teralexi-vs'
+const MONACO_THEME_DARK = 'teralexi-vs-dark'
 
 let customThemesDefined = false
 

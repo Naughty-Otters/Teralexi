@@ -1,12 +1,12 @@
 /** Replaced in main bundle by rollup (see `.electron-vite/rollup.config.ts`). */
-export const BAKED_BASE_API = '__OPENFDE_BASE_API__'
+export const BAKED_BASE_API = '__TERALEXI_BASE_API__'
 
 /** Replaced in main bundle by rollup. */
-export const BAKED_DESKTOP_UPDATE_FORCE_DEV = '__OPENFDE_DESKTOP_UPDATE_FORCE_DEV__'
+export const BAKED_DESKTOP_UPDATE_FORCE_DEV = '__TERALEXI_DESKTOP_UPDATE_FORCE_DEV__'
 
-/** Rollup replace touches every `__OPENFDE_*__` literal — detect unresolved placeholders by shape. */
+/** Rollup replace touches every `__TERALEXI_*__` literal — detect unresolved placeholders by shape. */
 export function isUnresolvedBakedPlaceholder(value: string): boolean {
-  return /^__OPENFDE_[A-Z0-9_]+__$/.test(value)
+  return /^__TERALEXI_[A-Z0-9_]+__$/.test(value)
 }
 
 function stripEnvValue(raw: string): string {

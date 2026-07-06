@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import type Database from 'better-sqlite3'
-import { getopenfdeMemoryVectorsDbPath } from '@config/openfde-home'
+import { getTeralexiMemoryVectorsDbPath } from '@config/teralexi-home'
 import { openAppSqliteDatabase } from '@main/services/sqlite/open-app-database'
 import type {
   AgentMemoryBlock,
@@ -121,7 +121,7 @@ export class MemoryVectorStore {
   private readonly db: Database.Database
 
   constructor(db?: Database.Database) {
-    this.db = db ?? openAppSqliteDatabase(getopenfdeMemoryVectorsDbPath())
+    this.db = db ?? openAppSqliteDatabase(getTeralexiMemoryVectorsDbPath())
     runVectorMemoryMigrations(this.db)
   }
 

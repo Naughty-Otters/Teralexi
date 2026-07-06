@@ -6,15 +6,15 @@ vi.mock('@config/system-prop', () => ({
 
 import { getSystemPropValue } from '@config/system-prop'
 import {
-  getOpenFdeBaseApiUrl,
-  getOpenFdeDesktopForceDevUpdateConfig,
-  getOpenFdeDesktopReleasesFeedUrl,
-  getOpenFdeGoogleAuthLoginUrl,
-  getOpenFdeGraphqlUrl,
-  getOpenFdeSupportUploadUrl,
-} from './openfde-platform-config'
+  getTeralexiBaseApiUrl,
+  getTeralexiDesktopForceDevUpdateConfig,
+  getTeralexiDesktopReleasesFeedUrl,
+  getTeralexiGoogleAuthLoginUrl,
+  getTeralexiGraphqlUrl,
+  getTeralexiSupportUploadUrl,
+} from './teralexi-platform-config'
 
-describe('openfde-platform-config', () => {
+describe('teralexi-platform-config', () => {
   beforeEach(() => {
     vi.mocked(getSystemPropValue).mockReset()
   })
@@ -25,7 +25,7 @@ describe('openfde-platform-config', () => {
       return ''
     })
 
-    expect(getOpenFdeGoogleAuthLoginUrl()).toBe(
+    expect(getTeralexiGoogleAuthLoginUrl()).toBe(
       'https://staging.example.com/auth/login',
     )
   })
@@ -36,15 +36,15 @@ describe('openfde-platform-config', () => {
       return ''
     })
 
-    expect(getOpenFdeBaseApiUrl()).toBe('http://127.0.0.1:8000')
-    expect(getOpenFdeGraphqlUrl()).toBe('http://127.0.0.1:8000/graphql')
-    expect(getOpenFdeGoogleAuthLoginUrl()).toBe(
+    expect(getTeralexiBaseApiUrl()).toBe('http://127.0.0.1:8000')
+    expect(getTeralexiGraphqlUrl()).toBe('http://127.0.0.1:8000/graphql')
+    expect(getTeralexiGoogleAuthLoginUrl()).toBe(
       'http://127.0.0.1:8000/auth/login',
     )
-    expect(getOpenFdeSupportUploadUrl()).toBe(
+    expect(getTeralexiSupportUploadUrl()).toBe(
       'http://127.0.0.1:8000/support/upload',
     )
-    expect(getOpenFdeDesktopReleasesFeedUrl()).toBe(
+    expect(getTeralexiDesktopReleasesFeedUrl()).toBe(
       'http://127.0.0.1:8000/desktop/releases/stable/',
     )
   })
@@ -56,7 +56,7 @@ describe('openfde-platform-config', () => {
       return ''
     })
 
-    expect(getOpenFdeSupportUploadUrl()).toBe(
+    expect(getTeralexiSupportUploadUrl()).toBe(
       'http://127.0.0.1:8000/api/support/reports',
     )
   })
@@ -66,6 +66,6 @@ describe('openfde-platform-config', () => {
       if (key === 'app.desktop.forceDevUpdateConfig') return 'true'
       return ''
     })
-    expect(getOpenFdeDesktopForceDevUpdateConfig()).toBe(true)
+    expect(getTeralexiDesktopForceDevUpdateConfig()).toBe(true)
   })
 })

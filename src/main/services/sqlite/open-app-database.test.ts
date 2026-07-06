@@ -12,21 +12,21 @@ vi.mock('better-sqlite3', () => ({
   },
 }))
 
-vi.mock('@config/openfde-home', () => ({
+vi.mock('@config/teralexi-home', () => ({
   ensureParentDirForFile: vi.fn(),
 }))
 
-import { ensureParentDirForFile } from '@config/openfde-home'
+import { ensureParentDirForFile } from '@config/teralexi-home'
 import { openAppSqliteDatabase } from './open-app-database'
 
 describe('openAppSqliteDatabase', () => {
   it('ensures parent directories before opening sqlite', () => {
-    const db = openAppSqliteDatabase('/mock/home/db/openfde.db')
+    const db = openAppSqliteDatabase('/mock/home/db/teralexi.db')
     try {
       expect(ensureParentDirForFile).toHaveBeenCalledWith(
-        '/mock/home/db/openfde.db',
+        '/mock/home/db/teralexi.db',
       )
-      expect(db.path).toBe('/mock/home/db/openfde.db')
+      expect(db.path).toBe('/mock/home/db/teralexi.db')
       expect(pragma).toHaveBeenCalledWith('journal_mode = WAL')
       expect(pragma).toHaveBeenCalledWith('foreign_keys = ON')
     } finally {

@@ -1,4 +1,4 @@
-import { jsonSchema } from '@openfde-ai'
+import { jsonSchema } from '@teralexi-ai'
 import type { Tool } from 'ai'
 import { z } from 'zod'
 import { loadSkillActions } from '@main/skills/skill-module-loader'

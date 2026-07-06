@@ -1,7 +1,7 @@
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  expectedOpenfdeHomeForPlatform,
+  expectedTeralexiHomeForPlatform,
   fakeOtherRepoForPlatform,
   fakeRepo,
   fakeRepoForPlatform,
@@ -14,7 +14,7 @@ import {
   lspBinNameForPlatform,
   mockHomedir,
   mockHomedirForPlatform,
-  mockOpenfdeDirForPlatform,
+  mockTeralexiDirForPlatform,
   mockTesterHomedirForPlatform,
   p,
   pathEndsWith,
@@ -39,7 +39,7 @@ describe('test-path-helpers', () => {
         true,
       )
       expect(pathEndsWith('/repo/env/.sit.env', '\\repo\\env\\.sit.env')).toBe(true)
-      expect(pathIncludes('D:\\mock-home\\.openfde\\skills', '.openfde/skills')).toBe(
+      expect(pathIncludes('D:\\mock-home\\.teralexi\\skills', '.teralexi/skills')).toBe(
         true,
       )
     })
@@ -72,13 +72,13 @@ describe('test-path-helpers', () => {
       )
     })
 
-    it('builds openfde home and nested dirs with join()', () => {
-      const home = expectedOpenfdeHomeForPlatform(platform)
+    it('builds teralexi home and nested dirs with join()', () => {
+      const home = expectedTeralexiHomeForPlatform(platform)
       expect(p(home)).toBe(
-        p(resolve(join(mockHomedirForPlatform(platform), '.openfde'))),
+        p(resolve(join(mockHomedirForPlatform(platform), '.teralexi'))),
       )
-      expect(mockOpenfdeDirForPlatform(platform, 'skills', 'demo')).toBe(
-        join(mockHomedirForPlatform(platform), '.openfde', 'skills', 'demo'),
+      expect(mockTeralexiDirForPlatform(platform, 'skills', 'demo')).toBe(
+        join(mockHomedirForPlatform(platform), '.teralexi', 'skills', 'demo'),
       )
     })
 

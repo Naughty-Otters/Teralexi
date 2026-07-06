@@ -9,10 +9,10 @@ let projectRoot = ''
 let userSkillsDir = ''
 let userToolSetDir = ''
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeSkillsDir: () => userSkillsDir,
-  getopenfdeToolSetDir: () => userToolSetDir,
-  openfde_HOME_DIRNAME: '.openfde',
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiSkillsDir: () => userSkillsDir,
+  getTeralexiToolSetDir: () => userToolSetDir,
+  TERALEXI_HOME_DIRNAME: '.teralexi',
 }))
 
 vi.mock('electron', () => ({
@@ -39,8 +39,8 @@ describe('skill-path integration', () => {
 
   beforeEach(async () => {
     projectRoot = await mkdtemp(join(tmpdir(), 'skill-path-root-'))
-    userSkillsDir = join(projectRoot, '.openfde', 'skills')
-    userToolSetDir = join(projectRoot, '.openfde', 'toolSet')
+    userSkillsDir = join(projectRoot, '.teralexi', 'skills')
+    userToolSetDir = join(projectRoot, '.teralexi', 'toolSet')
     await mkdir(join(projectRoot, 'skills'), { recursive: true })
     await mkdir(join(projectRoot, 'toolSet'), { recursive: true })
     await mkdir(userSkillsDir, { recursive: true })
@@ -125,12 +125,12 @@ describe('skill-path integration', () => {
       app: {
         isPackaged: true,
         getAppPath: () =>
-          '/Applications/OpenFDE.app/Contents/Resources/app.asar',
+          '/Applications/Teralexi.app/Contents/Resources/app.asar',
       },
     }))
     vi.resetModules()
     const { resolveBundledSkillsDirectory } = await import('./skill-path')
-    const unpacked = '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked/skills'
+    const unpacked = '/Applications/Teralexi.app/Contents/Resources/app.asar.unpacked/skills'
     expect(p(resolveBundledSkillsDirectory())).toBe(p(unpacked))
     vi.resetModules()
     vi.doMock('electron', () => ({

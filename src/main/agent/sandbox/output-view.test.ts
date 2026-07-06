@@ -166,7 +166,7 @@ describe('syncSandboxOutputView', () => {
             loadAttempt++
             if (loadAttempt === 1) {
               throw new Error(
-                "ERR_ABORTED (-3) loading 'file:///tmp/openfde-sandbox-preview/a.html'",
+                "ERR_ABORTED (-3) loading 'file:///tmp/teralexi-sandbox-preview/a.html'",
               )
             }
           }),

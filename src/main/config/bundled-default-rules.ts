@@ -8,10 +8,10 @@ const log = createLogger('config.bundled-default-rules')
 const RULE_FILE_RE = /\.(?:md|mdc)$/i
 
 export function resolveBundledDefaultRulesDirectory(): string {
-  return joinAppResourcePath('.openfde', 'rules')
+  return joinAppResourcePath('.teralexi', 'rules')
 }
 
-/** Copy shipped default rules into ~/.openfde/rules when a file is not present yet. */
+/** Copy shipped default rules into ~/.teralexi/rules when a file is not present yet. */
 export function seedBundledDefaultRulesIfMissing(userRulesDir: string): void {
   const bundledRulesDir = resolveBundledDefaultRulesDirectory()
   if (!existsSync(bundledRulesDir)) {

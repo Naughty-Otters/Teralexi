@@ -7,7 +7,7 @@
         <input
           class="sp-input"
           :value="state.botName"
-          placeholder="OpenFDE WeChat Bot"
+          placeholder="Teralexi WeChat Bot"
           @blur="saveBotName"
         />
       </div>
@@ -169,7 +169,7 @@ type WeChatChatMessage = {
 }
 
 const state = ref<WeChatState>({
-  botName: 'OpenFDE WeChat Bot',
+  botName: 'Teralexi WeChat Bot',
   corpId: '',
   agentId: '',
   status: 'idle',

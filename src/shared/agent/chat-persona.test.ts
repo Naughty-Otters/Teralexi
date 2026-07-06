@@ -7,10 +7,10 @@ import {
 } from './chat-persona'
 
 describe('chat-persona', () => {
-  it('uses OpenFDE as the speaker name', () => {
-    expect(ASSISTANT_CHAT_DISPLAY_NAME).toBe('OpenFDE')
-    expect(assistantBubbleSpeakerName()).toBe('OpenFDE')
-    expect(assistantStepProgressDisplayTitle()).toBe('OpenFDE')
+  it('uses Teralexi as the speaker name', () => {
+    expect(ASSISTANT_CHAT_DISPLAY_NAME).toBe('Teralexi')
+    expect(assistantBubbleSpeakerName()).toBe('Teralexi')
+    expect(assistantStepProgressDisplayTitle()).toBe('Teralexi')
   })
 
   it('returns human activity labels while running', () => {

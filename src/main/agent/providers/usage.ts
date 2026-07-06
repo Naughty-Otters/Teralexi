@@ -1,4 +1,4 @@
-import type { LanguageModelUsage } from '@openfde-ai'
+import type { LanguageModelUsage } from '@teralexi-ai'
 import { getConversationStore } from '@main/services/conversation-store'
 import { reportProviderMetricAsync } from '@main/services/provider-metrics-reporter'
 import { randomShortUuid } from '@shared/utils/short-uuid'

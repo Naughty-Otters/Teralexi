@@ -6,7 +6,7 @@ export type WorkflowCompileContext = {
   sourceDir?: string
 }
 
-const CONTEXT_STACK_KEY = Symbol.for('openfde.workflowCompileContextStack')
+const CONTEXT_STACK_KEY = Symbol.for('teralexi.workflowCompileContextStack')
 
 function contextStack(): WorkflowCompileContext[] {
   const g = globalThis as typeof globalThis & {

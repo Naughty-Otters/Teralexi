@@ -11,7 +11,7 @@ vi.mock('fs/promises', () => ({
 vi.mock('@main/skills/skill-path', () => ({
   resolveSkillsSources: vi.fn(() => ({
     bundled: '/skills-root',
-    user: '/mock/.openfde/skills',
+    user: '/mock/.teralexi/skills',
   })),
 }))
 

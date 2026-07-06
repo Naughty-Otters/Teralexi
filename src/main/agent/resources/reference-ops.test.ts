@@ -60,7 +60,7 @@ describe('resolveReferenceReadPathInSandbox', () => {
   let layout: { root: string; refsDir: string; skillsDir: string }
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'openfde-ref-'))
+    root = mkdtempSync(join(tmpdir(), 'teralexi-ref-'))
     layout = {
       root,
       refsDir: join(root, 'refs'),
@@ -97,7 +97,7 @@ describe('resolveReferenceReadPathInSandbox', () => {
 
 describe('resolveLocalSourcePathForReferenceCopy', () => {
   it('prefers skill-local paths when skillId is provided', () => {
-    const root = mkdtempSync(join(tmpdir(), 'openfde-ref-copy-'))
+    const root = mkdtempSync(join(tmpdir(), 'teralexi-ref-copy-'))
     const skillsDir = join(root, 'skills')
     const skillRoot = join(skillsDir, 'demo')
     mkdirSync(skillRoot, { recursive: true })

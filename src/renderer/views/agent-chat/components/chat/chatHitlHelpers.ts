@@ -1,4 +1,4 @@
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 import { collectFormRequestId, isCollectFormRequestPart } from './collectFormTypes'
 import { toolPartNeedsApproval } from './chatToolPartHelpers'
 

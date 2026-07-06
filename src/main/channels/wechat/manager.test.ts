@@ -100,7 +100,7 @@ describe('WeChatChannelManager', () => {
     const { getWeChatChannelManager } = await import('./manager')
     const manager = getWeChatChannelManager()
     const state = manager.setBotName('  ')
-    expect(state.botName).toBe('OpenFDE WeChat Bot')
+    expect(state.botName).toBe('Teralexi WeChat Bot')
   })
 
   it('setCredentials starts the bot when corpId and corpSecret provided', async () => {

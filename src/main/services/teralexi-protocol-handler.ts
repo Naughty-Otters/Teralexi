@@ -1,13 +1,13 @@
 import { app, BrowserWindow } from 'electron'
 import { createLogger } from '@main/logger'
 import {
-  OPENFDE_PROTOCOL,
-  parseOpenFdeProtocolUrl,
-} from '@shared/openfde-protocol'
+  TERALEXI_PROTOCOL,
+  parseTeralexiProtocolUrl,
+} from '@shared/teralexi-protocol'
 import { handleGoogleAccountOAuthDeepLink } from '@main/services/google-account-oauth'
-import { clearOpenFdeServerAuthCache } from '@main/services/openfde-server-auth'
+import { clearTeralexiServerAuthCache } from '@main/services/teralexi-server-auth'
 
-const log = createLogger('services.openfde-protocol')
+const log = createLogger('services.teralexi-protocol')
 
 const pendingProtocolUrls: string[] = []
 let protocolHandlerReady = false
@@ -22,17 +22,17 @@ function focusMainWindow(): void {
 }
 
 function extractProtocolUrlFromArgv(argv: string[]): string | undefined {
-  return argv.find((arg) => arg.startsWith(`${OPENFDE_PROTOCOL}://`))
+  return argv.find((arg) => arg.startsWith(`${TERALEXI_PROTOCOL}://`))
 }
 
-async function dispatchOpenFdeUrl(rawUrl: string): Promise<void> {
-  const action = parseOpenFdeProtocolUrl(rawUrl)
+async function dispatchTeralexiUrl(rawUrl: string): Promise<void> {
+  const action = parseTeralexiProtocolUrl(rawUrl)
   if (!action) {
-    log.warn('Ignoring unrecognized openfde URL', { rawUrl })
+    log.warn('Ignoring unrecognized teralexi URL', { rawUrl })
     return
   }
 
-  log.info('Handling openfde protocol URL', { host: action.type })
+  log.info('Handling teralexi protocol URL', { host: action.type })
   focusMainWindow()
 
   if (action.type === 'open') {
@@ -43,59 +43,59 @@ async function dispatchOpenFdeUrl(rawUrl: string): Promise<void> {
         expiresIn: action.expiresIn,
         scope: action.scope,
       })
-      clearOpenFdeServerAuthCache()
+      clearTeralexiServerAuthCache()
     } catch (err) {
       log.error('Google OAuth deep link failed', { err })
     }
   }
 }
 
-export function handleOpenFdeProtocolUrl(rawUrl: string): void {
+export function handleTeralexiProtocolUrl(rawUrl: string): void {
   if (!protocolHandlerReady) {
     pendingProtocolUrls.push(rawUrl)
     return
   }
-  void dispatchOpenFdeUrl(rawUrl)
+  void dispatchTeralexiUrl(rawUrl)
 }
 
-export function setOpenFdeProtocolHandlerReady(): void {
+export function setTeralexiProtocolHandlerReady(): void {
   protocolHandlerReady = true
   for (const url of pendingProtocolUrls.splice(0)) {
-    void dispatchOpenFdeUrl(url)
+    void dispatchTeralexiUrl(url)
   }
 }
 
-export function registerOpenFdeProtocolClient(): void {
+export function registerTeralexiProtocolClient(): void {
   if (process.defaultApp) {
     if (process.argv.length >= 2) {
       app.setAsDefaultProtocolClient(
-        OPENFDE_PROTOCOL,
+        TERALEXI_PROTOCOL,
         process.execPath,
         [process.argv[1]!],
       )
     }
   } else {
-    app.setAsDefaultProtocolClient(OPENFDE_PROTOCOL)
+    app.setAsDefaultProtocolClient(TERALEXI_PROTOCOL)
   }
 }
 
-export function registerOpenFdeProtocolHandlers(): void {
+export function registerTeralexiProtocolHandlers(): void {
   app.on('open-url', (event, url) => {
     event.preventDefault()
-    handleOpenFdeProtocolUrl(url)
+    handleTeralexiProtocolUrl(url)
   })
 
   app.on('second-instance', (_event, argv) => {
     const url = extractProtocolUrlFromArgv(argv)
-    if (url) handleOpenFdeProtocolUrl(url)
+    if (url) handleTeralexiProtocolUrl(url)
   })
 
   const startupUrl = extractProtocolUrlFromArgv(process.argv)
   if (startupUrl) {
-    handleOpenFdeProtocolUrl(startupUrl)
+    handleTeralexiProtocolUrl(startupUrl)
   }
 }
 
-export function requestOpenFdeSingleInstanceLock(): boolean {
+export function requestTeralexiSingleInstanceLock(): boolean {
   return app.requestSingleInstanceLock()
 }

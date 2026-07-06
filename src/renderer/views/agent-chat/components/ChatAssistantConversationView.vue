@@ -261,7 +261,7 @@
 </template>
 
 <script setup lang="ts">
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 import { createStandardMarkdownIt } from '@shared/markdown/create-markdown-it'
 import { computed, nextTick, ref, watch, watchEffect } from 'vue'
 import {

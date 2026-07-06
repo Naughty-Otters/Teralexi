@@ -45,7 +45,7 @@ vi.mock('discord.js', () => ({
     login = loginMock
     destroy = destroyMock
     channels = { fetch: channelsFetchMock }
-    user = { id: 'bot-123', tag: 'openfdeBot#1234' }
+    user = { id: 'bot-123', tag: 'teralexiBot#1234' }
   },
   Events: {
     ClientReady: 'ready',
@@ -98,7 +98,7 @@ describe('DiscordChannelManager', () => {
       const readyHandler = onceMock.mock.calls.find(
         (c: unknown[]) => c[0] === 'ready',
       )?.[1]
-      readyHandler?.({ user: { id: 'bot-123', tag: 'openfdeBot#1234' } })
+      readyHandler?.({ user: { id: 'bot-123', tag: 'teralexiBot#1234' } })
       return 'token'
     })
 
@@ -121,7 +121,7 @@ describe('DiscordChannelManager', () => {
     const { getDiscordChannelManager } = await import('./manager')
     const manager = getDiscordChannelManager()
     const state = manager.setBotName('  ')
-    expect(state.botName).toBe('OpenFDE Discord Bot')
+    expect(state.botName).toBe('Teralexi Discord Bot')
   })
 
   it('setBotToken starts the bot and calls login', async () => {
@@ -131,7 +131,7 @@ describe('DiscordChannelManager', () => {
       const readyHandler = onceMock.mock.calls.find(
         (c: unknown[]) => c[0] === 'ready',
       )?.[1]
-      readyHandler?.({ user: { id: 'bot-123', tag: 'openfdeBot#1234' } })
+      readyHandler?.({ user: { id: 'bot-123', tag: 'teralexiBot#1234' } })
       return 'token'
     })
 
@@ -140,7 +140,7 @@ describe('DiscordChannelManager', () => {
     const state = await manager.setBotToken('MTIz.abc.def')
     expect(loginMock).toHaveBeenCalledWith('MTIz.abc.def')
     expect(state.status).toBe('connected')
-    expect(state.botUsername).toBe('openfdeBot#1234')
+    expect(state.botUsername).toBe('teralexiBot#1234')
   })
 
   it('stop() disconnects the bot', async () => {
@@ -150,7 +150,7 @@ describe('DiscordChannelManager', () => {
       const readyHandler = onceMock.mock.calls.find(
         (c: unknown[]) => c[0] === 'ready',
       )?.[1]
-      readyHandler?.({ user: { id: 'bot-123', tag: 'openfdeBot#1234' } })
+      readyHandler?.({ user: { id: 'bot-123', tag: 'teralexiBot#1234' } })
       return 'token'
     })
 
@@ -183,7 +183,7 @@ describe('DiscordChannelManager', () => {
       const readyHandler = onceMock.mock.calls.find(
         (c: unknown[]) => c[0] === 'ready',
       )?.[1]
-      readyHandler?.({ user: { id: 'bot-123', tag: 'openfdeBot#1234' } })
+      readyHandler?.({ user: { id: 'bot-123', tag: 'teralexiBot#1234' } })
       return 'token'
     })
 
@@ -219,7 +219,7 @@ describe('DiscordChannelManager', () => {
       const readyHandler = onceMock.mock.calls.find(
         (c: unknown[]) => c[0] === 'ready',
       )?.[1]
-      readyHandler?.({ user: { id: 'bot-123', tag: 'openfdeBot#1234' } })
+      readyHandler?.({ user: { id: 'bot-123', tag: 'teralexiBot#1234' } })
       return 'token'
     })
 
@@ -265,7 +265,7 @@ describe('DiscordChannelManager', () => {
       const readyHandler = onceMock.mock.calls.find(
         (c: unknown[]) => c[0] === 'ready',
       )?.[1]
-      readyHandler?.({ user: { id: 'bot-123', tag: 'openfdeBot#1234' } })
+      readyHandler?.({ user: { id: 'bot-123', tag: 'teralexiBot#1234' } })
       return 'token'
     })
 
@@ -298,7 +298,7 @@ describe('DiscordChannelManager', () => {
       const readyHandler = onceMock.mock.calls.find(
         (c: unknown[]) => c[0] === 'ready',
       )?.[1]
-      readyHandler?.({ user: { id: 'bot-123', tag: 'openfdeBot#1234' } })
+      readyHandler?.({ user: { id: 'bot-123', tag: 'teralexiBot#1234' } })
       return 'token'
     })
 

@@ -1,4 +1,4 @@
-import { jsonSchema, stepCountIs } from '@openfde-ai'
+import { jsonSchema, stepCountIs } from '@teralexi-ai'
 import type { StreamTextParams, StreamTextResult } from '../llm/runtime'
 import { resolveToolLoopMaxIterations } from '@shared/agent/tool-loop'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'

@@ -7,7 +7,7 @@
         <input
           class="sp-input"
           :value="state.botName"
-          placeholder="OpenFDE Slack Bot"
+          placeholder="Teralexi Slack Bot"
           @blur="saveBotName"
         />
       </div>
@@ -176,7 +176,7 @@ type SlackChatMessage = {
 }
 
 const state = ref<SlackState>({
-  botName: 'OpenFDE Slack Bot',
+  botName: 'Teralexi Slack Bot',
   botToken: '',
   appToken: '',
   botUserId: null,

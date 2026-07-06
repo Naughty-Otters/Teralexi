@@ -12,9 +12,9 @@ import { buildBlankWorkflowDefinition } from './workflow-store'
 
 let testWorkflowsRoot = ''
 
-vi.mock('@config/openfde-home', () => ({
+vi.mock('@config/teralexi-home', () => ({
   getWorkflowSourceDir: (workflowId: string) => join(testWorkflowsRoot, workflowId, 'source'),
-  getopenfdeWorkflowsDir: () => testWorkflowsRoot,
+  getTeralexiWorkflowsDir: () => testWorkflowsRoot,
 }))
 
 function sampleDefinition(workflowId: string) {
@@ -124,7 +124,7 @@ vi.mock('@main/services/conversation-store', () => ({
 describe('compileWorkflow', () => {
   beforeEach(async () => {
     compileWorkflowWithTools.mockClear()
-    testWorkflowsRoot = await mkdtemp(join(tmpdir(), 'openfde-wf-compile-'))
+    testWorkflowsRoot = await mkdtemp(join(tmpdir(), 'teralexi-wf-compile-'))
   })
 
   afterEach(async () => {

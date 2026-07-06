@@ -23,8 +23,8 @@ vi.mock('@config/system-prop', () => ({
   getSystemPropValue: vi.fn((_key: string, fallback = '') => fallback),
 }))
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeAccountsDir: vi.fn(() => '/accounts'),
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiAccountsDir: vi.fn(() => '/accounts'),
 }))
 
 vi.mock('@main/services/google-account-notify', () => ({
@@ -45,7 +45,7 @@ import {
   clearStoredAccount,
   googleAccountSignInIsConfigured,
   loadStoredAccount,
-  resolveOpenFdeGoogleAuthLoginUrl,
+  resolveTeralexiGoogleAuthLoginUrl,
   startGoogleAccountSignIn,
 } from './google-account-oauth'
 import { GOOGLE_ACCOUNT_NOT_CONFIGURED } from '@shared/google-account-settings'
@@ -66,26 +66,26 @@ describe('google-account-oauth', () => {
     )
   })
 
-  it('resolveOpenFdeGoogleAuthLoginUrl uses dev fallback when env unset', () => {
+  it('resolveTeralexiGoogleAuthLoginUrl uses dev fallback when env unset', () => {
     vi.stubEnv('NODE_ENV', 'development')
-    expect(resolveOpenFdeGoogleAuthLoginUrl()).toBe(
+    expect(resolveTeralexiGoogleAuthLoginUrl()).toBe(
       'http://localhost:8000/auth/login',
     )
     vi.unstubAllEnvs()
   })
 
-  it('resolveOpenFdeGoogleAuthLoginUrl prefers env override', () => {
+  it('resolveTeralexiGoogleAuthLoginUrl prefers env override', () => {
     vi.mocked(getSystemPropValue).mockReturnValue('https://auth.example/login')
-    expect(resolveOpenFdeGoogleAuthLoginUrl()).toBe('https://auth.example/login')
+    expect(resolveTeralexiGoogleAuthLoginUrl()).toBe('https://auth.example/login')
   })
 
   it('googleAccountSignInIsConfigured is true with default URL', () => {
     expect(googleAccountSignInIsConfigured()).toBe(true)
   })
 
-  it('resolveOpenFdeGoogleAuthLoginUrl returns empty in packaged app without config', () => {
+  it('resolveTeralexiGoogleAuthLoginUrl returns empty in packaged app without config', () => {
     vi.mocked(isPackagedRuntime).mockReturnValue(true)
-    expect(resolveOpenFdeGoogleAuthLoginUrl()).toBe('')
+    expect(resolveTeralexiGoogleAuthLoginUrl()).toBe('')
     vi.mocked(isPackagedRuntime).mockReturnValue(false)
   })
 

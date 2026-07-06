@@ -37,7 +37,7 @@ export const providerSetupZhCn: ProviderSetupLabels = {
     agentsIncomplete: '请先为每个 Agent 完成配置。',
     finishSetup: '完成设置',
     continueToAgents: '下一步：配置 Agent',
-    rampUpTitle: '欢迎使用 OpenFDE',
+    rampUpTitle: '欢迎使用 Teralexi',
     rampUpSubtitle: '连接 LLM 并为 Agent 指定模型后即可开始使用。',
     configuredProvidersHint:
       '以下提供商已配置完成。选择一个用于 Agent，或继续添加新的提供商。',
@@ -54,12 +54,12 @@ export const providerSetupZhCn: ProviderSetupLabels = {
   landing: {
     title: '连接你的第一个模型',
     subtitle:
-      '分步引导从 OpenAI、Anthropic、DeepSeek 等获取 API 密钥，并在 OpenFDE 中测试保存。',
+      '分步引导从 OpenAI、Anthropic、DeepSeek 等获取 API 密钥，并在 Teralexi 中测试保存。',
     cta: '开始设置向导',
   },
   providers: {
     ollama: {
-      intro: 'Ollama 在本地运行开源模型。安装后拉取模型，再将 OpenFDE 指向服务器地址。',
+      intro: 'Ollama 在本地运行开源模型。安装后拉取模型，再将 Teralexi 指向服务器地址。',
       steps: [
         '下载并安装 Ollama。',
         '在终端运行：ollama pull llama3.2（或其他模型）。',

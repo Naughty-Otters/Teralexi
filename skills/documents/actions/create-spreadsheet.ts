@@ -9,11 +9,11 @@
 import ExcelJS from 'exceljs'
 import path from 'path'
 import fs from 'fs'
-import type { SkillTool } from '@openfde/skill-sdk'
+import type { SkillTool } from '@teralexi/skill-sdk'
 import {
   getOutputResultsRelPrefix,
   requireActiveSandbox,
-} from '@openfde/skill-sdk'
+} from '@teralexi/skill-sdk'
 import { resolveExcelTheme } from './template-core/load-themes'
 import type { ExcelThemeStyle } from './template-core/types'
 
@@ -91,7 +91,7 @@ export const createSpreadsheet: SkillTool = {
 
     // ── build workbook ───────────────────────────────────────────────────────
     const wb = new ExcelJS.Workbook()
-    wb.creator = 'OpenFDE'
+    wb.creator = 'Teralexi'
     wb.created = new Date()
 
     const ws = wb.addWorksheet(sheetName)

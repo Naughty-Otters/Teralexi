@@ -24,7 +24,7 @@ vi.mock('../skill-path', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../skill-path')>()
   return {
     ...actual,
-    resolveUserSkillsDirectory: () => '/mock/.openfde/skills',
+    resolveUserSkillsDirectory: () => '/mock/.teralexi/skills',
     isLoadableSkillFolder: vi.fn(() => true),
   }
 })

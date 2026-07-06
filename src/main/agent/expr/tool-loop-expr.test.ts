@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { stepCountIs } from '@openfde-ai'
+import { stepCountIs } from '@teralexi-ai'
 import { resolveToolLoopMaxIterations } from '@shared/agent/tool-loop'
 import { expressionPlanIsRunnable } from './expression-plan'
 import {

@@ -7,7 +7,7 @@ vi.mock('../llm/runtime', () => ({
   runLlmStream: (...args: unknown[]) => runLlmStreamMock(...args),
 }))
 
-vi.mock('@openfde-ai', () => ({
+vi.mock('@teralexi-ai', () => ({
   Output: { object: vi.fn((cfg: unknown) => cfg) },
 }))
 

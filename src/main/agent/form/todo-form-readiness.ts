@@ -2,7 +2,7 @@
  * Execution-time assessment: whether a todo has enough structured input to run tools,
  * or should enter the HITL form collection pipeline.
  */
-import { Output } from '@openfde-ai'
+import { Output } from '@teralexi-ai'
 import type { StreamTextParams } from '../llm/runtime'
 import { z } from 'zod'
 import type { AgentStepContext } from '../context'

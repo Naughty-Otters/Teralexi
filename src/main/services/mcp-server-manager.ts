@@ -2,7 +2,7 @@ import {
   createMCPClient,
   Experimental_StdioMCPTransport,
   type MCPClient,
-} from '@openfde-ai/mcp'
+} from '@teralexi-ai/mcp'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
 import type { StoredMcpServer } from './conversation-store'
 import {

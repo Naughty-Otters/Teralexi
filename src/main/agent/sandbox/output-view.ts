@@ -19,7 +19,7 @@ const lastLoadedPreview = new Map<
 >()
 const previewLoadChains = new Map<number, Promise<void>>()
 const closedHandlersRegistered = new Set<number>()
-const previewHtmlDir = join(tmpdir(), 'openfde-sandbox-preview')
+const previewHtmlDir = join(tmpdir(), 'teralexi-sandbox-preview')
 const log = createLogger('sandbox.output-view')
 
 function isNavigationAbortedError(err: unknown): boolean {

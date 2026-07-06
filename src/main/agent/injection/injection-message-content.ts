@@ -1,4 +1,4 @@
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import { readInjectorMessageMeta } from './injection-message-meta'
 
 export const CURRENT_DATETIME_INJECTOR_MARKER = '## Current date and time'

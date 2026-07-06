@@ -65,7 +65,7 @@ describe('code-signing-env', () => {
     const env = {
       ...process.env,
       MAC_SIGN_IDENTITY: 'Developer ID Application: Example (TEAM123)',
-      MAC_SIGN_CERTIFICATE: '~/certs/openfde.p12',
+      MAC_SIGN_CERTIFICATE: '~/certs/teralexi.p12',
       MAC_SIGN_CERTIFICATE_PASSWORD: 'mac-secret',
     } as NodeJS.ProcessEnv
 
@@ -110,8 +110,8 @@ describe('code-signing-env', () => {
     expect(isInlineCertificate('data:application/x-pkcs12;base64,AAAA')).toBe(true)
     expect(isInlineCertificate(`${'A'.repeat(3000)}`)).toBe(true)
     expect(isInlineCertificate('QUFBQQ==')).toBe(true)
-    expect(isInlineCertificate('~/certs/openfde.p12')).toBe(false)
-    expect(isInlineCertificate('/abs/path/openfde.p12')).toBe(false)
+    expect(isInlineCertificate('~/certs/teralexi.p12')).toBe(false)
+    expect(isInlineCertificate('/abs/path/teralexi.p12')).toBe(false)
     expect(isInlineCertificate('')).toBe(false)
   })
 
@@ -147,20 +147,20 @@ describe('code-signing-env', () => {
   it('maps friendly MAC_SIGN_* and WIN_SIGN_* aliases from env files', () => {
     const parsed = parseCodeSigningEnvFile(`
 MAC_SIGN_IDENTITY = 'Developer ID Application: Example (TEAM123)'
-MAC_SIGN_CERTIFICATE = '~/certs/openfde.p12'
+MAC_SIGN_CERTIFICATE = '~/certs/teralexi.p12'
 MAC_SIGN_CERTIFICATE_PASSWORD = 'mac-secret'
 MAC_APPLE_ID = 'dev@example.com'
 MAC_APPLE_APP_SPECIFIC_PASSWORD = 'abcd-efgh'
 MAC_APPLE_TEAM_ID = 'TEAM123'
-WIN_SIGN_CERTIFICATE = '~/certs/openfde.pfx'
+WIN_SIGN_CERTIFICATE = '~/certs/teralexi.pfx'
 WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
 `)
     expect(parsed.get('CSC_NAME')).toBe(
       'Developer ID Application: Example (TEAM123)',
     )
-    expect(parsed.get('CSC_LINK')).toBe('~/certs/openfde.p12')
+    expect(parsed.get('CSC_LINK')).toBe('~/certs/teralexi.p12')
     expect(parsed.get('CSC_KEY_PASSWORD')).toBe('mac-secret')
-    expect(parsed.get('WIN_CSC_LINK')).toBe('~/certs/openfde.pfx')
+    expect(parsed.get('WIN_CSC_LINK')).toBe('~/certs/teralexi.pfx')
     expect(parsed.get('WIN_CSC_KEY_PASSWORD')).toBe('win-secret')
     expect(parsed.get('APPLE_ID')).toBe('dev@example.com')
   })
@@ -207,8 +207,8 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
       AZURE_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
       AZURE_CLIENT_SECRET: 'secret',
       AZURE_SIGNING_ENDPOINT: 'https://example.com/',
-      AZURE_SIGNING_ACCOUNT_NAME: 'openfde',
-      AZURE_SIGNING_CERTIFICATE_PROFILE: 'openfde-profile',
+      AZURE_SIGNING_ACCOUNT_NAME: 'teralexi',
+      AZURE_SIGNING_CERTIFICATE_PROFILE: 'teralexi-profile',
       AZURE_SIGNING_PUBLISHER_NAME: 'Example Dev',
     })
 
@@ -227,8 +227,8 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
       AZURE_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
       AZURE_CLIENT_SECRET: 'secret',
       AZURE_SIGNING_ENDPOINT: 'https://eus.codesigning.azure.net/',
-      AZURE_SIGNING_ACCOUNT_NAME: 'openfde',
-      AZURE_SIGNING_CERTIFICATE_PROFILE: 'openfde-profile',
+      AZURE_SIGNING_ACCOUNT_NAME: 'teralexi',
+      AZURE_SIGNING_CERTIFICATE_PROFILE: 'teralexi-profile',
       AZURE_SIGNING_PUBLISHER_NAME: 'Example Dev',
     })
 
@@ -246,8 +246,8 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
         AZURE_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
         AZURE_CLIENT_SECRET: 'secret',
         AZURE_SIGNING_ENDPOINT: 'https://eus.codesigning.azure.net/',
-        AZURE_SIGNING_ACCOUNT_NAME: 'openfde',
-        AZURE_SIGNING_CERTIFICATE_PROFILE: 'openfde-profile',
+        AZURE_SIGNING_ACCOUNT_NAME: 'teralexi',
+        AZURE_SIGNING_CERTIFICATE_PROFILE: 'teralexi-profile',
         AZURE_SIGNING_PUBLISHER_NAME: 'Example Dev',
       }),
     ).toBe(true)
@@ -259,8 +259,8 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
           AZURE_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
           AZURE_CLIENT_SECRET: 'secret',
           AZURE_SIGNING_ENDPOINT: 'https://eus.codesigning.azure.net/',
-          AZURE_SIGNING_ACCOUNT_NAME: 'openfde',
-          AZURE_SIGNING_CERTIFICATE_PROFILE: 'openfde-profile',
+          AZURE_SIGNING_ACCOUNT_NAME: 'teralexi',
+          AZURE_SIGNING_CERTIFICATE_PROFILE: 'teralexi-profile',
           AZURE_SIGNING_PUBLISHER_NAME: 'Example Dev',
         },
       ),
@@ -273,16 +273,16 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
       AZURE_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
       AZURE_CLIENT_SECRET: 'secret',
       AZURE_SIGNING_ENDPOINT: 'https://eus.codesigning.azure.net/',
-      AZURE_SIGNING_ACCOUNT_NAME: 'openfde',
-      AZURE_SIGNING_CERTIFICATE_PROFILE: 'openfde-profile',
+      AZURE_SIGNING_ACCOUNT_NAME: 'teralexi',
+      AZURE_SIGNING_CERTIFICATE_PROFILE: 'teralexi-profile',
       AZURE_SIGNING_PUBLISHER_NAME: 'Example Dev',
     } as NodeJS.ProcessEnv
 
     expect(buildAzureTrustedSigningExtraArgs(env)).toEqual([
       '--config.win.azureSignOptions.publisherName="Example Dev"',
       '--config.win.azureSignOptions.endpoint=https://eus.codesigning.azure.net/',
-      '--config.win.azureSignOptions.certificateProfileName=openfde-profile',
-      '--config.win.azureSignOptions.codeSigningAccountName=openfde',
+      '--config.win.azureSignOptions.certificateProfileName=teralexi-profile',
+      '--config.win.azureSignOptions.codeSigningAccountName=teralexi',
     ])
 
     expect(
@@ -311,8 +311,8 @@ WIN_SIGN_CERTIFICATE_PASSWORD = 'win-secret'
       AZURE_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
       AZURE_CLIENT_SECRET: 'secret',
       AZURE_SIGNING_ENDPOINT: 'https://eus.codesigning.azure.net/',
-      AZURE_SIGNING_ACCOUNT_NAME: 'openfde',
-      AZURE_SIGNING_CERTIFICATE_PROFILE: 'openfde-profile',
+      AZURE_SIGNING_ACCOUNT_NAME: 'teralexi',
+      AZURE_SIGNING_CERTIFICATE_PROFILE: 'teralexi-profile',
       AZURE_SIGNING_PUBLISHER_NAME: 'Zhenqi Li',
     } as NodeJS.ProcessEnv
 
@@ -328,8 +328,8 @@ AZURE_TENANT_ID = 'tenant-from-file'
 AZURE_CLIENT_ID = 'client-from-file'
 AZURE_CLIENT_SECRET = 'secret-from-file'
 AZURE_SIGNING_ENDPOINT = 'https://eus.codesigning.azure.net/'
-AZURE_SIGNING_ACCOUNT_NAME = 'openfde'
-AZURE_SIGNING_CERTIFICATE_PROFILE = 'openfde-profile'
+AZURE_SIGNING_ACCOUNT_NAME = 'teralexi'
+AZURE_SIGNING_CERTIFICATE_PROFILE = 'teralexi-profile'
 AZURE_SIGNING_PUBLISHER_NAME = 'Example Dev'
 `)
 
@@ -349,7 +349,7 @@ AZURE_SIGNING_PUBLISHER_NAME = 'Example Dev'
     ).toBe(true)
     expect(
       isWindowsCodeSigningConfigured(
-        new Map([['WIN_CSC_LINK', 'C:\\certs\\openfde.pfx']]),
+        new Map([['WIN_CSC_LINK', 'C:\\certs\\teralexi.pfx']]),
       ),
     ).toBe(true)
     expect(
@@ -367,8 +367,8 @@ AZURE_SIGNING_PUBLISHER_NAME = 'Example Dev'
     const env = {
       ...process.env,
       MAC_SIGN_IDENTITY: 'Developer ID Application: Example (TEAM123)',
-      MAC_SIGN_CERTIFICATE: '~/certs/openfde.p12',
-      WIN_SIGN_CERTIFICATE: '~/certs/openfde.pfx',
+      MAC_SIGN_CERTIFICATE: '~/certs/teralexi.p12',
+      WIN_SIGN_CERTIFICATE: '~/certs/teralexi.pfx',
       WIN_SIGN_CERTIFICATE_PASSWORD: 'win-secret',
     } as NodeJS.ProcessEnv
 
@@ -378,9 +378,9 @@ AZURE_SIGNING_PUBLISHER_NAME = 'Example Dev'
     try {
       applyCodeSigningEnv(env)
       expect(env.CSC_NAME).toBe('Example (TEAM123)')
-      expect(env.CSC_LINK).toContain('openfde.pfx')
+      expect(env.CSC_LINK).toContain('teralexi.pfx')
       expect(env.CSC_KEY_PASSWORD).toBe('win-secret')
-      expect(env.WIN_CSC_LINK).toContain('openfde.pfx')
+      expect(env.WIN_CSC_LINK).toContain('teralexi.pfx')
       expect(env.CSC_IDENTITY_AUTO_DISCOVERY).toBe('false')
     } finally {
       Object.defineProperty(process, 'platform', { value: originalPlatform })
@@ -435,7 +435,7 @@ AZURE_SIGNING_PUBLISHER_NAME = 'Example Dev'
     ).toEqual(['--config.win.signAndEditExecutable=false'])
     expect(
       buildElectronBuilderExtraArgs(
-        new Map([['WIN_CSC_LINK', 'C:\\certs\\openfde.pfx']]),
+        new Map([['WIN_CSC_LINK', 'C:\\certs\\teralexi.pfx']]),
         { buildingWin: true },
       ),
     ).toEqual([])
@@ -499,7 +499,7 @@ AZURE_SIGNING_PUBLISHER_NAME = 'Example Dev'
   it('describeCodeSigningEnv warns when .p12 password is missing', () => {
     const env = new Map([
       ['CSC_NAME', 'Example (TEAM123)'],
-      ['CSC_LINK', '/certs/openfde.p12'],
+      ['CSC_LINK', '/certs/teralexi.p12'],
     ])
     const text = messages(
       describeCodeSigningEnv(env, { buildingMac: true }).filter(

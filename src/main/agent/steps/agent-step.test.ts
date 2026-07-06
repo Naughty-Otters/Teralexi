@@ -145,7 +145,7 @@ describe('AgentStep.buildToolSet', () => {
 
   beforeEach(async () => {
     toolLoopScopesPassed.length = 0
-    sandboxRoot = await mkdtemp(join(tmpdir(), 'openfde-agent-step-'))
+    sandboxRoot = await mkdtemp(join(tmpdir(), 'teralexi-agent-step-'))
     await mkdir(join(sandboxRoot, 'output', 'toolLoop'), { recursive: true })
     flow = makeFlowContext(sandboxRoot)
     parentCtx = flow.createStepContext('toolLoop', 'Agentic Run')

@@ -205,10 +205,10 @@ describe('explore manifest builder', () => {
       results: [
         toolResult({
           toolName: 'web_search',
-          inputSummary: 'query=openfde agent',
+          inputSummary: 'query=teralexi agent',
           outputText: JSON.stringify({
             success: true,
-            query: 'openfde agent',
+            query: 'teralexi agent',
             resultCount: 2,
             results: [
               {
@@ -256,7 +256,7 @@ describe('explore manifest builder', () => {
     expect(manifest.resources).toHaveLength(3)
     expect(manifest.resources?.[0]).toMatchObject({
       kind: 'web_search',
-      query: 'openfde agent',
+      query: 'teralexi agent',
       topUrls: ['https://example.com/docs'],
     })
     expect(manifest.resources?.[1]).toMatchObject({

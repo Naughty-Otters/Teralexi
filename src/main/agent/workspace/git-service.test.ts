@@ -33,7 +33,7 @@ describe('git-service', () => {
   })
 
   it('resolvePathInsideWorkspace rejects path escape', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-resolve-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-resolve-'))
     const inside = resolvePathInsideWorkspace(dir, 'src/a.ts')
     expect(inside.ok).toBe(true)
     const escape = resolvePathInsideWorkspace(dir, '../outside')
@@ -41,7 +41,7 @@ describe('git-service', () => {
   })
 
   it('gitDiff returns error result instead of diff text on failure', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-norepo-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-norepo-'))
     const result = await gitDiff(dir, {})
     expect(result.ok).toBe(false)
     if (result.ok) return
@@ -49,7 +49,7 @@ describe('git-service', () => {
   })
 
   it('gitDiff includes untracked new files as all-additions diff', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-untracked-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-untracked-'))
     runGit(dir, ['init'])
     runGit(dir, ['config', 'user.email', 'test@example.com'])
     runGit(dir, ['config', 'user.name', 'Test'])
@@ -83,7 +83,7 @@ describe('git-service', () => {
   })
 
   it('listWorkspaceFiles lists immediate children with git status', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-list-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-list-'))
     runGit(dir, ['init'])
     runGit(dir, ['config', 'user.email', 'test@example.com'])
     runGit(dir, ['config', 'user.name', 'Test'])
@@ -105,7 +105,7 @@ describe('git-service', () => {
   })
 
   it('listWorkspaceFiles lists children of a subdirectory', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-subdir-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-subdir-'))
     runGit(dir, ['init'])
     mkdirSync(join(dir, 'src'), { recursive: true })
     writeFileSync(join(dir, 'src', 'index.ts'), 'export {}\n')
@@ -118,7 +118,7 @@ describe('git-service', () => {
   })
 
   it('gitStatus parses branch tracking and rename entries', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-status-parse-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-status-parse-'))
     runGit(dir, ['init'])
     runGit(dir, ['config', 'user.email', 'test@example.com'])
     runGit(dir, ['config', 'user.name', 'Test'])
@@ -135,7 +135,7 @@ describe('git-service', () => {
   })
 
   it('gitDiff staged mode returns staged diff', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-staged-diff-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-staged-diff-'))
     runGit(dir, ['init'])
     runGit(dir, ['config', 'user.email', 'test@example.com'])
     runGit(dir, ['config', 'user.name', 'Test'])
@@ -149,7 +149,7 @@ describe('git-service', () => {
   })
 
   it('gitLog returns parsed commits', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-log-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-log-'))
     runGit(dir, ['init'])
     runGit(dir, ['config', 'user.email', 'test@example.com'])
     runGit(dir, ['config', 'user.name', 'Test'])
@@ -164,7 +164,7 @@ describe('git-service', () => {
   })
 
   it('gitAdd and gitCommit succeed for tracked file', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-add-commit-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-add-commit-'))
     runGit(dir, ['init'])
     runGit(dir, ['config', 'user.email', 'test@example.com'])
     runGit(dir, ['config', 'user.name', 'Test'])
@@ -178,7 +178,7 @@ describe('git-service', () => {
   })
 
   it('gitPush reports error for repo without remote', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-push-no-remote-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-push-no-remote-'))
     runGit(dir, ['init'])
     runGit(dir, ['config', 'user.email', 'test@example.com'])
     runGit(dir, ['config', 'user.name', 'Test'])
@@ -195,19 +195,19 @@ describe('git-service', () => {
   })
 
   it('listWorkspaceFiles returns error for missing directory', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-list-missing-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-list-missing-'))
     const listed = await listWorkspaceFiles(dir, 'missing/subdir')
     expect(listed.ok).toBe(false)
   })
 
   it('resolvePathInsideWorkspace rejects empty path', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-empty-path-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-empty-path-'))
     const result = resolvePathInsideWorkspace(dir, '   ')
     expect(result.ok).toBe(false)
   })
 
   it('searchWorkspaceFiles ranks exact base name before broader matches', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-search-workspace-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-search-workspace-'))
     mkdirSync(join(dir, 'src', 'nested'), { recursive: true })
     writeFileSync(join(dir, 'src', 'file.ts'), 'export {}\n')
     writeFileSync(join(dir, 'src', 'nested', 'other-file.ts'), 'export {}\n')
@@ -220,7 +220,7 @@ describe('git-service', () => {
   })
 
   it('readWorkspaceFileContent reads text files and rejects binary', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-read-file-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-read-file-'))
     writeFileSync(join(dir, 'hello.txt'), 'hello\nworld\n')
     writeFileSync(join(dir, 'binary.bin'), Buffer.from([0, 1, 2, 3]))
 
@@ -238,7 +238,7 @@ describe('git-service', () => {
   })
 
   it('readWorkspaceFileContent rejects directories and missing files', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-read-edge-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-read-edge-'))
     mkdirSync(join(dir, 'nested'))
 
     const missing = await readWorkspaceFileContent(dir, 'missing.txt')
@@ -251,7 +251,7 @@ describe('git-service', () => {
   })
 
   it('readWorkspaceFileContent rejects files larger than editor limit', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-read-large-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-read-large-'))
     const bigPath = join(dir, 'big.txt')
     writeFileSync(bigPath, Buffer.alloc(2 * 1024 * 1024 + 1))
 
@@ -261,7 +261,7 @@ describe('git-service', () => {
   })
 
   it('writeWorkspaceFileContent rejects missing and non-file paths', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-write-edge-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-write-edge-'))
     mkdirSync(join(dir, 'nested'))
 
     const missing = await writeWorkspaceFileContent(dir, 'missing.txt', 'x')
@@ -274,13 +274,13 @@ describe('git-service', () => {
   })
 
   it('readWorkspaceFileContent rejects paths outside cwd', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-read-escape-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-read-escape-'))
     const result = await readWorkspaceFileContent(dir, '../../outside.txt')
     expect(result.ok).toBe(false)
   })
 
   it('writeWorkspaceFileContent rejects paths outside cwd', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-write-escape-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-write-escape-'))
     const result = await writeWorkspaceFileContent(
       dir,
       '../../outside.txt',
@@ -290,7 +290,7 @@ describe('git-service', () => {
   })
 
   it('writeWorkspaceFileContent updates file content', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-write-file-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-write-file-'))
     writeFileSync(join(dir, 'edit-me.ts'), 'const x = 1\n')
 
     const written = await writeWorkspaceFileContent(
@@ -306,7 +306,7 @@ describe('git-service', () => {
   })
 
   it('runWorkspaceTerminalCommand executes in workspace cwd', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-terminal-run-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-terminal-run-'))
     writeFileSync(join(dir, 'terminal-check.txt'), 'ok\n')
 
     const result = await runWorkspaceTerminalCommand(
@@ -320,7 +320,7 @@ describe('git-service', () => {
   })
 
   it('runWorkspaceTerminalCommand rejects paths outside workspace', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-git-terminal-escape-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-terminal-escape-'))
 
     const result = await runWorkspaceTerminalCommand(dir, 'pwd', '../')
     expect(result.ok).toBe(false)

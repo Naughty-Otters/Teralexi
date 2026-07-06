@@ -1,8 +1,8 @@
-export const OPENFDE_PROTOCOL = 'openfde'
-export const OPENFDE_OPEN_HOST = 'open'
-export const OPENFDE_CALLBACK_URL = `${OPENFDE_PROTOCOL}://${OPENFDE_OPEN_HOST}`
+export const TERALEXI_PROTOCOL = 'teralexi'
+export const TERALEXI_OPEN_HOST = 'open'
+export const TERALEXI_CALLBACK_URL = `${TERALEXI_PROTOCOL}://${TERALEXI_OPEN_HOST}`
 
-export type OpenFdeOpenAction = {
+export type TeralexiOpenAction = {
   type: 'open'
   accessToken: string
   refreshToken?: string
@@ -10,16 +10,16 @@ export type OpenFdeOpenAction = {
   scope?: string
 }
 
-export type OpenFdeProtocolAction = OpenFdeOpenAction
+export type TeralexiProtocolAction = TeralexiOpenAction
 
-/** Parse `openfde://open?token=<xxx>` (also accepts `access_token`). */
-export function parseOpenFdeProtocolUrl(rawUrl: string): OpenFdeProtocolAction | null {
+/** Parse `teralexi://open?token=<xxx>` (also accepts `access_token`). */
+export function parseTeralexiProtocolUrl(rawUrl: string): TeralexiProtocolAction | null {
   try {
     const url = new URL(rawUrl)
-    if (url.protocol !== `${OPENFDE_PROTOCOL}:`) return null
+    if (url.protocol !== `${TERALEXI_PROTOCOL}:`) return null
 
     const host = url.hostname || url.pathname.replace(/^\//, '').split('/')[0]
-    if (host !== OPENFDE_OPEN_HOST) return null
+    if (host !== TERALEXI_OPEN_HOST) return null
 
     const accessToken =
       url.searchParams.get('token')?.trim() ||

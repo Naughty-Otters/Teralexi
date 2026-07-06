@@ -153,7 +153,7 @@ export class CheerioSearchHandler extends SearchCrawlerHandler {
   }
 
   private async fetchInner(spec: SearchCrawlRequest): Promise<SearchPagePayload> {
-    const storageDir = await mkdtemp(join(tmpdir(), 'openfde-cheerio-'))
+    const storageDir = await mkdtemp(join(tmpdir(), 'teralexi-cheerio-'))
     const crawleeConfig = createEphemeralCrawleeConfig(storageDir)
     let payload!: SearchPagePayload
 

@@ -28,8 +28,8 @@ export interface AppLogger {
 
 type RuntimeKind = 'main' | 'renderer'
 
-const WRAPPED_FN = Symbol('openfde.logging.wrapped-fn')
-const INSTRUMENTED_TARGET = Symbol('openfde.logging.instrumented-target')
+const WRAPPED_FN = Symbol('teralexi.logging.wrapped-fn')
+const INSTRUMENTED_TARGET = Symbol('teralexi.logging.instrumented-target')
 const REDACTED_KEYS = [
   'authorization',
   'token',

@@ -4,12 +4,12 @@ import { homedir } from 'os'
 import { dirname, join, resolve } from 'path'
 import { CONFIG_PROPERTIES_FILENAME } from './system-prop-keys'
 
-export const openfde_HOME_DIRNAME = '.openfde'
-export const openfde_DB_FILENAME = 'openfde.db'
-export const openfde_MEMORY_VECTORS_DB_FILENAME = 'memory-vectors.db'
+export const TERALEXI_HOME_DIRNAME = '.teralexi'
+export const TERALEXI_DB_FILENAME = 'teralexi.db'
+export const TERALEXI_MEMORY_VECTORS_DB_FILENAME = 'memory-vectors.db'
 
-/** App-owned paths under `~/.openfde/` (not Electron `userData` as a whole). */
-const openfde_APP_DIRS = [
+/** App-owned paths under `~/.teralexi/` (not Electron `userData` as a whole). */
+const TERALEXI_APP_DIRS = [
   'config',
   'db',
   'logs',
@@ -23,8 +23,8 @@ const openfde_APP_DIRS = [
   'rules',
 ] as const
 
-/** Channel session/data dirs under `~/.openfde/channels/`. */
-export const openfde_CHANNEL_DATA_DIRS = [
+/** Channel session/data dirs under `~/.teralexi/channels/`. */
+export const TERALEXI_CHANNEL_DATA_DIRS = [
   'whatsapp-auth',
   'telegram-data',
   'discord-data',
@@ -32,162 +32,162 @@ export const openfde_CHANNEL_DATA_DIRS = [
   'slack-data',
 ] as const
 
-const openfde_DB_DIRNAME = 'db'
+const TERALEXI_DB_DIRNAME = 'db'
 
 let initialized = false
-let openfdeHomePath: string | null = null
+let teralexiHomePath: string | null = null
 
-function resolveopenfdeHomePath(): string {
-  return join(homedir(), openfde_HOME_DIRNAME)
+function resolveTeralexiHomePath(): string {
+  return join(homedir(), TERALEXI_HOME_DIRNAME)
 }
 
-export function getopenfdeHome(): string {
-  if (!openfdeHomePath) {
-    openfdeHomePath = resolveopenfdeHomePath()
+export function getTeralexiHome(): string {
+  if (!teralexiHomePath) {
+    teralexiHomePath = resolveTeralexiHomePath()
   }
   if (!initialized) {
-    initializeopenfdeHome(getElectronApp())
+    initializeTeralexiHome(getElectronApp())
   }
-  return openfdeHomePath
+  return teralexiHomePath
 }
 
-export function getopenfdeConfigDir(): string {
-  const dir = join(getopenfdeHome(), 'config')
+export function getTeralexiConfigDir(): string {
+  const dir = join(getTeralexiHome(), 'config')
   ensureDir(dir)
   return dir
 }
 
-export function getopenfdeConfigPropertiesPath(): string {
-  return join(getopenfdeConfigDir(), CONFIG_PROPERTIES_FILENAME)
+export function getTeralexiConfigPropertiesPath(): string {
+  return join(getTeralexiConfigDir(), CONFIG_PROPERTIES_FILENAME)
 }
 
-export function getopenfdeDbDir(): string {
-  const dir = join(getopenfdeHome(), openfde_DB_DIRNAME)
+export function getTeralexiDbDir(): string {
+  const dir = join(getTeralexiHome(), TERALEXI_DB_DIRNAME)
   ensureDir(dir)
   return dir
 }
 
-export function getopenfdeDbPath(): string {
-  const path = join(getopenfdeDbDir(), openfde_DB_FILENAME)
+export function getTeralexiDbPath(): string {
+  const path = join(getTeralexiDbDir(), TERALEXI_DB_FILENAME)
   ensureParentDirForFile(path)
   return path
 }
 
-export function getopenfdeWorkspacePath(): string {
-  const dir = join(getopenfdeHome(), 'workspace')
+export function getTeralexiWorkspacePath(): string {
+  const dir = join(getTeralexiHome(), 'workspace')
   ensureDir(dir)
   return dir
 }
 
-/** `~/.openfde/channels` — WhatsApp auth, Telegram/Discord/Slack/WeChat data. */
-export function getopenfdeChannelsDir(): string {
-  const dir = join(getopenfdeHome(), 'channels')
+/** `~/.teralexi/channels` — WhatsApp auth, Telegram/Discord/Slack/WeChat data. */
+export function getTeralexiChannelsDir(): string {
+  const dir = join(getTeralexiHome(), 'channels')
   ensureDir(dir)
   return dir
 }
 
-function getopenfdeChannelDataDir(
-  name: (typeof openfde_CHANNEL_DATA_DIRS)[number],
+function getTeralexiChannelDataDir(
+  name: (typeof TERALEXI_CHANNEL_DATA_DIRS)[number],
 ): string {
-  const dir = join(getopenfdeChannelsDir(), name)
+  const dir = join(getTeralexiChannelsDir(), name)
   ensureDir(dir)
   return dir
 }
 
 /** Per-run and per-conversation agent sandboxes (`<root>/skills`, `output/`, etc.). */
-export function getopenfdeSandboxDir(): string {
-  const dir = join(getopenfdeWorkspacePath(), 'sandbox')
+export function getTeralexiSandboxDir(): string {
+  const dir = join(getTeralexiWorkspacePath(), 'sandbox')
   ensureDir(dir)
   return dir
 }
 
-export function getopenfdeAccountsDir(): string {
-  const dir = join(getopenfdeHome(), 'accounts')
+export function getTeralexiAccountsDir(): string {
+  const dir = join(getTeralexiHome(), 'accounts')
   ensureDir(dir)
   return dir
 }
 
-export function getopenfdeWhatsAppAuthDir(): string {
-  return getopenfdeChannelDataDir('whatsapp-auth')
+export function getTeralexiWhatsAppAuthDir(): string {
+  return getTeralexiChannelDataDir('whatsapp-auth')
 }
 
-export function getopenfdeTelegramDataDir(): string {
-  return getopenfdeChannelDataDir('telegram-data')
+export function getTeralexiTelegramDataDir(): string {
+  return getTeralexiChannelDataDir('telegram-data')
 }
 
-export function getopenfdeDiscordDataDir(): string {
-  return getopenfdeChannelDataDir('discord-data')
+export function getTeralexiDiscordDataDir(): string {
+  return getTeralexiChannelDataDir('discord-data')
 }
 
-export function getopenfdeWeChatDataDir(): string {
-  return getopenfdeChannelDataDir('wechat-data')
+export function getTeralexiWeChatDataDir(): string {
+  return getTeralexiChannelDataDir('wechat-data')
 }
 
-export function getopenfdeSlackDataDir(): string {
-  return getopenfdeChannelDataDir('slack-data')
+export function getTeralexiSlackDataDir(): string {
+  return getTeralexiChannelDataDir('slack-data')
 }
 
-export function getopenfdeSkillsDir(): string {
-  const dir = join(getopenfdeHome(), 'skills')
+export function getTeralexiSkillsDir(): string {
+  const dir = join(getTeralexiHome(), 'skills')
   ensureDir(dir)
   return dir
 }
 
-/** User overrides for shared tools (`~/.openfde/toolSet`). */
-export function getopenfdeToolSetDir(): string {
-  const dir = join(getopenfdeHome(), 'toolSet')
+/** User overrides for shared tools (`~/.teralexi/toolSet`). */
+export function getTeralexiToolSetDir(): string {
+  const dir = join(getTeralexiHome(), 'toolSet')
   ensureDir(dir)
   return dir
 }
 
-/** User-defined workflow folders (`~/.openfde/workflows`). */
-export function getopenfdeWorkflowsDir(): string {
-  const dir = join(getopenfdeHome(), 'workflows')
+/** User-defined workflow folders (`~/.teralexi/workflows`). */
+export function getTeralexiWorkflowsDir(): string {
+  const dir = join(getTeralexiHome(), 'workflows')
   ensureDir(dir)
   return dir
 }
 
-/** User project rules (`~/.openfde/rules`). Workspace rules live in `<project>/.openfde/rules/`. */
-export function getopenfdeRulesDir(): string {
-  const dir = join(getopenfdeHome(), 'rules')
+/** User project rules (`~/.teralexi/rules`). Workspace rules live in `<project>/.teralexi/rules/`. */
+export function getTeralexiRulesDir(): string {
+  const dir = join(getTeralexiHome(), 'rules')
   ensureDir(dir)
   return dir
 }
 
 export function getWorkflowSourceDir(workflowId: string): string {
-  const dir = join(getopenfdeWorkflowsDir(), workflowId, 'source')
+  const dir = join(getTeralexiWorkflowsDir(), workflowId, 'source')
   ensureDir(dir)
   return dir
 }
 
 export function getWorkflowSandboxDir(workflowId: string, runId: string): string {
-  const dir = join(getopenfdeWorkflowsDir(), workflowId, 'runs', runId)
+  const dir = join(getTeralexiWorkflowsDir(), workflowId, 'runs', runId)
   ensureDir(dir)
   return dir
 }
 
-export function getopenfdeLogsDir(): string {
-  const dir = join(getopenfdeHome(), 'logs')
+export function getTeralexiLogsDir(): string {
+  const dir = join(getTeralexiHome(), 'logs')
   ensureDir(dir)
   return dir
 }
 
-export function getopenfdeAgentLogsDir(): string {
-  const dir = join(getopenfdeLogsDir(), 'agents')
+export function getTeralexiAgentLogsDir(): string {
+  const dir = join(getTeralexiLogsDir(), 'agents')
   ensureDir(dir)
   return dir
 }
 
 /** Root for per-agent memory (`block`, `session`, `persona` under each agent id). */
-export function getopenfdeMemoryDir(): string {
-  const dir = join(getopenfdeHome(), 'memory')
+export function getTeralexiMemoryDir(): string {
+  const dir = join(getTeralexiHome(), 'memory')
   ensureDir(dir)
   return dir
 }
 
-/** SQLite database for vector memory records under `~/.openfde/memory/`. */
-export function getopenfdeMemoryVectorsDbPath(): string {
-  const path = join(getopenfdeMemoryDir(), openfde_MEMORY_VECTORS_DB_FILENAME)
+/** SQLite database for vector memory records under `~/.teralexi/memory/`. */
+export function getTeralexiMemoryVectorsDbPath(): string {
+  const path = join(getTeralexiMemoryDir(), TERALEXI_MEMORY_VECTORS_DB_FILENAME)
   ensureParentDirForFile(path)
   return path
 }
@@ -207,9 +207,9 @@ function sanitizeAgentIdForPath(agentId: string): string {
   return cleaned || 'unknown-agent'
 }
 
-/** `~/.openfde/memory/<agent-id>/{block,session}` (persona is global under `users/`). */
+/** `~/.teralexi/memory/<agent-id>/{block,session}` (persona is global under `users/`). */
 export function getAgentMemoryDirs(agentId: string): AgentMemoryDirs {
-  const root = join(getopenfdeMemoryDir(), sanitizeAgentIdForPath(agentId))
+  const root = join(getTeralexiMemoryDir(), sanitizeAgentIdForPath(agentId))
   const block = join(root, 'block')
   const session = join(root, 'session')
   const persona = join(root, 'persona')
@@ -229,11 +229,11 @@ function sanitizeUserIdForMemoryPath(userId: string): string {
 
 /**
  * Global persona profile for a user — all agents and all conversations.
- * `~/.openfde/memory/users/<user-id>/persona/profile.json`
+ * `~/.teralexi/memory/users/<user-id>/persona/profile.json`
  */
 export function resolveGlobalPersonaSnapshotPath(userId: string): string {
   return join(
-    getopenfdeMemoryDir(),
+    getTeralexiMemoryDir(),
     'users',
     sanitizeUserIdForMemoryPath(userId),
     'persona',
@@ -251,7 +251,7 @@ export function getGlobalPersonaSnapshotPath(userId: string): string {
 /** Read-only path for per-agent persona (`memory/<agent-id>/persona/profile.json`). */
 export function resolveAgentPersonaSnapshotPath(agentId: string): string {
   return join(
-    getopenfdeMemoryDir(),
+    getTeralexiMemoryDir(),
     sanitizeAgentIdForPath(agentId),
     'persona',
     'profile.json',
@@ -285,38 +285,38 @@ export function ensureParentDirForFile(filePath: string): void {
 }
 
 /**
- * Creates `~/.openfde/` and standard subdirectories on first use.
+ * Creates `~/.teralexi/` and standard subdirectories on first use.
  * Electron `userData` stays at the default OS location for Chromium internals.
  */
-export function initializeopenfdeHome(app?: ElectronAppLike | null): string {
-  const home = resolve(resolveopenfdeHomePath())
+export function initializeTeralexiHome(app?: ElectronAppLike | null): string {
+  const home = resolve(resolveTeralexiHomePath())
 
   if (initialized) {
-    return openfdeHomePath ?? home
+    return teralexiHomePath ?? home
   }
 
-  openfdeHomePath = home
+  teralexiHomePath = home
   initialized = true
 
   ensureDir(home)
-  for (const dir of openfde_APP_DIRS) {
+  for (const dir of TERALEXI_APP_DIRS) {
     ensureDir(join(home, dir))
   }
   ensureDir(join(home, 'workspace', 'sandbox'))
 
-  for (const name of openfde_CHANNEL_DATA_DIRS) {
+  for (const name of TERALEXI_CHANNEL_DATA_DIRS) {
     ensureDir(join(home, 'channels', name))
   }
 
   return home
 }
 
-export function isopenfdeHomeInitialized(): boolean {
+export function isTeralexiHomeInitialized(): boolean {
   return initialized
 }
 
 /** Default Electron userData path for a given app name. */
-export function guessDefaultElectronUserData(appName = 'openfde'): string {
+export function guessDefaultElectronUserData(appName = 'teralexi'): string {
   const platform = process.platform
   if (platform === 'darwin') {
     return join(homedir(), 'Library', 'Application Support', appName)

@@ -32,8 +32,8 @@ export type HookInvocationContext = {
 }
 
 const HOOK_PATHS = [
-  join(homedir(), '.openfde', 'hooks.json'),
-  join(process.cwd(), '.openfde', 'hooks.json'),
+  join(homedir(), '.teralexi', 'hooks.json'),
+  join(process.cwd(), '.teralexi', 'hooks.json'),
 ]
 
 let cachedConfig: UserHooksConfig | null | undefined

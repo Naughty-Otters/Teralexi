@@ -109,7 +109,7 @@ async function extractZipToSkillFolder(
   zipBuffer: Buffer,
   dest: string,
 ): Promise<void> {
-  const tempDir = await mkdtemp(join(tmpdir(), 'openfde-clawhub-'))
+  const tempDir = await mkdtemp(join(tmpdir(), 'teralexi-clawhub-'))
   try {
     const zip = new AdmZip(zipBuffer)
     zip.extractAllTo(tempDir, true)

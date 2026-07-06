@@ -1,7 +1,7 @@
 /**
  * Collect-form HITL data parts in client UI message threads.
  */
-import type { TextPart } from '@openfde-ai'
+import type { TextPart } from '@teralexi-ai'
 import type { ClientUiMessage } from '../utils/client-ui-parse'
 import { createLogger } from '@main/logger'
 

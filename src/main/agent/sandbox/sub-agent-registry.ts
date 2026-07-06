@@ -1,10 +1,10 @@
 /**
  * Isolated sandbox roots for sub-agent runs:
- *   ~/.openfde/workspace/sandbox/sub-agents/sub-agent-<agent>-<suffix>/
+ *   ~/.teralexi/workspace/sandbox/sub-agents/sub-agent-<agent>-<suffix>/
  */
 
 import { join } from 'node:path'
-import { getopenfdeSandboxDir } from '@config/openfde-home'
+import { getTeralexiSandboxDir } from '@config/teralexi-home'
 import { Sandbox } from './sandbox-impl'
 import type { SandboxPlanningAccess } from './types'
 
@@ -36,7 +36,7 @@ export function resolveSubAgentSandboxRoot(_agentId: string, runId: string): str
   if (!safeRunId) {
     throw new Error('Sub-agent sandbox requires a non-empty runId')
   }
-  return join(getopenfdeSandboxDir(), 'sub-agents', safeRunId)
+  return join(getTeralexiSandboxDir(), 'sub-agents', safeRunId)
 }
 
 export function isSubAgentSandboxRoot(path: string): boolean {

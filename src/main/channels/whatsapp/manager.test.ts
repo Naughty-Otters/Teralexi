@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('electron', () => ({ app: {} }))
 vi.mock('fs/promises', () => ({ mkdir: vi.fn(), rm: vi.fn() }))
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeWhatsAppAuthDir: vi.fn(() => '/wa-auth'),
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiWhatsAppAuthDir: vi.fn(() => '/wa-auth'),
 }))
 vi.mock('@config/system-prop', () => ({
   getSystemPropValue: vi.fn((_k: string, def?: string) => def ?? ''),

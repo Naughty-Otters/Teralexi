@@ -74,7 +74,7 @@ export async function lintWorkspaceFile(
   }
 
   const absPath = resolveUserProjectPath(resolved.cwd, rel)
-  const tempDir = mkdtempSync(join(tmpdir(), 'openfde-eslint-'))
+  const tempDir = mkdtempSync(join(tmpdir(), 'teralexi-eslint-'))
   const tempFile = join(tempDir, rel.split('/').pop() ?? 'temp.ts')
 
   try {

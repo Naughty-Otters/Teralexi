@@ -289,7 +289,7 @@ describe('simple injectors', () => {
         expect.objectContaining({
           role: 'assistant',
           content: 'plan message',
-          openfdeInjectorMeta: expect.objectContaining({
+          teralexiInjectorMeta: expect.objectContaining({
             injectorId: 'plan-mode',
           }),
         }),

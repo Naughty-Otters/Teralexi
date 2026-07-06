@@ -20,11 +20,11 @@ import {
 } from 'docx'
 import path from 'path'
 import fs from 'fs'
-import type { SkillTool } from '@openfde/skill-sdk'
+import type { SkillTool } from '@teralexi/skill-sdk'
 import {
   getOutputResultsRelPrefix,
   requireActiveSandbox,
-} from '@openfde/skill-sdk'
+} from '@teralexi/skill-sdk'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -235,7 +235,7 @@ export const createWordDoc: SkillTool = {
 
     // ── assemble and write ───────────────────────────────────────────────────
     const doc = new Document({
-      creator: author || 'OpenFDE',
+      creator: author || 'Teralexi',
       title: docTitle,
       sections: [
         {

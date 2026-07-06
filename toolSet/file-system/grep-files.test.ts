@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
-  OPENFDE_AGENT_WORKSPACE_PATH_ENV,
+  TERALEXI_AGENT_SANDBOX_ROOT_ENV,
+  TERALEXI_AGENT_WORKSPACE_PATH_ENV,
   SANDBOX_ROOT_GLOBAL_KEY,
   WORKSPACE_PATH_GLOBAL_KEY,
 } from '../sandbox-paths'
@@ -24,10 +24,10 @@ function setSandboxRoot(root: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (root) {
     g[SANDBOX_ROOT_GLOBAL_KEY] = root
-    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = root
+    process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV] = root
   } else {
     delete g[SANDBOX_ROOT_GLOBAL_KEY]
-    delete process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]
+    delete process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV]
   }
 }
 
@@ -35,10 +35,10 @@ function setWorkspaceRoot(root: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (root) {
     g[WORKSPACE_PATH_GLOBAL_KEY] = root
-    process.env[OPENFDE_AGENT_WORKSPACE_PATH_ENV] = root
+    process.env[TERALEXI_AGENT_WORKSPACE_PATH_ENV] = root
   } else {
     delete g[WORKSPACE_PATH_GLOBAL_KEY]
-    delete process.env[OPENFDE_AGENT_WORKSPACE_PATH_ENV]
+    delete process.env[TERALEXI_AGENT_WORKSPACE_PATH_ENV]
   }
 }
 
@@ -48,8 +48,8 @@ describe('grep-files tool', () => {
 
   beforeEach(async () => {
     runRipgrepJsonMock.mockReset()
-    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'openfde-grep-sb-'))
-    workspaceRoot = await mkdtemp(path.join(tmpdir(), 'openfde-grep-ws-'))
+    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'teralexi-grep-sb-'))
+    workspaceRoot = await mkdtemp(path.join(tmpdir(), 'teralexi-grep-ws-'))
     await mkdir(path.join(workspaceRoot, 'src'), { recursive: true })
     await writeFile(path.join(workspaceRoot, 'src', 'a.ts'), 'const needle = 1\n', 'utf-8')
     await writeFile(path.join(workspaceRoot, 'src', 'b.txt'), 'no match\n', 'utf-8')

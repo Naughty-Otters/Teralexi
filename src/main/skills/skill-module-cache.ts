@@ -37,7 +37,7 @@ function resolveFingerprintInputPath(key: string): string {
 }
 
 export function skillModuleCacheDir(): string {
-  const override = process.env.OPENFDE_SKILL_MODULE_CACHE_DIR?.trim()
+  const override = process.env.TERALEXI_SKILL_MODULE_CACHE_DIR?.trim()
   if (override) return override
   if (isPackagedApp()) {
     return join(resolveAppRoot(), SKILL_MODULE.PACKAGED_CACHE_DIR)
@@ -173,7 +173,7 @@ export function resolveEsbuildForSkillCompile(): typeof import('esbuild') {
 /**
  * Load a cached CJS bundle using the main-process `require` so nested imports
  * resolve against the app (asar node_modules, Electron builtins). Plain
- * `require(cacheFile)` resolves from ~/.openfde and fails when packaged.
+ * `require(cacheFile)` resolves from ~/.teralexi and fails when packaged.
  */
 export function loadCachedCommonJsModule(
   filepath: string,

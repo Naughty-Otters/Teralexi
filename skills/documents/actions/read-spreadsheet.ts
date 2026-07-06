@@ -5,11 +5,11 @@
 
 import ExcelJS from 'exceljs'
 import path from 'path'
-import type { SkillTool } from '@openfde/skill-sdk'
+import type { SkillTool } from '@teralexi/skill-sdk'
 import {
   requireActiveSandbox,
   resolvePathAllowingOutside,
-} from '@openfde/skill-sdk'
+} from '@teralexi/skill-sdk'
 
 export const readSpreadsheet: SkillTool = {
   name: 'read_spreadsheet',

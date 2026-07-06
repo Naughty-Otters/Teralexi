@@ -7,7 +7,7 @@
  * dropping old turns. Keeps recent rounds verbatim. Best-effort: any failure
  * returns the original messages unchanged so the run is never blocked.
  */
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import {
   extractPathsFromPatchText,
   parseToolFileChanges,

@@ -1,6 +1,6 @@
 # Skill development guide
 
-Step-by-step tutorial for building a **openfde agent skill**. Skills are folders of markdown (and optional scripts) that tell the agent **what to do**, **which tools to use**, and **how to plan multi-step work**.
+Step-by-step tutorial for building a **teralexi agent skill**. Skills are folders of markdown (and optional scripts) that tell the agent **what to do**, **which tools to use**, and **how to plan multi-step work**.
 
 ---
 
@@ -10,11 +10,11 @@ Step-by-step tutorial for building a **openfde agent skill**. Skills are folders
 |----------|---------|
 | `skills/` in the repo | Bundled skill folders shipped with the app (`default`, …) |
 | `toolSet/` in the repo | Bundled shared tools (sibling of `skills/`, not inside it) |
-| `~/.openfde/skills/` | **Your skills** — install here; same folder name **overrides** bundled skills |
+| `~/.teralexi/skills/` | **Your skills** — install here; same folder name **overrides** bundled skills |
 
-> **Note:** The user install path is `~/.openfde/skills/` (plural), not `~/.openfde/skill`.
+> **Note:** The user install path is `~/.teralexi/skills/` (plural), not `~/.teralexi/skill`.
 
-A skill is **loadable** when its folder contains at least `skill.md`. openfde also expects valid metadata in `properties.md` (or YAML frontmatter inside `skill.md`).
+A skill is **loadable** when its folder contains at least `skill.md`. teralexi also expects valid metadata in `properties.md` (or YAML frontmatter inside `skill.md`).
 
 **Reserved folder names** under `skills/` (do not use as skill ids): `common`, `node_modules`, `__pycache__`, or any name starting with `.`.
 
@@ -25,18 +25,18 @@ A skill is **loadable** when its folder contains at least `skill.md`. openfde al
 | Default assistant | `skills/default/` | Minimal skill, tools list, examples |
 | GitHub | `skills/github/` | `git_*` and `github_*` tools in `actions/` (not global toolSet) |
 | Google Workspace | `skills/google-workspace/` | Gmail, Calendar, Drive via Google OAuth; `google_*` tools live in `actions/` (not global toolSet) |
-| One-step HITL test | `~/.openfde/skills/one-step-hitl-test/` | Single todo, optional form, one script run |
-| Multi-step quote test | `~/.openfde/skills/multi-step-quote-test/` | Workflow table, forms, refs, Python sort chain |
+| One-step HITL test | `~/.teralexi/skills/one-step-hitl-test/` | Single todo, optional form, one script run |
+| Multi-step quote test | `~/.teralexi/skills/multi-step-quote-test/` | Workflow table, forms, refs, Python sort chain |
 
 ---
 
 ## Step 1 — Create the skill folder
 
-Pick a **folder id** (lowercase, hyphens, no spaces). This id is the skill key everywhere in openfde.
+Pick a **folder id** (lowercase, hyphens, no spaces). This id is the skill key everywhere in teralexi.
 
 ```bash
-mkdir -p ~/.openfde/skills/my-skill
-cd ~/.openfde/skills/my-skill
+mkdir -p ~/.teralexi/skills/my-skill
+cd ~/.teralexi/skills/my-skill
 ```
 
 Optional subfolders (defaults shown; override via `refs_dir`, `scripts_dir`, `form_dir` in `properties.md`):
@@ -51,7 +51,7 @@ my-skill/
 └── actions/           # advanced: custom TypeScript tools (optional)
 ```
 
-Restart the app or reload skills after adding a new folder so openfde picks it up.
+Restart the app or reload skills after adding a new folder so teralexi picks it up.
 
 ---
 
@@ -96,12 +96,12 @@ Persistent conventions live outside skills:
 
 | Location | Scope |
 |----------|--------|
-| `~/.openfde/rules/*.md` | Global — all projects |
-| `<workspace>/.openfde/rules/*.md` | Project-specific |
+| `~/.teralexi/rules/*.md` | Global — all projects |
+| `<workspace>/.teralexi/rules/*.md` | Project-specific |
 
 Rules are injected into every agent run (after skill instructions). Use for commit style, test commands, or team standards — keep each file focused and under ~50 lines.
 
-Example in this repo: [`.openfde/rules/coding-standards.md`](../.openfde/rules/coding-standards.md).
+Example in this repo: [`.teralexi/rules/coding-standards.md`](../.teralexi/rules/coding-standards.md).
 
 ### Bundled coding sub-skills
 
@@ -113,7 +113,7 @@ Example in this repo: [`.openfde/rules/coding-standards.md`](../.openfde/rules/c
 
 Copy patterns from `skills/coding/refs/` for plan modes, sub-agents, and procedural contracts.
 
-If `properties.md` is missing, openfde falls back to defaults (`gemma4` / `ollama`) or frontmatter in `skill.md`.
+If `properties.md` is missing, teralexi falls back to defaults (`gemma4` / `ollama`) or frontmatter in `skill.md`.
 
 Invalid segments are skipped; if none remain valid for a key, that category falls back to its default folder.
 
@@ -149,7 +149,7 @@ Shared path rules live in the toolSet (`WORKSPACE_PATH_HINT` / shell description
 
 ## Step 3 — Write `skill.md` (core instructions)
 
-`skill.md` uses `## Section` headings. openfde parses these sections:
+`skill.md` uses `## Section` headings. teralexi parses these sections:
 
 | Section | Required | Used for |
 |---------|----------|----------|
@@ -199,7 +199,7 @@ Brief description of what the agent should do first.
 3. **Execution discipline** — State sandbox rules explicitly (paths under `output/`, script tools only, no raw shell one-liners).
 4. **Link attachments** — Use relative links: `[form/my.form.md](form/my.form.md)`, `refs/format.md`, `scripts/run.sh`.
 
-See `skills/default/skill.md` for a small example and `~/.openfde/skills/one-step-hitl-test/skill.md` for a single-todo table.
+See `skills/default/skill.md` for a small example and `~/.teralexi/skills/one-step-hitl-test/skill.md` for a single-todo table.
 
 ---
 
@@ -335,7 +335,7 @@ For skills with ordered todos, add a table in `## Instructions` like this:
 
 This table is the **single source of truth** for planning. The **Import** column tells the planner what to put on each todo’s `reference_doc` and `reference_scripts`.
 
-Full example: `~/.openfde/skills/multi-step-quote-test/skill.md` → **Workflow overview (canonical chain)**.
+Full example: `~/.teralexi/skills/multi-step-quote-test/skill.md` → **Workflow overview (canonical chain)**.
 
 ---
 
@@ -343,9 +343,9 @@ Full example: `~/.openfde/skills/multi-step-quote-test/skill.md` → **Workflow 
 
 ### 10a. Verify loading
 
-1. Place the folder under `~/.openfde/skills/<skill-id>/`.
+1. Place the folder under `~/.teralexi/skills/<skill-id>/`.
 2. Ensure `skill.md` + valid `properties.md` exist.
-3. Open openfde → select the skill in the UI (description should match).
+3. Open teralexi → select the skill in the UI (description should match).
 4. Optional: Settings → inspect skill attachments (`refs/`, `scripts/`, `form/`).
 
 ### 10b. Smoke-test in chat
@@ -383,7 +383,7 @@ Common fixes:
 
 ## Step 11 — Checklist before sharing
 
-- [ ] Folder id is lowercase-with-hyphens under `~/.openfde/skills/`
+- [ ] Folder id is lowercase-with-hyphens under `~/.teralexi/skills/`
 - [ ] `properties.md` has `name`, `description`, `model`, `provider`
 - [ ] `skill.md` has `## Instructions` and `## Tools`
 - [ ] Trigger phrases documented
@@ -400,7 +400,7 @@ Common fixes:
 Fastest path for a new skill:
 
 ```bash
-cp -R ~/.openfde/skills/one-step-hitl-test ~/.openfde/skills/my-new-skill
+cp -R ~/.teralexi/skills/one-step-hitl-test ~/.teralexi/skills/my-new-skill
 ```
 
 Then edit:
@@ -412,7 +412,7 @@ Then edit:
 
 ---
 
-## How openfde uses your files (runtime map)
+## How teralexi uses your files (runtime map)
 
 ```
 User message + selected skill
@@ -437,5 +437,5 @@ User message + selected skill
 | Skill loader | `src/main/skills/skills-directory-loader.ts` |
 | Markdown sections | `src/main/skills/skill-markdown.ts`, `llm-constants.ts` |
 | Attachments API | `src/main/skills/skill-attachments.ts` |
-| Bundled tools | `toolSet/` (repo root) and `~/.openfde/toolSet/` |
+| Bundled tools | `toolSet/` (repo root) and `~/.teralexi/toolSet/` |
 | Planning prompt hints | `src/main/agent/expr/planning-expr.ts` |

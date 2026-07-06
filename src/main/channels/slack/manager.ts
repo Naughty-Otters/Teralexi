@@ -7,7 +7,7 @@ import { createLogger } from '@main/logger'
 const SLACK_BOT_TOKEN_KEY = 'settings.slack.botToken'
 const SLACK_APP_TOKEN_KEY = 'settings.slack.appToken'
 const SLACK_BOT_NAME_KEY = 'settings.slack.botName'
-const DEFAULT_BOT_NAME = 'OpenFDE Slack Bot'
+const DEFAULT_BOT_NAME = 'Teralexi Slack Bot'
 const DEFAULT_SLACK_AGENT_ID = 'skill:default'
 const CHANNEL_ID = 'slack'
 const log = createLogger('channels.slack.manager')

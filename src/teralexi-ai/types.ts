@@ -1,5 +1,5 @@
 /**
- * AI SDK types — re-exported for app code. Import from `@openfde-ai`, not `ai`.
+ * AI SDK types — re-exported for app code. Import from `@teralexi-ai`, not `ai`.
  */
 export type {
   ChatTransport,

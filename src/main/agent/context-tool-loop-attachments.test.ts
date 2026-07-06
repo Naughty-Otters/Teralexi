@@ -24,7 +24,7 @@ function makeFlowWithSandbox(root: string): AgentFlowContext {
 
 describe('mergeToolLoopAttachmentsIntoParent', () => {
   it('merges standalone child tool-loop files onto the visible parent step', () => {
-    const root = mkdtempSync(join(tmpdir(), 'openfde-toolloop-att-'))
+    const root = mkdtempSync(join(tmpdir(), 'teralexi-toolloop-att-'))
     const childScope = 'toolLoop:child-run'
     const childResults = join(root, 'output', 'toolLoop', 'child-run', 'results')
     mkdirSync(childResults, { recursive: true })
@@ -60,7 +60,7 @@ describe('mergeToolLoopAttachmentsIntoParent', () => {
 
 describe('emitStepProgress publish routing', () => {
   it('forwards per-task tool loop progress to the batch parent for live UI', () => {
-    const flow = makeFlowWithSandbox(mkdtempSync(join(tmpdir(), 'openfde-toolloop-ui-')))
+    const flow = makeFlowWithSandbox(mkdtempSync(join(tmpdir(), 'teralexi-toolloop-ui-')))
     const onStepProgress = vi.fn()
     flow.opts.onStepProgress = onStepProgress
 

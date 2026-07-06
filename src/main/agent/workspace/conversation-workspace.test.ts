@@ -32,7 +32,7 @@ describe('validateWorkspaceDirectoryPath', () => {
   })
 
   it('accepts an existing directory', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-ws-valid-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-ws-valid-'))
     const result = validateWorkspaceDirectoryPath(dir)
     expect(result).toEqual({ ok: true, path: dir })
   })
@@ -43,7 +43,7 @@ describe('validateWorkspaceDirectoryPath', () => {
       ok: false,
     })
 
-    dir = mkdtempSync(join(tmpdir(), 'openfde-ws-file-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-ws-file-'))
     const file = join(dir, 'not-a-dir.txt')
     mkdirSync(dir, { recursive: true })
     writeFileSync(file, 'x')
@@ -61,7 +61,7 @@ describe('setWorkspacePath / clearWorkspacePath', () => {
   })
 
   it('persists validated path and builds stack', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-ws-set-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-ws-set-'))
     const result = setWorkspacePath('conv-a', dir)
     expect(result.ok).toBe(true)
     if (!result.ok) return
@@ -107,7 +107,7 @@ describe('setWorkspacePath / clearWorkspacePath', () => {
   })
 
   it('getWorkspaceStack includes workspace entry when configured', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-ws-stack-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-ws-stack-'))
     setWorkspacePath('conv-stack-ws', dir)
     expect(getWorkspaceStack('conv-stack-ws')).toEqual([
       { type: 'sandbox' },

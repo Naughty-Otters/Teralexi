@@ -7,7 +7,7 @@ import { createLogger } from '@main/logger'
 
 const DISCORD_BOT_TOKEN_KEY = 'settings.discord.botToken'
 const DISCORD_BOT_NAME_KEY = 'settings.discord.botName'
-const DEFAULT_BOT_NAME = 'OpenFDE Discord Bot'
+const DEFAULT_BOT_NAME = 'Teralexi Discord Bot'
 const DEFAULT_DISCORD_AGENT_ID = 'skill:default'
 const CHANNEL_ID = 'discord'
 const log = createLogger('channels.discord.manager')

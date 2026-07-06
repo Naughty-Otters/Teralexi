@@ -1,4 +1,4 @@
-import { isToolOrDynamicToolUIPart, type UIMessage } from '@openfde-ai'
+import { isToolOrDynamicToolUIPart, type UIMessage } from '@teralexi-ai'
 
 export function flattenAssistantPartsToContent(msg: UIMessage): string {
   const chunks: string[] = []

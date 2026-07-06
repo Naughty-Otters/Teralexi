@@ -33,7 +33,7 @@ export function buildSkillSystemPropertiesInstructionsBlock(
   return [
     '### Skill configuration properties',
     '',
-    'Persisted in ~/.openfde/config/config.properties and managed in agent **Configurations** — do not ask users to paste secrets in chat.',
+    'Persisted in ~/.teralexi/config/config.properties and managed in agent **Configurations** — do not ask users to paste secrets in chat.',
     '',
     ...lines,
   ].join('\n')

@@ -2,7 +2,7 @@ import type { WebSearchResult } from './web-search-engines'
 
 const OPENALEX_API = 'https://api.openalex.org/works'
 const OPENALEX_USER_AGENT =
-  'OpenFDE/1.0 (mailto:support@openfde.local; academic search fallback)'
+  'Teralexi/1.0 (mailto:support@teralexi.local; academic search fallback)'
 
 type OpenAlexWork = {
   id?: string

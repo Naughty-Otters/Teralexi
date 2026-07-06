@@ -7,7 +7,7 @@
         <input
           class="sp-input"
           :value="state.botName"
-          placeholder="OpenFDE Telegram Bot"
+          placeholder="Teralexi Telegram Bot"
           @blur="saveBotName"
         />
       </div>
@@ -145,7 +145,7 @@ type TelegramChatMessage = {
 }
 
 const state = ref<TelegramState>({
-  botName: 'OpenFDE Telegram Bot',
+  botName: 'Teralexi Telegram Bot',
   botToken: '',
   botUsername: null,
   status: 'idle',

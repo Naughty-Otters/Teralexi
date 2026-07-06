@@ -1,6 +1,6 @@
 # LLM Event Pipeline
 
-Event-driven LLM processing for the openfde **main process** agent pipeline. Inspired by [OpenCode](https://github.com/anomalyco/opencode)'s `SessionProcessor` + `LLMEvent` pattern, adapted for Electron (IPC instead of HTTP/SSE).
+Event-driven LLM processing for the teralexi **main process** agent pipeline. Inspired by [OpenCode](https://github.com/anomalyco/opencode)'s `SessionProcessor` + `LLMEvent` pattern, adapted for Electron (IPC instead of HTTP/SSE).
 
 The AI SDK (`streamText`, `Agent.stream`) remains the **provider boundary**. Application code does not call `streamText` directly — it goes through this pipeline.
 
@@ -36,7 +36,7 @@ flowchart TB
 
   subgraph layerA [Layer A — Adapter]
     Adapter[ai-sdk-adapter.ts]
-    StreamText["streamText (@openfde-ai/llm-adapter)"]
+    StreamText["streamText (@teralexi-ai/llm-adapter)"]
   end
 
   subgraph layerB [Layer B — Processor]
@@ -79,7 +79,7 @@ step-start / step-finish / finish
 provider-error
 ```
 
-Only [`runtime.ts`](runtime.ts) imports `streamText`, via the internal alias [`@openfde-ai/llm-adapter`](../../../openfde-ai/llm-adapter.ts).
+Only [`runtime.ts`](runtime.ts) imports `streamText`, via the internal alias [`@teralexi-ai/llm-adapter`](../../../teralexi-ai/llm-adapter.ts).
 
 ### Layer B — Processor + handlers
 
@@ -294,7 +294,7 @@ src/main/agent/
 ├── agent-stream-bridge.ts        IPC callbacks (unchanged contract)
 └── engine/conversation.ts        per-run bus + opts wiring
 
-src/openfde-ai/
+src/teralexi-ai/
 └── llm-adapter.ts                only streamText import site
 ```
 

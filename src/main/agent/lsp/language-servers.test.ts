@@ -7,7 +7,7 @@ import {
   initBundledLspBin,
   isLspSupportedFile,
   matchLanguageServer,
-  OPENFDE_LSP_BUNDLED_BIN_ENV,
+  TERALEXI_LSP_BUNDLED_BIN_ENV,
   resolveServerCommand,
   buildServerPath,
   LANGUAGE_SERVERS,
@@ -51,15 +51,15 @@ describe('isLspSupportedFile', () => {
 
 describe('resolveServerCommand', () => {
   let dir: string
-  const savedEnv = process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]
+  const savedEnv = process.env[TERALEXI_LSP_BUNDLED_BIN_ENV]
   afterEach(() => {
     if (dir) rmSync(dir, { recursive: true, force: true })
-    if (savedEnv === undefined) delete process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]
-    else process.env[OPENFDE_LSP_BUNDLED_BIN_ENV] = savedEnv
+    if (savedEnv === undefined) delete process.env[TERALEXI_LSP_BUNDLED_BIN_ENV]
+    else process.env[TERALEXI_LSP_BUNDLED_BIN_ENV] = savedEnv
   })
 
   it('prefers a project-local node_modules/.bin install', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-lsp-bin-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-lsp-bin-'))
     const binDir = join(dir, 'node_modules', '.bin')
     mkdirSync(binDir, { recursive: true })
     const localBin = join(binDir, lspBinName('typescript-language-server'))
@@ -68,12 +68,12 @@ describe('resolveServerCommand', () => {
   })
 
   it('falls back to the app-bundled bin when no project-local install exists', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-lsp-bundled-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-lsp-bundled-'))
     const bundledBin = join(dir, '.bin')
     mkdirSync(bundledBin, { recursive: true })
     const server = join(bundledBin, lspBinName('typescript-language-server'))
     writeFileSync(server, '#!/usr/bin/env node\n')
-    process.env[OPENFDE_LSP_BUNDLED_BIN_ENV] = bundledBin
+    process.env[TERALEXI_LSP_BUNDLED_BIN_ENV] = bundledBin
 
     // workspace has no local install → resolves to the bundled one
     const ws = join(dir, 'empty-workspace')
@@ -82,11 +82,11 @@ describe('resolveServerCommand', () => {
   })
 
   it('project-local takes precedence over the app-bundled bin', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-lsp-prec-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-lsp-prec-'))
     const bundledBin = join(dir, 'bundled', '.bin')
     mkdirSync(bundledBin, { recursive: true })
     writeFileSync(join(bundledBin, lspBinName('typescript-language-server')), 'x')
-    process.env[OPENFDE_LSP_BUNDLED_BIN_ENV] = bundledBin
+    process.env[TERALEXI_LSP_BUNDLED_BIN_ENV] = bundledBin
 
     const ws = join(dir, 'ws')
     const localBinDir = join(ws, 'node_modules', '.bin')
@@ -97,33 +97,33 @@ describe('resolveServerCommand', () => {
   })
 
   it('falls back to the bare command when nothing is installed', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-lsp-nobin-'))
-    delete process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-lsp-nobin-'))
+    delete process.env[TERALEXI_LSP_BUNDLED_BIN_ENV]
     expect(resolveServerCommand(tsServer, dir)).toBe('typescript-language-server')
   })
 })
 
 describe('initBundledLspBin', () => {
   let dir: string
-  const savedEnv = process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]
+  const savedEnv = process.env[TERALEXI_LSP_BUNDLED_BIN_ENV]
   afterEach(() => {
     if (dir) rmSync(dir, { recursive: true, force: true })
-    if (savedEnv === undefined) delete process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]
-    else process.env[OPENFDE_LSP_BUNDLED_BIN_ENV] = savedEnv
+    if (savedEnv === undefined) delete process.env[TERALEXI_LSP_BUNDLED_BIN_ENV]
+    else process.env[TERALEXI_LSP_BUNDLED_BIN_ENV] = savedEnv
   })
 
   it('publishes the first candidate root that has node_modules/.bin', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-lsp-init-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-lsp-init-'))
     const good = join(dir, 'good')
     mkdirSync(join(good, 'node_modules', '.bin'), { recursive: true })
     const result = initBundledLspBin([join(dir, 'missing'), good])
     expect(result).toBe(join(good, 'node_modules', '.bin'))
-    expect(process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]).toBe(result)
+    expect(process.env[TERALEXI_LSP_BUNDLED_BIN_ENV]).toBe(result)
   })
 
   it('returns null when no candidate has node_modules/.bin', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-lsp-init-none-'))
-    delete process.env[OPENFDE_LSP_BUNDLED_BIN_ENV]
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-lsp-init-none-'))
+    delete process.env[TERALEXI_LSP_BUNDLED_BIN_ENV]
     expect(initBundledLspBin([join(dir, 'a'), join(dir, 'b')])).toBeNull()
   })
 })
@@ -135,14 +135,14 @@ describe('detectWorkspaceServers', () => {
   })
 
   it('detects typescript via tsconfig/package.json and nothing for a bare dir', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-lsp-detect-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-lsp-detect-'))
     expect(detectWorkspaceServers(dir)).toEqual([])
     writeFileSync(join(dir, 'package.json'), '{}')
     expect(detectWorkspaceServers(dir).map((s) => s.id)).toContain('typescript')
   })
 
   it('detects multiple ecosystems by their markers', () => {
-    dir = mkdtempSync(join(tmpdir(), 'openfde-lsp-multi-'))
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-lsp-multi-'))
     writeFileSync(join(dir, 'tsconfig.json'), '{}')
     writeFileSync(join(dir, 'go.mod'), 'module x\n')
     const ids = detectWorkspaceServers(dir).map((s) => s.id)

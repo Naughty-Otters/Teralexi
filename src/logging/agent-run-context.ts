@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { getopenfdeAgentLogsDir } from '@config/openfde-home'
+import { getTeralexiAgentLogsDir } from '@config/teralexi-home'
 import type { Logger as PinoLogger } from 'pino'
 import type { DestinationStream } from 'pino'
 import pino from 'pino'
@@ -37,7 +37,7 @@ function buildAgentRunLogPath(meta: AgentRunLogMeta): string {
   const agentPart = sanitizeLogSegment(meta.agentId)
   const convPart = sanitizeLogSegment(meta.conversationId, 24)
   const assistantPart = sanitizeLogSegment(meta.assistantMessageId, 16)
-  const dir = join(getopenfdeAgentLogsDir(), agentPart)
+  const dir = join(getTeralexiAgentLogsDir(), agentPart)
   mkdirSync(dir, { recursive: true })
   return join(
     dir,

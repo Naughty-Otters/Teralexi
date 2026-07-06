@@ -1,4 +1,4 @@
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 import type { StepProgressPartInput } from '../../structuredDebugViewModel'
 
 export type SubAgentRunStatus =

@@ -27,7 +27,7 @@ export {
   forEachItemWithExpression,
   type ForEachItemExpressionOptions,
 } from '../steps/foreach-item-run'
-export { openfde } from './openfde'
+export { teralexi } from './teralexi'
 export { AgentFlowBase } from './agent-flow-base'
 export {
   type AgentFlowPipelineRecipe,

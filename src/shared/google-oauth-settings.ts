@@ -8,8 +8,8 @@ export {
 } from './google-workspace-settings'
 
 export {
-  OPENFDE_GOOGLE_AUTH_LOGIN_URL_KEY,
-  DEFAULT_OPENFDE_GOOGLE_AUTH_LOGIN_URL_DEV as DEFAULT_GOOGLE_AUTH_LOGIN_URL,
-  isOpenFdeGoogleAccountSignInConfigured as isGoogleSignInConfigured,
+  TERALEXI_GOOGLE_AUTH_LOGIN_URL_KEY,
+  DEFAULT_TERALEXI_GOOGLE_AUTH_LOGIN_URL_DEV as DEFAULT_GOOGLE_AUTH_LOGIN_URL,
+  isTeralexiGoogleAccountSignInConfigured as isGoogleSignInConfigured,
   GOOGLE_ACCOUNT_NOT_CONFIGURED,
 } from './google-account-settings'

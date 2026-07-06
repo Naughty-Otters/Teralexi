@@ -6,7 +6,7 @@ import { createLogger } from '@main/logger'
 
 const TELEGRAM_BOT_TOKEN_KEY = 'settings.telegram.botToken'
 const TELEGRAM_BOT_NAME_KEY = 'settings.telegram.botName'
-const DEFAULT_BOT_NAME = 'OpenFDE Telegram Bot'
+const DEFAULT_BOT_NAME = 'Teralexi Telegram Bot'
 const DEFAULT_TELEGRAM_AGENT_ID = 'skill:default'
 const CHANNEL_ID = 'telegram'
 const log = createLogger('channels.telegram.manager')

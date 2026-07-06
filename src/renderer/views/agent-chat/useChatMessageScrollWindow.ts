@@ -1,5 +1,5 @@
 import { computed, nextTick, ref, watch, type Ref } from 'vue'
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 
 export const CHAT_MESSAGE_PAGE_SIZE = 25
 export const CHAT_MESSAGE_WINDOW_MAX = 50

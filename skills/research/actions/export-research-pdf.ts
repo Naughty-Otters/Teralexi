@@ -5,13 +5,13 @@
 import fs from 'fs'
 import path from 'path'
 import { z } from 'zod'
-import type { SkillTool } from '@openfde/skill-sdk'
+import type { SkillTool } from '@teralexi/skill-sdk'
 import {
   exportMarkdownBodyToPdf,
   getOutputResultsRelPrefix,
   requireActiveSandbox,
   resolveSandboxRelativePath,
-} from '@openfde/skill-sdk'
+} from '@teralexi/skill-sdk'
 
 const pathField = (label: string) =>
   z.preprocess((val) => {

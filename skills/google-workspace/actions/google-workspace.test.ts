@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
+  TERALEXI_AGENT_SANDBOX_ROOT_ENV,
   SANDBOX_ROOT_GLOBAL_KEY,
 } from '../../../toolSet/sandbox-paths'
 
@@ -12,8 +12,8 @@ const fetchMock = vi.hoisted(() => vi.fn())
 const getValidAccessTokenMock = vi.hoisted(() => vi.fn())
 const loadStoredAccountMock = vi.hoisted(() => vi.fn())
 
-vi.mock('@openfde/skill-sdk', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@openfde/skill-sdk')>()
+vi.mock('@teralexi/skill-sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@teralexi/skill-sdk')>()
   return {
     ...actual,
     getValidAccessToken: getValidAccessTokenMock,
@@ -41,10 +41,10 @@ function setSandboxRoot(root: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (root) {
     g[SANDBOX_ROOT_GLOBAL_KEY] = root
-    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = root
+    process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV] = root
   } else {
     delete g[SANDBOX_ROOT_GLOBAL_KEY]
-    delete process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]
+    delete process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV]
   }
 }
 
@@ -266,7 +266,7 @@ describe('google_drive_download', () => {
   let sandboxRoot: string
 
   beforeEach(async () => {
-    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'openfde-gws-download-'))
+    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'teralexi-gws-download-'))
     setSandboxRoot(sandboxRoot)
     fetchMock.mockReset()
     getValidAccessTokenMock.mockReset()

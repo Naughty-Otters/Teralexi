@@ -1,6 +1,6 @@
 import { realpathSync } from 'fs'
 import { join, relative, resolve } from 'path'
-import { getWorkflowSourceDir } from '@config/openfde-home'
+import { getWorkflowSourceDir } from '@config/teralexi-home'
 import {
   ENTITIES_DEFINITION_JSON_FILENAME,
   WORKFLOW_DEFINITION_JSON_FILENAME,

@@ -1,6 +1,6 @@
 # Code signing (macOS + Windows)
 
-OpenFDE uses [electron-builder](https://www.electron.build/code-signing) signing env vars at **build time only**. Signing config is **never baked into the app** and **never packaged** in the installer.
+Teralexi uses [electron-builder](https://www.electron.build/code-signing) signing env vars at **build time only**. Signing config is **never baked into the app** and **never packaged** in the installer.
 
 | Where | Used for |
 | --- | --- |
@@ -10,7 +10,7 @@ OpenFDE uses [electron-builder](https://www.electron.build/code-signing) signing
 
 Do **not** commit `.p12` / `.pfx` files, passwords, or `env/.signing.env`.
 
-Runtime user settings belong in `~/.openfde/config/config.properties`.
+Runtime user settings belong in `~/.teralexi/config/config.properties`.
 
 ## Local configuration (`env/.signing.env`)
 
@@ -40,14 +40,14 @@ Required for in-app auto-update install on macOS.
 MAC_SIGN_IDENTITY = 'Your Name (TEAMID)'
 ```
 
-Use the name from Keychain **without** the `Developer ID Application:` prefix — electron-builder adds that automatically. You can also paste the full Keychain string; OpenFDE strips the prefix for you.
+Use the name from Keychain **without** the `Developer ID Application:` prefix — electron-builder adds that automatically. You can also paste the full Keychain string; Teralexi strips the prefix for you.
 
 List identities: `security find-identity -v -p codesigning`
 
 **Option B — `.p12` file** (CI or when cert is not in Keychain)
 
 ```properties
-MAC_SIGN_CERTIFICATE = '~/certs/openfde.p12'
+MAC_SIGN_CERTIFICATE = '~/certs/teralexi.p12'
 MAC_SIGN_CERTIFICATE_PASSWORD = 'your-p12-password'
 MAC_SIGN_IDENTITY = 'Your Name (TEAMID)'
 ```
@@ -65,7 +65,7 @@ When all three Apple vars are set, builds pass `--config.mac.notarize=true` auto
 ### Windows (Authenticode `.pfx`)
 
 ```properties
-WIN_SIGN_CERTIFICATE = '~/certs/openfde.pfx'
+WIN_SIGN_CERTIFICATE = '~/certs/teralexi.pfx'
 WIN_SIGN_CERTIFICATE_PASSWORD = 'your-pfx-password'
 ```
 
@@ -94,7 +94,7 @@ AZURE_SIGNING_PUBLISHER_NAME = 'Your Legal Name'
 - `AZURE_SIGNING_ACCOUNT_NAME` is the **Artifact Signing account** name (not the App Registration name).
 - `AZURE_SIGNING_CERTIFICATE_PROFILE` is the **certificate profile** name inside that account.
 
-When all Azure variables are set, OpenFDE passes `win.azureSignOptions` to electron-builder and skips the `.pfx` / self-signed paths. If both Azure and `WIN_SIGN_*` are configured, **Azure takes precedence**.
+When all Azure variables are set, Teralexi passes `win.azureSignOptions` to electron-builder and skips the `.pfx` / self-signed paths. If both Azure and `WIN_SIGN_*` are configured, **Azure takes precedence**.
 
 #### Required variables (all 7 must be present)
 
@@ -125,7 +125,7 @@ Look for this block near the top of the Windows build log (`[code-sign]` lines),
 | Wrong endpoint region | Certificate profile not found |
 | App Registration name instead of Artifact Signing account name | Signing account not found |
 | Publisher name does not match identity validation CN | Signature rejected or publisher mismatch |
-| Publisher name contains spaces (e.g. `Zhenqi Li`) | Must be quoted in electron-builder args — OpenFDE handles this automatically; if you see `Unknown argument: li`, update to latest `run-electron-builder.ts` |
+| Publisher name contains spaces (e.g. `Zhenqi Li`) | Must be quoted in electron-builder args — Teralexi handles this automatically; if you see `Unknown argument: li`, update to latest `run-electron-builder.ts` |
 
 #### Troubleshooting: `403 (Forbidden)` on `Submitting digest for signing...`
 
@@ -138,7 +138,7 @@ Status: 403 (Forbidden)
 SignTool Error: An unexpected internal error has occurred.
 ```
 
-**Authentication worked** (tenant/client/secret are valid), but Azure **rejected the sign request**. This is almost always IAM or resource metadata — not an OpenFDE/electron-builder bug.
+**Authentication worked** (tenant/client/secret are valid), but Azure **rejected the sign request**. This is almost always IAM or resource metadata — not an Teralexi/electron-builder bug.
 
 **Checklist (in order):**
 
@@ -182,7 +182,7 @@ Artifact Signing account
   → Access control (IAM)
   → Role assignments
   → Filter: "Artifact Signing Certificate Profile Signer"
-  → Member column should show your App Registration name (e.g. openfde-code-sign-app)
+  → Member column should show your App Registration name (e.g. teralexi-code-sign-app)
 ```
 
 **Still 403?** In Azure Portal, open the App Registration → **Enterprise applications** → find the service principal → copy its **Object ID** and confirm that exact principal appears in the IAM role assignment on the signing account. Re-assign the Signer role to the app if needed, wait a few minutes for propagation, then re-run the workflow.
@@ -228,7 +228,7 @@ On GitHub Actions, confirm each `AZURE_*` secret exists in the job environment (
 #### Where to find the Endpoint (`AZURE_SIGNING_ENDPOINT`)
 
 1. [Azure Portal](https://portal.azure.com) → search **Artifact Signing** (or *Trusted Signing*)
-2. Open your **Artifact Signing account** (the resource you created, e.g. `openfde`)
+2. Open your **Artifact Signing account** (the resource you created, e.g. `teralexi`)
 3. On **Overview**, find **Account URI** — that is your endpoint
 
 Copy it exactly into `AZURE_SIGNING_ENDPOINT` / GitHub secret `AZURE_SIGNING_ENDPOINT`. A trailing slash is fine (`https://eus.codesigning.azure.net/`).
@@ -302,7 +302,7 @@ Store these in the **`release`** environment (Settings → Environments → rele
 Encode macOS certificate:
 
 ```bash
-base64 -i openfde.p12 | pbcopy
+base64 -i teralexi.p12 | pbcopy
 ```
 
 ### Windows secrets (`.pfx` **or** Azure Trusted Signing)
@@ -325,10 +325,10 @@ Encode Windows `.pfx` certificate:
 
 ```bash
 # macOS / Linux
-base64 -i openfde.pfx | pbcopy
+base64 -i teralexi.pfx | pbcopy
 
 # Windows PowerShell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes('openfde.pfx')) | Set-Clipboard
+[Convert]::ToBase64String([IO.File]::ReadAllBytes('teralexi.pfx')) | Set-Clipboard
 ```
 
 ### Workflows
@@ -344,7 +344,7 @@ If signing secrets are missing, workflows still produce unsigned installers.
 
 ### Unsigned vs signed builds (macOS + Windows)
 
-OpenFDE defaults to **unsigned builds that launch locally** when no signing credentials are configured. When you provide keys via shell env (or CI secrets), the same build scripts sign automatically.
+Teralexi defaults to **unsigned builds that launch locally** when no signing credentials are configured. When you provide keys via shell env (or CI secrets), the same build scripts sign automatically.
 
 | Platform | Unsigned (no keys) | Signed (keys provided) |
 | --- | --- | --- |
@@ -356,9 +356,9 @@ Friendly env vars (see table above) map to electron-builder `CSC_*` / `WIN_CSC_*
 **macOS unsigned manual fix** (only needed for artifacts built before this policy):
 
 ```bash
-codesign --force --deep --sign - build/mac-arm64/OpenFDE.app
-xattr -cr build/mac-arm64/OpenFDE.app
-open build/mac-arm64/OpenFDE.app
+codesign --force --deep --sign - build/mac-arm64/Teralexi.app
+xattr -cr build/mac-arm64/Teralexi.app
+open build/mac-arm64/Teralexi.app
 ```
 
 For distribution to other machines, use Developer ID + notarization (macOS) or Authenticode (Windows).
@@ -387,7 +387,7 @@ The manual commands below are what the script wraps, for when you want to inspec
 **1. Verify the signature is valid and complete**
 
 ```bash
-codesign --verify --deep --strict --verbose=2 "build/mac-arm64/OpenFDE.app"
+codesign --verify --deep --strict --verbose=2 "build/mac-arm64/Teralexi.app"
 ```
 
 Expect `…: valid on disk` and `…: satisfies its Designated Requirement`. Any `code object is not signed at all` means an inner framework was missed.
@@ -395,7 +395,7 @@ Expect `…: valid on disk` and `…: satisfies its Designated Requirement`. Any
 **2. Inspect who signed it (Authority chain + Team ID)**
 
 ```bash
-codesign -dv --verbose=4 "build/mac-arm64/OpenFDE.app"
+codesign -dv --verbose=4 "build/mac-arm64/Teralexi.app"
 ```
 
 Look for:
@@ -406,7 +406,7 @@ Look for:
 **3. Gatekeeper assessment (what end users' Macs actually check)**
 
 ```bash
-spctl --assess --type execute --verbose "build/mac-arm64/OpenFDE.app"
+spctl --assess --type execute --verbose "build/mac-arm64/Teralexi.app"
 ```
 
 Expect `source=Notarized Developer ID` and `accepted`. `source=Unnotarized Developer ID` means signed but not notarized; `rejected` means Gatekeeper will block it.
@@ -414,8 +414,8 @@ Expect `source=Notarized Developer ID` and `accepted`. `source=Unnotarized Devel
 **4. Confirm the notarization ticket is stapled**
 
 ```bash
-xcrun stapler validate "build/mac-arm64/OpenFDE.app"
-xcrun stapler validate "build/OpenFDE-<version>-arm64.dmg"
+xcrun stapler validate "build/mac-arm64/Teralexi.app"
+xcrun stapler validate "build/Teralexi-<version>-arm64.dmg"
 ```
 
 Expect `The validate action worked!`. `does not have a ticket stapled` means notarization did not complete or the staple step was skipped.
@@ -427,19 +427,19 @@ Run these on Windows (PowerShell), against the NSIS installer and/or the unpacke
 **PowerShell (no SDK required):**
 
 ```powershell
-Get-AuthenticodeSignature "build\OpenFDE Setup <version>.exe" | Format-List
+Get-AuthenticodeSignature "build\Teralexi Setup <version>.exe" | Format-List
 ```
 
 Read the `Status` field:
 - `Valid` → signed with a certificate trusted by this machine (real Authenticode cert).
-- `UnknownError` / `NotTrusted` → signed, but the signing cert is **not trusted** — this is the expected result for the **self-signed fallback**. Check `SignerCertificate.Subject`; `CN=OpenFDE (Self-Signed)` confirms it is the ephemeral self-signed cert, not a production cert.
+- `UnknownError` / `NotTrusted` → signed, but the signing cert is **not trusted** — this is the expected result for the **self-signed fallback**. Check `SignerCertificate.Subject`; `CN=Teralexi (Self-Signed)` confirms it is the ephemeral self-signed cert, not a production cert.
 - `NotSigned` → unsigned build (no cert configured and self-signed generation was skipped/failed).
 
 **signtool (Windows SDK):**
 
 ```powershell
 # /pa uses the Authenticode policy; /v is verbose
-signtool verify /pa /v "build\OpenFDE Setup <version>.exe"
+signtool verify /pa /v "build\Teralexi Setup <version>.exe"
 ```
 
 A real cert prints `Successfully verified`. A self-signed cert fails chain-of-trust verification (`A certificate chain processed, but terminated in a root certificate which is not trusted`) — that is expected until a real Authenticode cert is supplied via `WIN_SIGN_CERTIFICATE`.

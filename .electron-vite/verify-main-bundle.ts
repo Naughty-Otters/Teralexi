@@ -39,7 +39,7 @@ const SOURCE_SCAN_ROOTS = [
   'config',
   'src/shared',
   'src/logging',
-  'src/openfde-ai',
+  'src/teralexi-ai',
   'src/ipc',
   'skill-sdk',
 ]

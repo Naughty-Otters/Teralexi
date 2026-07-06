@@ -6,14 +6,14 @@ import { findMacAppBundles } from './macos-unsigned-resign'
 
 describe('macos-unsigned-resign', () => {
   it('findMacAppBundles discovers apps under build/mac-*', () => {
-    const root = mkdtempSync(join(tmpdir(), 'openfde-find-mac-app-'))
+    const root = mkdtempSync(join(tmpdir(), 'teralexi-find-mac-app-'))
     const appDir = join(root, 'mac-arm64')
     mkdirSync(appDir, { recursive: true })
-    mkdirSync(join(appDir, 'OpenFDE.app', 'Contents', 'MacOS'), {
+    mkdirSync(join(appDir, 'Teralexi.app', 'Contents', 'MacOS'), {
       recursive: true,
     })
-    writeFileSync(join(appDir, 'OpenFDE.app', 'Contents', 'MacOS', 'OpenFDE'), '')
+    writeFileSync(join(appDir, 'Teralexi.app', 'Contents', 'MacOS', 'Teralexi'), '')
 
-    expect(findMacAppBundles(root)).toEqual([join(appDir, 'OpenFDE.app')])
+    expect(findMacAppBundles(root)).toEqual([join(appDir, 'Teralexi.app')])
   })
 })

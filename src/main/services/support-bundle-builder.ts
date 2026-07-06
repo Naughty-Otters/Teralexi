@@ -13,10 +13,10 @@ import { arch, platform, release } from 'node:os'
 import AdmZip from 'adm-zip'
 import {
   getAgentMemoryDirs,
-  getopenfdeAgentLogsDir,
-  getopenfdeConfigPropertiesPath,
-  getopenfdeLogsDir,
-} from '@config/openfde-home'
+  getTeralexiAgentLogsDir,
+  getTeralexiConfigPropertiesPath,
+  getTeralexiLogsDir,
+} from '@config/teralexi-home'
 import { AGENT_DEFAULTS } from '@main/agent/config/constants'
 import { loadAllMemoryBlocksForConversation, loadSessionMemorySnapshot } from '@main/agent/memory/agent-memory-store'
 import { resolveAppVersion } from '@main/config/app-version'
@@ -99,7 +99,7 @@ function collectAgentLogs(
   stagingDir: string,
   conversationId?: string | null,
 ): void {
-  const logsDir = getopenfdeAgentLogsDir()
+  const logsDir = getTeralexiAgentLogsDir()
   if (!existsSync(logsDir)) return
   const dest = join(stagingDir, 'logs', 'agents')
   mkdirSync(dest, { recursive: true })
@@ -178,7 +178,7 @@ export async function buildSupportBundle(
   const includeSandbox = options.includeSandbox === true
   const includeMemory = options.includeMemory !== false
 
-  const bundleRoot = join(getopenfdeLogsDir(), 'support-bundles')
+  const bundleRoot = join(getTeralexiLogsDir(), 'support-bundles')
   const stagingDir = join(bundleRoot, reportId)
   emptyDirSync(stagingDir)
   ensureDirSync(stagingDir)
@@ -204,7 +204,7 @@ export async function buildSupportBundle(
   })
 
   mkdirSync(join(stagingDir, 'settings'), { recursive: true })
-  const configPath = getopenfdeConfigPropertiesPath()
+  const configPath = getTeralexiConfigPropertiesPath()
   if (existsSync(configPath)) {
     const redacted = redactPropertiesFile(readFileSync(configPath, 'utf8'))
     writeFileSync(
@@ -243,7 +243,7 @@ export async function buildSupportBundle(
   }
 
   mkdirSync(join(stagingDir, 'logs'), { recursive: true })
-  const mainLogPath = join(getopenfdeLogsDir(), 'main.log')
+  const mainLogPath = join(getTeralexiLogsDir(), 'main.log')
   writeFileSync(
     join(stagingDir, 'logs', 'main.log.tail'),
     tailFileBytes(mainLogPath, MAIN_LOG_TAIL_BYTES),
@@ -286,7 +286,7 @@ export async function buildSupportBundle(
 
   writeJson(join(stagingDir, 'manifest.json'), manifest)
 
-  const zipPath = join(bundleRoot, `openfde-support-${reportId}.zip`)
+  const zipPath = join(bundleRoot, `teralexi-support-${reportId}.zip`)
   const zip = new AdmZip()
   zip.addLocalFolder(stagingDir, '')
   zip.writeZip(zipPath)

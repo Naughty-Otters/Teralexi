@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 import { computed, ref, watch } from 'vue'
 import { VTimeline } from '@renderer/components/timeline'
 import type { VTimelineItem } from '@renderer/components/timeline'

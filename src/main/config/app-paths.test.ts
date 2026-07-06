@@ -6,7 +6,7 @@ vi.mock('electron', () => ({
   app: {
     isPackaged: false,
     getAppPath: () =>
-      '/Applications/OpenFDE.app/Contents/Resources/app.asar',
+      '/Applications/Teralexi.app/Contents/Resources/app.asar',
   },
 }))
 
@@ -21,23 +21,23 @@ describe('app-paths', () => {
       app: {
         isPackaged: true,
         getAppPath: () =>
-          '/Applications/OpenFDE.app/Contents/Resources/app.asar',
+          '/Applications/Teralexi.app/Contents/Resources/app.asar',
       },
     }))
     vi.resetModules()
     const { resolveAppRoot, joinAppResourcePath, toOnDiskAppPath } =
       await import('./app-paths')
-    const unpacked = '/Applications/OpenFDE.app/Contents/Resources/app.asar.unpacked'
+    const unpacked = '/Applications/Teralexi.app/Contents/Resources/app.asar.unpacked'
     expect(p(resolveAppRoot())).toBe(p(unpacked))
     expect(p(joinAppResourcePath('skills'))).toBe(p(join(unpacked, 'skills')))
     expect(p(joinAppResourcePath('toolSet'))).toBe(p(join(unpacked, 'toolSet')))
-    expect(p(joinAppResourcePath('.openfde', 'rules'))).toBe(
-      p(join(unpacked, '.openfde', 'rules')),
+    expect(p(joinAppResourcePath('.teralexi', 'rules'))).toBe(
+      p(join(unpacked, '.teralexi', 'rules')),
     )
     expect(
       p(
         toOnDiskAppPath(
-          '/Applications/OpenFDE.app/Contents/Resources/app.asar/toolSet/index.ts',
+          '/Applications/Teralexi.app/Contents/Resources/app.asar/toolSet/index.ts',
         ),
       ),
     ).toBe(p(join(unpacked, 'toolSet', 'index.ts')))
@@ -46,7 +46,7 @@ describe('app-paths', () => {
       app: {
         isPackaged: false,
         getAppPath: () =>
-          '/Applications/OpenFDE.app/Contents/Resources/app.asar',
+          '/Applications/Teralexi.app/Contents/Resources/app.asar',
       },
     }))
   })

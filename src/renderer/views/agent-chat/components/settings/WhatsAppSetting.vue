@@ -7,7 +7,7 @@
         <input
           class="sp-input"
           :value="state.botName"
-          placeholder="OpenFDE WhatsApp Bot"
+          placeholder="Teralexi WhatsApp Bot"
           @blur="saveBotName"
         />
       </div>
@@ -510,7 +510,7 @@ const localPhoneRaw = ref('')
 const localPhoneDisplay = ref('')
 
 const state = ref<WhatsAppState>({
-  botName: 'OpenFDE WhatsApp Bot',
+  botName: 'Teralexi WhatsApp Bot',
   targetPhone: '',
   status: 'idle',
   qrCodeDataUrl: null,

@@ -57,8 +57,8 @@ const mockWordExecute = vi.hoisted(() =>
 )
 const mockExportPdf = vi.hoisted(() => vi.fn(async () => undefined))
 
-vi.mock('@openfde/skill-sdk', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@openfde/skill-sdk')>()
+vi.mock('@teralexi/skill-sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@teralexi/skill-sdk')>()
   return {
     ...actual,
     requireActiveSandbox: () => ({ ok: true, root: '/tmp/sandbox-test' }),

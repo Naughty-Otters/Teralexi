@@ -9,10 +9,10 @@ import { join } from 'node:path'
 import {
   getAgentMemoryDirs,
   getGlobalPersonaSnapshotPath,
-  getopenfdeMemoryDir,
+  getTeralexiMemoryDir,
   resolveAgentPersonaSnapshotPath,
   resolveGlobalPersonaSnapshotPath,
-} from '@config/openfde-home'
+} from '@config/teralexi-home'
 import { appCache } from '@main/cache/app-cache'
 import {
   AGENT_MEMORY_PERSONA_SNAPSHOT_FILE,
@@ -53,7 +53,7 @@ function readJsonFile<T>(path: string): T | null {
 }
 
 function listAgentMemoryRootIds(): string[] {
-  const memoryRoot = getopenfdeMemoryDir()
+  const memoryRoot = getTeralexiMemoryDir()
   try {
     return readdirSync(memoryRoot, { withFileTypes: true })
       .filter(
@@ -269,7 +269,7 @@ export function loadAllSessionMemorySnapshotsForUser(
   const byKey = new Map<string, AgentMemorySessionSnapshot>()
 
   for (const agentRootId of listAgentMemoryRootIds()) {
-    const sessionDir = join(getopenfdeMemoryDir(), agentRootId, 'session')
+    const sessionDir = join(getTeralexiMemoryDir(), agentRootId, 'session')
     for (const snap of loadSessionSnapshotsFromDir(sessionDir)) {
       if (normalizedUserId && snap.userId !== normalizedUserId) continue
       const key = `${snap.agentId}::${snap.conversationId}`

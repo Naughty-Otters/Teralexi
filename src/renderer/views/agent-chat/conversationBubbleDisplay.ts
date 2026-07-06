@@ -1,4 +1,4 @@
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 import { filterThinkingConversationSections } from '@shared/agent/thinking-bubble-display'
 import { userFacingTextFromStructuredOuter } from '@shared/agent/assistant-external-reply'
 import { parseAssistantStructuredContent } from '@store/agent/context'

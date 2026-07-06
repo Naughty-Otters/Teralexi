@@ -11,29 +11,29 @@
  */
 import { createLogger, traceFunction } from '@main/logger'
 import {
-  OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
+  TERALEXI_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
   SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY,
   setSandboxOutputScope,
 } from './tool-loop-output'
 import { getCurrentAgentRunScope } from '../run/run-scope'
 
-export const OPENFDE_AGENT_SANDBOX_ROOT_ENV = 'OPENFDE_AGENT_SANDBOX_ROOT' as const
+export const TERALEXI_AGENT_SANDBOX_ROOT_ENV = 'TERALEXI_AGENT_SANDBOX_ROOT' as const
 
 /** Must match {@link toolSet/shell-command.ts} */
-export const SANDBOX_ROOT_GLOBAL_KEY = '__OPENFDE_AGENT_SANDBOX_ROOT__' as const
+export const SANDBOX_ROOT_GLOBAL_KEY = '__TERALEXI_AGENT_SANDBOX_ROOT__' as const
 
 /** Env var carrying the user-selected workspace folder path for the current run. */
-export const OPENFDE_AGENT_WORKSPACE_PATH_ENV = 'OPENFDE_AGENT_WORKSPACE_PATH' as const
+export const TERALEXI_AGENT_WORKSPACE_PATH_ENV = 'TERALEXI_AGENT_WORKSPACE_PATH' as const
 
-export const WORKSPACE_PATH_GLOBAL_KEY = '__OPENFDE_AGENT_WORKSPACE_PATH__' as const
+export const WORKSPACE_PATH_GLOBAL_KEY = '__TERALEXI_AGENT_WORKSPACE_PATH__' as const
 
 /** Active conversation id for plan-mode and other conversation-scoped tools. */
-export const OPENFDE_AGENT_CONVERSATION_ID_ENV = 'OPENFDE_AGENT_CONVERSATION_ID' as const
+export const TERALEXI_AGENT_CONVERSATION_ID_ENV = 'TERALEXI_AGENT_CONVERSATION_ID' as const
 
-export const CONVERSATION_ID_GLOBAL_KEY = '__OPENFDE_AGENT_CONVERSATION_ID__' as const
+export const CONVERSATION_ID_GLOBAL_KEY = '__TERALEXI_AGENT_CONVERSATION_ID__' as const
 
 export {
-  OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
+  TERALEXI_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
   SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY,
 }
 
@@ -43,10 +43,10 @@ function applySandboxRootToGlobals(root: string | undefined): void {
   const g = globalThis as unknown as Record<string, unknown>
   if (root?.trim()) {
     const v = root.trim()
-    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = v
+    process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV] = v
     g[SANDBOX_ROOT_GLOBAL_KEY] = v
   } else {
-    delete process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]
+    delete process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV]
     delete g[SANDBOX_ROOT_GLOBAL_KEY]
     setSandboxOutputScope(undefined)
   }
@@ -85,7 +85,7 @@ function getAgentRunSandboxRootImpl(): string | undefined {
   if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
     return fromGlobal.trim()
   }
-  return process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]?.trim() || undefined
+  return process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV]?.trim() || undefined
 }
 
 export const setAgentRunSandboxRoot = traceFunction(
@@ -116,7 +116,7 @@ function getAgentRunSandboxOutputScopeImpl(): string | undefined {
   if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
     return fromGlobal.trim()
   }
-  return process.env[OPENFDE_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]?.trim() || undefined
+  return process.env[TERALEXI_AGENT_SANDBOX_OUTPUT_SCOPE_ENV]?.trim() || undefined
 }
 
 export const setAgentRunSandboxOutputScope = traceFunction(
@@ -143,10 +143,10 @@ function applyWorkspacePathToGlobals(workspacePath: string | undefined): void {
   const g = globalThis as unknown as Record<string, unknown>
   if (workspacePath?.trim()) {
     const v = workspacePath.trim()
-    process.env[OPENFDE_AGENT_WORKSPACE_PATH_ENV] = v
+    process.env[TERALEXI_AGENT_WORKSPACE_PATH_ENV] = v
     g[WORKSPACE_PATH_GLOBAL_KEY] = v
   } else {
-    delete process.env[OPENFDE_AGENT_WORKSPACE_PATH_ENV]
+    delete process.env[TERALEXI_AGENT_WORKSPACE_PATH_ENV]
     delete g[WORKSPACE_PATH_GLOBAL_KEY]
   }
 }
@@ -166,7 +166,7 @@ function getAgentRunWorkspacePathImpl(): string | undefined {
   if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
     return fromGlobal.trim()
   }
-  return process.env[OPENFDE_AGENT_WORKSPACE_PATH_ENV]?.trim() || undefined
+  return process.env[TERALEXI_AGENT_WORKSPACE_PATH_ENV]?.trim() || undefined
 }
 
 export const setAgentRunWorkspacePath = traceFunction(

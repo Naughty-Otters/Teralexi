@@ -11,13 +11,13 @@ vi.mock('fs/promises', () => ({
   rm: vi.fn(),
 }))
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeSandboxDir: vi.fn(() => '/home/.openfde/workspace/sandbox'),
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiSandboxDir: vi.fn(() => '/home/.teralexi/workspace/sandbox'),
 }))
 
 import { rm } from 'fs/promises'
 import {
-  isRemovableopenfdeSandboxPath,
+  isRemovableteralexiSandboxPath,
   removeSandboxDirectories,
 } from './cleanup'
 
@@ -26,9 +26,9 @@ describe('remove-sandbox-directories', () => {
     vi.mocked(rm).mockReset()
   })
 
-  it('allows paths under openfde sandbox root', () => {
-    const p = join('/home/.openfde/workspace/sandbox', 'openfde-sandbox-abc')
-    expect(isRemovableopenfdeSandboxPath(p)).toBe(true)
+  it('allows paths under teralexi sandbox root', () => {
+    const p = join('/home/.teralexi/workspace/sandbox', 'teralexi-sandbox-abc')
+    expect(isRemovableteralexiSandboxPath(p)).toBe(true)
   })
 
   it('rejects paths outside allowed roots', async () => {
@@ -37,19 +37,19 @@ describe('remove-sandbox-directories', () => {
   })
 
   it('removes allowed sandbox directories', async () => {
-    const p = join('/home/.openfde/workspace/sandbox', 'run-1')
+    const p = join('/home/.teralexi/workspace/sandbox', 'run-1')
     await removeSandboxDirectories([p])
     expect(rm).toHaveBeenCalledWith(resolve(p), { recursive: true, force: true })
   })
 
-  it('allows legacy openfde-sandbox folders under tmpdir', () => {
-    const p = join(os.tmpdir(), 'openfde-sandbox-test123')
-    expect(isRemovableopenfdeSandboxPath(p)).toBe(true)
+  it('allows legacy teralexi-sandbox folders under tmpdir', () => {
+    const p = join(os.tmpdir(), 'teralexi-sandbox-test123')
+    expect(isRemovableteralexiSandboxPath(p)).toBe(true)
   })
 
   it('logs and continues when rm fails', async () => {
     vi.mocked(rm).mockRejectedValueOnce(new Error('busy'))
-    const p = join('/home/.openfde/workspace/sandbox', 'run-2')
+    const p = join('/home/.teralexi/workspace/sandbox', 'run-2')
     await expect(removeSandboxDirectories([p])).resolves.toBeUndefined()
   })
 })

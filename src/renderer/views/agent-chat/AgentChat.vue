@@ -12,7 +12,7 @@
         :style="sidebarStyle"
       >
         <div class="sidebar-brand">
-          <div class="brand-logo"><openfdeLogo /></div>
+          <div class="brand-logo"><TeralexiLogo /></div>
           <span class="brand-name">{{ t.app.name }}</span>
         </div>
         <AgentList
@@ -116,7 +116,7 @@ import {
   setTitleBarChatControls,
 } from '@renderer/composables/useTitleBarChatControls'
 import PanelResizeHandle from '@renderer/components/PanelResizeHandle.vue'
-import openfdeLogo from './components/openfdeLogo.vue'
+import TeralexiLogo from './components/teralexiLogo.vue'
 import AgentList from './components/AgentList.vue'
 import SidebarFooter from './components/SidebarFooter.vue'
 import ChatPanel from './components/ChatPanel.vue'
@@ -185,7 +185,7 @@ function onSignInGateSuccess() {
 
 function onOpenLocalLlmFromGate() {
   signInGateOpen.value = false
-  sessionStorage.setItem('openfde.settingsTab', 'llm')
+  sessionStorage.setItem('teralexi.settingsTab', 'llm')
   rightPanelView.value = 'settings'
 }
 
@@ -224,7 +224,7 @@ const {
   defaultSize: 256,
   minSize: 200,
   maxSize: { fraction: 0.42 },
-  storageKey: 'openfde.agent.sidebarWidth',
+  storageKey: 'teralexi.agent.sidebarWidth',
   enabled: sidebarResizeEnabled,
 })
 
@@ -361,7 +361,7 @@ function renderLiveStepProgress(chunk: Record<string, unknown>): string {
     },
   }
 
-  return `${visible}\n<!-- openfde-structured:${encodeStructuredMarker(structured)} -->`
+  return `${visible}\n<!-- teralexi-structured:${encodeStructuredMarker(structured)} -->`
 }
 
 onMounted(async () => {

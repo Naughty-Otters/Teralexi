@@ -42,7 +42,7 @@ export type SubAgentDelegationContext = {
  * imports this file directly — a module-level singleton would not be shared.
  * Use a process-global stack (same pattern as sandbox globals).
  */
-const SUB_AGENT_DELEGATION_STACK_KEY = '__openfdeSubAgentDelegationStack'
+const SUB_AGENT_DELEGATION_STACK_KEY = '__teralexiSubAgentDelegationStack'
 
 type DelegationStack = SubAgentDelegationContext[]
 

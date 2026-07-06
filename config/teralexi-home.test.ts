@@ -2,7 +2,7 @@ import { mkdirSync } from 'fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { expectedOpenfdeHome, mockHomedir } from '@test-paths'
+import { expectedTeralexiHome, mockHomedir } from '@test-paths'
 
 vi.mock('fs', () => ({
   mkdirSync: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock('module', () => ({
   createRequire: (...args: unknown[]) => createRequireMock(...args),
 }))
 
-describe('openfde-home', () => {
+describe('teralexi-home', () => {
   beforeEach(async () => {
     vi.resetModules()
     const fs = await import('fs')
@@ -34,58 +34,58 @@ describe('openfde-home', () => {
     })
   })
 
-  async function loadopenfdeHome() {
-    return import('./openfde-home')
+  async function loadTeralexiHome() {
+    return import('./teralexi-home')
   }
 
   it('initializes app dirs under homedir', async () => {
-    const mod = await loadopenfdeHome()
-    const home = mod.initializeopenfdeHome(null)
-    expect(home).toBe(expectedOpenfdeHome())
-    expect(mod.isopenfdeHomeInitialized()).toBe(true)
+    const mod = await loadTeralexiHome()
+    const home = mod.initializeTeralexiHome(null)
+    expect(home).toBe(expectedTeralexiHome())
+    expect(mod.isTeralexiHomeInitialized()).toBe(true)
     expect(vi.mocked(mkdirSync)).toHaveBeenCalled()
   })
 
   it('exposes path helpers after init', async () => {
-    const mod = await loadopenfdeHome()
-    mod.initializeopenfdeHome(null)
+    const mod = await loadTeralexiHome()
+    mod.initializeTeralexiHome(null)
 
-    expect(mod.getopenfdeHome()).toBe(expectedOpenfdeHome())
-    expect(mod.getopenfdeConfigDir()).toBe(
-      join(expectedOpenfdeHome(), 'config'),
+    expect(mod.getTeralexiHome()).toBe(expectedTeralexiHome())
+    expect(mod.getTeralexiConfigDir()).toBe(
+      join(expectedTeralexiHome(), 'config'),
     )
     vi.mocked(mkdirSync).mockClear()
-    expect(mod.getopenfdeDbPath()).toBe(
-      join(expectedOpenfdeHome(), 'db', 'openfde.db'),
+    expect(mod.getTeralexiDbPath()).toBe(
+      join(expectedTeralexiHome(), 'db', 'teralexi.db'),
     )
     expect(vi.mocked(mkdirSync)).toHaveBeenCalledWith(
-      join(expectedOpenfdeHome(), 'db'),
+      join(expectedTeralexiHome(), 'db'),
       { recursive: true },
     )
-    expect(mod.getopenfdeWorkspacePath()).toBe(
-      join(expectedOpenfdeHome(), 'workspace'),
+    expect(mod.getTeralexiWorkspacePath()).toBe(
+      join(expectedTeralexiHome(), 'workspace'),
     )
-    expect(mod.getopenfdeSandboxDir()).toContain('sandbox')
-    expect(mod.getopenfdeSkillsDir()).toContain('skills')
-    expect(mod.getopenfdeToolSetDir()).toContain('toolSet')
-    expect(mod.getopenfdeLogsDir()).toContain('logs')
-    expect(mod.getopenfdeAgentLogsDir()).toContain('agents')
+    expect(mod.getTeralexiSandboxDir()).toContain('sandbox')
+    expect(mod.getTeralexiSkillsDir()).toContain('skills')
+    expect(mod.getTeralexiToolSetDir()).toContain('toolSet')
+    expect(mod.getTeralexiLogsDir()).toContain('logs')
+    expect(mod.getTeralexiAgentLogsDir()).toContain('agents')
   })
 
   it('creates channel data dirs', async () => {
-    const mod = await loadopenfdeHome()
-    mod.initializeopenfdeHome(null)
+    const mod = await loadTeralexiHome()
+    mod.initializeTeralexiHome(null)
 
-    expect(mod.getopenfdeWhatsAppAuthDir()).toContain('whatsapp-auth')
-    expect(mod.getopenfdeTelegramDataDir()).toContain('telegram-data')
-    expect(mod.getopenfdeDiscordDataDir()).toContain('discord-data')
-    expect(mod.getopenfdeWeChatDataDir()).toContain('wechat-data')
-    expect(mod.getopenfdeSlackDataDir()).toContain('slack-data')
+    expect(mod.getTeralexiWhatsAppAuthDir()).toContain('whatsapp-auth')
+    expect(mod.getTeralexiTelegramDataDir()).toContain('telegram-data')
+    expect(mod.getTeralexiDiscordDataDir()).toContain('discord-data')
+    expect(mod.getTeralexiWeChatDataDir()).toContain('wechat-data')
+    expect(mod.getTeralexiSlackDataDir()).toContain('slack-data')
   })
 
   it('sanitizes agent and user ids for memory paths', async () => {
-    const mod = await loadopenfdeHome()
-    mod.initializeopenfdeHome(null)
+    const mod = await loadTeralexiHome()
+    mod.initializeTeralexiHome(null)
 
     const dirs = mod.getAgentMemoryDirs('  bad id!!  ')
     expect(dirs.root).toContain('bad_id')
@@ -98,36 +98,36 @@ describe('openfde-home', () => {
   })
 
   it('ensureDir creates memory agent block paths, not channel dirs', async () => {
-    const mod = await loadopenfdeHome()
-    mod.initializeopenfdeHome(null)
+    const mod = await loadTeralexiHome()
+    mod.initializeTeralexiHome(null)
     vi.mocked(mkdirSync).mockClear()
 
     const dirs = mod.getAgentMemoryDirs('skill:default')
 
     expect(dirs.block).toBe(
-      join(expectedOpenfdeHome(), 'memory', 'skill_default', 'block'),
+      join(expectedTeralexiHome(), 'memory', 'skill_default', 'block'),
     )
     expect(vi.mocked(mkdirSync)).toHaveBeenCalledWith(dirs.block, {
       recursive: true,
     })
     expect(vi.mocked(mkdirSync)).not.toHaveBeenCalledWith(
-      join(expectedOpenfdeHome(), 'channels', 'whatsapp-auth'),
+      join(expectedTeralexiHome(), 'channels', 'whatsapp-auth'),
       expect.anything(),
     )
   })
 
   it('does not redirect app db, config, memory, or logs paths into channels/', async () => {
-    const mod = await loadopenfdeHome()
-    mod.initializeopenfdeHome(null)
+    const mod = await loadTeralexiHome()
+    mod.initializeTeralexiHome(null)
     vi.mocked(mkdirSync).mockClear()
 
-    mod.getopenfdeDbPath()
-    mod.getopenfdeConfigDir()
-    mod.getopenfdeMemoryVectorsDbPath()
-    mod.getopenfdeLogsDir()
+    mod.getTeralexiDbPath()
+    mod.getTeralexiConfigDir()
+    mod.getTeralexiMemoryVectorsDbPath()
+    mod.getTeralexiLogsDir()
 
     const channelRedirect = join(
-      expectedOpenfdeHome(),
+      expectedTeralexiHome(),
       'channels',
       'whatsapp-auth',
     )
@@ -135,30 +135,30 @@ describe('openfde-home', () => {
       expect(call[0]).not.toBe(channelRedirect)
     }
     expect(vi.mocked(mkdirSync)).toHaveBeenCalledWith(
-      join(expectedOpenfdeHome(), 'db'),
+      join(expectedTeralexiHome(), 'db'),
       { recursive: true },
     )
     expect(vi.mocked(mkdirSync)).toHaveBeenCalledWith(
-      join(expectedOpenfdeHome(), 'memory'),
+      join(expectedTeralexiHome(), 'memory'),
       { recursive: true },
     )
   })
 
   it('creates channel data dirs under channels/', async () => {
-    const mod = await loadopenfdeHome()
-    mod.initializeopenfdeHome(null)
+    const mod = await loadTeralexiHome()
+    mod.initializeTeralexiHome(null)
     vi.mocked(mkdirSync).mockClear()
 
-    mod.getopenfdeWhatsAppAuthDir()
+    mod.getTeralexiWhatsAppAuthDir()
 
     expect(vi.mocked(mkdirSync)).toHaveBeenCalledWith(
-      join(expectedOpenfdeHome(), 'channels', 'whatsapp-auth'),
+      join(expectedTeralexiHome(), 'channels', 'whatsapp-auth'),
       { recursive: true },
     )
   })
 
   it('guessDefaultElectronUserData covers platforms', async () => {
-    const mod = await loadopenfdeHome()
+    const mod = await loadTeralexiHome()
     const original = process.platform
 
     Object.defineProperty(process, 'platform', { value: 'darwin' })
@@ -177,8 +177,8 @@ describe('openfde-home', () => {
     createRequireMock.mockImplementation(() => () => ({
       app: { getPath: vi.fn(() => '/electron') },
     }))
-    const mod = await loadopenfdeHome()
-    mod.getopenfdeHome()
+    const mod = await loadTeralexiHome()
+    mod.getTeralexiHome()
     expect(createRequireMock).toHaveBeenCalled()
   })
 })

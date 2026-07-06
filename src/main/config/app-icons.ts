@@ -6,7 +6,7 @@ import { toOnDiskAppPath } from './app-paths'
 
 const log = createLogger('config.app-icons')
 
-export const APP_DISPLAY_NAME = 'OpenFDE'
+export const APP_DISPLAY_NAME = 'Teralexi'
 
 /** Call before `app.whenReady()` so macOS menu / switcher use the product name. */
 export function configureAppBranding(): void {
@@ -54,11 +54,11 @@ export function getAppIconPngPath(): string {
   const resolved = firstExistingPath([
     join(resolveBuildIconsDir(), 'icon.png'),
     join(root, 'src', 'renderer', 'public', 'favicon.png'),
-    join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-logo.png'),
+    join(root, 'src', 'renderer', 'assets', 'icons', 'teralexi-logo.png'),
     join(root, 'dist', 'electron', 'renderer', 'favicon.png'),
   ])
   if (!resolved) {
-    throw new Error('openfde-logo.png not found')
+    throw new Error('teralexi-logo.png not found')
   }
   return resolved
 }
@@ -81,8 +81,8 @@ export function getTrayIconPngPath(): string {
     : [join(buildIcons, 'tray-icon.png'), join(buildIcons, 'tray-icon@2x.png')]
   const candidates = [
     ...buildTrayCandidates,
-    join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-tray-icon.png'),
-    join(root, 'src', 'renderer', 'assets', 'icons', 'openfde-logo.png'),
+    join(root, 'src', 'renderer', 'assets', 'icons', 'teralexi-tray-icon.png'),
+    join(root, 'src', 'renderer', 'assets', 'icons', 'teralexi-logo.png'),
     join(buildIcons, 'icon.png'),
   ]
   const resolved = firstExistingPath(candidates)
@@ -95,7 +95,7 @@ export function getTrayIconPngPath(): string {
 function isTrayTemplateIconPath(path: string): boolean {
   const normalized = path.replace(/\\/g, '/')
   return (
-    normalized.includes('openfde-tray-icon') ||
+    normalized.includes('teralexi-tray-icon') ||
     normalized.endsWith('/tray-icon.png') ||
     normalized.endsWith('/tray-icon@2x.png')
   )

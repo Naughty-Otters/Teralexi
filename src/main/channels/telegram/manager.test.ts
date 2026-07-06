@@ -32,7 +32,7 @@ vi.mock('@main/logger', () => ({
   }),
 }))
 
-const getMeMock = vi.fn().mockResolvedValue({ username: 'openfde_bot' })
+const getMeMock = vi.fn().mockResolvedValue({ username: 'teralexi_bot' })
 const sendMessageMock = vi.fn().mockResolvedValue({})
 const onMock = vi.fn()
 const startMock = vi.fn().mockImplementation(function (
@@ -112,7 +112,7 @@ describe('TelegramChannelManager', () => {
     const { getTelegramChannelManager } = await import('./manager')
     const manager = getTelegramChannelManager()
     const state = manager.setBotName('  ')
-    expect(state.botName).toBe('OpenFDE Telegram Bot')
+    expect(state.botName).toBe('Teralexi Telegram Bot')
   })
 
   it('setBotToken starts the bot and returns connected state', async () => {

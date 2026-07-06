@@ -85,7 +85,7 @@ export interface SkillProperties {
   skillGroupPrimary?: boolean
   /**
    * config.properties keys + form metadata from properties.md (`system_properties`
-   * and `system_property.<key>.*` lines). Persisted under ~/.openfde/config/.
+   * and `system_property.<key>.*` lines). Persisted under ~/.teralexi/config/.
    */
   systemProperties?: SkillSystemPropertySpec[]
 }

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to openfde are documented in this file.
+All notable changes to teralexi are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Vector memory staging: successful ReAct runs can index user/assistant turns in
-  `~/.openfde/memory/memory-vectors.db` (embedding retrieval not wired yet).
+  `~/.teralexi/memory/memory-vectors.db` (embedding retrieval not wired yet).
 - Consolidated memory settings under `memory.recording.*` and `memory.retention.*`
   with a single Settings → Memory panel (recording layers + retention limits).
 - **Vector index** toggle (`memory.recording.vector`); off by default until
@@ -73,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `exit_plan_mode`) failing with “Cannot open database because the directory does
   not exist”.
 - All app SQLite opens go through `openAppSqliteDatabase`, which ensures parent
-  directories exist; `openfde-home` path helpers for db, config, workspace,
+  directories exist; `teralexi-home` path helpers for db, config, workspace,
   logs, and memory also create dirs on access.
 - Skill/toolSet esbuild cache now fingerprints bundled inputs and rebuilds when
   shared deps change; cache is cleared on app startup so plan-mode tools pick up
@@ -83,6 +83,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial pre-release build of openfde desktop app.
+- Initial pre-release build of teralexi desktop app.
 - GitHub Releases auto-update pipeline (placeholder repo until official release).
 - Settings → About panel with manual update check and install flow.

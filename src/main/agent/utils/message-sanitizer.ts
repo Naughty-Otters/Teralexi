@@ -11,7 +11,7 @@
  *  4. Empty content normalization — remove messages whose content carries no usable text
  */
 
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import { stripInjectorMessageMeta } from '../injection/injection-message-meta'
 
 // ---------------------------------------------------------------------------

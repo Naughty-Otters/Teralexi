@@ -1,4 +1,4 @@
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 import { computed, type MaybeRefOrGetter, toValue } from 'vue'
 import { createStandardMarkdownIt } from '@shared/markdown/create-markdown-it'
 import { prepareMarkdownSource } from '@shared/markdown/prepare-markdown-source'

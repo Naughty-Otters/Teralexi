@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('node:fs', () => ({ mkdirSync: vi.fn() }))
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeLogsDir: vi.fn(() => '/mock/logs'),
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiLogsDir: vi.fn(() => '/mock/logs'),
 }))
 vi.mock('pino', () => ({
   default: {

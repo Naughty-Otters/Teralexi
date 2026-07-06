@@ -4,7 +4,7 @@ import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { p } from '@test-paths'
 import {
-  OPENFDE_AGENT_SANDBOX_ROOT_ENV,
+  TERALEXI_AGENT_SANDBOX_ROOT_ENV,
   SANDBOX_ROOT_GLOBAL_KEY,
 } from '../sandbox-paths'
 import { applyPatch } from './apply-patch'
@@ -13,10 +13,10 @@ function setSandboxRoot(root: string | undefined) {
   const g = globalThis as unknown as Record<string, unknown>
   if (root) {
     g[SANDBOX_ROOT_GLOBAL_KEY] = root
-    process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV] = root
+    process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV] = root
   } else {
     delete g[SANDBOX_ROOT_GLOBAL_KEY]
-    delete process.env[OPENFDE_AGENT_SANDBOX_ROOT_ENV]
+    delete process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV]
   }
 }
 
@@ -24,7 +24,7 @@ describe('apply-patch tool', () => {
   let sandboxRoot: string
 
   beforeEach(async () => {
-    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'openfde-apply-patch-'))
+    sandboxRoot = await mkdtemp(path.join(tmpdir(), 'teralexi-apply-patch-'))
     await mkdir(path.join(sandboxRoot, 'dir'), { recursive: true })
     await writeFile(
       path.join(sandboxRoot, 'dir', 'sample.txt'),

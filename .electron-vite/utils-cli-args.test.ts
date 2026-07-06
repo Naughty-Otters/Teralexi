@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { stripOpenFdeCliArgs } from './utils'
+import { stripTeralexiCliArgs } from './utils'
 
-describe('stripOpenFdeCliArgs', () => {
+describe('stripTeralexiCliArgs', () => {
   it('removes -m and its value before electron-builder', () => {
     expect(
-      stripOpenFdeCliArgs([
+      stripTeralexiCliArgs([
         '-m',
         'prod',
         '-c',
@@ -17,7 +17,7 @@ describe('stripOpenFdeCliArgs', () => {
   })
 
   it('passes through electron-builder flags unchanged', () => {
-    expect(stripOpenFdeCliArgs(['--dir', '-c', 'build.json'])).toEqual([
+    expect(stripTeralexiCliArgs(['--dir', '-c', 'build.json'])).toEqual([
       '--dir',
       '-c',
       'build.json',

@@ -7,8 +7,8 @@ const exportMarkdownBodyToPdf = vi.hoisted(() =>
   vi.fn(async () => undefined),
 )
 
-vi.mock('@openfde/skill-sdk', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@openfde/skill-sdk')>()
+vi.mock('@teralexi/skill-sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@teralexi/skill-sdk')>()
   return {
     ...actual,
     exportMarkdownBodyToPdf,
@@ -23,21 +23,21 @@ describe('exportResearchPdf', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    sandboxRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'openfde-export-pdf-'))
+    sandboxRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'teralexi-export-pdf-'))
     markdownRel = 'output/results/topic-research-paper.md'
     const markdownAbs = path.join(sandboxRoot, markdownRel)
     fs.mkdirSync(path.dirname(markdownAbs), { recursive: true })
     fs.writeFileSync(markdownAbs, '# Topic\n\n## Abstract\n\nBody.', 'utf8')
 
     const g = globalThis as unknown as Record<string, unknown>
-    g.__OPENFDE_AGENT_SANDBOX_ROOT__ = sandboxRoot
-    process.env.OPENFDE_AGENT_SANDBOX_ROOT = sandboxRoot
+    g.__TERALEXI_AGENT_SANDBOX_ROOT__ = sandboxRoot
+    process.env.TERALEXI_AGENT_SANDBOX_ROOT = sandboxRoot
   })
 
   afterEach(() => {
     fs.rmSync(sandboxRoot, { recursive: true, force: true })
-    delete process.env.OPENFDE_AGENT_SANDBOX_ROOT
-    delete (globalThis as unknown as Record<string, unknown>).__OPENFDE_AGENT_SANDBOX_ROOT__
+    delete process.env.TERALEXI_AGENT_SANDBOX_ROOT
+    delete (globalThis as unknown as Record<string, unknown>).__TERALEXI_AGENT_SANDBOX_ROOT__
   })
 
   it('exports PDF using sandbox.root, not the requireActiveSandbox object', async () => {

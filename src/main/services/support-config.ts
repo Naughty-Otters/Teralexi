@@ -1,17 +1,17 @@
 import config from '@config/index'
 import type { SupportConfig } from '@shared/support-bundle'
 import {
-  getOpenFdeBaseApiUrl,
-  getOpenFdeSupportUploadUrl,
-} from './openfde-platform-config'
+  getTeralexiBaseApiUrl,
+  getTeralexiSupportUploadUrl,
+} from './teralexi-platform-config'
 import {
   getSupportUploadQuota,
   getSupportUploadUserKey,
 } from './support-upload-tracker'
 
 export function getSupportConfig(): SupportConfig {
-  const baseApiUrl = getOpenFdeBaseApiUrl()
-  const uploadUrl = getOpenFdeSupportUploadUrl()
+  const baseApiUrl = getTeralexiBaseApiUrl()
+  const uploadUrl = getTeralexiSupportUploadUrl()
   const maxUploadsPerDay = Math.max(1, config.support.maxUploadsPerDay)
   const uploadCooldownMinutes = Math.max(0, config.support.uploadCooldownMinutes)
   const userKey = getSupportUploadUserKey()

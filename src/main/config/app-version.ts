@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { version as packageVersion } from '../../../package.json'
 
 /**
- * openfde application semver.
+ * teralexi application semver.
  *
  * When running unpackaged (`npm run dev`), Electron's `app.getVersion()` returns
  * the Electron runtime version (e.g. 38.x), not package.json. Use package.json

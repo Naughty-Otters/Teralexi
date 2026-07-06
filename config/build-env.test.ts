@@ -24,16 +24,16 @@ describe('build-env', () => {
     expect(buildEnvToEnvFileName('sit')).toBe('.sit.env')
   })
 
-  it('prefers OPENFDE_BUILD_ENV over NODE_ENV', () => {
+  it('prefers TERALEXI_BUILD_ENV over NODE_ENV', () => {
     expect(
       resolveBuildEnv({
-        OPENFDE_BUILD_ENV: 'sit',
+        TERALEXI_BUILD_ENV: 'sit',
         NODE_ENV: 'production',
       }),
     ).toBe('sit')
     expect(
       resolveRuntimeNodeEnv({
-        OPENFDE_BUILD_ENV: 'prod',
+        TERALEXI_BUILD_ENV: 'prod',
         NODE_ENV: 'development',
       }),
     ).toBe('production')

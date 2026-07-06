@@ -7,7 +7,7 @@ import {
 describe('project-rules', () => {
   it('loads and formats markdown rules from user and workspace dirs', () => {
     const rules = loadProjectRules({
-      userRulesDir: `${process.cwd()}/.openfde/rules`,
+      userRulesDir: `${process.cwd()}/.teralexi/rules`,
       workspaceRulesDir: null,
     })
     expect(rules.length).toBeGreaterThan(0)

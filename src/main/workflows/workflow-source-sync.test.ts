@@ -17,9 +17,9 @@ import {
 
 let testWorkflowsRoot = ''
 
-vi.mock('@config/openfde-home', () => ({
+vi.mock('@config/teralexi-home', () => ({
   getWorkflowSourceDir: (workflowId: string) => join(testWorkflowsRoot, workflowId, 'source'),
-  getopenfdeWorkflowsDir: () => testWorkflowsRoot,
+  getTeralexiWorkflowsDir: () => testWorkflowsRoot,
 }))
 
 function blankSourceFiles(workflowId: string, name: string) {
@@ -35,7 +35,7 @@ describe('workflow definition source sync', () => {
   const workflowId = 'wf-sync-test'
 
   beforeEach(async () => {
-    testWorkflowsRoot = await mkdtemp(join(tmpdir(), 'openfde-wf-sync-'))
+    testWorkflowsRoot = await mkdtemp(join(tmpdir(), 'teralexi-wf-sync-'))
   })
 
   afterEach(async () => {

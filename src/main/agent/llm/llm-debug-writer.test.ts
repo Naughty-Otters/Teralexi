@@ -3,8 +3,8 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@config/openfde-home', () => ({
-  getopenfdeSandboxDir: vi.fn(() => join(tmpdir(), 'openfde-test-sandbox')),
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiSandboxDir: vi.fn(() => join(tmpdir(), 'teralexi-test-sandbox')),
 }))
 
 const getUserProperty = vi.fn()
@@ -25,7 +25,7 @@ import {
   scheduleLlmDebugResponse,
 } from './llm-debug-writer'
 
-const sandboxRoot = join(tmpdir(), 'openfde-test-sandbox')
+const sandboxRoot = join(tmpdir(), 'teralexi-test-sandbox')
 
 describe('llm-debug-writer', () => {
   beforeEach(() => {

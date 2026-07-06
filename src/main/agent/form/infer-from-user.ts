@@ -1,4 +1,4 @@
-import { Output } from '@openfde-ai'
+import { Output } from '@teralexi-ai'
 import type { StreamTextParams } from '../llm/runtime'
 import { z } from 'zod'
 import type { AgentStepContext } from '../context'

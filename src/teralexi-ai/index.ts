@@ -1,7 +1,7 @@
 /**
- * openfde AI layer on top of Vercel AI SDK.
+ * teralexi AI layer on top of Vercel AI SDK.
  *
- * Application code must import from `@openfde-ai` (or `@openfde-ai/vue` in the renderer)
+ * Application code must import from `@teralexi-ai` (or `@teralexi-ai/vue` in the renderer)
  * instead of `ai`, `@ai-sdk/*`, or `ollama-ai-provider-v2` directly.
  */
 export * from './types'

@@ -1,6 +1,6 @@
 # Coding guide — file change UI
 
-How openfde shows **edits, writes, and patches** in the agent chat. Use this when extending file tools, HITL approval, or the diff renderer.
+How teralexi shows **edits, writes, and patches** in the agent chat. Use this when extending file tools, HITL approval, or the diff renderer.
 
 ---
 

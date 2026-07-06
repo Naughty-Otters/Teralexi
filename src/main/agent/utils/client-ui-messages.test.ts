@@ -22,7 +22,7 @@ import {
 } from './client-ui-messages'
 import { convertCollectFormDataUIPartToText } from '../form/ui-messages'
 
-vi.mock('@openfde-ai', () => ({
+vi.mock('@teralexi-ai', () => ({
   convertToModelMessages: vi.fn(async () => []),
 }))
 

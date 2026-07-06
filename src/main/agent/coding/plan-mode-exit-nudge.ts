@@ -1,4 +1,4 @@
-import { stepCountIs, type ModelMessage } from '@openfde-ai'
+import { stepCountIs, type ModelMessage } from '@teralexi-ai'
 import { EXIT_PLAN_MODE_TOOL_NAME } from '@toolSet/planning'
 import type { AgentStepContext } from '../context'
 import type { LlmDebugToolCallRecord } from '../llm/llm-debug-tool-calls'

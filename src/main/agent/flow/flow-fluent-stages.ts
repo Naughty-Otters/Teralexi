@@ -21,7 +21,7 @@ import type {
 } from './pipeline'
 import { resolvePipelineStepInput } from '../expr'
 import { toolLoopFlowStepDefinition } from './tool-loop-flow-step'
-import { openfde } from './openfde'
+import { teralexi } from './teralexi'
 import type { CustomStepOptions } from './step-prompts'
 import type { StepHook } from './pipeline'
 
@@ -71,7 +71,7 @@ export class FlowFluentStages<T extends PipelineEntrySink> {
     input?: StepExpression | ((factory: StepExprFactory) => StepExpression),
   ): T {
     if (typeof input === 'function') {
-      return this.push(buildThinkingPipelineEntry(input(openfde.expr)))
+      return this.push(buildThinkingPipelineEntry(input(teralexi.expr)))
     }
     return this.push(buildThinkingPipelineEntry(input))
   }
@@ -86,7 +86,7 @@ export class FlowFluentStages<T extends PipelineEntrySink> {
       return this.pushStage(
         TOOL_LOOP_STEP_ID,
         toolLoopFlowStepDefinition,
-        input(openfde.expr),
+        input(teralexi.expr),
       )
     }
     if (isStepExpression(input)) {

@@ -1,4 +1,4 @@
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import { extractTrailingUserForPersistence } from '../utils/client-ui-messages'
 import type { ClientUiMessage } from '../utils/client-ui-parse'
 import {

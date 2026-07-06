@@ -231,7 +231,7 @@ class EditorLspBridge {
   }
 }
 
-const EDITOR_LSP_BRIDGE_GLOBAL_KEY = '__OPENFDE_EDITOR_LSP_BRIDGE__' as const
+const EDITOR_LSP_BRIDGE_GLOBAL_KEY = '__TERALEXI_EDITOR_LSP_BRIDGE__' as const
 
 export function getEditorLspBridge(): EditorLspBridge {
   const g = globalThis as unknown as Record<string, unknown>

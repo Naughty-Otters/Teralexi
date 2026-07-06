@@ -1,4 +1,4 @@
-import { Output } from '@openfde-ai'
+import { Output } from '@teralexi-ai'
 import { z } from 'zod'
 import { createLogger } from '@main/logger'
 import { ConfigContext } from '../config/context'

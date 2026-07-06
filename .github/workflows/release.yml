@@ -67,7 +67,7 @@ jobs:
       - name: Build production installers (env/.prod.env)
         env:
           NODE_OPTIONS: --max-old-space-size=6144
-          OPENFDE_BUILD_ENV: prod
+          TERALEXI_BUILD_ENV: prod
           MAC_SIGN_CERTIFICATE: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_CERTIFICATE_BASE64 || '' }}
           MAC_SIGN_CERTIFICATE_PASSWORD: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_CERTIFICATE_PASSWORD || '' }}
           MAC_SIGN_IDENTITY: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_IDENTITY || '' }}
@@ -96,7 +96,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          role-session-name: openfde-release-${{ matrix.platform }}-${{ github.run_id }}
+          role-session-name: teralexi-release-${{ matrix.platform }}-${{ github.run_id }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Upload production release to S3
@@ -109,7 +109,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: openfde-${{ matrix.platform }}-prod
+          name: teralexi-${{ matrix.platform }}-prod
           path: |
             build/*.yml
             build/latest*.yml

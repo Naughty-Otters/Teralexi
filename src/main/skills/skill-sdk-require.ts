@@ -6,7 +6,7 @@ const BLOCKED_SKILL_MODULE_PREFIXES = [
   '@main/',
   '@shared/',
   '@logging/',
-  '@openfde-ai/',
+  '@teralexi-ai/',
   '@config/',
   '@toolSet/',
   '@renderer/',
@@ -22,10 +22,10 @@ function isBlockedSkillModuleId(id: string): boolean {
 }
 
 function resolveSkillSdkId(id: string): boolean {
-  return id === '@openfde/skill-sdk' || id.startsWith('@openfde/skill-sdk/')
+  return id === '@teralexi/skill-sdk' || id.startsWith('@teralexi/skill-sdk/')
 }
 
-/** Require function for esbuild-bundled user skill modules (`@openfde/skill-sdk` only). */
+/** Require function for esbuild-bundled user skill modules (`@teralexi/skill-sdk` only). */
 export function createSkillModuleRequire(
   parentFilename: string,
 ): NodeRequire {
@@ -38,7 +38,7 @@ export function createSkillModuleRequire(
     }
     if (isPackagedApp() && isBlockedSkillModuleId(id)) {
       throw new Error(
-        `Skill modules cannot import "${id}". Use @openfde/skill-sdk for supported APIs.`,
+        `Skill modules cannot import "${id}". Use @teralexi/skill-sdk for supported APIs.`,
       )
     }
     return parentRequire(id)

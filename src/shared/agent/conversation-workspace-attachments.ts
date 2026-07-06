@@ -1,4 +1,4 @@
-import type { UIMessage } from '@openfde-ai'
+import type { UIMessage } from '@teralexi-ai'
 import { isFileChangeToolName } from '@shared/file-change/types'
 import { parseToolFileChanges } from '@shared/file-change/parse-tool-file-changes'
 import { isLikelyBinaryFilePath } from './non-binary-file'

@@ -33,7 +33,7 @@ describe('form projection schema + resolve', () => {
   })
 
   it('prefers static title/message over projection bindings', async () => {
-    const root = join(tmpdir(), `openfde-form-static-${Date.now()}`)
+    const root = join(tmpdir(), `teralexi-form-static-${Date.now()}`)
     await writeProjection(root, FORM_PROJECTION_ARTIFACT_DEFAULT, {
       title: 'From JSON',
       message: 'From JSON body',
@@ -52,7 +52,7 @@ describe('form projection schema + resolve', () => {
   })
 
   it('auto-resolves select options from $.options.<fieldKey>', async () => {
-    const root = join(tmpdir(), `openfde-form-auto-${Date.now()}`)
+    const root = join(tmpdir(), `teralexi-form-auto-${Date.now()}`)
     await writeProjection(root, FORM_PROJECTION_ARTIFACT_DEFAULT, {
       options: { engine: ['ddg', 'bing'] },
     })
@@ -72,7 +72,7 @@ describe('form projection schema + resolve', () => {
   })
 
   it('merges static select options when projection json path misses', async () => {
-    const root = join(tmpdir(), `openfde-form-merge-${Date.now()}`)
+    const root = join(tmpdir(), `teralexi-form-merge-${Date.now()}`)
     await writeProjection(root, FORM_PROJECTION_ARTIFACT_DEFAULT, {
       options: { tag: ['love'] },
     })
@@ -144,7 +144,7 @@ describe('form projection schema + resolve', () => {
 {"fields":[{"key":"tag","label":"Tag","type":"select","optionsFrom":{"artifact":"form-projection.json"}}]}
 -->`
     const resolved = await resolveCollectFormFromMarkdown(md, {
-      sandboxRoot: join(tmpdir(), `openfde-form-empty-${Date.now()}`),
+      sandboxRoot: join(tmpdir(), `teralexi-form-empty-${Date.now()}`),
     })
     expect(resolved.fields[0]).toMatchObject({
       type: 'string',
@@ -153,7 +153,7 @@ describe('form projection schema + resolve', () => {
   })
 
   it('loads options from markdown artifact when no jsonPath', async () => {
-    const root = join(tmpdir(), `openfde-form-md-artifact-${Date.now()}`)
+    const root = join(tmpdir(), `teralexi-form-md-artifact-${Date.now()}`)
     const artifactPath = join(root, 'output', 'toolLoop', 'step-1', 'tags.md')
     await mkdir(join(artifactPath, '..'), { recursive: true })
     await writeFile(artifactPath, '- alpha\n- beta\n', 'utf-8')

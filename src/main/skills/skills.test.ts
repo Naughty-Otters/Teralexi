@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('./skill-path', () => ({
-  resolveUserSkillsDirectory: vi.fn(() => '/mock/.openfde/skills'),
+  resolveUserSkillsDirectory: vi.fn(() => '/mock/.teralexi/skills'),
 }))
 
 vi.mock('./skill-markdown', () => ({
@@ -17,7 +17,7 @@ import { resolveUserSkillsDirectory } from './skill-path'
 
 describe('skills entry', () => {
   it('getSkillsDir returns user skills directory', () => {
-    expect(getSkillsDir()).toBe('/mock/.openfde/skills')
+    expect(getSkillsDir()).toBe('/mock/.teralexi/skills')
     expect(resolveUserSkillsDirectory).toHaveBeenCalled()
   })
 

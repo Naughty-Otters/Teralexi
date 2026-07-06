@@ -1,4 +1,4 @@
-import type { ModelMessage } from '@openfde-ai'
+import type { ModelMessage } from '@teralexi-ai'
 import {
   attachInjectorMessageMeta,
   type InjectorMessageMeta,

@@ -28,8 +28,8 @@ vi.mock('electron', () => ({
 vi.mock('fs', () => ({
   existsSync: vi.fn((path: string) =>
     String(path).includes('favicon.png') ||
-    String(path).includes('openfde-logo.png') ||
-    String(path).includes('openfde-tray-icon.png') ||
+    String(path).includes('teralexi-logo.png') ||
+    String(path).includes('teralexi-tray-icon.png') ||
     String(path).includes('tray-icon.png') ||
     String(path).includes('icon.icns'),
   ),
@@ -45,8 +45,8 @@ describe('app-icons', () => {
   it('configureAppBranding sets the product name', async () => {
     const { configureAppBranding, APP_DISPLAY_NAME } = await import('./app-icons')
     configureAppBranding()
-    expect(APP_DISPLAY_NAME).toBe('OpenFDE')
-    expect(mockApp.setName).toHaveBeenCalledWith('OpenFDE')
+    expect(APP_DISPLAY_NAME).toBe('Teralexi')
+    expect(mockApp.setName).toHaveBeenCalledWith('Teralexi')
   })
 
   it('loadTrayIcon resolves logo PNG', async () => {
@@ -57,14 +57,14 @@ describe('app-icons', () => {
 
   it('resolveBuildIconsDir prefers Resources/build/icons when packaged', async () => {
     mockApp.isPackaged = true
-    mockApp.getAppPath.mockReturnValue('/OpenFDE.app/Contents/Resources/app.asar')
+    mockApp.getAppPath.mockReturnValue('/Teralexi.app/Contents/Resources/app.asar')
     const existsSync = vi.fn((target: string) =>
       pathEndsWith(String(target), 'Resources/build/icons/tray-icon.png'),
     )
     vi.doMock('fs', () => ({ existsSync }))
     const { resolveBuildIconsDir } = await import('./app-icons')
     expect(p(resolveBuildIconsDir())).toBe(
-      p('/OpenFDE.app/Contents/Resources/build/icons'),
+      p('/Teralexi.app/Contents/Resources/build/icons'),
     )
   })
 

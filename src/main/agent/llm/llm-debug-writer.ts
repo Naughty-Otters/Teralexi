@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { mkdir, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import { getopenfdeSandboxDir } from '@config/openfde-home'
+import { getTeralexiSandboxDir } from '@config/teralexi-home'
 import { createLogger } from '@main/logger'
 import { getConversationStore } from '@main/services/conversation-store'
 import {
@@ -84,7 +84,7 @@ function sandboxRootForConversation(conversationId: string): string {
   const dirName = createHash('sha256')
     .update(conversationId, 'utf8')
     .digest('hex')
-  return join(getopenfdeSandboxDir(), dirName)
+  return join(getTeralexiSandboxDir(), dirName)
 }
 
 export function resolveLlmDebugRunDir(ctx: LlmDebugContext): string | null {
@@ -93,7 +93,7 @@ export function resolveLlmDebugRunDir(ctx: LlmDebugContext): string | null {
   const conversationId = ctx.conversationId?.trim()
   const root = conversationId
     ? sandboxRootForConversation(conversationId)
-    : join(getopenfdeSandboxDir(), '_ephemeral', runId)
+    : join(getTeralexiSandboxDir(), '_ephemeral', runId)
   return join(root, 'llm-debug', runId)
 }
 

@@ -3,7 +3,7 @@ import { join } from 'path'
 import {
   getWorkflowSandboxDir,
   getWorkflowSourceDir,
-} from '@config/openfde-home'
+} from '@config/teralexi-home'
 import {
   DEFINITION_JSON_FILENAME,
   ENTITIES_DEFINITION_JSON_FILENAME,
