@@ -4,7 +4,11 @@ import {
   MULTIPLE_BRANCH_THINKING_MARKER,
 } from './deep-thinking-blocks'
 import { assembleInstructions, injectUserMessages } from './pipeline'
-import { recordDatetimeInjection } from './conversation-injection-state'
+import {
+  clearDatetimeInjectionState,
+  recordDatetimeInjection,
+} from './conversation-injection-state'
+import { clearDeepThinkingInjectionState } from './deep-thinking-injection-state'
 
 vi.mock('../coding/plan-mode-state', () => ({
   isPlanModeActive: vi.fn(() => false),
@@ -103,6 +107,8 @@ function makeToolLoopCtx(overrides: Record<string, unknown> = {}) {
 
 describe('injector pipeline', () => {
   beforeEach(() => {
+    clearDatetimeInjectionState()
+    clearDeepThinkingInjectionState()
     vi.mocked(appCache.getAgents).mockReturnValue(null)
   })
 
@@ -210,7 +216,7 @@ describe('injector pipeline', () => {
     expect(out).toContain('Tool Result Decision Rules')
   })
 
-  it('injects current datetime as a user message once per day', async () => {
+  it('does not duplicate datetime on later tool-loop steps', async () => {
     const ctx = makeToolLoopCtx({
       opts: { skillId: 'coding', conversationId: 'conv-datetime', userId: 'user-1' },
       agentRun: { meta: { depth: 0 } },

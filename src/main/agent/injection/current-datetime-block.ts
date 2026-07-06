@@ -25,25 +25,28 @@ function resolveTimeZone(timeZone?: string): string {
 
 function formatUtcOffset(now: Date, timeZone: string): string {
   try {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      timeZoneName: 'shortOffset',
-    }).formatToParts(now)
-    const offset = parts.find((part) => part.type === 'timeZoneName')?.value
-    if (offset?.startsWith('GMT')) {
-      return offset.replace('GMT', 'UTC')
-    }
-    if (offset) return offset
+    // Avoid `timeZoneName: 'shortOffset'` — it can stall for several seconds on
+    // Windows Node/ICU during cold start.
+    const utcMs = new Date(
+      now.toLocaleString('en-US', { timeZone: 'UTC' }),
+    ).getTime()
+    const tzMs = new Date(
+      now.toLocaleString('en-US', { timeZone }),
+    ).getTime()
+    const offsetMinutes = Math.round((tzMs - utcMs) / 60_000)
+    const sign = offsetMinutes >= 0 ? '+' : '-'
+    const abs = Math.abs(offsetMinutes)
+    const hours = String(Math.floor(abs / 60)).padStart(2, '0')
+    const minutes = String(abs % 60).padStart(2, '0')
+    return `UTC${sign}${hours}:${minutes}`
   } catch {
-    // fall through
+    const offsetMinutes = -now.getTimezoneOffset()
+    const sign = offsetMinutes >= 0 ? '+' : '-'
+    const abs = Math.abs(offsetMinutes)
+    const hours = String(Math.floor(abs / 60)).padStart(2, '0')
+    const minutes = String(abs % 60).padStart(2, '0')
+    return `UTC${sign}${hours}:${minutes}`
   }
-
-  const offsetMinutes = -now.getTimezoneOffset()
-  const sign = offsetMinutes >= 0 ? '+' : '-'
-  const abs = Math.abs(offsetMinutes)
-  const hours = String(Math.floor(abs / 60)).padStart(2, '0')
-  const minutes = String(abs % 60).padStart(2, '0')
-  return `UTC${sign}${hours}:${minutes}`
 }
 
 export function calendarDayKey(

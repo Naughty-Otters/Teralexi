@@ -27,3 +27,26 @@ vi.mock('@main/logger', () => ({
 vi.mock('@logging/main-process-streams', () => ({
   buildMainProcessLogStreams: () => [],
 }))
+
+/** Prime ICU formatters used by datetime injection so cold-start stalls do not time out tests. */
+function warmIntlDateTimeFormat(): void {
+  try {
+    const now = new Date('2026-06-20T12:00:00.000Z')
+    new Intl.DateTimeFormat('en-US', {
+      dateStyle: 'full',
+      timeStyle: 'long',
+      timeZone: 'UTC',
+    }).format(now)
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'UTC',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(now)
+    Intl.DateTimeFormat().resolvedOptions().timeZone
+  } catch {
+    // Minimal ICU builds may omit some options; tests fall back to UTC.
+  }
+}
+
+warmIntlDateTimeFormat()
