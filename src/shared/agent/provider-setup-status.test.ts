@@ -22,6 +22,7 @@ function emptyCreds(
       bytedance: { apiKey: '' },
       huggingface: { apiKey: '' },
       'nvidia-nim': { apiKey: '' },
+      custom: { apiKey: '' },
     },
     ...overrides,
   }

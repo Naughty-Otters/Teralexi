@@ -155,5 +155,14 @@ export const providerSetupZhCn: ProviderSetupLabels = {
         '粘贴到下方并点击「测试并保存」。',
       ],
     },
+    custom: {
+      intro:
+        '连接任意 OpenAI 兼容提供商。默认 Base URL 为 OpenRouter；请按实际服务商修改。',
+      steps: [
+        '在 models.dev 浏览提供商与 model id（见下方「文档」链接）。',
+        '在提供商控制台创建 API 密钥（「管理你的 LLM API 密钥」以 Fireworks 为例）。',
+        '粘贴密钥、按需修改 Base URL，并在智能体模型名中使用提供商的 model id。',
+      ],
+    },
   },
 }

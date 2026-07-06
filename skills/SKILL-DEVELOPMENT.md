@@ -73,7 +73,7 @@ enabled: true
 | `name` | yes | Display name |
 | `description` | yes | Include **what** the skill does and **when** to select it |
 | `model` | yes | Provider model id |
-| `provider` | yes | `ollama`, `llamacpp`, `openai`, `anthropic`, `gemini`, `deepseek`, `moonshot`, `qwen`, `bytedance`, `huggingface`, or `nvidia-nim` |
+| `provider` | yes | `ollama`, `llamacpp`, `openai`, `anthropic`, `gemini`, `deepseek`, `moonshot`, `qwen`, `bytedance`, `huggingface`, `nvidia-nim`, or `custom` |
 | `color` | no | UI accent: `primary`, `secondary`, `success`, `info`, `warning`, `error`, `neutral` |
 | `enabled` | no | `true` / `false` (default `true`) |
 | `refs_dir` | no | Comma-separated reference doc folders (default `refs`; entries may be nested, e.g. `assets/refs`) |

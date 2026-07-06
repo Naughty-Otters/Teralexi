@@ -54,6 +54,7 @@ function metaForOpenAiCompatible(id: ProviderType): ProviderSetupMeta | undefine
     bytedance: 'https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey',
     huggingface: 'https://huggingface.co/settings/tokens',
     'nvidia-nim': 'https://build.nvidia.com/settings/api-key',
+    custom: 'https://app.fireworks.ai/settings/users/api-keys',
   }
   return {
     id,
@@ -119,6 +120,10 @@ export const PROVIDER_SETUP_META: Record<ProviderType, ProviderSetupMeta> = {
   bytedance: metaForOpenAiCompatible('bytedance')!,
   huggingface: metaForOpenAiCompatible('huggingface')!,
   'nvidia-nim': metaForOpenAiCompatible('nvidia-nim')!,
+  custom: {
+    ...metaForOpenAiCompatible('custom')!,
+    docsUrl: 'https://models.dev',
+  },
 }
 
 export function providerSetupMeta(provider: ProviderType): ProviderSetupMeta {
