@@ -2094,7 +2094,8 @@ export const useAgentStore = defineStore('agent', () => {
     }
   }
 
-  async function loadMcpServers(): Promise<void> {
+  async function loadMcpServers(opts?: { fetchTools?: boolean }): Promise<void> {
+    const fetchTools = opts?.fetchTools ?? false
     const channel = window.ipcRendererChannel?.ListMcpServers
     if (!channel?.invoke) {
       mcpServers.value = []
@@ -2109,25 +2110,45 @@ export const useAgentStore = defineStore('agent', () => {
 
     mcpServers.value = Array.isArray(servers) ? servers : []
 
-    const nextToolsMap: Record<string, McpToolDefinition[]> = {}
-    const nextErrors: Record<string, string> = {}
-    for (const server of mcpServers.value) {
-      if (!server.enabled) continue
-      try {
-        nextToolsMap[server.id] = await fetchMcpServerTools(server.id)
-      } catch (error) {
-        log.warn('Failed to load MCP server tools', {
-          serverId: server.id,
-          serverName: server.name,
-          err: error,
-        })
-        nextToolsMap[server.id] = []
-        nextErrors[server.id] = formatMcpToolLoadError(error)
+    if (!fetchTools) return
+
+    const enabledServers = mcpServers.value.filter((server) => server.enabled)
+    const results = await Promise.allSettled(
+      enabledServers.map(async (server) => ({
+        serverId: server.id,
+        serverName: server.name,
+        tools: await fetchMcpServerTools(server.id),
+      })),
+    )
+
+    const nextToolsMap = { ...mcpToolsByServer.value }
+    const nextErrors = { ...mcpToolsLoadErrorByServer.value }
+    for (let i = 0; i < results.length; i++) {
+      const server = enabledServers[i]
+      const result = results[i]
+      if (!server || !result) continue
+
+      if (result.status === 'fulfilled') {
+        nextToolsMap[result.value.serverId] = result.value.tools
+        delete nextErrors[result.value.serverId]
+        continue
       }
+
+      log.warn('Failed to load MCP server tools', {
+        serverId: server.id,
+        serverName: server.name,
+        err: result.reason,
+      })
+      nextToolsMap[server.id] = []
+      nextErrors[server.id] = formatMcpToolLoadError(result.reason)
     }
 
     mcpToolsByServer.value = nextToolsMap
     mcpToolsLoadErrorByServer.value = nextErrors
+  }
+
+  async function loadMcpToolsForEnabledServers(): Promise<void> {
+    await loadMcpServers({ fetchTools: true })
   }
 
   async function addMcpServer(input: {
@@ -2156,7 +2177,7 @@ export const useAgentStore = defineStore('agent', () => {
       enabled: input.enabled ?? true,
     })
 
-    await loadMcpServers()
+    await loadMcpServers({ fetchTools: true })
   }
 
   async function toggleMcpServerEnabled(serverId: string): Promise<void> {
@@ -2940,6 +2961,7 @@ export const useAgentStore = defineStore('agent', () => {
     initializeSettingsFromConfig,
     loadSkillsFromDisk,
     loadMcpServers,
+    loadMcpToolsForEnabledServers,
     sendMessage,
     handleChannelIncomingToAgent,
     checkConnection,

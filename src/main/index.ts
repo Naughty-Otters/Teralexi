@@ -36,6 +36,7 @@ import { getSchedulerManager } from './services/scheduler-manager'
 import { registerMainProcessSupportHandlers } from './services/support-event-store'
 import { getLspManager, initBundledLspBin } from './agent/lsp'
 import { createLogger } from './logger'
+import { prewarmMcpRuntimeEnvironment } from './services/mcp-runtime-check'
 import {
   registerTeralexiProtocolClient,
   registerTeralexiProtocolHandlers,
@@ -97,6 +98,10 @@ async function onAppReady() {
       app.dock.setIcon(icon)
     }
   }
+
+  // Warm MCP PATH caches in the background so Settings → MCP opens instantly.
+  prewarmMcpRuntimeEnvironment()
+  log.info('MCP runtime PATH prewarm requested')
 
   const initWindow = new InitWindow()
   initWindow.initWindow()

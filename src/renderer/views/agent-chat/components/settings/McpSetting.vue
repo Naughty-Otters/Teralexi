@@ -679,8 +679,9 @@ const canSubmit = computed(() => {
   return Boolean(draft.value.url.trim())
 })
 
-onMounted(async () => {
-  await loadMcpRuntimeStatus()
+onMounted(() => {
+  void loadMcpRuntimeStatus()
+  void agentStore.loadMcpToolsForEnabledServers()
   if (agentStore.mcpServers.length > 0) {
     selectServer(agentStore.mcpServers[0]!.id)
   } else {
