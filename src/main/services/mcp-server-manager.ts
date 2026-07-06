@@ -11,6 +11,7 @@ import {
 } from './mcp-server-runtime'
 import {
   buildStdioMcpEnv,
+  ensureMcpSpawnPathReady,
   resolveCommandOnPath,
   resolveStdioMcpCommand,
 } from './mcp-runtime-check'
@@ -46,6 +47,7 @@ class McpServerManager {
         throw new Error(`MCP server ${server.name} is missing command`)
       }
 
+      await ensureMcpSpawnPathReady()
       const { command, path } = resolveStdioMcpCommand(server.command)
       const resolved = resolveCommandOnPath(server.command, path)
       if (!resolved) {

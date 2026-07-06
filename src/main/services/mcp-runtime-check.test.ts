@@ -4,6 +4,13 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { isWin, mockTesterHomedir } from '@test-paths'
 
 vi.mock('node:child_process', () => ({
+  execFile: vi.fn((_file, _args, _opts, cb) => {
+    if (typeof _opts === 'function') {
+      _opts(null, { stdout: '' })
+      return
+    }
+    cb?.(null, { stdout: '' })
+  }),
   execFileSync: vi.fn(() => ''),
 }))
 
@@ -31,12 +38,16 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-import { execFileSync } from 'node:child_process'
+import { execFile, execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import {
   buildMcpSpawnPath,
   checkMcpRuntimeStatus,
+  prewarmLoginShellPath,
+  probeCommandForTests,
+  resetDarwinPathCache,
   resetLoginShellPathCache,
+  resetMcpRuntimeStatusCache,
   resolveCommandOnPath,
   resolveCommonUserBinPaths,
   resolveLoginShellPath,
@@ -45,6 +56,9 @@ import {
 describe('mcp-runtime-check', () => {
   beforeEach(() => {
     resetLoginShellPathCache()
+    resetDarwinPathCache()
+    resetMcpRuntimeStatusCache()
+    vi.mocked(execFile).mockReset()
     vi.mocked(execFileSync).mockReset()
     vi.mocked(existsSync).mockReset()
   })
@@ -82,15 +96,24 @@ describe('mcp-runtime-check', () => {
     expect(resolveCommandOnPath('uvx', buildMcpSpawnPath())).toBe(uvxPath)
   })
 
-  it.skipIf(isWin)('uses login-shell PATH for GUI apps missing shell init', () => {
-    vi.mocked(execFileSync).mockImplementation((file, args) => {
+  it.skipIf(isWin)('uses login-shell PATH for GUI apps missing shell init', async () => {
+    vi.mocked(execFile).mockImplementation((file, args, opts, cb) => {
+      const callback =
+        typeof opts === 'function'
+          ? opts
+          : (cb as (err: Error | null, result: { stdout: string }) => void)
       if (String(file).endsWith('zsh') && Array.isArray(args)) {
-        return '/Users/tester/.nvm/versions/node/v22/bin:/opt/homebrew/bin'
+        callback(null, {
+          stdout: '/Users/tester/.nvm/versions/node/v22/bin:/opt/homebrew/bin',
+        })
+        return undefined as never
       }
-      return ''
+      callback(null, { stdout: '' })
+      return undefined as never
     })
     process.env.SHELL = '/bin/zsh'
 
+    await prewarmLoginShellPath()
     expect(resolveLoginShellPath()).toBe(
       '/Users/tester/.nvm/versions/node/v22/bin:/opt/homebrew/bin',
     )
@@ -105,17 +128,27 @@ describe('mcp-runtime-check', () => {
     expect(resolveCommandOnPath('npx', '/opt/homebrew/bin')).toBe(npxPath)
   })
 
-  it.skipIf(isWin)('reports npx availability when executable responds', () => {
+  it.skipIf(isWin)('reports npx availability when executable is on PATH', () => {
     vi.mocked(existsSync).mockImplementation((target) =>
       String(target).endsWith('/opt/homebrew/bin/npx'),
     )
-    vi.mocked(execFileSync).mockImplementation((file, args) => {
-      if (String(file).endsWith('npx')) return '10.0.0'
-      return ''
-    })
 
     const status = checkMcpRuntimeStatus()
     expect(status.npx.available).toBe(true)
     expect(status.npx.resolvedPath).toBe('/opt/homebrew/bin/npx')
+  })
+
+  it.skipIf(isWin)('probeCommandForTests can verify executable responses', () => {
+    vi.mocked(existsSync).mockImplementation((target) =>
+      String(target).endsWith('/opt/homebrew/bin/npx'),
+    )
+    vi.mocked(execFileSync).mockImplementation((file) => {
+      if (String(file).endsWith('npx')) return '10.0.0'
+      return ''
+    })
+
+    expect(
+      probeCommandForTests('npx', ['--version'], '/opt/homebrew/bin'),
+    ).toBe(true)
   })
 })

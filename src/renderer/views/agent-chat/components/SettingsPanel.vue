@@ -173,7 +173,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
 import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { useAgentStore } from '@store/agent'
@@ -198,22 +198,55 @@ import GeminiSetting from './settings/GeminiSetting.vue'
 import DeepSeekSetting from './settings/DeepSeekSetting.vue'
 import ZhipuSetting from './settings/ZhipuSetting.vue'
 import OpenAiCompatibleProviderSetting from './settings/OpenAiCompatibleProviderSetting.vue'
-import McpSetting from './settings/McpSetting.vue'
-import ToolSetSetting from './settings/ToolSetSetting.vue'
-import AgentConfigurationPanel from './settings/AgentConfigurationPanel.vue'
-import SkillCompilationsSetting from './settings/SkillCompilationsSetting.vue'
-import ClawHubSkillRegistry from './settings/ClawHubSkillRegistry.vue'
-import AccountsSetting from './settings/AccountsSetting.vue'
-import WhatsAppSetting from './settings/WhatsAppSetting.vue'
-import TelegramSetting from './settings/TelegramSetting.vue'
-import DiscordSetting from './settings/DiscordSetting.vue'
-import WeChatSetting from './settings/WeChatSetting.vue'
-import SlackSetting from './settings/SlackSetting.vue'
-import SchedulerSetting from './settings/SchedulerSetting.vue'
-import MemorySetting from './settings/MemorySetting.vue'
-import ChatUiSetting from './settings/ChatUiSetting.vue'
-import DeveloperSetting from './settings/DeveloperSetting.vue'
-import AboutUpdatePanel from './settings/AboutUpdatePanel.vue'
+
+const McpSetting = defineAsyncComponent(
+  () => import('./settings/McpSetting.vue'),
+)
+const ToolSetSetting = defineAsyncComponent(
+  () => import('./settings/ToolSetSetting.vue'),
+)
+const AgentConfigurationPanel = defineAsyncComponent(
+  () => import('./settings/AgentConfigurationPanel.vue'),
+)
+const SkillCompilationsSetting = defineAsyncComponent(
+  () => import('./settings/SkillCompilationsSetting.vue'),
+)
+const ClawHubSkillRegistry = defineAsyncComponent(
+  () => import('./settings/ClawHubSkillRegistry.vue'),
+)
+const AccountsSetting = defineAsyncComponent(
+  () => import('./settings/AccountsSetting.vue'),
+)
+const WhatsAppSetting = defineAsyncComponent(
+  () => import('./settings/WhatsAppSetting.vue'),
+)
+const TelegramSetting = defineAsyncComponent(
+  () => import('./settings/TelegramSetting.vue'),
+)
+const DiscordSetting = defineAsyncComponent(
+  () => import('./settings/DiscordSetting.vue'),
+)
+const WeChatSetting = defineAsyncComponent(
+  () => import('./settings/WeChatSetting.vue'),
+)
+const SlackSetting = defineAsyncComponent(
+  () => import('./settings/SlackSetting.vue'),
+)
+const SchedulerSetting = defineAsyncComponent(
+  () => import('./settings/SchedulerSetting.vue'),
+)
+const MemorySetting = defineAsyncComponent(
+  () => import('./settings/MemorySetting.vue'),
+)
+const ChatUiSetting = defineAsyncComponent(
+  () => import('./settings/ChatUiSetting.vue'),
+)
+const DeveloperSetting = defineAsyncComponent(
+  () => import('./settings/DeveloperSetting.vue'),
+)
+const AboutUpdatePanel = defineAsyncComponent(
+  () => import('./settings/AboutUpdatePanel.vue'),
+)
 import {
   registerSettingsTabHandler,
 } from '@renderer/composables/useAppUpdateNavigation'
