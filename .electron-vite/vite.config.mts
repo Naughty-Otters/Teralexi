@@ -5,6 +5,7 @@ import vueJsx from '@vitejs/plugin-vue-jsx'
 import ui from '@nuxt/ui/vite'
 import viteIkarosTools from './plugin/vite-ikaros-tools'
 import { getConfig } from './utils'
+import { rendererManualChunks } from './renderer-manual-chunks'
 
 function resolve(dir: string) {
   return join(__dirname, '..', dir)
@@ -44,6 +45,11 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'esnext',
     cssCodeSplit: false,
+    rollupOptions: {
+      output: {
+        manualChunks: rendererManualChunks,
+      },
+    },
   },
   server: {
     watch: {
