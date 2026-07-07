@@ -3,7 +3,7 @@
  * disk/DB cold starts.
  *
  * Called from:
- *  - window-manager during the startup loader window (full warm)
+ *  - window-manager during the startup loader window (base warm; agent-scoped deferred)
  *  - IPC WarmAgentCache when the user switches agents (agent-scoped refresh)
  *
  * Every operation is fire-and-forget; failures are logged but never thrown.
@@ -30,6 +30,18 @@ export interface WarmCacheArgs {
 }
 
 let startupWarmPromise: Promise<void> | null = null
+let deferredAgentWarmPromise: Promise<void> | null = null
+
+async function warmAllAgentScoped(userId: string): Promise<void> {
+  const agents = await resolveAgentsForWarm(userId)
+  await Promise.allSettled(
+    agents.map((agent) => warmAgentScoped(userId, agent.id)),
+  )
+  log.info('App cache deferred agent warm complete', {
+    ...appCache.stats(),
+    agentCount: agents.length,
+  })
+}
 
 async function resolveAgentsForWarm(userId: string): Promise<EngineAgent[]> {
   const cached = appCache.getAgents(userId)
@@ -101,8 +113,8 @@ async function warmAgentScoped(userId: string, agentId: string): Promise<void> {
 }
 
 /**
- * Full startup warm: base buckets + MCP tools and persona for every agent.
- * Safe to call multiple times; concurrent calls share one in-flight promise.
+ * Startup warm: agents + credentials only. Agent-scoped MCP/persona warm is deferred
+ * via scheduleDeferredAppCacheAgentWarm so first paint is not blocked.
  */
 export function warmAppCacheOnStartup(userId: string): Promise<void> {
   if (!startupWarmPromise) {
@@ -112,11 +124,8 @@ export function warmAppCacheOnStartup(userId: string): Promise<void> {
       await Promise.allSettled([warmAgents(userId), warmCredentials()])
 
       const agents = await resolveAgentsForWarm(userId)
-      await Promise.allSettled(
-        agents.map((agent) => warmAgentScoped(userId, agent.id)),
-      )
 
-      log.info('App cache startup warm complete', {
+      log.info('App cache startup warm base complete', {
         ...appCache.stats(),
         agentCount: agents.length,
       })
@@ -129,9 +138,23 @@ export function warmAppCacheOnStartup(userId: string): Promise<void> {
   return startupWarmPromise
 }
 
+/**
+ * MCP tools + persona for every agent. Runs after the main window is shown.
+ */
+export function scheduleDeferredAppCacheAgentWarm(userId: string): Promise<void> {
+  if (deferredAgentWarmPromise) return deferredAgentWarmPromise
+  deferredAgentWarmPromise = warmAllAgentScoped(userId).catch((err) => {
+    deferredAgentWarmPromise = null
+    log.warn('App cache deferred agent warm failed', { userId, err })
+    throw err
+  })
+  return deferredAgentWarmPromise
+}
+
 /** Used in tests to reset startup dedupe state. */
 export function resetStartupWarmForTests(): void {
   startupWarmPromise = null
+  deferredAgentWarmPromise = null
 }
 
 /**

@@ -1,172 +1,167 @@
 ﻿<!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title></title>
-
+    <title>Teralexi</title>
     <style>
-      html {
+      :root {
+        --splash-bg: #fafafa;
+        --splash-text: #52525b;
+        --splash-spinner-track: #e4e4e7;
+        --splash-spinner-head: #2563eb;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --splash-bg: #18181b;
+          --splash-text: #a1a1aa;
+          --splash-spinner-track: #3f3f46;
+          --splash-spinner-head: #60a5fa;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
         height: 100%;
-        min-height: 100%;
+        margin: 0;
         overflow: hidden;
         user-select: none;
         -webkit-app-region: no-drag;
-      }
-
-      html body {
-        background-size: 163px;
-        font:
-          14px/21px Monaco,
-          sans-serif;
-        color: #999;
         -webkit-font-smoothing: antialiased;
-        -webkit-text-size-adjust: 100%;
-        -moz-text-size-adjust: 100%;
-        -ms-text-size-adjust: 100%;
-        text-size-adjust: 100%;
-        height: 100%;
-        min-height: 100%;
-        margin: 0px;
-        background: transparent;
+        background: var(--splash-bg);
       }
 
-      html body h4 {
-        margin: 0;
+      body {
+        display: grid;
+        place-items: center;
+        font:
+          12px/1.35 system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: var(--splash-text);
       }
 
-      /* .loading-line {
-      height: 1px;
-      width: 100%;
-      position: absolute;
-    }
-
-    .top {
-      background: linear-gradient(-225deg, #ff3cac 0%, #2b86c5 58%, #ff3cac 100%);
-
-      top: 0;
-    }
-
-    .left {
-      background: linear-gradient(-225deg, #ff3cac 0%, #2b86c5 58%, #ff3cac 100%);
-      right: 99px;
-      transform: rotate(90deg);
-      width: 600px;
-    }
-
-    .right {
-      left: 99px;
-      transform: rotate(90deg);
-      width: 600px;
-      background: linear-gradient(-225deg, #ff3cac 0%, #2b86c5 58%, #ff3cac 100%);
-    }
-
-    .bottom {
-      background: linear-gradient(-225deg, #ff3cac 0%, #2b86c5 58%, #ff3cac 100%);
-
-      bottom: 0;
-    } */
-
-      .scene {
-        position: relative;
+      .splash {
         display: flex;
-        justify-content: center;
+        flex-direction: column;
         align-items: center;
-        height: 100%;
-        background: transparent;
-        position: relative;
+        gap: 14px;
+        padding: 8px;
+        animation: splash-in 0.28s ease-out both;
       }
 
-      .loader {
+      .splash-mark {
         position: relative;
-        width: 15em;
-        height: 15em;
-        background: linear-gradient(
-          -225deg,
-          #ff3cac9e 0%,
-          #562b7c9e 52%,
-          #2b86c59e 100%
-        );
+        width: 56px;
+        height: 56px;
+        display: grid;
+        place-items: center;
+      }
+
+      .splash-logo {
+        width: 40px;
+        height: 40px;
+        display: block;
+        object-fit: contain;
+      }
+
+      .splash-logo--light {
+        display: none;
+        filter: brightness(0) saturate(100%);
+        opacity: 0.88;
+      }
+
+      .splash-logo--dark {
+        display: none;
+        mix-blend-mode: screen;
+      }
+
+      @media (prefers-color-scheme: light) {
+        .splash-logo--light {
+          display: block;
+        }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .splash-logo--dark {
+          display: block;
+        }
+      }
+
+      .splash-spinner {
+        position: absolute;
+        inset: 0;
         border-radius: 50%;
-        animation: spin 0.5s linear infinite;
+        border: 2px solid var(--splash-spinner-track);
+        border-top-color: var(--splash-spinner-head);
+        animation: spin 0.8s linear infinite;
       }
 
-      span {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        border-radius: inherit;
-        background: inherit;
-      }
-
-      span:nth-child(1) {
-        filter: blur(5px);
-      }
-
-      span:nth-child(2) {
-        filter: blur(10px);
-      }
-
-      span:nth-child(3) {
-        filter: blur(25px);
-      }
-
-      span:nth-child(4) {
-        filter: blur(50px);
-      }
-
-      span::after {
-        position: absolute;
-        content: '';
-        top: 10px;
-        left: 10px;
-        right: 10px;
-        bottom: 10px;
-        background: transparent;
-        border-radius: inherit;
+      .splash-label {
+        margin: 0;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
       }
 
       @keyframes spin {
         to {
-          transform: rotate(1turn);
+          transform: rotate(360deg);
         }
       }
 
-      .text {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 14px;
-        letter-spacing: 0.08em;
-        color: #d6d6d6;
-        z-index: 1;
-        pointer-events: none;
+      @keyframes splash-in {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
-      /* @keyframes slidein{
-      from{
+      @media (prefers-reduced-motion: reduce) {
+        .splash {
+          animation: none;
+        }
 
+        .splash-spinner {
+          animation-duration: 1.2s;
+        }
       }
-      to{
-        
-      }
-    } */
     </style>
   </head>
 
   <body>
-    <div class="scene">
-      <!-- <i class="loading-line top"></i>
-    <i class="loading-line right"></i>
-    <i class="loading-line bottom"></i>
-    <i class="loading-line left"></i> -->
-      <div class="loader">
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
+    <div class="splash" role="status" aria-live="polite" aria-busy="true">
+      <div class="splash-mark">
+        <img
+          class="splash-logo splash-logo--light"
+          src="./teralexi-logo-splash.png"
+          width="40"
+          height="40"
+          alt=""
+          decoding="async"
+        />
+        <img
+          class="splash-logo splash-logo--dark"
+          src="./teralexi-logo-dark.png"
+          width="40"
+          height="40"
+          alt=""
+          decoding="async"
+        />
+        <div class="splash-spinner" aria-hidden="true"></div>
       </div>
-      <div class="text">Loading</div>
+      <p class="splash-label">Loading</p>
     </div>
   </body>
 </html>

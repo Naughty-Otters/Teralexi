@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { appCache } from './app-cache'
 import {
   resetStartupWarmForTests,
+  scheduleDeferredAppCacheAgentWarm,
   warmAgentCache,
   warmAppCacheOnStartup,
 } from './cache-warmer'
@@ -49,6 +50,7 @@ describe('cache-warmer', () => {
 
   it('warmAppCacheOnStartup loads base buckets and all agents', async () => {
     await warmAppCacheOnStartup('default')
+    await scheduleDeferredAppCacheAgentWarm('default')
 
     expect(appCache.getAgents('default')).toHaveLength(2)
     expect(appCache.getCredentials()).toBeTruthy()

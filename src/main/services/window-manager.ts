@@ -9,12 +9,15 @@ import {
   applyWindowGlassEffect,
   glassBrowserWindowOptions,
 } from './window-glass'
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, dialog, nativeTheme } from 'electron'
 import { getLoadingURL, getPreloadFile, getWinURL } from '../config/static-path'
 import { APP_DISPLAY_NAME, loadWindowIcon } from '../config/app-icons'
 import { useProcessException } from '@main/hooks/exception-hook'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
-import { warmAppCacheOnStartup } from '@main/cache/cache-warmer'
+import {
+  scheduleDeferredAppCacheAgentWarm,
+  warmAppCacheOnStartup,
+} from '@main/cache/cache-warmer'
 import { scheduleStartupUpdateCheck } from './check-update'
 import { DEFAULT_USER_ID } from '@main/agent/config/config'
 import { attachSandboxPreviewNavigation } from './sandbox-preview-navigation'
@@ -98,7 +101,8 @@ class MainInit {
     // Show window after dom-ready
     this.mainWindow.once('ready-to-show', () => {
       this.mainWindow.show()
-      if (config.UseStartupChart) this.loadWindow.destroy()
+      this.destroyLoadingWindow()
+      scheduleDeferredAppCacheAgentWarm(DEFAULT_USER_ID)
       scheduleStartupUpdateCheck(this.mainWindow)
     })
     // Auto-open devtools in development mode
@@ -125,31 +129,49 @@ class MainInit {
       }
     })
   }
+  private destroyLoadingWindow(): void {
+    if (!config.UseStartupChart || !this.loadWindow) return
+    if (!this.loadWindow.isDestroyed()) {
+      this.loadWindow.destroy()
+    }
+    this.loadWindow = null
+  }
+
   // Loading window constructor
   loadingWindow(loadingURL: string) {
     log.info('Creating loading window')
+    const useDarkSplash = nativeTheme.shouldUseDarkColors
     this.loadWindow = new BrowserWindow({
-      width: 400,
-      height: 600,
+      width: 200,
+      height: 170,
       frame: false,
       skipTaskbar: true,
-      transparent: true,
+      transparent: false,
+      backgroundColor: useDarkSplash ? '#18181b' : '#fafafa',
       resizable: false,
+      show: false,
+      center: true,
+      roundedCorners: true,
       webPreferences: {
         experimentalFeatures: true,
         preload: getPreloadFile('preload'),
       },
     })
 
-    this.loadWindow.loadURL(loadingURL)
-    this.loadWindow.show()
-    this.loadWindow.setAlwaysOnTop(true)
-    // Warm agent cache while the loader is visible (runs in parallel with the delay below).
-    void warmAppCacheOnStartup(DEFAULT_USER_ID)
-    // Delay before creating main window (acts as a sleep)
-    setTimeout(() => {
+    const beginMainWindow = () => {
+      if (this.mainWindow) return
       this.createMainWindow()
-    }, 1500)
+    }
+
+    // Register before loadURL so we never miss ready-to-show on a fast/cached load.
+    this.loadWindow.once('ready-to-show', () => {
+      this.loadWindow.show()
+      this.loadWindow.setAlwaysOnTop(true)
+      beginMainWindow()
+    })
+
+    void warmAppCacheOnStartup(DEFAULT_USER_ID)
+    this.loadWindow.loadURL(loadingURL)
   }
   // Initialize window
   initWindow() {
@@ -161,7 +183,9 @@ class MainInit {
     if (useStartupChart) {
       return this.loadingWindow(this.shartURL)
     }
-    void warmAppCacheOnStartup(DEFAULT_USER_ID)
+    void warmAppCacheOnStartup(DEFAULT_USER_ID).then(() => {
+      scheduleDeferredAppCacheAgentWarm(DEFAULT_USER_ID)
+    })
     return this.createMainWindow()
   }
 }
