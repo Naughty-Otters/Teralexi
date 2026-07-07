@@ -1,41 +1,45 @@
 <template>
   <form class="chat-composer" @submit.prevent="emit('submit')">
-    <BackgroundTaskPanel
-      v-if="codingAgent && backgroundTasks.length > 0"
-      :tasks="backgroundTasks"
-      @cancel="emit('cancel-background-task', $event)"
-    />
-    <CodingModeBar
-      v-if="showCodingModeBar"
-      :active-mode="codingMode"
-      :disabled="workspaceDisabled"
-      @update:active-mode="emit('update:codingMode', $event)"
-    />
-    <p
-      v-if="planStatusHint"
-      class="composer-plan-mode-hint"
-      role="status"
-    >
-      {{ planStatusHint }}
-    </p>
-    <WorkspacePathBanner :disabled="workspaceDisabled" />
-    <SkillSystemPropertiesForm
-      v-if="skillSetup?.needsSetup"
-      :title="skillSetup.title"
-      :intro="skillSetup.intro"
-      :loading-label="skillSetup.loadingLabel"
-      :save-label="skillSetup.saveLabel"
-      :saving-label="skillSetup.savingLabel"
-      :fields="skillSetup.fields"
-      :loading="skillSetup.loading"
-      :saving="skillSetup.saving"
-      :can-save="skillSetup.canSave"
-      :error="skillSetup.error"
-      @update-field="skillSetup.onUpdateField"
-      @save="skillSetup.onSave"
-    />
+    <template v-if="!loading">
+      <BackgroundTaskPanel
+        v-if="codingAgent && backgroundTasks.length > 0"
+        :tasks="backgroundTasks"
+        @cancel="emit('cancel-background-task', $event)"
+      />
+      <CodingModeBar
+        v-if="showCodingModeBar"
+        :active-mode="codingMode"
+        :disabled="workspaceDisabled"
+        @update:active-mode="emit('update:codingMode', $event)"
+      />
+      <p
+        v-if="planStatusHint"
+        class="composer-plan-mode-hint"
+        role="status"
+      >
+        {{ planStatusHint }}
+      </p>
+      <WorkspacePathBanner :disabled="workspaceDisabled" />
+      <SkillSystemPropertiesForm
+        v-if="skillSetup?.needsSetup"
+        :title="skillSetup.title"
+        :intro="skillSetup.intro"
+        :loading-label="skillSetup.loadingLabel"
+        :save-label="skillSetup.saveLabel"
+        :saving-label="skillSetup.savingLabel"
+        :fields="skillSetup.fields"
+        :loading="skillSetup.loading"
+        :saving="skillSetup.saving"
+        :can-save="skillSetup.canSave"
+        :error="skillSetup.error"
+        @update-field="skillSetup.onUpdateField"
+        @save="skillSetup.onSave"
+      />
+    </template>
     <div class="composer-shell">
+      <ComposerSkeleton v-if="loading" />
       <RichMessageComposer
+        v-else
         :model-value="modelValue"
         :selected-agent-id="selectedAgentId"
         :agent-options="agentOptions"
@@ -57,7 +61,7 @@
       <button
         type="submit"
         class="composer-send cp-icon-btn cp-icon-btn--compact"
-        :disabled="sendDisabled"
+        :disabled="sendDisabled || loading"
         aria-label="Send message"
         title="Send message"
       >
@@ -90,7 +94,7 @@ import {
   type PlanModeDisplayStatus,
 } from '@shared/agent/plan-mode-phase'
 import type { StagedChatAttachment } from '@renderer/composables/useChatAttachments'
-import ComposerFallback from './ComposerFallback.vue'
+import ComposerSkeleton from './ComposerSkeleton.vue'
 import CodingModeBar from './CodingModeBar.vue'
 import WorkspacePathBanner from './WorkspacePathBanner.vue'
 import BackgroundTaskPanel, {
@@ -102,7 +106,7 @@ import type { SkillGroupAgentRef } from '@shared/agent/skill-groups'
 
 const RichMessageComposer = defineAsyncComponent({
   loader: () => import('./RichMessageComposer.vue'),
-  loadingComponent: ComposerFallback,
+  loadingComponent: ComposerSkeleton,
   delay: 0,
 })
 
@@ -124,6 +128,8 @@ export type ChatComposerSkillSetupState = {
 
 const props = defineProps<{
   modelValue: string
+  /** Shows a non-interactive skeleton while conversation/bootstrap is loading. */
+  loading?: boolean
   /** Disables only the send button (input stays editable). */
   sendDisabled: boolean
   selectedAgentId: string | null
@@ -169,7 +175,7 @@ const planStatusHint = computed(() =>
 )
 
 function onComposerSubmit() {
-  if (props.sendDisabled) return
+  if (props.loading || props.sendDisabled) return
   emit('submit')
 }
 </script>
