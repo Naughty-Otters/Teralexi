@@ -1,6 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { readInjectorMessageMeta } from './injection-message-meta'
-import { readInjectorMessageMeta } from './injection-message-meta'
 import {
   buildValidationRulesBlock,
   validationRulesInjector,
