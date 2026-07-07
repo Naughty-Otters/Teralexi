@@ -3,6 +3,9 @@
     :src="logoSrc"
     class="brand-logo-img"
     alt="Teralexi"
+    fetchpriority="high"
+    loading="eager"
+    decoding="async"
   />
 </template>
 

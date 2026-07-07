@@ -42,13 +42,9 @@ const continuingLocal = ref(false)
 
 onMounted(async () => {
   await agentStore.initializeSettingsFromConfig()
-  await agentStore.loadSkillsFromDisk()
-  await agentStore.checkConnection()
-  await agentStore.checkLlamaCppConnection()
-  await agentStore.fetchModelsForProvider('ollama')
-
   ready.value = true
 
+  // Cloud API keys are known from config; local providers are probed in the setup wizard.
   if (agentStore.hasLlmProviderReady && agentStore.areAllAgentsLlmReady) {
     await agentStore.completeOnboarding()
     markOnboardingCompleteInRouteCache()

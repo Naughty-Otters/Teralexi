@@ -766,8 +766,7 @@ export const useAgentStore = defineStore('agent', () => {
       }
     }
 
-    await loadSkillsFromDisk()
-    await loadMcpServers()
+    await Promise.all([loadSkillsFromDisk(), loadMcpServers()])
 
     if (agents.value.length === 0) {
       log.warn('Agent list empty after LoadSkills; retrying once')
@@ -1699,14 +1698,7 @@ export const useAgentStore = defineStore('agent', () => {
   }
 
   async function checkConnection() {
-    try {
-      const res = await fetch(`${ollamaBaseURL.value}/api/version`, {
-        signal: AbortSignal.timeout(60000 * 5),
-      })
-      connectionStatus.value = res.ok ? 'connected' : 'error'
-    } catch {
-      connectionStatus.value = 'error'
-    }
+    await fetchModelsForProvider('ollama')
   }
 
   async function checkLlamaCppConnection() {
@@ -1811,7 +1803,6 @@ export const useAgentStore = defineStore('agent', () => {
         if (connectionStatus.value !== 'connected') {
           return { ok: false, error: 'Cannot reach Ollama server' }
         }
-        await fetchModelsForProvider('ollama')
         const modelCount = availableModelsByProvider.value.ollama?.length ?? 0
         return { ok: true, modelCount }
       }
@@ -1926,8 +1917,12 @@ export const useAgentStore = defineStore('agent', () => {
         const res = await fetch(`${ollamaBaseURL.value}/api/tags`, {
           signal: AbortSignal.timeout(5000),
         })
-        if (!res.ok) return
+        if (!res.ok) {
+          connectionStatus.value = 'error'
+          return
+        }
         const data = await res.json()
+        connectionStatus.value = 'connected'
         availableModelsByProvider.value = {
           ...availableModelsByProvider.value,
           ollama: (data.models ?? []).map((m: { name: string }) => m.name),
@@ -2033,6 +2028,9 @@ export const useAgentStore = defineStore('agent', () => {
         }
       }
     } catch (error) {
+      if (provider === 'ollama') {
+        connectionStatus.value = 'error'
+      }
       // silently fail
       log.warn('Failed to fetch models for provider', { provider, err: error })
     }

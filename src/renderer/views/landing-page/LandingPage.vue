@@ -1,6 +1,13 @@
 <template>
   <div id="wrapper">
-    <img id="logo" :src="teralexiLogo" alt="Teralexi" />
+    <img
+      id="logo"
+      :src="teralexiLogo"
+      alt="Teralexi"
+      fetchpriority="high"
+      loading="eager"
+      decoding="async"
+    />
     <main>
       <div class="left-side">
         <span class="title">
