@@ -14,6 +14,7 @@ import {
   resolveOpenAiCompatibleCredentials,
 } from '@shared/agent/llm-provider-registry'
 import type { ProviderCredentials } from '../types'
+import { resolveMcpServersForAgent } from '@shared/mcp/resolve-mcp-servers-for-agent'
 export type AgentRunCredentials = ProviderCredentials
 
 function loadOpenAiCompatibleCredentials(
@@ -133,16 +134,13 @@ export async function loadMcpToolsForAgentFromServers(
   agent: EngineAgent,
 ): Promise<RuntimeToolMeta[]> {
   const allMcpServers = getConversationStore().listMcpServers(userId)
-  const enabledServers = allMcpServers.filter((s) => s.enabled)
+  const servers = resolveMcpServersForAgent(
+    allMcpServers,
+    agent.availableMcpServers,
+  )
   const mcpTools: RuntimeToolMeta[] = []
 
-  for (const server of enabledServers) {
-    if (
-      agent.availableMcpServers != null &&
-      !agent.availableMcpServers.includes(server.id)
-    ) {
-      continue
-    }
+  for (const server of servers) {
     try {
       const tools = await getMcpServerManager().listTools(server)
       for (const tool of tools) {

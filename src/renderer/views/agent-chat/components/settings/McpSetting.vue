@@ -681,12 +681,18 @@ const canSubmit = computed(() => {
 
 onMounted(() => {
   void loadMcpRuntimeStatus()
-  void agentStore.loadMcpToolsForEnabledServers()
-  if (agentStore.mcpServers.length > 0) {
-    selectServer(agentStore.mcpServers[0]!.id)
-  } else {
-    createNew()
-  }
+  void agentStore.loadMcpServers().then(() => {
+    if (agentStore.mcpServers.length > 0) {
+      selectServer(agentStore.mcpServers[0]!.id)
+    } else {
+      createNew()
+    }
+  })
+})
+
+watch(selectedId, (id) => {
+  if (!id || id === '__new__') return
+  void agentStore.refreshMcpServerTools(id)
 })
 
 watch(

@@ -1,11 +1,5 @@
-import MarkdownIt from 'markdown-it'
+import { renderBasicMarkdown } from '@shared/markdown/basic-markdown-it'
 import { markdownToPlainText } from '@shared/markdown/markdown-to-plain-text'
-
-const printMarkdown = new MarkdownIt({
-  html: false,
-  breaks: true,
-  linkify: true,
-})
 
 export async function copyBubbleMarkdownContent(
   markdown: string,
@@ -13,10 +7,10 @@ export async function copyBubbleMarkdownContent(
   const source = markdown.trim()
   if (!source || !navigator.clipboard) return false
 
-  const plainText = markdownToPlainText(source)
+  const plainText = await markdownToPlainText(source)
   if (!plainText) return false
 
-  const html = printMarkdown.render(source)
+  const html = await renderBasicMarkdown(source)
 
   if (typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
     try {
@@ -37,15 +31,15 @@ export async function copyBubbleMarkdownContent(
   return true
 }
 
-export function printBubbleMarkdownContent(args: {
+export async function printBubbleMarkdownContent(args: {
   markdown: string
   title?: string
-}): void {
+}): Promise<void> {
   const markdown = args.markdown.trim()
   if (!markdown) return
 
   const title = args.title?.trim() || 'Message'
-  const bodyHtml = printMarkdown.render(markdown)
+  const bodyHtml = await renderBasicMarkdown(markdown)
   const iframe = document.createElement('iframe')
   iframe.setAttribute('aria-hidden', 'true')
   iframe.style.cssText =

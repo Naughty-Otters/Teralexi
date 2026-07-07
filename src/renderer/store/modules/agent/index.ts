@@ -303,11 +303,9 @@ export const useAgentStore = defineStore('agent', () => {
     return m.loadSkillsFromDisk(ctx, persistence)
   }
 
-  async function loadMcpServers(opts?: {
-    fetchTools?: boolean
-  }): Promise<void> {
+  async function loadMcpServers(): Promise<void> {
     const m = await import('./agent-mcp-servers')
-    return m.loadMcpServers(ctx, opts)
+    return m.loadMcpServers(ctx)
   }
 
   let assistantRunPromise: Promise<
@@ -361,9 +359,14 @@ export const useAgentStore = defineStore('agent', () => {
     return mcpActionsPromise
   }
 
-  async function loadMcpToolsForEnabledServers(): Promise<void> {
+  async function refreshMcpServerTools(serverId: string): Promise<void> {
     const actions = await getMcpActions()
-    return actions.loadMcpToolsForEnabledServers()
+    return actions.refreshMcpServerTools(serverId)
+  }
+
+  async function loadMcpToolsForAssignedAgents(): Promise<void> {
+    const actions = await getMcpActions()
+    return actions.loadMcpToolsForAssignedAgents()
   }
 
   async function addMcpServer(
@@ -482,7 +485,8 @@ export const useAgentStore = defineStore('agent', () => {
     loadInitialConversations,
     loadSkillsFromDisk,
     loadMcpServers,
-    loadMcpToolsForEnabledServers,
+    refreshMcpServerTools,
+    loadMcpToolsForAssignedAgents,
     sendMessage,
     handleChannelIncomingToAgent,
     checkConnection: llm.checkConnection,

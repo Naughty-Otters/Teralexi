@@ -42,15 +42,10 @@ export function useAgentStartupBootstrap() {
     isRunning.value = true
     deferredBootstrapPromise = (async () => {
       try {
-        setBackgroundStatus(t.value.startup.loadingMcp)
-        await agentStore.loadMcpServers()
-
         setBackgroundStatus(t.value.startup.preparingWorkspace)
         await workspaceStore.loadForConversation(
           agentStore.currentConversationId,
         )
-
-        void agentStore.loadMcpToolsForEnabledServers()
       } finally {
         setBackgroundStatus(null)
         isRunning.value = false

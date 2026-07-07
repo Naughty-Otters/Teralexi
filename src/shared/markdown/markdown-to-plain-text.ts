@@ -1,10 +1,4 @@
-import MarkdownIt from 'markdown-it'
-
-const copyMarkdown = new MarkdownIt({
-  html: false,
-  breaks: true,
-  linkify: true,
-})
+import { renderBasicMarkdown } from './basic-markdown-it'
 
 function normalizePlainText(text: string): string {
   return text
@@ -103,8 +97,8 @@ function isInsidePre(node: Node): boolean {
 }
 
 /** Readable plain text for clipboard targets that do not render Markdown. */
-export function markdownToPlainText(markdown: string): string {
+export async function markdownToPlainText(markdown: string): Promise<string> {
   const source = markdown.trim()
   if (!source) return ''
-  return htmlToPlainText(copyMarkdown.render(source))
+  return htmlToPlainText(await renderBasicMarkdown(source))
 }

@@ -11,6 +11,7 @@
       :class="{ 'chat-bubble-action-btn--ok': copied }"
       :title="t.chat.copyBubbleContent"
       :aria-label="t.chat.copyBubbleContent"
+      :disabled="copying"
       @click.stop="onCopy"
     >
       <UIcon
@@ -25,6 +26,7 @@
       class="chat-bubble-action-btn"
       :title="t.chat.printBubbleContent"
       :aria-label="t.chat.printBubbleContent"
+      :disabled="printing"
       @click.stop="onPrint"
     >
       <UIcon
@@ -54,15 +56,10 @@
 import { computed, ref } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
 import {
-  copyBubbleMarkdownContent,
-  printBubbleMarkdownContent,
-} from '../bubbleContentActions'
-import {
   bubblePdfDefaultFileName,
   bubblePdfKindForSection,
-  exportBubbleMarkdownAsPdf,
   type BubblePdfDocumentKind,
-} from '../bubblePdfExport'
+} from '../bubblePdfExportHelpers'
 
 const props = withDefaults(
   defineProps<{
@@ -80,12 +77,15 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
+  copied: []
+  copyFailed: [message?: string]
   exported: [savedPath: string]
   failed: [message: string]
 }>()
 
 const { t } = useI18n()
-const toast = useToast()
+const copying = ref(false)
+const printing = ref(false)
 const exporting = ref(false)
 const copied = ref(false)
 let copiedResetTimer: ReturnType<typeof setTimeout> | undefined
@@ -94,15 +94,14 @@ const hasContent = computed(() => Boolean(props.markdown?.trim()))
 
 async function onCopy(): Promise<void> {
   const markdown = props.markdown?.trim()
-  if (!markdown) return
+  if (!markdown || copying.value) return
 
+  copying.value = true
   try {
+    const { copyBubbleMarkdownContent } = await import('../bubbleContentActions')
     const ok = await copyBubbleMarkdownContent(markdown)
     if (!ok) {
-      toast.add({
-        title: t.value.chat.copyBubbleContentFailed,
-        color: 'error',
-      })
+      emit('copyFailed')
       return
     }
     copied.value = true
@@ -110,26 +109,31 @@ async function onCopy(): Promise<void> {
     copiedResetTimer = setTimeout(() => {
       copied.value = false
     }, 1600)
-    toast.add({
-      title: t.value.chat.copyBubbleContentSuccess,
-      color: 'success',
-    })
+    emit('copied')
   } catch (error) {
-    toast.add({
-      title: t.value.chat.copyBubbleContentFailed,
-      description: error instanceof Error ? error.message : String(error),
-      color: 'error',
-    })
+    emit(
+      'copyFailed',
+      error instanceof Error ? error.message : String(error),
+    )
+  } finally {
+    copying.value = false
   }
 }
 
-function onPrint(): void {
+async function onPrint(): Promise<void> {
   const markdown = props.markdown?.trim()
-  if (!markdown) return
-  printBubbleMarkdownContent({
-    markdown,
-    title: props.sectionTitle,
-  })
+  if (!markdown || printing.value) return
+
+  printing.value = true
+  try {
+    const { printBubbleMarkdownContent } = await import('../bubbleContentActions')
+    await printBubbleMarkdownContent({
+      markdown,
+      title: props.sectionTitle,
+    })
+  } finally {
+    printing.value = false
+  }
 }
 
 async function onExport(): Promise<void> {
@@ -138,6 +142,7 @@ async function onExport(): Promise<void> {
 
   exporting.value = true
   try {
+    const { exportBubbleMarkdownAsPdf } = await import('../bubblePdfExportHelpers')
     const result = await exportBubbleMarkdownAsPdf({
       markdown,
       defaultFileName: bubblePdfDefaultFileName(
@@ -149,19 +154,10 @@ async function onExport(): Promise<void> {
         bubblePdfKindForSection(props.sectionId?.trim() || 'generic'),
     })
     if (result.savedPath) {
-      toast.add({
-        title: t.value.chat.exportBubblePdfSuccess,
-        color: 'success',
-      })
       emit('exported', result.savedPath)
       return
     }
     if (result.error && !result.error.includes('cancel')) {
-      toast.add({
-        title: t.value.chat.exportBubblePdfFailed,
-        description: result.error,
-        color: 'error',
-      })
       emit('failed', result.error)
     }
   } finally {
