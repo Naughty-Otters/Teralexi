@@ -1,7 +1,10 @@
-import MarkdownIt from 'markdown-it'
+import type MarkdownIt from 'markdown-it'
 import { tryRenderDiagramSpecJsonToSvg } from '@shared/diagram/render-diagram-spec'
 import { escapeAttr } from '@shared/diagram/svg-utils'
 import { applySandboxPreviewLinkPlugin } from './sandbox-preview-links'
+
+let standardInstance: MarkdownIt | undefined
+let standardLoadPromise: Promise<MarkdownIt> | undefined
 
 const DIAGRAM_BLOCK_PENDING_RE =
   /<div class="diagram-block diagram-block--pending" data-diagram-spec="([^"]*)"[^>]*><\/div>/g
@@ -61,8 +64,10 @@ export function resolveDiagramBlocksInHtml(html: string): string {
   })
 }
 
-export function createStandardMarkdownIt(): MarkdownIt {
-  const md = new MarkdownIt({
+export function configureStandardMarkdownIt(
+  MarkdownItCtor: typeof import('markdown-it').default,
+): MarkdownIt {
+  const md = new MarkdownItCtor({
     html: false,
     breaks: true,
     linkify: true,
@@ -75,4 +80,23 @@ export function createStandardMarkdownIt(): MarkdownIt {
   applyDiagramFencePlugin(md)
   applySandboxPreviewLinkPlugin(md)
   return md
+}
+
+/** Lazily loads markdown-it + standard plugins on first use. */
+export function getStandardMarkdownIt(): Promise<MarkdownIt> {
+  if (standardInstance) return Promise.resolve(standardInstance)
+  if (!standardLoadPromise) {
+    standardLoadPromise = import('markdown-it').then(({ default: MarkdownIt }) => {
+      standardInstance = configureStandardMarkdownIt(MarkdownIt)
+      return standardInstance
+    })
+  }
+  return standardLoadPromise
+}
+
+/** @deprecated Use {@link getStandardMarkdownIt} in renderer or {@link createStandardMarkdownItEager} in main. */
+export function createStandardMarkdownIt(): MarkdownIt {
+  throw new Error(
+    'createStandardMarkdownIt() is async-only in renderer; use getStandardMarkdownIt() or createStandardMarkdownItEager()',
+  )
 }

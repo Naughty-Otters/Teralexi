@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import { computed, inject, type Ref } from 'vue'
 import type { UIMessage } from '@teralexi-ai'
-import { renderMarkdownHtml } from '@renderer/lib/markdown'
+import { renderMarkdownHtml, rendererMarkdown } from '@renderer/lib/markdown'
 import {
   userCollectFormResponseChipLabel,
   userMessagePlainText,
@@ -53,7 +53,10 @@ const conversationId = inject<Ref<string | null | undefined>>('chatConversationI
 
 const formChip = computed(() => userCollectFormResponseChipLabel(props.message))
 const plainText = computed(() => userMessagePlainText(props.message))
-const renderedHtml = computed(() => renderMarkdownHtml(plainText.value))
+const renderedHtml = computed(() => {
+  void rendererMarkdown.value
+  return renderMarkdownHtml(plainText.value)
+})
 const attachments = computed(
   () => messageAttachmentsById?.value?.[props.message.id] ?? [],
 )

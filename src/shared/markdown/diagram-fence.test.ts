@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyDiagramFencePlugin,
-  createStandardMarkdownIt,
   resolveDiagramBlocksInHtml,
 } from './create-markdown-it'
+import { createStandardMarkdownItEager } from './create-markdown-it-eager'
 import MarkdownIt from 'markdown-it'
 
 const sampleSpec = JSON.stringify({
@@ -19,21 +19,21 @@ const sampleSpec = JSON.stringify({
 
 describe('diagram fence markdown plugin', () => {
   it('creates pending placeholder for valid diagram fence', () => {
-    const md = createStandardMarkdownIt()
+    const md = createStandardMarkdownItEager()
     const html = md.render(`\`\`\`diagram\n${sampleSpec}\n\`\`\``)
     expect(html).toContain('diagram-block--pending')
     expect(html).toContain('data-diagram-spec=')
   })
 
   it('falls back to code block for invalid JSON', () => {
-    const md = createStandardMarkdownIt()
+    const md = createStandardMarkdownItEager()
     const html = md.render('```diagram\n{ not json\n```')
     expect(html).toContain('<pre')
     expect(html).not.toContain('diagram-block')
   })
 
   it('resolveDiagramBlocksInHtml renders SVG', () => {
-    const md = createStandardMarkdownIt()
+    const md = createStandardMarkdownItEager()
     const html = md.render(`\`\`\`diagram\n${sampleSpec}\n\`\`\``)
     const resolved = resolveDiagramBlocksInHtml(html)
     expect(resolved).toContain('diagram-block--ready')

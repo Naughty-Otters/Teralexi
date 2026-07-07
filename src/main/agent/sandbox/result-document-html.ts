@@ -1,7 +1,5 @@
-import {
-  createStandardMarkdownIt,
-  resolveDiagramBlocksInHtml,
-} from '@shared/markdown/create-markdown-it'
+import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
+import { createStandardMarkdownItEager } from '@shared/markdown/create-markdown-it-eager'
 
 import {
   pdfDocumentFontFaceCss,
@@ -9,7 +7,7 @@ import {
   PDF_SANS_FONT_STACK,
 } from './pdf-print-styles'
 
-const markdown = createStandardMarkdownIt()
+const markdown = createStandardMarkdownItEager()
 
 /** Full HTML document wrapping rendered markdown (for PDF export). */
 export function renderMarkdownToHtmlDocument(markdownBody: string): string {

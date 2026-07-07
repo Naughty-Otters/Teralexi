@@ -1,10 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
+import { getStandardMarkdownIt } from '@shared/markdown/create-markdown-it'
 import {
   createRendererMarkdown,
   renderMarkdownHtml,
+  rendererMarkdown,
 } from './markdown'
 
 describe('renderMarkdownHtml', () => {
+  beforeAll(async () => {
+    rendererMarkdown.value = await getStandardMarkdownIt()
+  })
+
   it('renders bold markdown', () => {
     const html = renderMarkdownHtml('**bold**')
     expect(html).toContain('<strong>')
@@ -29,8 +35,8 @@ describe('renderMarkdownHtml', () => {
     expect(renderMarkdownHtml('   \n  ')).toBe('')
   })
 
-  it('createRendererMarkdown uses html:false', () => {
-    const md = createRendererMarkdown()
+  it('createRendererMarkdown uses html:false', async () => {
+    const md = await createRendererMarkdown()
     const html = md.render('<img onerror=alert(1) src=x>')
     expect(html).not.toMatch(/<img/i)
   })

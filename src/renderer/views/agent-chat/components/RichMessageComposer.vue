@@ -123,6 +123,7 @@
       @drop.prevent="onDrop"
     >
       <ComposerSlashCommandMenu
+        v-if="slashOpen"
         ref="slashMenuRef"
         :open="slashOpen"
         :query="slashQuery"
@@ -150,7 +151,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { Markdown } from '@tiptap/markdown'
 import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor, type Editor } from '@tiptap/vue-3'
-import { ref, watch, onBeforeUnmount, onMounted, nextTick, computed } from 'vue'
+import { ref, watch, onBeforeUnmount, onMounted, nextTick, computed, defineAsyncComponent } from 'vue'
 import AgentPickerButton from './AgentPickerButton.vue'
 import {
   buildAgentPickerEntries,
@@ -162,15 +163,19 @@ import {
   unregisterComposerAgentPicker,
 } from '@renderer/composables/useComposerAgentPicker'
 import ComposerFileMentionMenu from './ComposerFileMentionMenu.vue'
-import ComposerSlashCommandMenu from './ComposerSlashCommandMenu.vue'
 import WorkspaceSelector from './WorkspaceSelector.vue'
 import { useWorkspaceStore } from '@store/workspace'
-import {
-  filterSlashCommands,
-  type ComposerSlashCommand,
-} from './composer-slash-commands'
+import type { ComposerSlashCommand } from './composer-slash-command-types'
 import type { QueueDeliveryMode } from '../conversation-chat-session'
 import type { StagedChatAttachment } from '@renderer/composables/useChatAttachments'
+
+const ComposerSlashCommandMenu = defineAsyncComponent(
+  () => import('./ComposerSlashCommandMenu.vue'),
+)
+
+type SlashMenuExpose = {
+  focusActiveItem: () => void
+}
 
 const props = withDefaults(
   defineProps<{
@@ -228,7 +233,7 @@ const slashQuery = ref('')
 const slashItems = ref<ComposerSlashCommand[]>([])
 const slashRange = ref<{ from: number; to: number } | null>(null)
 const slashHighlightIndex = ref(0)
-const slashMenuRef = ref<InstanceType<typeof ComposerSlashCommandMenu> | null>(null)
+const slashMenuRef = ref<SlashMenuExpose | null>(null)
 const agentPickerRef = ref<InstanceType<typeof AgentPickerButton> | null>(null)
 const agentPickerOpen = ref(false)
 const agentPickerHighlightIndex = ref(0)
@@ -252,6 +257,25 @@ function selectableAgentAt(index: number): { id: string } | undefined {
 }
 
 const workspaceStore = useWorkspaceStore()
+
+let slashCommandListModule:
+  | typeof import('./composer-slash-command-list')
+  | null = null
+let slashCommandListLoad: Promise<typeof import('./composer-slash-command-list')> | null =
+  null
+
+function loadSlashCommandList() {
+  if (slashCommandListModule) {
+    return Promise.resolve(slashCommandListModule)
+  }
+  if (!slashCommandListLoad) {
+    slashCommandListLoad = import('./composer-slash-command-list').then((mod) => {
+      slashCommandListModule = mod
+      return mod
+    })
+  }
+  return slashCommandListLoad
+}
 
 function resetAgentPickerHighlight() {
   const idx = props.agentOptions.findIndex(
@@ -312,12 +336,13 @@ function getSlashCommandAtCursor(ed: Editor): {
   return { query, from: slashPos, to: from }
 }
 
-function refreshSlashMenu(ed: Editor) {
+async function refreshSlashMenu(ed: Editor) {
   const hit = getSlashCommandAtCursor(ed)
   if (!hit) {
     closeSlashMenu()
     return
   }
+  const { filterSlashCommands } = await loadSlashCommandList()
   const items = filterSlashCommands(
     hit.query,
     props.codingAgent ?? false,
@@ -338,6 +363,8 @@ function refreshSlashMenu(ed: Editor) {
   } else if (slashHighlightIndex.value >= items.length) {
     slashHighlightIndex.value = Math.max(0, items.length - 1)
   }
+  await nextTick()
+  slashMenuRef.value?.focusActiveItem()
 }
 
 function onSlashSelect(command: ComposerSlashCommand) {
@@ -370,7 +397,7 @@ async function refreshComposerMenus(ed: Editor) {
   const slashHit = getSlashCommandAtCursor(ed)
   if (slashHit) {
     closeMentionMenu()
-    refreshSlashMenu(ed)
+    await refreshSlashMenu(ed)
     return
   }
   closeSlashMenu()

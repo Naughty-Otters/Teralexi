@@ -270,7 +270,6 @@
 
 <script setup lang="ts">
 import type { UIMessage } from '@teralexi-ai'
-import { createStandardMarkdownIt } from '@shared/markdown/create-markdown-it'
 import { computed, nextTick, ref, watch, watchEffect } from 'vue'
 import {
   dedupeStepAttachments,
@@ -394,6 +393,7 @@ const emit = defineEmits<{
 }>()
 
 const {
+  markdown,
   view,
   sections,
   fallbackHtml,
@@ -414,8 +414,6 @@ const conversationSections = computed(() =>
 )
 
 const bubbleUiStyle = computed(() => chatUiBubbleCssVars())
-
-const markdown = createStandardMarkdownIt()
 
 const subAgentRuns = computed(() => buildSubAgentRunTree(props.message))
 
