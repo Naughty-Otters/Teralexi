@@ -85,7 +85,13 @@
         </div>
       </div>
     </li>
-    <li v-if="conversationItems.length === 0 && !collapsed" class="empty-item">
+    <li
+      v-if="agentStore.isLoadingInitialConversations && !collapsed"
+      class="empty-item"
+    >
+      Loading conversations…
+    </li>
+    <li v-else-if="conversationItems.length === 0 && !collapsed" class="empty-item">
       No conversations yet.
     </li>
   </ul>

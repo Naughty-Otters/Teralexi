@@ -17,6 +17,12 @@ export const lang: AppLocaleBundle = {
   app: {
     name: 'Teralexi',
   },
+  startup: {
+    loadingSettings: 'Loading settings and LLM providers…',
+    loadingConversations: 'Loading conversations…',
+    loadingMcp: 'Loading MCP servers…',
+    preparingWorkspace: 'Preparing workspace…',
+  },
   sidebar: {
     settings: 'Settings',
     tokenMonitor: 'Token monitor',

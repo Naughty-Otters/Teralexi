@@ -60,7 +60,7 @@ MAC_APPLE_APP_SPECIFIC_PASSWORD = 'xxxx-xxxx-xxxx-xxxx'
 MAC_APPLE_TEAM_ID = 'TEAMID'
 ```
 
-When all three Apple vars are set, builds pass `--config.mac.notarize=true` automatically.
+When all three Apple vars are set, builds notarize in the `afterSign` hook (with extended staple retries) and pass `--config.mac.notarize=false` so electron-builder does not staple with its shorter 3-attempt timeout.
 
 ### Windows (Authenticode `.pfx`)
 
@@ -419,6 +419,18 @@ xcrun stapler validate "build/Teralexi-<version>-arm64.dmg"
 ```
 
 Expect `The validate action worked!`. `does not have a ticket stapled` means notarization did not complete or the staple step was skipped.
+
+**Staple failed with code 68 (CloudKit timeout)**
+
+If the build fails with `Failed to staple your application with code: 68` and `api.apple-cloudkit.com` timed out, signing and notarization usually succeeded — only Apple's ticket delivery was slow. Retry:
+
+```bash
+node scripts/macos-staple-with-retry.cjs "build/mac/Teralexi.app"
+# or for arch-specific output:
+node scripts/macos-staple-with-retry.cjs "build/mac-arm64/Teralexi.app"
+```
+
+Then re-run packaging if dmg/zip were not produced, or staple the dmg directly after it is built. Check VPN/firewall if timeouts persist.
 
 ### Windows
 

@@ -707,7 +707,10 @@ export function buildElectronBuilderExtraArgs(
 ): string[] {
   const args: string[] = []
   if (isMacNotarizeConfigured(env)) {
-    args.push('--config.mac.notarize=true')
+    // Notarization runs in scripts/electron-after-sign.cjs with extended staple
+    // retries — electron-builder's built-in stapler only retries 3x and often
+    // fails with code 68 when api.apple-cloudkit.com times out.
+    args.push('--config.mac.notarize=false')
   }
   if (options?.buildingMac && isMacCodeSigningConfigured(env)) {
     // Fail the build if the Developer ID identity can't be resolved instead of

@@ -21,6 +21,27 @@ import { attachSandboxPreviewNavigation } from './sandbox-preview-navigation'
 
 const log = createLogger('services.window-manager')
 
+function attachRendererDiagnostics(webContents: Electron.WebContents): void {
+  webContents.on('did-fail-load', (_event, errorCode, errorDescription, url) => {
+    log.error('Renderer failed to load', {
+      errorCode,
+      errorDescription,
+      url,
+    })
+  })
+
+  webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    const payload = { message, line, sourceId }
+    if (level === 3) log.error('Renderer console error', payload)
+    else if (level === 2) log.warn('Renderer console warning', payload)
+    else log.info('Renderer console', payload)
+  })
+
+  webContents.on('render-process-gone', (_event, details) => {
+    log.error('Renderer process gone', details)
+  })
+}
+
 class MainInit {
   public winURL: string = ''
   public shartURL: string = ''
@@ -71,6 +92,7 @@ class MainInit {
     })
 
     // Load main window
+    attachRendererDiagnostics(this.mainWindow.webContents)
     attachSandboxPreviewNavigation(this.mainWindow.webContents, this.winURL)
     this.mainWindow.loadURL(this.winURL)
     // Show window after dom-ready
