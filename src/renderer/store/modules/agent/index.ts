@@ -32,7 +32,7 @@ import { createAgentMutationsActions } from './agent-mutations'
 import { createSandboxActions } from './sandbox-actions'
 import { createConversationActions } from './conversation-actions'
 import { createLlmProviderActions } from './llm-providers'
-import { createSettingsInitActions } from './settings-init'
+import type { SettingsInitDeps } from './settings-init'
 import type {
   Agent,
   Message,
@@ -70,6 +70,8 @@ export const useAgentStore = defineStore('agent', () => {
     abortController: AbortController
   } | null>(null)
   const hasLoadedSettings = ref(false)
+  const isLoadingInitialConversations = ref(false)
+  const hasLoadedInitialConversations = ref(false)
   const providerSetupDismissed = ref(false)
   const onboardingCompleted = ref(false)
   const mcpServers = ref<McpServerDefinition[]>([])
@@ -206,6 +208,8 @@ export const useAgentStore = defineStore('agent', () => {
     selectedAgentId,
     activeStreamState,
     hasLoadedSettings,
+    isLoadingInitialConversations,
+    hasLoadedInitialConversations,
     providerSetupDismissed,
     onboardingCompleted,
     mcpServers,
@@ -386,9 +390,36 @@ export const useAgentStore = defineStore('agent', () => {
     return actions.fetchMcpServerTools(serverId)
   }
 
-  const settings = createSettingsInitActions(ctx, conversation, {
-    loadSkillsFromDisk,
-  })
+  type SettingsActions = ReturnType<
+    typeof import('./settings-init').createSettingsInitActions
+  >
+  let settingsPromise: Promise<SettingsActions> | null = null
+
+  async function getSettingsActions() {
+    if (!settingsPromise) {
+      settingsPromise = import('./settings-init').then((m) =>
+        m.createSettingsInitActions(ctx, conversation, {
+          loadSkillsFromDisk,
+        } satisfies SettingsInitDeps),
+      )
+    }
+    return settingsPromise
+  }
+
+  async function initializeSettingsFromConfig() {
+    const settings = await getSettingsActions()
+    return settings.initializeSettingsFromConfig()
+  }
+
+  async function loadInitialConversations() {
+    const settings = await getSettingsActions()
+    return settings.loadInitialConversations()
+  }
+
+  async function loadAllConversationLists() {
+    const settings = await getSettingsActions()
+    return settings.loadAllConversationLists()
+  }
 
   watch(
     () => currentConversationId.value,
@@ -403,6 +434,8 @@ export const useAgentStore = defineStore('agent', () => {
 
   return {
     hasLoadedSettings,
+    isLoadingInitialConversations,
+    hasLoadedInitialConversations,
     providerSetupDismissed,
     onboardingCompleted,
     hasLlmProviderReady,
@@ -445,7 +478,8 @@ export const useAgentStore = defineStore('agent', () => {
     mcpToolsLoadErrorByServer,
     enabledMcpTools,
     selectAgent: conversation.selectAgent,
-    initializeSettingsFromConfig: settings.initializeSettingsFromConfig,
+    initializeSettingsFromConfig,
+    loadInitialConversations,
     loadSkillsFromDisk,
     loadMcpServers,
     loadMcpToolsForEnabledServers,
@@ -511,7 +545,7 @@ export const useAgentStore = defineStore('agent', () => {
     conversationHasOlderMessages: conversation.conversationHasOlderMessages,
     selectConversation: conversation.selectConversation,
     createNewConversation: conversation.createNewConversation,
-    loadAllConversationLists: settings.loadAllConversationLists,
+    loadAllConversationLists,
     renameConversation: conversation.renameConversation,
     deleteConversation: conversation.deleteConversation,
     clearConversationHistory: conversation.clearConversationHistory,

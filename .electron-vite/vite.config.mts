@@ -5,7 +5,9 @@ import vueJsx from '@vitejs/plugin-vue-jsx'
 import ui from '@nuxt/ui/vite'
 import viteIkarosTools from './plugin/vite-ikaros-tools'
 import { getConfig } from './utils'
+import { rendererIconBundlePlugin } from './renderer-icon-bundle'
 import { rendererManualChunks } from './renderer-manual-chunks'
+import { rendererElectronCompatPlugin } from './renderer-electron-compat'
 
 function resolve(dir: string) {
   return join(__dirname, '..', dir)
@@ -45,6 +47,8 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'esnext',
     cssCodeSplit: false,
+    // file:// cannot load crossorigin/modulepreload hints reliably in Electron.
+    modulePreload: false,
     rollupOptions: {
       output: {
         manualChunks: rendererManualChunks,
@@ -64,7 +68,17 @@ export default defineConfig({
       ],
     },
   },
-  plugins: [ui({ colorMode: false }), vueJsx(), vuePlugin(), viteIkarosTools()],
+  plugins: [
+    rendererElectronCompatPlugin(),
+    rendererIconBundlePlugin(root, resolve('.')),
+    ui({
+      colorMode: false,
+      icon: { mode: 'svg' },
+    }),
+    vueJsx(),
+    vuePlugin(),
+    viteIkarosTools(),
+  ],
   optimizeDeps: {
     include: ['shiki', 'monaco-editor'],
   },

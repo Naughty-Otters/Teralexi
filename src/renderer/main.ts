@@ -1,3 +1,4 @@
+import 'virtual:renderer-lucide-icons'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import NuxtUIPlugin from '@nuxt/ui/vue-plugin'

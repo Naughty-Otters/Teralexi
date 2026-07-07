@@ -35,6 +35,19 @@
       <section class="chat-main">
         <div class="chat-scroll-area">
           <div
+            v-if="showConversationLoading"
+            class="chat-conversation-loading"
+            role="status"
+            aria-live="polite"
+          >
+            <UIcon
+              name="i-lucide-loader-circle"
+              class="chat-conversation-loading__icon"
+              aria-hidden="true"
+            />
+            <span>{{ t.common.loading }}</span>
+          </div>
+          <div
             ref="messagesEl"
             class="chat-scroll"
             @scroll.passive="onMessagesScroll"
@@ -357,6 +370,9 @@ const props = defineProps<{ sidebarCollapsed: boolean }>()
 const emit = defineEmits<{ 'toggle-sidebar': [] }>()
 
 const agentStore = useAgentStore()
+const showConversationLoading = computed(
+  () => agentStore.isLoadingInitialConversations,
+)
 const workspaceStore = useWorkspaceStore()
 const workspaceNavStore = useWorkspaceNavigationStore()
 const { t } = useI18n()
@@ -897,7 +913,10 @@ const canSend = computed(() => {
 const reactiveMessages = ref<UIMessage[]>([])
 
 const showAgentGuide = computed(
-  () => reactiveMessages.value.length === 0 && !isBusy.value,
+  () =>
+    reactiveMessages.value.length === 0 &&
+    !isBusy.value &&
+    !agentStore.isLoadingInitialConversations,
 )
 
 const conversationWorkspaceAttachments = computed(() =>
@@ -2204,6 +2223,29 @@ watchEffect(() => {
   position: relative;
   display: flex;
   flex-direction: column;
+}
+.chat-conversation-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: color-mix(in srgb, var(--ui-bg) 88%, transparent);
+  color: var(--ui-text-muted);
+  font-size: 13px;
+}
+.chat-conversation-loading__icon {
+  width: 22px;
+  height: 22px;
+  animation: chat-conversation-loading-spin 0.9s linear infinite;
+}
+@keyframes chat-conversation-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .chat-scroll {
   position: relative;

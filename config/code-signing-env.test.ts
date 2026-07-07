@@ -387,7 +387,7 @@ AZURE_SIGNING_PUBLISHER_NAME = 'Example Dev'
     }
   })
 
-  it('adds notarize flag when Apple credentials are configured', () => {
+  it('disables electron-builder notarize when Apple credentials are configured', () => {
     const args = buildElectronBuilderExtraArgs(
       new Map([
         ['APPLE_ID', 'dev@example.com'],
@@ -395,7 +395,7 @@ AZURE_SIGNING_PUBLISHER_NAME = 'Example Dev'
         ['APPLE_TEAM_ID', 'TEAM123'],
       ]),
     )
-    expect(args).toEqual(['--config.mac.notarize=true'])
+    expect(args).toEqual(['--config.mac.notarize=false'])
   })
 
   it('disables hardenedRuntime for unsigned macOS builds', () => {

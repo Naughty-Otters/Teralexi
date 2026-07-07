@@ -61,12 +61,27 @@
           @close="rightPanelView = 'chat'"
         />
         <ChatPanel
-          v-else
+          v-else-if="chatPanelMounted"
           :sidebar-collapsed="sidebarCollapsed"
           @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed"
         />
+        <div
+          v-else
+          class="right-panel-boot-loading"
+          role="status"
+          aria-live="polite"
+        >
+          <UIcon
+            name="i-lucide-loader-circle"
+            class="right-panel-boot-loading__icon"
+            aria-hidden="true"
+          />
+          <span>{{ t.common.loading }}</span>
+        </div>
       </main>
     </div>
+
+    <StartupStatusBar :message="startupStatus" />
 
     <ProviderSetupWizard
       v-if="isSignedIn"
@@ -104,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch, watchEffect } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, watchEffect, nextTick, defineAsyncComponent } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAgentStore } from '@store/agent'
 import { useWorkspaceStore } from '@store/workspace'
@@ -119,11 +134,28 @@ import PanelResizeHandle from '@renderer/components/PanelResizeHandle.vue'
 import TeralexiLogo from './components/teralexiLogo.vue'
 import AgentList from './components/AgentList.vue'
 import SidebarFooter from './components/SidebarFooter.vue'
-import ChatPanel from './components/ChatPanel.vue'
-import SettingsPanel from './components/SettingsPanel.vue'
-import MonitorPanel from './components/MonitorPanel.vue'
-import WorkspacePanel from './components/WorkspacePanel.vue'
-import WorkflowPanel from '@renderer/views/workflows/WorkflowPanel.vue'
+
+const ChatPanel = defineAsyncComponent(
+  () => import('./components/ChatPanel.vue'),
+)
+const SettingsPanel = defineAsyncComponent(
+  () => import('./components/SettingsPanel.vue'),
+)
+const MonitorPanel = defineAsyncComponent(
+  () => import('./components/MonitorPanel.vue'),
+)
+const WorkspacePanel = defineAsyncComponent(
+  () => import('./components/WorkspacePanel.vue'),
+)
+const WorkflowPanel = defineAsyncComponent(
+  () => import('@renderer/views/workflows/WorkflowPanel.vue'),
+)
+const ProviderSetupWizard = defineAsyncComponent(
+  () => import('./components/ProviderSetupWizard.vue'),
+)
+const SignInRequiredPanel = defineAsyncComponent(
+  () => import('./components/SignInRequiredPanel.vue'),
+)
 import {
   registerAppUpdateAboutHandler,
 } from '@renderer/composables/useAppUpdateNavigation'
@@ -140,11 +172,11 @@ import { loadChatUiSettings } from './chatUiSettings'
 import { loadAppLocale } from '@renderer/i18n/appLocaleSettings'
 import { useI18n } from '@renderer/composables/useI18n'
 import { runConversationStoreUiSync } from './conversationStoreUiSync'
-import ProviderSetupWizard from './components/ProviderSetupWizard.vue'
-import SignInRequiredPanel from './components/SignInRequiredPanel.vue'
 import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { PROVIDER_SETUP_SESSION_KEY } from '@renderer/lib/provider-setup-session'
 import { requestSandboxPreview } from './sandboxPreviewBridge'
+import { useAgentStartupBootstrap } from '@renderer/composables/useAgentStartupBootstrap'
+import StartupStatusBar from './components/StartupStatusBar.vue'
 
 const { t } = useI18n()
 const { isSignedIn } = useGoogleAccount()
@@ -153,6 +185,8 @@ const toast = useToast()
 const { state: appUpdateState } = useAppUpdate()
 
 const agentStore = useAgentStore()
+const { statusMessage: startupStatus, run: runStartupBootstrap } =
+  useAgentStartupBootstrap()
 const workspaceStore = useWorkspaceStore()
 const { activeLabel: workspaceActiveLabel } = storeToRefs(workspaceStore)
 const workspaceNavStore = useWorkspaceNavigationStore()
@@ -162,6 +196,7 @@ const rightPanelView = ref<
 const sidebarCollapsed = ref(true)
 const layoutEl = ref<HTMLElement | null>(null)
 const providerSetupOpen = ref(false)
+const chatPanelMounted = ref(false)
 const signInGateOpen = ref(false)
 
 const signInGateDescription = computed(() => t.value.signInGate.wizard)
@@ -364,7 +399,7 @@ function renderLiveStepProgress(chunk: Record<string, unknown>): string {
   return `${visible}\n<!-- teralexi-structured:${encodeStructuredMarker(structured)} -->`
 }
 
-onMounted(async () => {
+onMounted(() => {
   registerAppUpdateAboutHandler(() => {
     rightPanelView.value = 'settings'
   })
@@ -496,8 +531,11 @@ onMounted(async () => {
       void workspaceStore.loadForConversation(id)
     },
   )
-  await agentStore.initializeSettingsFromConfig()
-  void workspaceStore.loadForConversation(agentStore.currentConversationId)
+
+  void bootstrapAgentChat()
+})
+
+function openProviderSetupWizardIfNeeded() {
   if (sessionStorage.getItem(PROVIDER_SETUP_SESSION_KEY) === '1') {
     sessionStorage.removeItem(PROVIDER_SETUP_SESSION_KEY)
     if (isSignedIn.value) {
@@ -506,7 +544,16 @@ onMounted(async () => {
   } else if (agentStore.shouldShowProviderSetupWizard && isSignedIn.value) {
     providerSetupOpen.value = true
   }
-})
+}
+
+async function bootstrapAgentChat() {
+  await nextTick()
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve())
+  })
+  chatPanelMounted.value = true
+  void runStartupBootstrap(openProviderSetupWizardIfNeeded)
+}
 
 onUnmounted(() => {
   registerAppUpdateAboutHandler(null)
@@ -525,6 +572,7 @@ onUnmounted(() => {
   height: 100%;
   box-sizing: border-box;
   overflow: hidden;
+  position: relative;
 }
 .agent-layout {
   display: flex;
@@ -592,6 +640,26 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: hidden;
   background: var(--ui-bg);
+}
+.right-panel-boot-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--ui-text-muted);
+  font-size: 13px;
+}
+.right-panel-boot-loading__icon {
+  width: 22px;
+  height: 22px;
+  animation: right-panel-boot-spin 0.9s linear infinite;
+}
+@keyframes right-panel-boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .sign-in-gate-overlay {

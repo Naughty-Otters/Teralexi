@@ -87,7 +87,7 @@ if (buildingMac) {
   if (isMacCodeSigningConfigured(signingEnv)) {
     console.log('[code-sign] macOS signing configured (forceCodeSigning on — build fails if identity is unresolved)')
     if (isMacNotarizeConfigured(signingEnv)) {
-      console.log('[code-sign] Apple notarization enabled')
+      console.log('[code-sign] Apple notarization enabled (afterSign hook with extended staple retries)')
     }
   } else {
     console.log(

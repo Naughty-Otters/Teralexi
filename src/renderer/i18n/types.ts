@@ -16,6 +16,12 @@ export type AppLabels = {
   app: {
     name: string
   }
+  startup: {
+    loadingSettings: string
+    loadingConversations: string
+    loadingMcp: string
+    preparingWorkspace: string
+  }
   sidebar: {
     settings: string
     tokenMonitor: string

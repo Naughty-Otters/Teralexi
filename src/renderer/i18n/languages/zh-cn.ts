@@ -17,6 +17,12 @@ export const lang: AppLocaleBundle = {
   app: {
     name: 'Teralexi',
   },
+  startup: {
+    loadingSettings: '正在加载设置与 LLM 提供商…',
+    loadingConversations: '正在加载会话…',
+    loadingMcp: '正在加载 MCP 服务器…',
+    preparingWorkspace: '正在准备工作区…',
+  },
   sidebar: {
     settings: '设置',
     tokenMonitor: 'Token 监控',

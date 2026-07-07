@@ -35,6 +35,8 @@ export type AgentStoreContext = {
     abortController: AbortController
   } | null>
   hasLoadedSettings: Ref<boolean>
+  isLoadingInitialConversations: Ref<boolean>
+  hasLoadedInitialConversations: Ref<boolean>
   providerSetupDismissed: Ref<boolean>
   onboardingCompleted: Ref<boolean>
   mcpServers: Ref<McpServerDefinition[]>

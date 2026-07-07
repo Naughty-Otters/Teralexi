@@ -12,8 +12,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
-import TitleBar from '@renderer/components/title-bar/title-bar.vue'
+import { defineAsyncComponent, onMounted, onUnmounted } from 'vue'
+
+const TitleBar = defineAsyncComponent(
+  () => import('@renderer/components/title-bar/title-bar.vue'),
+)
 import {
   bindAppUpdateListeners,
   loadAppVersion,

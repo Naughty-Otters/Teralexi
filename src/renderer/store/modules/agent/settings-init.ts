@@ -44,6 +44,8 @@ export function createSettingsInitActions(
     zhipuBaseURL,
     openAiCompatibleApiKeys,
     openAiCompatibleBaseUrls,
+    isLoadingInitialConversations,
+    hasLoadedInitialConversations,
     providerSetupDismissed,
     onboardingCompleted,
     selectedAgentId,
@@ -52,7 +54,6 @@ export function createSettingsInitActions(
     chatSelectableAgents,
   } = ctx
   const {
-    selectAgent,
     selectConversation,
     loadConversationList,
     mostRecentConversation,
@@ -235,8 +236,6 @@ export function createSettingsInitActions(
 
     await loadSkillsFromDisk()
 
-    void import('./agent-mcp-servers').then((m) => m.loadMcpServers(ctx))
-
     if (agents.value.length === 0) {
       log.warn('Agent list empty after LoadSkills; retrying once')
       await loadSkillsFromDisk()
@@ -255,7 +254,7 @@ export function createSettingsInitActions(
       const fallbackAgent = pickFrom[0]
       const initialAgent = defaultAgent ?? fallbackAgent
       if (initialAgent) {
-        await selectAgent(initialAgent.id)
+        selectedAgentId.value = initialAgent.id
       }
     } else if (
       selectedAgentId.value &&
@@ -264,18 +263,28 @@ export function createSettingsInitActions(
       const fallback =
         chatSelectableAgents.value.find((a) => a.name === 'Default') ??
         chatSelectableAgents.value[0]
-      if (fallback) await selectAgent(fallback.id)
-    }
-
-    await loadAllConversationLists()
-    if (!focusedConversationId.value) {
-      const recent = mostRecentConversation()
-      if (recent) {
-        await selectConversation(recent.id)
-      }
+      if (fallback) selectedAgentId.value = fallback.id
     }
 
     hasLoadedSettings.value = true
+  }
+
+  async function loadInitialConversations(): Promise<void> {
+    if (hasLoadedInitialConversations.value) return
+
+    isLoadingInitialConversations.value = true
+    try {
+      await loadAllConversationLists()
+      if (!focusedConversationId.value) {
+        const recent = mostRecentConversation()
+        if (recent) {
+          await selectConversation(recent.id)
+        }
+      }
+      hasLoadedInitialConversations.value = true
+    } finally {
+      isLoadingInitialConversations.value = false
+    }
   }
 
   async function loadAllConversationLists(): Promise<void> {
@@ -289,6 +298,7 @@ export function createSettingsInitActions(
   }
   return {
     initializeSettingsFromConfig,
+    loadInitialConversations,
     loadAllConversationLists,
   }
 }
