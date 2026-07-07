@@ -4,15 +4,18 @@ vi.mock('pino-pretty', () => ({
   default: vi.fn(() => ({ write: vi.fn() })),
 }))
 
-vi.mock('pino', () => ({
-  default: {
-    destination: vi.fn(() => ({ write: vi.fn() })),
-  },
+const createRotatingPinoFileDestination = vi.fn(() => ({ write: vi.fn(), end: vi.fn() }))
+
+vi.mock('./log-rotation', () => ({
+  createRotatingPinoFileDestination,
+  DEFAULT_MAX_LOG_BYTES: 10 * 1024 * 1024,
+  DEFAULT_MAX_LOG_FILES: 5,
 }))
 
 describe('pretty-stream', () => {
   beforeEach(() => {
     vi.resetModules()
+    createRotatingPinoFileDestination.mockClear()
     delete process.env.NODE_ENV
   })
 
@@ -28,32 +31,34 @@ describe('pretty-stream', () => {
     expect(usePrettyLogs()).toBe(false)
   })
 
-  it('createAgentRunLogDestination uses pino.destination in production', async () => {
+  it('createAgentRunLogDestination uses rotating file sink in production', async () => {
     process.env.NODE_ENV = 'production'
-    const pino = (await import('pino')).default
     const { createAgentRunLogDestination } = await import('./pretty-stream')
     createAgentRunLogDestination('/tmp/run.log')
-    expect(pino.destination).toHaveBeenCalledWith(
-      expect.objectContaining({ dest: '/tmp/run.log', sync: true }),
-    )
+    expect(createRotatingPinoFileDestination).toHaveBeenCalledWith('/tmp/run.log')
   })
 
-  it('createPinoFileDestination opens log files synchronously', async () => {
-    const pino = (await import('pino')).default
+  it('createPinoFileDestination uses rotating file sink', async () => {
     const { createPinoFileDestination } = await import('./pretty-stream')
     createPinoFileDestination('/tmp/main.log')
-    expect(pino.destination).toHaveBeenCalledWith(
-      expect.objectContaining({ dest: '/tmp/main.log', sync: true }),
+    expect(createRotatingPinoFileDestination).toHaveBeenCalledWith(
+      '/tmp/main.log',
+      undefined,
     )
   })
 
-  it('createAgentRunLogDestination uses pino-pretty in development', async () => {
+  it('createAgentRunLogDestination wraps rotating sink with pino-pretty in development', async () => {
     process.env.NODE_ENV = 'development'
     const pinoPretty = (await import('pino-pretty')).default
     const { createAgentRunLogDestination } = await import('./pretty-stream')
+    const rotatingSink = { write: vi.fn(), end: vi.fn() }
+    createRotatingPinoFileDestination.mockReturnValueOnce(rotatingSink)
+
     createAgentRunLogDestination('/tmp/run.log')
+
+    expect(createRotatingPinoFileDestination).toHaveBeenCalledWith('/tmp/run.log')
     expect(pinoPretty).toHaveBeenCalledWith(
-      expect.objectContaining({ destination: '/tmp/run.log' }),
+      expect.objectContaining({ destination: rotatingSink }),
     )
   })
 })

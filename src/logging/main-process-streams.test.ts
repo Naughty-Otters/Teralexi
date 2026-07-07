@@ -4,11 +4,13 @@ vi.mock('node:fs', () => ({ mkdirSync: vi.fn() }))
 vi.mock('@config/teralexi-home', () => ({
   getTeralexiLogsDir: vi.fn(() => '/mock/logs'),
 }))
-vi.mock('pino', () => ({
-  default: {
-    destination: vi.fn(() => ({ write: vi.fn() })),
-  },
-}))
+vi.mock('./pretty-stream', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./pretty-stream')>()
+  return {
+    ...actual,
+    createPinoFileDestination: vi.fn(() => ({ write: vi.fn() })),
+  }
+})
 
 describe('buildMainProcessLogStreams', () => {
   beforeEach(() => {
