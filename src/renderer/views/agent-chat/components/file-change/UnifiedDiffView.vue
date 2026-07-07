@@ -8,7 +8,11 @@
 </template>
 
 <script setup lang="ts">
-import ShikiDiffView from '@renderer/components/code/ShikiDiffView.vue'
+import { defineAsyncComponent } from 'vue'
+
+const ShikiDiffView = defineAsyncComponent(
+  () => import('@renderer/components/code/ShikiDiffView.vue'),
+)
 
 withDefaults(
   defineProps<{

@@ -103,11 +103,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import ShikiCodeBlock from '@renderer/components/code/ShikiCodeBlock.vue'
+import { computed, defineAsyncComponent, ref } from 'vue'
 import { guessLanguageFromCode } from '@renderer/lib/shiki/guess-language'
 import { parseToolFileChanges } from '@shared/file-change/parse-tool-file-changes'
-import FileChangeStack from './file-change/FileChangeStack.vue'
 import ChatTodoChecklist from './ChatTodoChecklist.vue'
 import { TOOL_LOOP_BRIEF_DIFF_LINES } from './chat/toolLoopPanelItems'
 import {
@@ -123,6 +121,13 @@ import {
   toolRunStatePresentation,
   truncateDisplay,
 } from './chat/chatToolPartHelpers'
+
+const FileChangeStack = defineAsyncComponent(
+  () => import('./file-change/FileChangeStack.vue'),
+)
+const ShikiCodeBlock = defineAsyncComponent(
+  () => import('@renderer/components/code/ShikiCodeBlock.vue'),
+)
 
 const props = withDefaults(
   defineProps<{ part: unknown; compact?: boolean }>(),

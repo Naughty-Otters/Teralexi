@@ -63,23 +63,26 @@ export function createSettingsInitActions(
   async function initializeSettingsFromConfig() {
     if (hasLoadedSettings.value && agents.value.length > 0) return
 
-    const values = await getSystemConfigValues([
-      SYSTEM_PROP_KEYS.ollamaBaseURL,
-      SYSTEM_PROP_KEYS.llamacppBaseURL,
-      SYSTEM_PROP_KEYS.llamacppApiKey,
-      SYSTEM_PROP_KEYS.anthropicApiKey,
-      SYSTEM_PROP_KEYS.anthropicBaseURL,
-      SYSTEM_PROP_KEYS.openaiApiKey,
-      SYSTEM_PROP_KEYS.openaiBaseURL,
-      SYSTEM_PROP_KEYS.geminiApiKey,
-      SYSTEM_PROP_KEYS.geminiBaseURL,
-      SYSTEM_PROP_KEYS.deepseekApiKey,
-      SYSTEM_PROP_KEYS.deepseekApiUrl,
-      SYSTEM_PROP_KEYS.zhipuApiKey,
-      SYSTEM_PROP_KEYS.zhipuBaseURL,
-      PROVIDER_SETUP_DISMISSED_KEY,
-      ONBOARDING_COMPLETED_KEY,
-      ...openAiCompatibleProviderConfigKeys(),
+    const [values] = await Promise.all([
+      getSystemConfigValues([
+        SYSTEM_PROP_KEYS.ollamaBaseURL,
+        SYSTEM_PROP_KEYS.llamacppBaseURL,
+        SYSTEM_PROP_KEYS.llamacppApiKey,
+        SYSTEM_PROP_KEYS.anthropicApiKey,
+        SYSTEM_PROP_KEYS.anthropicBaseURL,
+        SYSTEM_PROP_KEYS.openaiApiKey,
+        SYSTEM_PROP_KEYS.openaiBaseURL,
+        SYSTEM_PROP_KEYS.geminiApiKey,
+        SYSTEM_PROP_KEYS.geminiBaseURL,
+        SYSTEM_PROP_KEYS.deepseekApiKey,
+        SYSTEM_PROP_KEYS.deepseekApiUrl,
+        SYSTEM_PROP_KEYS.zhipuApiKey,
+        SYSTEM_PROP_KEYS.zhipuBaseURL,
+        PROVIDER_SETUP_DISMISSED_KEY,
+        ONBOARDING_COMPLETED_KEY,
+        ...openAiCompatibleProviderConfigKeys(),
+      ]),
+      loadSkillsFromDisk(),
     ])
 
     ollamaBaseURL.value = normalizeBaseURL(
@@ -233,8 +236,6 @@ export function createSettingsInitActions(
         )
       }
     }
-
-    await loadSkillsFromDisk()
 
     if (agents.value.length === 0) {
       log.warn('Agent list empty after LoadSkills; retrying once')

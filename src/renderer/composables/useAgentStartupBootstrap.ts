@@ -3,7 +3,8 @@ import { useAgentStore } from '@store/agent'
 import { useWorkspaceStore } from '@store/workspace'
 import { useI18n } from '@renderer/composables/useI18n'
 
-let bootstrapPromise: Promise<void> | null = null
+let criticalBootstrapPromise: Promise<void> | null = null
+let deferredBootstrapPromise: Promise<void> | null = null
 
 export function useAgentStartupBootstrap() {
   const agentStore = useAgentStore()
@@ -14,49 +15,62 @@ export function useAgentStartupBootstrap() {
   const isRunning = ref(false)
   const isComplete = ref(false)
 
-  function setStatus(message: string | null) {
+  function setBackgroundStatus(message: string | null) {
     statusMessage.value = message
   }
 
-  async function run(onComplete?: () => void): Promise<void> {
-    if (bootstrapPromise) {
-      await bootstrapPromise
-      onComplete?.()
-      return
+  async function runCriticalStartup(): Promise<void> {
+    if (criticalBootstrapPromise) return criticalBootstrapPromise
+
+    criticalBootstrapPromise = (async () => {
+      await agentStore.initializeSettingsFromConfig()
+      await agentStore.loadInitialConversations()
+      isComplete.value = true
+    })()
+
+    try {
+      await criticalBootstrapPromise
+    } catch (error) {
+      criticalBootstrapPromise = null
+      throw error
     }
+  }
+
+  async function runDeferredStartup(): Promise<void> {
+    if (deferredBootstrapPromise) return deferredBootstrapPromise
 
     isRunning.value = true
-    bootstrapPromise = (async () => {
+    deferredBootstrapPromise = (async () => {
       try {
-        setStatus(t.value.startup.loadingSettings)
-        await agentStore.initializeSettingsFromConfig()
-
-        setStatus(t.value.startup.loadingConversations)
-        await agentStore.loadInitialConversations()
-
-        setStatus(t.value.startup.loadingMcp)
+        setBackgroundStatus(t.value.startup.loadingMcp)
         await agentStore.loadMcpServers()
 
-        setStatus(t.value.startup.preparingWorkspace)
+        setBackgroundStatus(t.value.startup.preparingWorkspace)
         await workspaceStore.loadForConversation(
           agentStore.currentConversationId,
         )
 
         void agentStore.loadMcpToolsForEnabledServers()
       } finally {
-        setStatus(null)
+        setBackgroundStatus(null)
         isRunning.value = false
-        isComplete.value = true
       }
     })()
 
     try {
-      await bootstrapPromise
-      onComplete?.()
+      await deferredBootstrapPromise
     } catch (error) {
-      bootstrapPromise = null
+      deferredBootstrapPromise = null
+      isRunning.value = false
+      setBackgroundStatus(null)
       throw error
     }
+  }
+
+  async function run(onComplete?: () => void): Promise<void> {
+    await runCriticalStartup()
+    onComplete?.()
+    void runDeferredStartup()
   }
 
   return {

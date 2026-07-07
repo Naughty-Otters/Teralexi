@@ -116,18 +116,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, defineAsyncComponent, ref } from 'vue'
 import MarkdownIt from 'markdown-it'
-import FileChangeStack from './file-change/FileChangeStack.vue'
 import { useFileChangePreview } from './file-change/useFileChangePreview'
 import { usePlanApprovalPreview } from './planning/usePlanApprovalPreview'
 import ChatTodoChecklist from './ChatTodoChecklist.vue'
-import ShikiCodeBlock from '@renderer/components/code/ShikiCodeBlock.vue'
 import '@renderer/components/code/terminal-theme.css'
 import {
   guessLanguageFromCode,
   languageForTerminalSlot,
 } from '@renderer/lib/shiki/guess-language'
+
+const FileChangeStack = defineAsyncComponent(
+  () => import('./file-change/FileChangeStack.vue'),
+)
+const ShikiCodeBlock = defineAsyncComponent(
+  () => import('@renderer/components/code/ShikiCodeBlock.vue'),
+)
 import {
   extractTerminalView,
   formatToolInput,

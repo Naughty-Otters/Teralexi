@@ -17,8 +17,12 @@
 </template>
 
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import type { FileChangePreview } from '@shared/file-change/types'
-import FileChangeCard from './FileChangeCard.vue'
+
+const FileChangeCard = defineAsyncComponent(
+  () => import('./FileChangeCard.vue'),
+)
 
 withDefaults(
   defineProps<{

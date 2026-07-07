@@ -311,6 +311,10 @@ import {
 import { lastAssistantMessageIsCompleteWithCollectFormResponses } from './chat/chatSendAutomaticallyWhen'
 
 import { useHorizontalPanelResize } from '@renderer/composables/useHorizontalPanelResize'
+import {
+  LAYOUT_PREF_KEYS,
+  useLayoutPreference,
+} from '@renderer/lib/layout-preferences'
 import PanelResizeHandle from '@renderer/components/PanelResizeHandle.vue'
 import { handleChatPanelLinkClick } from '../sandboxPreview'
 import { bindSandboxPreviewRequest } from '../sandboxPreviewBridge'
@@ -445,8 +449,14 @@ function sendTextForAttachments(sourcePaths: readonly string[]): string {
   return `Attached ${sourcePaths.length} file${sourcePaths.length === 1 ? '' : 's'}`
 }
 
-const showReportPanel = ref(false)
-const showWorkspaceSplitPanel = ref(false)
+const showReportPanel = useLayoutPreference(
+  LAYOUT_PREF_KEYS.reportPanelOpen,
+  false,
+)
+const showWorkspaceSplitPanel = useLayoutPreference(
+  LAYOUT_PREF_KEYS.workspaceSplitPanelOpen,
+  false,
+)
 const previewLinkTabsByConversation = ref<Record<string, PreviewLinkTab[]>>({})
 const activePreviewLinkTabIdByConversation = ref<Record<string, string | null>>(
   {},
