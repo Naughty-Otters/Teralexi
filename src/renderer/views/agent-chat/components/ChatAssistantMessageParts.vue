@@ -178,7 +178,8 @@ import {
 import { contentHash } from './chat/assistantHtmlCache'
 import { injectCodeCopyButtons } from './chat/streamingMarkdown'
 import { useAgentStore } from '@store/agent'
-import { createStandardMarkdownIt, resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
+import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
+import { useLazyStandardMarkdown } from '@renderer/composables/useLazyStandardMarkdown'
 import { rewriteSandboxPreviewLinksInHtml } from '@shared/markdown/sandbox-preview-links'
 import { prepareMarkdownSource } from '@shared/markdown/prepare-markdown-source'
 import {
@@ -238,7 +239,7 @@ const agentStore = useAgentStore()
 
 const assistantMsgPartsEl = ref<HTMLElement | null>(null)
 
-const stepProgressMarkdown = createStandardMarkdownIt()
+const stepProgressMarkdown = useLazyStandardMarkdown()
 
 const emit = defineEmits<{
   'collect-form-submit': [
@@ -476,9 +477,19 @@ function renderAgentErrorHtml(part: unknown): string {
   return renderAgentErrorMarkdown(raw)
 }
 
+function escapePlainMarkdownFallback(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>')
+}
+
 function renderAgentErrorMarkdown(text: string): string {
   if (!text.trim()) return ''
-  return stepProgressMarkdown.render(text)
+  const md = stepProgressMarkdown.value
+  if (!md) return `<p>${escapePlainMarkdownFallback(text)}</p>`
+  return md.render(text)
 }
 
 function agentStepProgressOutputLinks(part: unknown): StepOutputLinkView[] {
@@ -508,7 +519,9 @@ function renderStepProgressBodyHtml(
   const raw = agentStepProgressText(part)
   const prepared = prepareMarkdownSource(raw)
   if (!prepared) return ''
-  const html = applyStatusBadges(stepProgressMarkdown.render(prepared))
+  const md = stepProgressMarkdown.value
+  if (!md) return `<p>${escapePlainMarkdownFallback(prepared)}</p>`
+  const html = applyStatusBadges(md.render(prepared))
   return rewriteSandboxPreviewLinksInHtml(resolveDiagramBlocksInHtml(html))
 }
 

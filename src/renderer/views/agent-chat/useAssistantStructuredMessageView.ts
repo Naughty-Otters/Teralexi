@@ -1,6 +1,6 @@
 import type { UIMessage } from '@teralexi-ai'
 import { computed, type MaybeRefOrGetter, toValue } from 'vue'
-import { createStandardMarkdownIt } from '@shared/markdown/create-markdown-it'
+import { useLazyStandardMarkdown } from '@renderer/composables/useLazyStandardMarkdown'
 import { prepareMarkdownSource } from '@shared/markdown/prepare-markdown-source'
 import { applyStatusBadges } from './assistantStructuredRender'
 import { chatUiBubbleTextKeepChars } from './chatUiSettings'
@@ -15,7 +15,7 @@ import { excludeSubAgentStepProgressParts } from './stepProgressDisplay'
 export function useAssistantStructuredMessageView(
   messageSource: MaybeRefOrGetter<UIMessage>,
 ) {
-  const markdown = createStandardMarkdownIt()
+  const markdown = useLazyStandardMarkdown()
 
   const message = computed(() => toValue(messageSource))
 
@@ -52,10 +52,11 @@ export function useAssistantStructuredMessageView(
 
   const view = computed((): StructuredDebugView | null => {
     void chatUiBubbleTextKeepChars.value
+    if (!markdown.value) return null
     return buildStructuredDebugViewForMessage({
       raw: assistantTextRaw.value,
       stepProgressParts: parentStepProgressParts.value,
-      markdown,
+      markdown: markdown.value,
       isStreaming: isStreaming.value,
     })
   })
@@ -67,11 +68,12 @@ export function useAssistantStructuredMessageView(
   const fallbackHtml = computed(() => {
     void chatUiBubbleTextKeepChars.value
     const prepared = prepareMarkdownSource(assistantTextRaw.value)
-    if (!prepared) return ''
-    return applyStatusBadges(markdown.render(prepared))
+    if (!prepared || !markdown.value) return ''
+    return applyStatusBadges(markdown.value.render(prepared))
   })
 
   return {
+    markdown,
     view,
     sections,
     fallbackHtml,

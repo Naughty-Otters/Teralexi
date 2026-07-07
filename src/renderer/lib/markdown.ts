@@ -1,27 +1,45 @@
 import type MarkdownIt from 'markdown-it'
 import {
-  createStandardMarkdownIt,
+  getStandardMarkdownIt,
   resolveDiagramBlocksInHtml,
 } from '@shared/markdown/create-markdown-it'
 import {
   prepareMarkdownSource,
   unwrapOuterMarkdownFence,
 } from '@shared/markdown/prepare-markdown-source'
+import { shallowRef } from 'vue'
 
 export { prepareMarkdownSource, unwrapOuterMarkdownFence }
 
-let sharedRenderer: MarkdownIt | null = null
+export const rendererMarkdown = shallowRef<MarkdownIt | null>(null)
 
-/** Shared markdown-it instance for chat bubbles and previews. */
-export function createRendererMarkdown(): MarkdownIt {
-  return createStandardMarkdownIt()
+let loadStarted = false
+
+function ensureRendererMarkdownLoad(): void {
+  if (loadStarted) return
+  loadStarted = true
+  void getStandardMarkdownIt().then((md) => {
+    rendererMarkdown.value = md
+  })
 }
 
-export function getRendererMarkdown(): MarkdownIt {
-  if (!sharedRenderer) {
-    sharedRenderer = createRendererMarkdown()
-  }
-  return sharedRenderer
+ensureRendererMarkdownLoad()
+
+function escapePlainMarkdownFallback(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>')
+}
+
+/** Shared markdown-it instance for chat bubbles and previews. */
+export async function createRendererMarkdown(): Promise<MarkdownIt> {
+  return getStandardMarkdownIt()
+}
+
+export function getRendererMarkdown(): MarkdownIt | null {
+  return rendererMarkdown.value
 }
 
 /**
@@ -29,8 +47,11 @@ export function getRendererMarkdown(): MarkdownIt {
  * Empty input returns an empty string (caller may hide the node).
  */
 export function renderMarkdownHtml(source: string): string {
+  ensureRendererMarkdownLoad()
   const prepared = prepareMarkdownSource(source)
   if (!prepared) return ''
-  const html = getRendererMarkdown().render(prepared)
+  const md = rendererMarkdown.value
+  if (!md) return `<p>${escapePlainMarkdownFallback(prepared)}</p>`
+  const html = md.render(prepared)
   return resolveDiagramBlocksInHtml(html)
 }

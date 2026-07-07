@@ -40,7 +40,7 @@
 
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
-import type { ComposerSlashCommand } from './composer-slash-commands'
+import type { ComposerSlashCommand } from './composer-slash-command-types'
 
 const props = defineProps<{
   open: boolean

@@ -83,14 +83,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import type { CodingMode } from '@shared/agent/coding-mode'
 import {
   planModeComposerHint,
   type PlanModeDisplayStatus,
 } from '@shared/agent/plan-mode-phase'
 import type { StagedChatAttachment } from '@renderer/composables/useChatAttachments'
-import RichMessageComposer from './RichMessageComposer.vue'
+import ComposerFallback from './ComposerFallback.vue'
 import CodingModeBar from './CodingModeBar.vue'
 import WorkspacePathBanner from './WorkspacePathBanner.vue'
 import BackgroundTaskPanel, {
@@ -99,6 +99,12 @@ import BackgroundTaskPanel, {
 import SkillSystemPropertiesForm from './SkillSystemPropertiesForm.vue'
 import type { SkillSystemPropertyFieldView } from '@renderer/composables/useSkillSystemProperties'
 import type { SkillGroupAgentRef } from '@shared/agent/skill-groups'
+
+const RichMessageComposer = defineAsyncComponent({
+  loader: () => import('./RichMessageComposer.vue'),
+  loadingComponent: ComposerFallback,
+  delay: 0,
+})
 
 export type ChatComposerSkillSetupState = {
   needsSetup: boolean

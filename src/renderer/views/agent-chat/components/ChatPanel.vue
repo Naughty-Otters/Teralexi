@@ -216,6 +216,7 @@
 <script setup lang="ts">
 import {
   computed,
+  defineAsyncComponent,
   nextTick,
   onMounted,
   onUnmounted,
@@ -225,7 +226,7 @@ import {
   watch,
   watchEffect,
 } from 'vue'
-import { createStandardMarkdownIt } from '@shared/markdown/create-markdown-it'
+import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
 import './chat/markdown-preview.css'
 import { Chat } from '@teralexi-ai/vue'
 import {
@@ -315,6 +316,7 @@ import {
   LAYOUT_PREF_KEYS,
   useLayoutPreference,
 } from '@renderer/lib/layout-preferences'
+import { useLazyStandardMarkdown } from '@renderer/composables/useLazyStandardMarkdown'
 import PanelResizeHandle from '@renderer/components/PanelResizeHandle.vue'
 import { handleChatPanelLinkClick } from '../sandboxPreview'
 import { bindSandboxPreviewRequest } from '../sandboxPreviewBridge'
@@ -324,14 +326,12 @@ import {
   type PreviewLinkTab,
 } from '../report-preview-tabs'
 import type { ReportPanelPreviewSource } from './ReportPanel.vue'
-import ReportPanel from './ReportPanel.vue'
 import ChatPanelHeader from './ChatPanelHeader.vue'
 import AgentGuidePanel from './AgentGuidePanel.vue'
 import ChatUserMessage from './ChatUserMessage.vue'
 import ChatAssistantMessageParts from './ChatAssistantMessageParts.vue'
 import ChatComposer from './ChatComposer.vue'
 import ChatConversationWorkspaceAttachments from './ChatConversationWorkspaceAttachments.vue'
-import WorkspacePanel from './WorkspacePanel.vue'
 import { formatSlashHelp } from './composer-slash-commands'
 import { openComposerAgentPicker } from '@renderer/composables/useComposerAgentPicker'
 import {
@@ -370,6 +370,9 @@ import {
 } from '@shared/agent/sub-agent-slash-command'
 import { resolveAllowSubAgents } from '@shared/agent/sub-agent-settings'
 
+const ReportPanel = defineAsyncComponent(() => import('./ReportPanel.vue'))
+const WorkspacePanel = defineAsyncComponent(() => import('./WorkspacePanel.vue'))
+
 const props = defineProps<{ sidebarCollapsed: boolean }>()
 const emit = defineEmits<{ 'toggle-sidebar': [] }>()
 
@@ -397,7 +400,7 @@ const PLAN_CMD_ALIAS_RE = /^\/plan(?:\s+(\S+))?\b/i
 const HELP_CMD_RE = /^\/help\b/i
 const MCP_CMD_RE = /^\/mcp(?:\s+([\s\S]*))?$/i
 const INSTALL_SKILL_CMD_RE = /^\/skill:install\s+(\S+)/i
-const markdown = createStandardMarkdownIt()
+const standardMarkdown = useLazyStandardMarkdown()
 
 const codingMode = ref<CodingMode>(DEFAULT_CODING_MODE)
 const planModeView = ref<PlanModeView>(defaultPlanModeView())
@@ -610,23 +613,38 @@ const chatGenerateId = createRendererChatGenerateId()
 
 const streamingTextBuffer = useStreamingTextBuffer()
 
-const assistantTextPartHtml = createAssistantTextPartHtmlRenderer({
-  markdown,
-  getStructuredDebug: () =>
-    usesStructuredAssistantRendering(resolveUiChatBoxDisplayMode()),
-  getStreamingText: UI_CHAT_CONVERSATION_MODE_ONLY
-    ? undefined
-    : (msg, part) => {
-        const partId = (part as { id?: string }).id ?? 'text-0'
-        const override = streamingTextBuffer.textForMessage(
-          msg,
-          partId,
-          part.text ?? '',
-        )
-        if (override !== (part.text ?? '')) return override
-        return undefined
-      },
-})
+const assistantTextPartHtmlRenderer = shallowRef<
+  ((msg: UIMessage, part: unknown) => string) | null
+>(null)
+
+watch(
+  standardMarkdown,
+  (markdown) => {
+    if (!markdown) return
+    assistantTextPartHtmlRenderer.value = createAssistantTextPartHtmlRenderer({
+      markdown,
+      getStructuredDebug: () =>
+        usesStructuredAssistantRendering(resolveUiChatBoxDisplayMode()),
+      getStreamingText: UI_CHAT_CONVERSATION_MODE_ONLY
+        ? undefined
+        : (msg, part) => {
+            const partId = (part as { id?: string }).id ?? 'text-0'
+            const override = streamingTextBuffer.textForMessage(
+              msg,
+              partId,
+              part.text ?? '',
+            )
+            if (override !== (part.text ?? '')) return override
+            return undefined
+          },
+    })
+  },
+  { immediate: true },
+)
+
+function assistantTextPartHtml(msg: UIMessage, part: unknown): string {
+  return assistantTextPartHtmlRenderer.value?.(msg, part) ?? ''
+}
 
 const isCatchingUp = computed(() => {
   const cid = agentStore.currentConversationId
