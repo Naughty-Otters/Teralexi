@@ -34,13 +34,6 @@
 
       <section class="chat-main">
         <div class="chat-scroll-area">
-          <div class="chat-scroll-watermark" aria-hidden="true">
-            <img
-              :src="teralexiPuppy"
-              alt=""
-              class="chat-scroll-watermark__img"
-            />
-          </div>
           <div
             ref="messagesEl"
             class="chat-scroll"
@@ -227,7 +220,6 @@ import {
   type UIMessage,
 } from '@teralexi-ai'
 
-import { teralexiPuppy } from '@renderer/assets/icons'
 import {
   useAgentStore,
   type Conversation,
@@ -2213,27 +2205,8 @@ watchEffect(() => {
   display: flex;
   flex-direction: column;
 }
-.chat-scroll-watermark {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-.chat-scroll-watermark__img {
-  width: min(92%, 820px);
-  height: auto;
-  max-height: 68%;
-  object-fit: contain;
-  opacity: 0.14;
-  border-radius: 16px;
-}
 .chat-scroll {
   position: relative;
-  z-index: 1;
   flex: 1;
   min-height: 0;
   overflow-y: auto;

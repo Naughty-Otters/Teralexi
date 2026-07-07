@@ -489,7 +489,6 @@ onMounted(async () => {
     },
   )
 
-  await workspaceStore.loadForConversation(agentStore.currentConversationId)
   watch(
     () => agentStore.currentConversationId,
     (id) => {
@@ -498,13 +497,7 @@ onMounted(async () => {
     },
   )
   await agentStore.initializeSettingsFromConfig()
-  await Promise.all(
-    agentStore.enabledAgents.map((agent) =>
-      agentStore.loadConversationList(agent.id),
-    ),
-  )
-  await agentStore.checkConnection()
-  await agentStore.fetchModelsForProvider('ollama')
+  void workspaceStore.loadForConversation(agentStore.currentConversationId)
   if (sessionStorage.getItem(PROVIDER_SETUP_SESSION_KEY) === '1') {
     sessionStorage.removeItem(PROVIDER_SETUP_SESSION_KEY)
     if (isSignedIn.value) {
