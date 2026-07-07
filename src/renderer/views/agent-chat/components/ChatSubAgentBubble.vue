@@ -39,11 +39,14 @@
         :class="`sub-agent-bubble__section--${section.status}`"
       >
         <ChatBubblePdfExportButton
+          v-if="showPdfExportButtons"
           corner
           :markdown="section.bodyMarkdown"
           :section-title="section.title"
           :section-id="section.id"
           :message-id="messageId"
+          @exported="onPdfExported"
+          @failed="onPdfExportFailed"
         />
         <header class="sub-agent-bubble__section-header">
           <span class="sub-agent-bubble__section-title">{{ section.title }}</span>
@@ -74,7 +77,7 @@
 
 <script setup lang="ts">
 import type MarkdownIt from 'markdown-it'
-import { computed, ref } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import {
   buildStructuredDebugViewFromStepProgress,
   type StepProgressPartInput,
@@ -88,7 +91,11 @@ import {
   chatUiBubbleTextKeepChars,
   limitBubbleTextForDisplay,
 } from '../chatUiSettings'
-import ChatBubblePdfExportButton from './ChatBubblePdfExportButton.vue'
+import { useI18n } from '@renderer/composables/useI18n'
+
+const ChatBubblePdfExportButton = defineAsyncComponent(
+  () => import('./ChatBubblePdfExportButton.vue'),
+)
 
 const props = defineProps<{
   node: SubAgentRunNode
@@ -99,6 +106,38 @@ const props = defineProps<{
 }>()
 
 const expanded = ref(false)
+const showPdfExportButtons = ref(false)
+const { t } = useI18n()
+const toast = useToast()
+
+watch(expanded, (isExpanded) => {
+  if (!isExpanded) {
+    showPdfExportButtons.value = false
+    return
+  }
+  const schedule =
+    typeof requestIdleCallback === 'function'
+      ? requestIdleCallback
+      : (callback: IdleRequestCallback) => window.setTimeout(callback, 1)
+  schedule(() => {
+    if (expanded.value) showPdfExportButtons.value = true
+  })
+})
+
+function onPdfExported(_savedPath: string): void {
+  toast.add({
+    title: t.value.chat.exportBubblePdfSuccess,
+    color: 'success',
+  })
+}
+
+function onPdfExportFailed(error: string): void {
+  toast.add({
+    title: t.value.chat.exportBubblePdfFailed,
+    description: error,
+    color: 'error',
+  })
+}
 
 const statusLabel = computed(() => {
   switch (props.node.status) {

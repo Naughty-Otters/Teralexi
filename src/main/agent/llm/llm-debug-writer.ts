@@ -53,6 +53,7 @@ export type LlmDebugResponseRecord = {
 
 const enabledCache = new Map<string, boolean>()
 const sessionCounters = new Map<string, number>()
+const pendingDebugWrites = new Set<Promise<void>>()
 
 export function invalidateLlmDebugCache(userId?: string): void {
   if (userId?.trim()) {
@@ -177,9 +178,20 @@ async function writeAtomic(filePath: string, content: string): Promise<void> {
 }
 
 function scheduleWrite(task: () => Promise<void>): void {
-  void task().catch((err) => {
+  const job = task().catch((err) => {
     log.warn('LLM debug write failed', { err })
   })
+  pendingDebugWrites.add(job)
+  void job.finally(() => {
+    pendingDebugWrites.delete(job)
+  })
+}
+
+/** Await background debug writes (unit tests only). */
+export async function flushLlmDebugWritesForTests(): Promise<void> {
+  while (pendingDebugWrites.size > 0) {
+    await Promise.all([...pendingDebugWrites])
+  }
 }
 
 export function scheduleLlmDebugRequest(

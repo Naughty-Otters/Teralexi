@@ -5,6 +5,11 @@ import {
 import { randomShortUuid } from '@shared/utils/short-uuid'
 import { useWorkspaceStore } from '@store/workspace'
 import {
+  LAYOUT_PREF_KEYS,
+  readStoredString,
+  writeStoredString,
+} from '@renderer/lib/layout-preferences'
+import {
   serializeAssistantMessageForHistory,
 } from './context'
 import type { AgentStoreContext } from './agent-store-context'
@@ -41,6 +46,14 @@ export function createConversationActions(
       if (hit) return hit
     }
     return undefined
+  }
+
+  function persistFocusedConversationId(conversationId: string | null): void {
+    writeStoredString(LAYOUT_PREF_KEYS.lastConversationId, conversationId)
+  }
+
+  function readPersistedConversationId(): string | null {
+    return readStoredString(LAYOUT_PREF_KEYS.lastConversationId)
   }
 
   function mostRecentConversation(): Conversation | null {
@@ -484,6 +497,7 @@ export function createConversationActions(
     forceReload = false,
   ): Promise<void> {
     focusedConversationId.value = conversationId
+    persistFocusedConversationId(conversationId)
     await syncSelectedAgentFromConversation(conversationId)
     // Load messages if not cached
     if (forceReload || !conversations.value[conversationId]) {
@@ -532,6 +546,7 @@ export function createConversationActions(
     ]
     await useWorkspaceStore().commitPendingWorkspace(conv.id)
     focusedConversationId.value = conv.id
+    persistFocusedConversationId(conv.id)
     activeConversationId.value[agentId] = conv.id
     return conv
   }
@@ -635,6 +650,7 @@ export function createConversationActions(
         await selectConversation(recent.id)
       } else {
         focusedConversationId.value = null
+        persistFocusedConversationId(null)
       }
     }
   }
@@ -666,6 +682,7 @@ export function createConversationActions(
   return {
     findConversationMeta,
     mostRecentConversation,
+    readPersistedConversationId,
     stopStreaming,
     markUiChatInFlight,
     isConversationStreamActive,

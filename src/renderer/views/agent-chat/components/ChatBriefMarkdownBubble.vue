@@ -1,12 +1,15 @@
 <template>
   <div class="brief-markdown-bubble">
-    <ChatBubbleContentActions
+    <ChatBubbleContentActionsLazy
       corner
-      show-copy-print
       :markdown="markdown"
       section-title="Response"
       section-id="markdown"
       :message-id="message.id"
+      @copied="onBubbleCopied"
+      @copy-failed="onBubbleCopyFailed"
+      @exported="onBubblePdfExported"
+      @failed="onBubblePdfExportFailed"
     />
     <div class="msg-html brief-markdown-bubble__body" v-html="html" />
   </div>
@@ -16,13 +19,21 @@
 import type { UIMessage } from '@teralexi-ai'
 import { computed } from 'vue'
 import { assistantTextPartMarkdown } from '../bubblePdfExport'
-import ChatBubbleContentActions from './ChatBubbleContentActions.vue'
+import { useBubbleActionToasts } from '../composables/useBubbleActionToasts'
+import ChatBubbleContentActionsLazy from './ChatBubbleContentActionsLazy.vue'
 
 const props = defineProps<{
   message: UIMessage
   part: unknown
   html: string
 }>()
+
+const {
+  onBubbleCopied,
+  onBubbleCopyFailed,
+  onBubblePdfExported,
+  onBubblePdfExportFailed,
+} = useBubbleActionToasts()
 
 const markdown = computed(() =>
   assistantTextPartMarkdown(props.message, props.part),

@@ -57,6 +57,8 @@ export function createSettingsInitActions(
     selectConversation,
     loadConversationList,
     mostRecentConversation,
+    findConversationMeta,
+    readPersistedConversationId,
   } = conversation
   const { loadSkillsFromDisk } = deps
 
@@ -277,9 +279,17 @@ export function createSettingsInitActions(
     try {
       await loadAllConversationLists()
       if (!focusedConversationId.value) {
-        const recent = mostRecentConversation()
-        if (recent) {
-          await selectConversation(recent.id)
+        const persistedId = readPersistedConversationId()
+        const persisted = persistedId
+          ? findConversationMeta(persistedId)
+          : undefined
+        if (persisted) {
+          await selectConversation(persisted.id)
+        } else {
+          const recent = mostRecentConversation()
+          if (recent) {
+            await selectConversation(recent.id)
+          }
         }
       }
       hasLoadedInitialConversations.value = true

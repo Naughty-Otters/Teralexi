@@ -993,7 +993,7 @@ watch(
   () => [activeTab.value, effectiveSkillId.value] as const,
   ([tab, skillId]) => {
     if (tab === 'prompt' && skillId) void loadSkillCompilation()
-    if (tab === 'mcp' && agentStore.mcpServers.length === 0) {
+    if (tab === 'mcp') {
       void agentStore.loadMcpServers()
     }
   },

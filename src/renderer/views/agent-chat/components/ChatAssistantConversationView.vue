@@ -77,12 +77,16 @@
               </span>
             </Transition>
           </span>
-          <ChatBubbleContentActions
+          <ChatBubbleContentActionsLazy
             v-if="section.bodyMarkdown?.trim()"
             :markdown="section.bodyMarkdown"
             :section-title="section.title"
             :section-id="section.id"
             :message-id="props.message.id"
+            @copied="onBubbleCopied"
+            @copy-failed="onBubbleCopyFailed"
+            @exported="onBubblePdfExported"
+            @failed="onBubblePdfExportFailed"
           />
         </div>
       </div>
@@ -249,11 +253,15 @@
     class="conversation-bubble conversation-bubble--summary conversation-bubble--exportable conversation-fallback-bubble"
   >
     <div class="conversation-bubble__toolbar conversation-fallback-bubble__toolbar">
-      <ChatBubbleContentActions
+      <ChatBubbleContentActionsLazy
         :markdown="fallbackMarkdown"
         section-title="Response"
         section-id="fallback"
         :message-id="props.message.id"
+        @copied="onBubbleCopied"
+        @copy-failed="onBubbleCopyFailed"
+        @exported="onBubblePdfExported"
+        @failed="onBubblePdfExportFailed"
       />
     </div>
     <div class="msg-html structured-debug-fallback" v-html="fallbackHtml" />
@@ -284,7 +292,8 @@ import ChatConversationSnapshotPreview from './ChatConversationSnapshotPreview.v
 import ChatConversationToolResponseBubble from './ChatConversationToolResponseBubble.vue'
 import AttachmentFileTypeIcon from './AttachmentFileTypeIcon.vue'
 import ChatSubAgentBubble from './ChatSubAgentBubble.vue'
-import ChatBubbleContentActions from './ChatBubbleContentActions.vue'
+import { useBubbleActionToasts } from '../composables/useBubbleActionToasts'
+import ChatBubbleContentActionsLazy from './ChatBubbleContentActionsLazy.vue'
 import ChatToolLoopPanel from './ChatToolLoopPanel.vue'
 import {
   type AssistantBubbleDescriptor,
@@ -372,6 +381,13 @@ type ConversationBubblePresentation = {
 const props = defineProps<{
   message: UIMessage
 }>()
+
+const {
+  onBubbleCopied,
+  onBubbleCopyFailed,
+  onBubblePdfExported,
+  onBubblePdfExportFailed,
+} = useBubbleActionToasts()
 
 const emit = defineEmits<{
   'open-preview': [url: string]

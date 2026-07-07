@@ -25,7 +25,7 @@ import {
   bubblePdfKindForSection,
   exportBubbleMarkdownAsPdf,
   type BubblePdfDocumentKind,
-} from '../bubblePdfExport'
+} from '../bubblePdfExportHelpers'
 
 const props = withDefaults(
   defineProps<{
@@ -46,7 +46,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const toast = useToast()
 const exporting = ref(false)
 
 const hasContent = computed(() => Boolean(props.markdown?.trim()))
@@ -68,19 +67,10 @@ async function onExport(): Promise<void> {
         bubblePdfKindForSection(props.sectionId?.trim() || 'generic'),
     })
     if (result.savedPath) {
-      toast.add({
-        title: t.value.chat.exportBubblePdfSuccess,
-        color: 'success',
-      })
       emit('exported', result.savedPath)
       return
     }
     if (result.error && !result.error.includes('cancel')) {
-      toast.add({
-        title: t.value.chat.exportBubblePdfFailed,
-        description: result.error,
-        color: 'error',
-      })
       emit('failed', result.error)
     }
   } finally {

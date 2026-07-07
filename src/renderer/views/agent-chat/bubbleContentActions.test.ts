@@ -64,14 +64,14 @@ describe('printBubbleMarkdownContent', () => {
     vi.restoreAllMocks()
   })
 
-  it('does nothing for empty markdown', () => {
+  it('does nothing for empty markdown', async () => {
     const appendChild = vi.spyOn(document.body, 'appendChild')
-    printBubbleMarkdownContent({ markdown: '   ' })
+    await printBubbleMarkdownContent({ markdown: '   ' })
     expect(appendChild).not.toHaveBeenCalled()
   })
 
-  it('creates a hidden iframe with rendered markdown', () => {
-    printBubbleMarkdownContent({
+  it('creates a hidden iframe with rendered markdown', async () => {
+    await printBubbleMarkdownContent({
       markdown: '# Title\n\nParagraph',
       title: 'Summary',
     })

@@ -1,10 +1,10 @@
-import { readFile, rm } from 'node:fs/promises'
-import { join } from 'node:path'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@config/teralexi-home', () => ({
-  getTeralexiSandboxDir: vi.fn(() => join(tmpdir(), 'teralexi-test-sandbox')),
+  getTeralexiSandboxDir: vi.fn(),
 }))
 
 const getUserProperty = vi.fn()
@@ -14,10 +14,12 @@ vi.mock('@main/services/conversation-store', () => ({
   }),
 }))
 
+import { getTeralexiSandboxDir } from '@config/teralexi-home'
 import {
   buildStreamTextDebugRequest,
   createLlmDebugRunId,
   createSubAgentLlmDebugRunId,
+  flushLlmDebugWritesForTests,
   invalidateLlmDebugCache,
   isLlmDebugEnabled,
   resolveLlmDebugRunDir,
@@ -25,15 +27,18 @@ import {
   scheduleLlmDebugResponse,
 } from './llm-debug-writer'
 
-const sandboxRoot = join(tmpdir(), 'teralexi-test-sandbox')
+let sandboxRoot = ''
 
 describe('llm-debug-writer', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     invalidateLlmDebugCache()
     getUserProperty.mockReset()
+    sandboxRoot = await mkdtemp(join(tmpdir(), 'teralexi-test-sandbox-'))
+    vi.mocked(getTeralexiSandboxDir).mockReturnValue(sandboxRoot)
   })
 
   afterEach(async () => {
+    await flushLlmDebugWritesForTests()
     await rm(sandboxRoot, { recursive: true, force: true })
   })
 
@@ -122,9 +127,9 @@ describe('llm-debug-writer', () => {
       },
     )
 
-    const dir = resolveLlmDebugRunDir(ctx)!
-    await new Promise((r) => setTimeout(r, 80))
+    await flushLlmDebugWritesForTests()
 
+    const dir = resolveLlmDebugRunDir(ctx)!
     const request = await readFile(
       join(dir, '001-streamText-streamText_progress.request.json'),
       'utf8',

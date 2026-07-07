@@ -4,6 +4,7 @@ export const LAYOUT_PREF_KEYS = {
   sidebarCollapsed: 'teralexi.agent.sidebarCollapsed',
   reportPanelOpen: 'teralexi.agent.reportPanelOpen',
   workspaceSplitPanelOpen: 'teralexi.agent.workspaceSplitPanelOpen',
+  lastConversationId: 'teralexi.agent.lastConversationId',
 } as const
 
 export function readStoredBoolean(key: string, fallback: boolean): boolean {
@@ -20,6 +21,27 @@ export function readStoredBoolean(key: string, fallback: boolean): boolean {
 export function writeStoredBoolean(key: string, value: boolean): void {
   try {
     localStorage.setItem(key, String(value))
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+export function readStoredString(key: string): string | null {
+  try {
+    const raw = localStorage.getItem(key)?.trim()
+    return raw || null
+  } catch {
+    return null
+  }
+}
+
+export function writeStoredString(key: string, value: string | null): void {
+  try {
+    if (value?.trim()) {
+      localStorage.setItem(key, value.trim())
+      return
+    }
+    localStorage.removeItem(key)
   } catch {
     /* ignore quota / private mode */
   }
