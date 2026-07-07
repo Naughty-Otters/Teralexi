@@ -34,20 +34,12 @@
 
       <section class="chat-main">
         <div class="chat-scroll-area">
-          <div
+          <ChatConversationSkeleton
             v-if="showConversationLoading"
-            class="chat-conversation-loading"
-            role="status"
-            aria-live="polite"
-          >
-            <UIcon
-              name="i-lucide-loader-circle"
-              class="chat-conversation-loading__icon"
-              aria-hidden="true"
-            />
-            <span>{{ t.common.loading }}</span>
-          </div>
+            :aria-label="t.startup.loadingConversations"
+          />
           <div
+            v-show="!showConversationLoading"
             ref="messagesEl"
             class="chat-scroll"
             @scroll.passive="onMessagesScroll"
@@ -157,6 +149,7 @@
 
         <ChatComposer
           v-model="draft"
+          :loading="showConversationLoading"
           :send-disabled="!canSend"
           :selected-agent-id="agentStore.selectedAgentId"
           :agent-options="composerAgentOptions"
@@ -331,6 +324,7 @@ import AgentGuidePanel from './AgentGuidePanel.vue'
 import ChatUserMessage from './ChatUserMessage.vue'
 import ChatAssistantMessageParts from './ChatAssistantMessageParts.vue'
 import ChatComposer from './ChatComposer.vue'
+import ChatConversationSkeleton from './ChatConversationSkeleton.vue'
 import ChatConversationWorkspaceAttachments from './ChatConversationWorkspaceAttachments.vue'
 import { formatSlashHelp } from './composer-slash-commands'
 import { openComposerAgentPicker } from '@renderer/composables/useComposerAgentPicker'
@@ -2251,29 +2245,6 @@ watchEffect(() => {
   position: relative;
   display: flex;
   flex-direction: column;
-}
-.chat-conversation-loading {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: color-mix(in srgb, var(--ui-bg) 88%, transparent);
-  color: var(--ui-text-muted);
-  font-size: 13px;
-}
-.chat-conversation-loading__icon {
-  width: 22px;
-  height: 22px;
-  animation: chat-conversation-loading-spin 0.9s linear infinite;
-}
-@keyframes chat-conversation-loading-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 .chat-scroll {
   position: relative;

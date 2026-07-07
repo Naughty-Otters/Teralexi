@@ -134,10 +134,13 @@ import PanelResizeHandle from '@renderer/components/PanelResizeHandle.vue'
 import TeralexiLogo from './components/teralexiLogo.vue'
 import AgentList from './components/AgentList.vue'
 import SidebarFooter from './components/SidebarFooter.vue'
+import ChatPanelSkeleton from './components/ChatPanelSkeleton.vue'
 
-const ChatPanel = defineAsyncComponent(
-  () => import('./components/ChatPanel.vue'),
-)
+const ChatPanel = defineAsyncComponent({
+  loader: () => import('./components/ChatPanel.vue'),
+  loadingComponent: ChatPanelSkeleton,
+  delay: 0,
+})
 const SettingsPanel = defineAsyncComponent(
   () => import('./components/SettingsPanel.vue'),
 )
