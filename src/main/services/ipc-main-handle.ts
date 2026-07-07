@@ -2031,6 +2031,7 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     const win = BrowserWindow.fromWebContents(event.sender)
     const result = await dialog.showOpenDialog(win ?? undefined, {
       properties: ['openDirectory'],
+      defaultPath: app.getPath('home'),
       title: 'Select Workspace Folder',
       buttonLabel: 'Select Folder',
     })
@@ -2313,6 +2314,7 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     const win = BrowserWindow.fromWebContents(event.sender)
     const result = await dialog.showOpenDialog(win ?? undefined, {
       properties: ['openFile', 'multiSelections'],
+      defaultPath: app.getPath('documents'),
       title: 'Attach files',
       buttonLabel: 'Attach',
       filters: buildPickChatAttachmentDialogFilters(),
