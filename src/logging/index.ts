@@ -20,6 +20,13 @@ export {
   type AgentRunLogMeta,
 } from './agent-run-context'
 
+export {
+  DEFAULT_MAX_LOG_BYTES,
+  DEFAULT_MAX_LOG_FILES,
+  createRotatingPinoFileDestination,
+  type RotatingLogOptions,
+} from './log-rotation'
+
 export { buildMainProcessLogStreams } from './main-process-streams'
 
 export {

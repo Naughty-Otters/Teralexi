@@ -1,6 +1,16 @@
 import type { DestinationStream } from 'pino'
-import pino from 'pino'
 import pinoPretty from 'pino-pretty'
+import {
+  createRotatingPinoFileDestination,
+  type RotatingLogOptions,
+} from './log-rotation'
+
+export type { RotatingLogOptions } from './log-rotation'
+export {
+  DEFAULT_MAX_LOG_BYTES,
+  DEFAULT_MAX_LOG_FILES,
+  createRotatingPinoFileDestination,
+} from './log-rotation'
 
 /** True in local development — console and per-run agent logs use human-readable lines. */
 export function usePrettyLogs(): boolean {
@@ -9,16 +19,13 @@ export function usePrettyLogs(): boolean {
 
 /**
  * File-backed pino destination that is ready before the first write or process exit.
- * Async destinations (sync: false) can throw "sonic boom is not ready yet" when
- * Electron exits early — common on Windows first launch or second-instance quit.
+ * Rotates to numbered archives when the active file exceeds maxBytes.
  */
-export function createPinoFileDestination(logFilePath: string): DestinationStream {
-  return pino.destination({
-    dest: logFilePath,
-    append: true,
-    mkdir: true,
-    sync: true,
-  })
+export function createPinoFileDestination(
+  logFilePath: string,
+  options?: RotatingLogOptions,
+): DestinationStream {
+  return createRotatingPinoFileDestination(logFilePath, options)
 }
 
 export function createPrettyLogStream(
@@ -39,8 +46,9 @@ export function createPrettyLogStream(
 
 /** Per-run agent log file destination (pretty text in dev, JSON lines in production). */
 export function createAgentRunLogDestination(logFilePath: string): DestinationStream {
+  const fileDestination = createRotatingPinoFileDestination(logFilePath)
   if (usePrettyLogs()) {
-    return createPrettyLogStream(logFilePath)
+    return createPrettyLogStream(fileDestination)
   }
-  return createPinoFileDestination(logFilePath)
+  return fileDestination
 }
