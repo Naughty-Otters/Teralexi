@@ -83,8 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import ShikiCodeBlock from '@renderer/components/code/ShikiCodeBlock.vue'
+import { computed, defineAsyncComponent, ref } from 'vue'
 import '@renderer/components/code/terminal-theme.css'
 import {
   guessLanguageFromCode,
@@ -99,6 +98,10 @@ import {
   toolRunStatePresentation,
   truncateDisplay,
 } from './chat/chatToolPartHelpers'
+
+const ShikiCodeBlock = defineAsyncComponent(
+  () => import('@renderer/components/code/ShikiCodeBlock.vue'),
+)
 
 const props = defineProps<{ part: unknown }>()
 

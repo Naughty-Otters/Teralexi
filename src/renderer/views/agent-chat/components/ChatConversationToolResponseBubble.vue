@@ -120,14 +120,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import ShikiCodeBlock from '@renderer/components/code/ShikiCodeBlock.vue'
+import { computed, defineAsyncComponent, ref } from 'vue'
 import {
   guessLanguageFromCode,
   languageForTerminalSlot,
 } from '@renderer/lib/shiki/guess-language'
 import { parseToolFileChanges } from '@shared/file-change/parse-tool-file-changes'
-import FileChangeStack from './file-change/FileChangeStack.vue'
 import ChatTodoChecklist from './ChatTodoChecklist.vue'
 import type { ConversationToolResponseViewer } from './chat/conversationToolResponseModel'
 import {
@@ -146,6 +144,13 @@ import {
   toolRunStatePresentation,
   truncateDisplay,
 } from './chat/chatToolPartHelpers'
+
+const FileChangeStack = defineAsyncComponent(
+  () => import('./file-change/FileChangeStack.vue'),
+)
+const ShikiCodeBlock = defineAsyncComponent(
+  () => import('@renderer/components/code/ShikiCodeBlock.vue'),
+)
 
 const props = defineProps<{
   part: unknown

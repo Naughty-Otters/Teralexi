@@ -119,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch, watchEffect, nextTick, defineAsyncComponent } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, watchEffect, defineAsyncComponent } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAgentStore } from '@store/agent'
 import { useWorkspaceStore } from '@store/workspace'
@@ -176,6 +176,10 @@ import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { PROVIDER_SETUP_SESSION_KEY } from '@renderer/lib/provider-setup-session'
 import { requestSandboxPreview } from './sandboxPreviewBridge'
 import { useAgentStartupBootstrap } from '@renderer/composables/useAgentStartupBootstrap'
+import {
+  LAYOUT_PREF_KEYS,
+  useLayoutPreference,
+} from '@renderer/lib/layout-preferences'
 import StartupStatusBar from './components/StartupStatusBar.vue'
 
 const { t } = useI18n()
@@ -193,10 +197,13 @@ const workspaceNavStore = useWorkspaceNavigationStore()
 const rightPanelView = ref<
   'chat' | 'settings' | 'monitor' | 'workspace' | 'workflows'
 >('chat')
-const sidebarCollapsed = ref(true)
+const sidebarCollapsed = useLayoutPreference(
+  LAYOUT_PREF_KEYS.sidebarCollapsed,
+  true,
+)
 const layoutEl = ref<HTMLElement | null>(null)
 const providerSetupOpen = ref(false)
-const chatPanelMounted = ref(false)
+const chatPanelMounted = ref(true)
 const signInGateOpen = ref(false)
 
 const signInGateDescription = computed(() => t.value.signInGate.wizard)
@@ -532,7 +539,7 @@ onMounted(() => {
     },
   )
 
-  void bootstrapAgentChat()
+  void runStartupBootstrap(openProviderSetupWizardIfNeeded)
 })
 
 function openProviderSetupWizardIfNeeded() {
@@ -544,15 +551,6 @@ function openProviderSetupWizardIfNeeded() {
   } else if (agentStore.shouldShowProviderSetupWizard && isSignedIn.value) {
     providerSetupOpen.value = true
   }
-}
-
-async function bootstrapAgentChat() {
-  await nextTick()
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => resolve())
-  })
-  chatPanelMounted.value = true
-  void runStartupBootstrap(openProviderSetupWizardIfNeeded)
 }
 
 onUnmounted(() => {

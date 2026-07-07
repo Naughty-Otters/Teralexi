@@ -129,18 +129,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted, defineAsyncComponent } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useWorkspaceStore } from '@store/workspace'
 import { useWorkspaceGitStore } from '@store/workspace-git'
 import { useWorkspaceNavigationStore } from '@store/workspace-navigation'
 import { useHorizontalPanelResize } from '@renderer/composables/useHorizontalPanelResize'
-import PanelResizeHandle from '@renderer/components/PanelResizeHandle.vue'
-import ShikiDiffView from '@renderer/components/code/ShikiDiffView.vue'
-import WorkspaceGitStatus from './workspace/WorkspaceGitStatus.vue'
-import WorkspaceGitLog from './workspace/WorkspaceGitLog.vue'
-import WorkspaceFileTree from './workspace/WorkspaceFileTree.vue'
-import WorkspaceFileEditor from './workspace/WorkspaceFileEditor.vue'
+
+const PanelResizeHandle = defineAsyncComponent(
+  () => import('@renderer/components/PanelResizeHandle.vue'),
+)
+const ShikiDiffView = defineAsyncComponent(
+  () => import('@renderer/components/code/ShikiDiffView.vue'),
+)
+const WorkspaceGitStatus = defineAsyncComponent(
+  () => import('./workspace/WorkspaceGitStatus.vue'),
+)
+const WorkspaceGitLog = defineAsyncComponent(
+  () => import('./workspace/WorkspaceGitLog.vue'),
+)
+const WorkspaceFileTree = defineAsyncComponent(
+  () => import('./workspace/WorkspaceFileTree.vue'),
+)
+const WorkspaceFileEditor = defineAsyncComponent(
+  () => import('./workspace/WorkspaceFileEditor.vue'),
+)
 
 withDefaults(defineProps<{ layout?: 'page' | 'split' }>(), { layout: 'page' })
 const emit = defineEmits<{ close: [] }>()
