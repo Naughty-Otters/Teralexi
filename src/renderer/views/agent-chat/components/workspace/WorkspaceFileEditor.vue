@@ -41,21 +41,27 @@
           @keydown.enter.prevent="activateTab(tab.path)"
           @keydown.space.prevent="activateTab(tab.path)"
         >
-          <span class="file-editor-tab-name">{{ tabLabel(tab.path) }}</span>
-          <span
-            v-if="gitStore.isEditorTabDirty(tab.path)"
-            class="file-editor-tab-dirty"
-            aria-label="Unsaved changes"
+          <AttachmentFileTypeIcon
+            :path="tab.path"
+            class="file-editor-tab-icon"
           />
-          <button
-            type="button"
-            class="file-editor-tab-close"
-            title="Close tab"
-            :aria-label="`Close ${tabLabel(tab.path)}`"
-            @click.stop="closeTab(tab.path)"
-          >
-            <UIcon name="i-lucide-x" style="width: 12px; height: 12px" />
-          </button>
+          <span class="file-editor-tab-name">{{ tabLabel(tab.path) }}</span>
+          <span class="file-editor-tab-trailing">
+            <span
+              v-if="gitStore.isEditorTabDirty(tab.path)"
+              class="file-editor-tab-dirty"
+              aria-label="Unsaved changes"
+            />
+            <button
+              type="button"
+              class="file-editor-tab-close"
+              title="Close tab"
+              :aria-label="`Close ${tabLabel(tab.path)}`"
+              @click.stop="closeTab(tab.path)"
+            >
+              <UIcon name="i-lucide-x" style="width: 13px; height: 13px" />
+            </button>
+          </span>
         </div>
       </div>
 
@@ -231,6 +237,7 @@ import WorkspaceXtermConsole from './WorkspaceXtermConsole.vue'
 import type { SharedWorkspaceSymbol } from '@shared/editor/workspace-symbol-types'
 import type { EditorLspStatus } from '@renderer/components/code/monaco-lsp/editor-lsp-controller'
 import { useSandboxOutputView } from '@renderer/composables/useSandboxOutputView'
+import AttachmentFileTypeIcon from '../AttachmentFileTypeIcon.vue'
 
 const lspHostEnabled = ref(true)
 
@@ -608,44 +615,67 @@ onUnmounted(() => {
   align-items: stretch;
   gap: 0;
   min-width: 0;
+  height: var(--wp-tab-strip-height, 38px);
+  padding: 0;
   overflow-x: auto;
   overflow-y: hidden;
   border-bottom: 1px solid var(--ui-border);
   background: var(--ui-bg-elevated, var(--ui-bg));
   flex-shrink: 0;
-  scrollbar-width: thin;
+  scrollbar-width: none;
 }
 
 .file-editor-tabbar::-webkit-scrollbar {
-  height: 4px;
+  display: none;
 }
 
 .file-editor-tab {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  max-width: 180px;
+  gap: 8px;
+  max-width: 220px;
   min-width: 0;
-  padding: 6px 8px 6px 10px;
+  height: 100%;
+  padding: 0 12px;
   border: none;
   border-right: 1px solid var(--ui-border);
+  border-radius: 0;
   background: transparent;
   color: var(--ui-text-muted);
   font-size: var(--app-font-size);
   font-family: var(--app-font-family);
+  line-height: 1.2;
   cursor: pointer;
   flex-shrink: 0;
+  transition:
+    color 0.14s ease,
+    background 0.14s ease,
+    box-shadow 0.14s ease;
 }
 
 .file-editor-tab:hover {
   color: var(--ui-text);
-  background: color-mix(in srgb, var(--ui-text) 4%, transparent);
+  background: color-mix(in srgb, var(--ui-text) 5%, transparent);
 }
 
-.file-editor-tab--active {
+.file-editor-tab:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px
+    color-mix(in srgb, var(--color-primary-500) 30%, transparent);
+}
+
+.file-editor-tab--active,
+.file-editor-tab--active:hover {
   color: var(--ui-text);
   background: var(--ui-bg);
   box-shadow: inset 0 2px 0 var(--color-primary-500, #6366f1);
+}
+
+.file-editor-tab-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
 }
 
 .file-editor-tab-name {
@@ -653,34 +683,62 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  font-weight: 500;
 }
 
-.file-editor-tab-dirty {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--color-warning-500, #f59e0b);
-  flex-shrink: 0;
-}
-
-.file-editor-tab-close {
+.file-editor-tab-trailing {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 18px;
   height: 18px;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--ui-text-muted);
-  cursor: pointer;
   flex-shrink: 0;
 }
 
+.file-editor-tab-dirty {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-warning-500, #f59e0b);
+  transition: opacity 0.12s ease;
+}
+
+.file-editor-tab-close {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ui-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.12s ease,
+    color 0.12s ease,
+    background 0.12s ease;
+}
+
+.file-editor-tab:hover .file-editor-tab-close,
+.file-editor-tab--active .file-editor-tab-close {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.file-editor-tab:hover .file-editor-tab-dirty,
+.file-editor-tab--active .file-editor-tab-dirty {
+  opacity: 0;
+}
+
 .file-editor-tab-close:hover {
-  color: var(--ui-text);
-  background: color-mix(in srgb, var(--ui-text) 8%, transparent);
+  color: var(--color-error-500, #ef4444);
+  background: color-mix(in srgb, var(--color-error-500, #ef4444) 14%, transparent);
 }
 
 .file-editor-toolbar {

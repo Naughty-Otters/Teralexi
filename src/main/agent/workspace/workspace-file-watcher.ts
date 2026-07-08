@@ -6,7 +6,9 @@ import { ensureFilesCwd } from './workspace-ipc-helpers'
 
 const log = createLogger('agent.workspace.file-watcher')
 
-const DEBOUNCE_MS = 300
+// Coalesce rapid filesystem events (e.g. an agent writing many files) into a
+// single push to the renderer.
+const DEBOUNCE_MS = 500
 
 type WatchEntry = {
   watcher: FSWatcher

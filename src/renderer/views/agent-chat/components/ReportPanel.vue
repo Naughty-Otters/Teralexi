@@ -362,71 +362,89 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   display: flex;
   flex-wrap: nowrap;
-  align-items: flex-end;
-  gap: 4px;
-  padding: 10px 10px 0;
+  align-items: stretch;
+  gap: 0;
+  height: var(--wp-tab-strip-height, 38px);
+  padding: 0;
   overflow-x: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
   border-bottom: 1px solid var(--ui-border);
   background: var(--ui-bg-elevated);
 }
 
+.report-panel-tabs::-webkit-scrollbar {
+  display: none;
+}
+
 .cp-tab-wrap {
+  position: relative;
   display: inline-flex;
   align-items: stretch;
   flex-shrink: 0;
-  max-width: min(220px, 42vw);
-  border-radius: 9px 9px 0 0;
+  height: 100%;
+  max-width: min(240px, 44vw);
+  border-radius: 0;
+}
+
+/* Give link tabs room for the close button that overlaps the trailing edge. */
+.cp-tab--link {
+  max-width: 100%;
+  padding-right: 30px;
 }
 
 .cp-tab-wrap--active .cp-tab {
   color: var(--ui-text);
   background: var(--ui-bg);
-  border-color: var(--ui-border);
-  border-bottom-color: var(--ui-bg);
-  margin-bottom: -1px;
-  padding-bottom: 9px;
-  box-shadow: 0 -1px 0 color-mix(in srgb, var(--ui-text) 5%, transparent);
+  box-shadow: inset 0 2px 0 var(--color-primary-500, #6366f1);
 }
 
 .cp-tab__label {
   display: block;
+  min-width: 0;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.cp-tab--link {
-  max-width: 100%;
-  padding-right: 8px;
-}
-
 .cp-tab__close {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  margin-left: -4px;
-  margin-bottom: 1px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: 5px;
   background: transparent;
   color: var(--ui-text-muted);
   cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.12s ease,
+    color 0.12s ease,
+    background 0.12s ease;
 }
 
+.cp-tab-wrap:hover .cp-tab__close,
 .cp-tab-wrap--active .cp-tab__close {
-  margin-bottom: 0;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .cp-tab__close:hover {
-  color: var(--ui-text);
-  background: color-mix(in srgb, var(--ui-text) 8%, transparent);
+  color: var(--color-error-500, #ef4444);
+  background: color-mix(in srgb, var(--color-error-500, #ef4444) 14%, transparent);
 }
 
 .cp-tab__close-icon {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
 }
 
 .report-panel-url-section {

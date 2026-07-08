@@ -868,8 +868,13 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
   }
 
   /**
-   * Refresh file list, git status, diff (when open), and reload clean editor tabs.
-   * Use for manual refresh, filesystem watch, and post-agent-run sync.
+   * Refresh file list, git status, and diff (when open).
+   *
+   * Open editor tabs are intentionally left untouched: reloading their content
+   * from disk on every refresh caused visible flicker (Monaco remount, cursor
+   * and undo-stack reset) and could race with in-progress edits. Use the
+   * per-file "Reload from disk" action (`reloadEditorFile`) to pull disk changes
+   * into an open editor on demand.
    */
   async function refreshWorkspaceView(options?: {
     includeLog?: boolean
@@ -882,7 +887,6 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     } else {
       await refreshFiles()
     }
-    await reloadEditorTabsFromDisk()
     filesRefreshSeq.value += 1
   }
 
