@@ -141,6 +141,17 @@ export const useWorkspaceNavigationStore = defineStore(
       return true
     }
 
+    function copyLayoutToConversation(
+      sourceConversationId: string,
+      targetConversationId: string,
+    ): void {
+      const sourceId = sourceConversationId.trim()
+      const targetId = targetConversationId.trim()
+      if (!sourceId || !targetId || sourceId === targetId) return
+      setWorkspacePanelOpen(targetId, isWorkspacePanelOpen(sourceId))
+      setWorkspacePanelTab(targetId, getWorkspacePanelTab(sourceId))
+    }
+
     return {
       openSplitPanel,
       tab,
@@ -155,6 +166,7 @@ export const useWorkspaceNavigationStore = defineStore(
       openInWorkspace,
       clearHighlight,
       consumeOpenSplitPanelRequest,
+      copyLayoutToConversation,
     }
   },
 )

@@ -2200,7 +2200,9 @@ watch(
 )
 
 async function startNewSessionFromTitleBar() {
-  const conv = await agentStore.createNewConversation()
+  const conv = await agentStore.createNewConversation(undefined, {
+    mode: 'replicate-current',
+  })
   if (!conv) return
   await agentStore.selectConversation(conv.id)
 }

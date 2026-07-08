@@ -3,22 +3,22 @@
     <button
       type="button"
       class="new-session-btn"
-      title="New conversation"
+      title="Start a new blank session"
       @click="startNewSession"
     >
-      <UIcon name="i-lucide-plus" class="new-session-btn__icon" />
-      <span>New session</span>
+      <UIcon name="i-lucide-square-plus" class="new-session-btn__icon" />
+      <span>New blank session</span>
     </button>
   </div>
   <button
     v-else
     type="button"
     class="new-session-btn new-session-btn--collapsed"
-    title="New conversation"
-    aria-label="New conversation"
+    title="Start a new blank session"
+    aria-label="Start a new blank session"
     @click="startNewSession"
   >
-    <UIcon name="i-lucide-plus" class="new-session-btn__icon" />
+    <UIcon name="i-lucide-square-plus" class="new-session-btn__icon" />
   </button>
   <div v-if="!collapsed" class="sidebar-section-label">Conversations</div>
   <ul
@@ -273,7 +273,7 @@ async function openConversation(conversationId: string, agentId: string) {
 }
 
 async function startNewSession() {
-  const conv = await agentStore.createNewConversation()
+  const conv = await agentStore.createNewConversation(undefined, { mode: 'fresh' })
   if (!conv) return
   await agentStore.selectConversation(conv.id)
   emit('navigate-chat')

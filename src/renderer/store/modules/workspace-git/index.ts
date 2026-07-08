@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useAgentStore } from '@store/agent'
+import {
+  LAYOUT_PREF_KEYS,
+  readStoredEditorSessionMap,
+  writeStoredEditorSessionMap,
+  type WorkspaceEditorSession,
+} from '@renderer/lib/layout-preferences'
 
 export type GitStatusEntry = {
   code: string
@@ -75,6 +81,12 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
   const editorTabs = ref<WorkspaceEditorTab[]>([])
   const activeEditorPath = ref<string | null>(null)
   const editorSaving = ref(false)
+  const editorSessionByConversation = ref<Record<string, WorkspaceEditorSession>>(
+    readStoredEditorSessionMap(
+      LAYOUT_PREF_KEYS.workspaceEditorSessionByConversation,
+    ),
+  )
+  let restoringEditorSession = false
 
   const activeEditorTab = computed(() => {
     const path = activeEditorPath.value
@@ -179,16 +191,119 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     return parts.length ? parts.join('/') : '.'
   }
 
-  function closeAllEditorTabs() {
+  function snapshotEditorSession(): WorkspaceEditorSession {
+    return {
+      openPaths: editorTabs.value.map((tab) => tab.path),
+      activePath: activeEditorPath.value,
+      filesDirectory: filesDirectory.value,
+    }
+  }
+
+  function readEditorSessionForConversation(
+    convId: string,
+  ): WorkspaceEditorSession {
+    const id = convId.trim()
+    if (!id) return { openPaths: [], activePath: null }
+    const currentId = conversationId.value?.trim()
+    if (currentId === id && workspacePath.value) {
+      return snapshotEditorSession()
+    }
+    return (
+      editorSessionByConversation.value[id] ?? { openPaths: [], activePath: null }
+    )
+  }
+
+  function copyEditorSessionToConversation(
+    sourceConversationId: string,
+    targetConversationId: string,
+  ): void {
+    const sourceId = sourceConversationId.trim()
+    const targetId = targetConversationId.trim()
+    if (!sourceId || !targetId || sourceId === targetId) return
+    saveEditorSessionForConversation(
+      targetId,
+      readEditorSessionForConversation(sourceId),
+    )
+  }
+
+  function saveEditorSessionForConversation(
+    convId: string,
+    session: WorkspaceEditorSession,
+  ): void {
+    const id = convId.trim()
+    if (!id) return
+    const next = { ...editorSessionByConversation.value, [id]: session }
+    editorSessionByConversation.value = next
+    writeStoredEditorSessionMap(
+      LAYOUT_PREF_KEYS.workspaceEditorSessionByConversation,
+      next,
+    )
+  }
+
+  function persistEditorSession(): void {
+    if (restoringEditorSession) return
+    const cid = conversationId.value?.trim()
+    if (!cid || !workspacePath.value) return
+    saveEditorSessionForConversation(cid, snapshotEditorSession())
+  }
+
+  function clearInMemoryEditorTabs(): void {
     editorTabs.value = []
     activeEditorPath.value = null
     editorSaving.value = false
   }
 
+  async function restoreEditorSession(convId: string): Promise<void> {
+    if (!workspacePath.value) return
+    const session = editorSessionByConversation.value[convId.trim()]
+    if (!session?.openPaths.length) {
+      if (session?.filesDirectory) {
+        filesDirectory.value = normalizeFilesDirectory(session.filesDirectory)
+        await refreshFiles()
+      }
+      return
+    }
+
+    restoringEditorSession = true
+    try {
+      clearInMemoryEditorTabs()
+      if (session.filesDirectory) {
+        filesDirectory.value = normalizeFilesDirectory(session.filesDirectory)
+      }
+      for (const path of session.openPaths) {
+        await openFileInEditor(path)
+      }
+      if (
+        session.activePath &&
+        editorTabs.value.some((tab) => tab.path === session.activePath)
+      ) {
+        activeEditorPath.value = session.activePath
+      }
+      await refreshFiles()
+    } finally {
+      restoringEditorSession = false
+      persistEditorSession()
+    }
+  }
+
+  function closeAllEditorTabs() {
+    clearInMemoryEditorTabs()
+    persistEditorSession()
+  }
+
   function setWorkspace(path: string | null, convId: string | null) {
-    workspacePath.value = path
-    conversationId.value =
+    const prevConvId = conversationId.value?.trim()
+    const prevPath = workspacePath.value
+    const nextConvId =
       convId?.trim() || useAgentStore().currentConversationId?.trim() || null
+    const pathChanged = prevPath !== path
+
+    if (prevConvId && prevPath && (prevConvId !== nextConvId || !path)) {
+      saveEditorSessionForConversation(prevConvId, snapshotEditorSession())
+    }
+
+    workspacePath.value = path
+    conversationId.value = nextConvId
     filesDirectory.value = '.'
     if (!path) {
       branch.value = ''
@@ -200,13 +315,28 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
       fileEntries.value = []
       diff.value = ''
       lastPrUrl.value = null
-      closeAllEditorTabs()
+      clearInMemoryEditorTabs()
       consoleEntries.value = []
       consoleError.value = null
       consoleCommand.value = ''
       consoleRunning.value = false
       consoleRunId.value = null
+      return
     }
+
+    if (!pathChanged && prevConvId === nextConvId) return
+
+    if (pathChanged && prevPath && prevConvId === nextConvId && nextConvId) {
+      saveEditorSessionForConversation(nextConvId, {
+        openPaths: [],
+        activePath: null,
+      })
+      clearInMemoryEditorTabs()
+      return
+    }
+
+    clearInMemoryEditorTabs()
+    if (nextConvId) void restoreEditorSession(nextConvId)
   }
 
   function toggleConsole(open?: boolean) {
@@ -599,6 +729,7 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     if (!normalized) return
     if (!editorTabs.value.some((tab) => tab.path === normalized)) return
     activeEditorPath.value = normalized
+    persistEditorSession()
   }
 
   function closeEditorTab(relativePath?: string): void {
@@ -613,15 +744,20 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     const wasActive = activeEditorPath.value === normalized
     editorTabs.value = editorTabs.value.filter((tab) => tab.path !== normalized)
 
-    if (!wasActive) return
+    if (!wasActive) {
+      persistEditorSession()
+      return
+    }
 
     if (editorTabs.value.length === 0) {
       activeEditorPath.value = null
+      persistEditorSession()
       return
     }
 
     const nextIndex = Math.min(index, editorTabs.value.length - 1)
     activeEditorPath.value = editorTabs.value[nextIndex]?.path ?? null
+    persistEditorSession()
   }
 
   function closeEditorFile() {
@@ -693,6 +829,7 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     const existing = editorTabs.value.find((tab) => tab.path === normalized)
     if (existing) {
       activeEditorPath.value = normalized
+      persistEditorSession()
       return
     }
 
@@ -708,6 +845,7 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     editorTabs.value = [...editorTabs.value, tab]
     activeEditorPath.value = normalized
     await loadEditorTabContent(normalized)
+    persistEditorSession()
   }
 
   async function reloadEditorFile(): Promise<void> {
@@ -828,6 +966,7 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     closeEditorTab,
     closeEditorFile,
     closeAllEditorTabs,
+    copyEditorSessionToConversation,
     isEditorTabDirty,
     reloadEditorFile,
     saveEditorFile,

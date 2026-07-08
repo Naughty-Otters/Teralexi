@@ -116,12 +116,12 @@
     >
       <button
         type="button"
-        class="cp-icon-btn window-title__btn"
-        title="New conversation"
-        aria-label="New conversation"
+        class="cp-icon-btn window-title__btn window-title__btn--duplicate-session"
+        title="New session with same agent and workspace"
+        aria-label="New session with same agent and workspace"
         @click="chatControls.onNewSession?.()"
       >
-        <UIcon class="cp-icon-btn__glyph" name="i-lucide-plus" />
+        <UIcon class="cp-icon-btn__glyph" name="i-lucide-copy-plus" />
       </button>
       <button
         type="button"
@@ -466,6 +466,14 @@ ipcRendererChannel.IsUseSysTitle.invoke().then((res) => {
   box-shadow:
     0 0 0 2px var(--ui-bg, #fff),
     0 0 0 4px color-mix(in srgb, var(--color-primary-500) 24%, transparent);
+}
+
+.window-title :deep(.window-title__btn--duplicate-session) {
+  color: var(--color-primary-600, var(--color-primary-500, #6366f1));
+}
+
+.window-title :deep(.window-title__btn--duplicate-session:hover:not(:disabled)) {
+  background: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
 }
 
 .window-title--mac {

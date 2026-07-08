@@ -9,8 +9,16 @@ export const LAYOUT_PREF_KEYS = {
     'teralexi.agent.workspacePanelOpenByConversation',
   workspacePanelTabByConversation:
     'teralexi.agent.workspacePanelTabByConversation',
+  workspaceEditorSessionByConversation:
+    'teralexi.agent.workspaceEditorSessionByConversation',
   lastConversationId: 'teralexi.agent.lastConversationId',
 } as const
+
+export type WorkspaceEditorSession = {
+  openPaths: string[]
+  activePath: string | null
+  filesDirectory?: string
+}
 
 export function readStoredBoolean(key: string, fallback: boolean): boolean {
   try {
@@ -98,6 +106,61 @@ export function readStoredStringMap(key: string): Record<string, string> {
 export function writeStoredStringMap(
   key: string,
   value: Record<string, string>,
+): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+function normalizeEditorSession(value: unknown): WorkspaceEditorSession | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const record = value as Record<string, unknown>
+  const openPaths = Array.isArray(record.openPaths)
+    ? record.openPaths
+        .filter((path): path is string => typeof path === 'string')
+        .map((path) => path.replace(/\\/g, '/').trim())
+        .filter(Boolean)
+    : []
+  const activeCandidate =
+    typeof record.activePath === 'string'
+      ? record.activePath.replace(/\\/g, '/').trim()
+      : ''
+  const activePath =
+    activeCandidate && openPaths.includes(activeCandidate)
+      ? activeCandidate
+      : (openPaths.at(-1) ?? null)
+  const filesDirectoryRaw =
+    typeof record.filesDirectory === 'string'
+      ? record.filesDirectory.replace(/\\/g, '/').trim()
+      : ''
+  const filesDirectory = filesDirectoryRaw || undefined
+  return { openPaths, activePath, filesDirectory }
+}
+
+export function readStoredEditorSessionMap(
+  key: string,
+): Record<string, WorkspaceEditorSession> {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    const out: Record<string, WorkspaceEditorSession> = {}
+    for (const [id, value] of Object.entries(parsed)) {
+      const session = normalizeEditorSession(value)
+      if (session) out[id] = session
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+export function writeStoredEditorSessionMap(
+  key: string,
+  value: Record<string, WorkspaceEditorSession>,
 ): void {
   try {
     localStorage.setItem(key, JSON.stringify(value))
