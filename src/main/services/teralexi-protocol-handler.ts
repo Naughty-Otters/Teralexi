@@ -5,16 +5,18 @@ import {
   parseTeralexiProtocolUrl,
 } from '@shared/teralexi-protocol'
 import { handleGoogleAccountOAuthDeepLink } from '@main/services/google-account-oauth'
+import { syncStoredGoogleAccountToRenderers } from '@main/services/google-account-notify'
 import { clearTeralexiServerAuthCache } from '@main/services/teralexi-server-auth'
+import { getTeralexiProtocolBridge } from '@main/services/teralexi-protocol-bridge'
 
 const log = createLogger('services.teralexi-protocol')
 
-const pendingProtocolUrls: string[] = []
-let protocolHandlerReady = false
-
 function focusMainWindow(): void {
   const windows = BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed())
-  const main = windows[0]
+  // Splash uses always-on-top during startup; prefer the main app window.
+  const main =
+    windows.find((w) => !w.isAlwaysOnTop()) ??
+    windows[windows.length - 1]
   if (!main) return
   if (main.isMinimized()) main.restore()
   main.show()
@@ -25,7 +27,7 @@ function extractProtocolUrlFromArgv(argv: string[]): string | undefined {
   return argv.find((arg) => arg.startsWith(`${TERALEXI_PROTOCOL}://`))
 }
 
-async function dispatchTeralexiUrl(rawUrl: string): Promise<void> {
+export async function dispatchTeralexiUrl(rawUrl: string): Promise<void> {
   const action = parseTeralexiProtocolUrl(rawUrl)
   if (!action) {
     log.warn('Ignoring unrecognized teralexi URL', { rawUrl })
@@ -44,6 +46,7 @@ async function dispatchTeralexiUrl(rawUrl: string): Promise<void> {
         scope: action.scope,
       })
       clearTeralexiServerAuthCache()
+      syncStoredGoogleAccountToRenderers()
     } catch (err) {
       log.error('Google OAuth deep link failed', { err })
     }
@@ -51,18 +54,44 @@ async function dispatchTeralexiUrl(rawUrl: string): Promise<void> {
 }
 
 export function handleTeralexiProtocolUrl(rawUrl: string): void {
-  if (!protocolHandlerReady) {
-    pendingProtocolUrls.push(rawUrl)
+  const bridge = getTeralexiProtocolBridge()
+  log.info('Received teralexi protocol URL', {
+    ready: bridge.ready,
+    hasDispatch: Boolean(bridge.dispatchUrl),
+    queued: bridge.pendingUrls.length,
+    url: rawUrl.slice(0, 120),
+  })
+
+  if (!bridge.ready || !bridge.dispatchUrl) {
+    bridge.pendingUrls.push(rawUrl)
     return
   }
-  void dispatchTeralexiUrl(rawUrl)
+
+  void bridge.dispatchUrl(rawUrl)
 }
 
-export function setTeralexiProtocolHandlerReady(): void {
-  protocolHandlerReady = true
-  for (const url of pendingProtocolUrls.splice(0)) {
-    void dispatchTeralexiUrl(url)
-  }
+/**
+ * Called from main-app.js when the renderer can receive account updates.
+ * Pass the dispatch fn from the same bundle as google-account-oauth IPC handlers.
+ */
+export function setTeralexiProtocolHandlerReady(
+  dispatchUrl: (rawUrl: string) => Promise<void> = dispatchTeralexiUrl,
+): void {
+  const bridge = getTeralexiProtocolBridge()
+  if (bridge.ready) return
+
+  bridge.dispatchUrl = dispatchUrl
+  bridge.ready = true
+  const queued = bridge.pendingUrls.splice(0)
+
+  log.info('Teralexi protocol handler ready', { queuedCount: queued.length })
+
+  void (async () => {
+    for (const url of queued) {
+      await dispatchUrl(url)
+    }
+    syncStoredGoogleAccountToRenderers()
+  })()
 }
 
 export function registerTeralexiProtocolClient(): void {

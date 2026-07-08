@@ -73,37 +73,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
+import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import './sp-shared.css'
 
 const { t } = useI18n()
 const p = computed(() => t.value.settings.panels)
 
-interface GoogleAccountInfo {
-  email: string
-  name: string
-  picture: string
-}
-
-const account = ref<GoogleAccountInfo | null>(null)
+const { account, signIn: signInAccount, signOut: signOutAccount } = useGoogleAccount()
 const loading = ref(false)
 const error = ref<string | null>(null)
-
-onMounted(async () => {
-  const stored = await window.ipcRendererChannel?.GetGoogleAccount?.invoke()
-  account.value = stored ?? null
-  window.ipcRendererChannel?.GoogleAccountChanged?.on?.(({ account: next }) => {
-    account.value = next
-  })
-})
 
 async function signIn() {
   loading.value = true
   error.value = null
   try {
-    const result = await window.ipcRendererChannel?.GoogleSignIn?.invoke()
-    account.value = result ?? null
+    const result = await signInAccount()
+    if (!result) {
+      error.value = t.value.auth.signInFailed
+    }
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : String(e)
   } finally {
@@ -114,8 +103,7 @@ async function signIn() {
 async function signOut() {
   loading.value = true
   try {
-    await window.ipcRendererChannel?.GoogleSignOut?.invoke()
-    account.value = null
+    await signOutAccount()
   } finally {
     loading.value = false
   }

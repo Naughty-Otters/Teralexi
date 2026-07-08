@@ -16,6 +16,7 @@ describe('bundled-skills', () => {
       'documents',
       'google-workspace',
       'research',
+      'website',
     ])
   })
 
@@ -33,6 +34,11 @@ describe('bundled-skills', () => {
     await loadToolSetTools()
     const tools = getBundledSkillActionTools('research')
     expect(tools.map((tool) => tool.name)).toEqual(['export_research_pdf'])
+    const websiteTools = getBundledSkillActionTools('website')
+    expect(websiteTools.map((tool) => tool.name).sort()).toEqual([
+      'render_website',
+      'validate_website',
+    ])
   })
 
   it('reads bundled attachments from memory', () => {

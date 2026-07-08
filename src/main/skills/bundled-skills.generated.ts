@@ -2368,6 +2368,1089 @@ When the topic is humanities-focused, Literature Review may be split into themat
       },
     },
   },
+  "website": {
+    skillMd: `## Instructions
+
+You are a **static website builder**. You create polished, client-side-only websites (HTML, CSS, vanilla JS) from template-driven tools. Deliverables are rendered in the **agent sandbox** for preview, then copied into the user's **workspace** when they are ready to keep the site.
+
+### Workspace (required)
+
+The user must **select a project folder** before you start (toolbar folder icon in the chat). Website work is tied to that folder — for reading source assets, choosing an output path, and promoting the finished site.
+
+**If no workspace is set:** Do not start the workflow. Ask the user to select the folder where the site should live (or where their content/images already are), then continue.
+
+**Typical flow:**
+1. Render to sandbox → user previews in chat
+2. On confirmation, \`promote_artifact\` the site folder into the workspace (e.g. \`./\`, \`public/\`, \`docs/\`, or a path the user names)
+
+Ask where in the project the site should land if they have not said so before promoting.
+
+### Where files live
+
+- **Preview (sandbox):** \`output/results/<site-slug>/index.html\` (+ sibling pages, \`styles.css\`, \`script.js\` for multi-page sites).
+- **Final site (workspace):** promoted copy under the selected workspace (user-chosen subfolder).
+- **Working data:** \`output/toolLoop/step-2b/results/site.json\` — canonical content envelope.
+- **Templates:** bundled under \`templates/\` (manifest, schemas, themes, HTML/CSS/JS). Selected via \`template_id\` in step 1.
+- **User assets:** when the user references images or data in their project, use \`read_file\` on workspace paths — read only.
+- **Workspace promotion:** use \`promote_artifact\` (sandbox \`from\` → workspace \`to\`) when the user wants the site in their project folder.
+- Prefer **\`render_website\`** in step 3 over hand-writing HTML in the sandbox.
+
+### Trigger
+
+Use this skill when the user asks to:
+- **Build** a website, landing page, portfolio, marketing page, or docs site
+- **Create** static HTML/CSS/JS (no React build step, no backend)
+- **Redesign** or **update** a previously generated sandbox site
+- **Preview** a static page in the app
+
+Do **not** use this skill for: React/Vue/Next apps (use **Coding**), PDF reports (use **Documents**), or analytical dashboards in chat (those are chat artifacts, not deployable sites).
+
+---
+
+### Templates
+
+Templates define **layout, typography, and theme**; \`site.json\` defines **content**. Registry: \`templates/manifest.json\`.
+
+| template_id | site_type | Output |
+|-------------|-----------|--------|
+| \`landing-minimal\` | single | One-page marketing / product landing |
+| \`landing-portfolio\` | single | Portfolio / personal site with projects grid |
+| \`docs-site\` | multi | Multi-page docs site with shared nav + layout |
+
+Pick \`template_id\` in step 1. **Do not** improvise colors or fonts in step 3 — they come from the template + theme in the manifest.
+
+---
+
+### Workflow (canonical chain)
+
+| Order | Todo | form_doc_name | Output |
+|-------|------|---------------|--------|
+| 0 | Confirm workspace — project folder selected | — | user picks folder via toolbar if missing |
+| 1 | Understand request — site type, template, title, data source | \`site-request.form.md\` | form: site_type, **template_id**, site_title, data_source, data_source_path, extra_notes |
+| 2a | Collect inline content *(when data_source = inline)* | type-specific form (see below) | normalized fields → write \`site.json\` |
+| 2b | Read or generate content *(when data_source = file or generate)* | — | \`output/toolLoop/step-2b/results/site.json\` |
+| 3 | Render website | — | \`output/results/<site-slug>/\` via **\`render_website\`** |
+| 4 | Validate site | — | \`validate_website\` on the site directory |
+
+**Step 2a form routing:**
+- \`site_type = single\` → \`form_doc_name: landing-content.form.md\`
+- \`site_type = multi\`  → \`form_doc_name: site-pages.form.md\`
+
+After step 2a, normalize form responses into canonical \`site.json\` and write to \`output/toolLoop/step-2b/results/site.json\`.
+
+**Rules:**
+- **Workspace required** — do not proceed past step 0 if no project folder is selected.
+- Never render without completing step 2 first.
+- Normalize content once in step 2; step 3 only reads \`site.json\` + manifest.
+- Always run step 4 after step 3; fix issues and re-render if validation fails.
+- Skip step 1 only when the user's message already contains ALL of: site type, template (or obvious default), title, and complete content.
+
+---
+
+### Continuation and follow-ups
+
+The sandbox **persists across turns** in the same conversation.
+
+**Before starting the canonical workflow on every turn:**
+
+1. Check **Existing sandbox artifacts** in the SANDBOX block and/or \`list_files\` on \`output/results/\`.
+2. Decide: **new site** vs **update existing**.
+
+| Situation | Action |
+|-----------|--------|
+| Prior \`output/results/<slug>/index.html\` exists, user wants tweaks | Read existing \`site.json\` if present; update data; re-run steps 3–4 |
+| User says "make it darker" / "add a contact section" | Edit \`site.json\` or form fields; re-render — do not restart from step 1 |
+| User wants site in their repo | \`promote_artifact\` the whole site folder into the workspace after validation passes |
+| No workspace selected | Ask user to pick a project folder before steps 1–2 |
+
+---
+
+### Canonical site.json shape
+
+\`\`\`json
+{
+  "title": "Acme Landing",
+  "meta": { "description": "...", "author": "...", "lang": "en" },
+  "theme": "minimal-light",
+  "nav": [{ "label": "Features", "href": "#features" }],
+  "hero": {
+    "headline": "Ship faster",
+    "subheadline": "Static sites without the build step",
+    "cta": { "label": "Get started", "href": "#contact" }
+  },
+  "sections": [
+    {
+      "id": "features",
+      "heading": "Features",
+      "body": "Optional intro copy",
+      "items": [{ "title": "Fast", "body": "No bundler required" }]
+    }
+  ],
+  "projects": [{ "title": "Project A", "description": "...", "url": "https://..." }],
+  "pages": [
+    { "slug": "index", "title": "Home", "sections": [{ "heading": "Welcome", "body": "..." }] },
+    { "slug": "guide", "title": "Guide", "sections": [] }
+  ],
+  "contact": { "email": "hello@example.com", "social": [{ "label": "GitHub", "url": "https://github.com" }] }
+}
+\`\`\`
+
+Include only blocks relevant to the template (\`hero\` + \`sections\` for landings, \`projects\` for portfolio, \`pages\` for multi-page).
+
+---
+
+### Step 3 — render the website
+
+**Always prefer \`render_website\`:**
+
+\`\`\`
+render_website({
+  template_id: "<from step 1>",
+  output_slug: "<site_title slug>",
+  data_path: "output/toolLoop/step-2b/results/site.json"
+})
+\`\`\`
+
+Returns \`{ success, site_dir, index_path, preview_hint, message }\`. Tell the user they can **click the preview link** in the chat to open the site beside the conversation.
+
+---
+
+### Step 4 — validate
+
+\`\`\`
+validate_website({ site_dir: "output/results/<site-slug>" })
+\`\`\`
+
+Fix reported errors (missing title, broken relative links, empty nav) and re-render until validation passes.
+
+---
+
+### Design discipline (stronger than generic HTML)
+
+Follow [refs/design-system.md](refs/design-system.md):
+
+1. **Template owns visual design** — no gradients, emoji icons, or decorative box-shadows unless the template provides them.
+2. **Semantic HTML** — \`header\`, \`main\`, \`nav\`, \`section\`, \`footer\`; one \`h1\` per page.
+3. **Accessible** — \`lang\` on \`<html>\`, alt text on images, sufficient contrast from theme tokens.
+4. **Vanilla JS only** — no npm, no frameworks, no \`fetch()\` to external APIs in generated sites.
+5. **Responsive** — templates include mobile layout; do not strip it.
+6. **No placeholder slop** — if content is missing, collect it in step 2; never ship "Lorem ipsum" sections the user did not ask for.
+
+---
+
+### Core rules
+
+1. **Never render without content** — complete step 2 before step 3.
+2. **Normalize once** — map form/file data to \`site.json\` in step 2.
+3. **Template owns style** — theme and layout come from \`template_id\`.
+4. **Validate before done** — step 4 must pass.
+5. **Report preview path** — always share the sandbox path and remind the user about in-app preview.
+6. **Promote on confirmation** — after validation, offer to copy the site into the workspace; do not promote without a selected folder or user consent.
+
+---
+
+## Tools
+
+- render_website: **Preferred step 3.** Render from template_id + site.json into \`output/results/<slug>/\`.
+- validate_website: **Step 4.** Check HTML structure, required files, and relative links.
+- read_file: Read user content files or prior site.json.
+- write_file: Write intermediate site.json in step 2.
+- list_files: Inspect output directory after generation.
+- glob_files: Find input files by pattern.
+- file_status: Check if a path exists before reading.
+- run_script_file: Run \`scripts/validate-site.mjs\` for deeper checks when needed.
+- promote_artifact: Copy finished site folder into the user's workspace.
+
+---
+
+## Examples
+
+### User
+
+Build a landing page for my SaaS product TaskFlow.
+
+### Assistant
+
+Please select a project folder (toolbar folder icon) if you have not already — I'll put the finished site there after preview. Then I'll show a quick form to pick a template and how you want to provide the copy.
+
+### User
+
+Create a 3-page docs site: Home, API, Changelog. Use the docs template.
+
+### Assistant
+
+I'll use the docs-site template and collect page content — showing the pages form now.
+
+### User
+
+Update the hero headline to "Build in minutes".
+
+### Assistant
+
+I'll check for an existing site in the sandbox, update site.json, re-render, and validate.
+`,
+    propertiesMd: `name: Website
+description: Build static HTML/CSS/JS websites and landing pages from templates. Requires a selected workspace folder. Use when the user asks to create a website, landing page, portfolio, docs site, or static web page — client-side only, no backend.
+model: gemma4
+provider: ollama
+color: info
+enabled: true
+refs_dir: refs, templates
+scripts_dir: scripts
+form_dir: form
+allowed_tools: read_file, edit_file, write_file, apply_patch, delete_file, move_file, copy_file, promote_artifact, list_files, grep_files, glob_files, search_files, file_status, run_script, run_script_file, web_search, web_scrape
+`,
+    attachments: {
+      "form/landing-content.form.md": {
+        category: "form",
+        encoding: "utf8",
+        content: `# Landing page content
+
+Content for single-page templates (\`landing-minimal\`, \`landing-portfolio\`).
+
+## Fields
+
+| Field | Description |
+|-------|-------------|
+| \`headline\` | Hero headline |
+| \`subheadline\` | Hero supporting line |
+| \`cta_label\` | Primary button label |
+| \`cta_href\` | Primary button link (\`#section\` or URL) |
+| \`sections_outline\` | One section per line: \`Heading: body\` or \`Heading: item1 | item2\` for feature bullets |
+| \`projects_outline\` | Portfolio only — one per line: \`Title: description | url\` |
+| \`contact_email\` | Optional contact email |
+| \`meta_description\` | SEO description |
+
+<!-- FORM_SCHEMA
+{
+  "title": "Landing page content",
+  "message": "Provide hero copy and sections. Styling comes from the template.",
+  "fields": [
+    {
+      "key": "headline",
+      "label": "Hero headline",
+      "type": "string",
+      "required": true,
+      "placeholder": "Ship static sites in minutes"
+    },
+    {
+      "key": "subheadline",
+      "label": "Hero subheadline",
+      "type": "text",
+      "required": false,
+      "placeholder": "Short supporting sentence"
+    },
+    {
+      "key": "cta_label",
+      "label": "Primary button label",
+      "type": "string",
+      "required": false,
+      "placeholder": "Get started"
+    },
+    {
+      "key": "cta_href",
+      "label": "Primary button link",
+      "type": "string",
+      "required": false,
+      "placeholder": "#contact"
+    },
+    {
+      "key": "sections_outline",
+      "label": "Sections (one per line)",
+      "type": "text",
+      "required": true,
+      "placeholder": "Features: Fast setup | No build step | Preview in app\\nAbout: We help teams ship landing pages."
+    },
+    {
+      "key": "projects_outline",
+      "label": "Projects (portfolio template, one per line)",
+      "type": "text",
+      "required": false,
+      "placeholder": "OpenFDE: Desktop agent app | https://github.com/example"
+    },
+    {
+      "key": "contact_email",
+      "label": "Contact email",
+      "type": "string",
+      "required": false
+    },
+    {
+      "key": "meta_description",
+      "label": "Page description (SEO)",
+      "type": "string",
+      "required": false
+    }
+  ]
+}
+-->
+`,
+      },
+      "form/site-pages.form.md": {
+        category: "form",
+        encoding: "utf8",
+        content: `# Multi-page site content
+
+Content for the \`docs-site\` template and other multi-page layouts.
+
+## Fields
+
+| Field | Description |
+|-------|-------------|
+| \`site_description\` | Short site tagline for header/footer |
+| \`pages_outline\` | One page per line: \`slug | Page title\` then indented sections as \`  Section heading: body\` |
+| \`nav_extra\` | Optional extra nav items: \`Label | filename.html\` per line |
+| \`meta_description\` | Default SEO description |
+
+<!-- FORM_SCHEMA
+{
+  "title": "Multi-page site content",
+  "message": "Define pages and section copy. The docs template adds shared navigation automatically.",
+  "fields": [
+    {
+      "key": "site_description",
+      "label": "Site tagline",
+      "type": "string",
+      "required": false,
+      "placeholder": "API and guides for TaskFlow"
+    },
+    {
+      "key": "pages_outline",
+      "label": "Pages and sections",
+      "type": "text",
+      "required": true,
+      "placeholder": "index | Home\\n  Welcome: Getting started with the API.\\n  Quick start: Install the CLI and run taskflow init.\\nguide | Guide\\n  Authentication: Use API keys from the dashboard."
+    },
+    {
+      "key": "nav_extra",
+      "label": "Extra nav items (optional)",
+      "type": "text",
+      "required": false,
+      "placeholder": "GitHub | https://github.com/example"
+    },
+    {
+      "key": "meta_description",
+      "label": "Default page description",
+      "type": "string",
+      "required": false
+    }
+  ]
+}
+-->
+`,
+      },
+      "form/site-request.form.md": {
+        category: "form",
+        encoding: "utf8",
+        content: `# Site Request
+
+Collect site type, template, title, and data source before building.
+
+**Keep \`template_id\` options in sync with \`templates/manifest.json\`.**
+
+## Fields
+
+| Field | Description |
+|-------|-------------|
+| \`site_type\` | Single-page or multi-page |
+| \`template_id\` | Layout / style template from manifest |
+| \`site_title\` | Site name / output folder slug |
+| \`data_source\` | Where content comes from |
+| \`data_source_path\` | Path to JSON or markdown (if applicable) |
+| \`extra_notes\` | Tone, audience, sections to include |
+
+<!-- FORM_SCHEMA
+{
+  "title": "What website would you like to build?",
+  "message": "Pick a template for layout and style. Ensure a project folder is selected in the toolbar — the finished site will be promoted there after preview. You provide content in the next step.",
+  "fields": [
+    {
+      "key": "site_type",
+      "label": "Site type",
+      "type": "select",
+      "required": true,
+      "options": [
+        { "value": "single", "label": "Single page (landing, portfolio)" },
+        { "value": "multi",  "label": "Multi-page (docs, small site)" }
+      ]
+    },
+    {
+      "key": "template_id",
+      "label": "Template",
+      "type": "select",
+      "required": true,
+      "options": [
+        { "value": "landing-minimal",    "label": "Minimal landing" },
+        { "value": "landing-portfolio",  "label": "Portfolio" },
+        { "value": "docs-site",          "label": "Documentation site" }
+      ]
+    },
+    {
+      "key": "site_title",
+      "label": "Site title",
+      "type": "string",
+      "required": true,
+      "placeholder": "e.g. TaskFlow, Jane Doe Portfolio, API Docs"
+    },
+    {
+      "key": "data_source",
+      "label": "Where is the content?",
+      "type": "select",
+      "required": true,
+      "options": [
+        { "value": "inline",   "label": "I will type it in the next step" },
+        { "value": "file",     "label": "It is in an existing file (JSON, markdown…)" },
+        { "value": "generate", "label": "Generate realistic sample content" }
+      ]
+    },
+    {
+      "key": "data_source_path",
+      "label": "File path (if using an existing file)",
+      "type": "string",
+      "required": false,
+      "placeholder": "/Users/me/content.json"
+    },
+    {
+      "key": "extra_notes",
+      "label": "Extra instructions (optional)",
+      "type": "text",
+      "required": false,
+      "placeholder": "e.g. developer audience, include pricing section, dark theme feel…"
+    }
+  ]
+}
+-->
+`,
+      },
+      "refs/design-system.md": {
+        category: "ref",
+        encoding: "utf8",
+        content: `# Static site design system
+
+Templates ship with themes from \`templates/styles/themes.json\`. The agent supplies **content only** in \`site.json\`.
+
+## Anti-slop rules (required)
+
+These patterns produce low-quality sites. Avoid them in custom edits; templates already exclude them.
+
+- **Gradients** on backgrounds or text
+- **Emoji** as icons or section markers
+- **Heavy box-shadows** on every card
+- **Rainbow accents** — one accent color per theme, used sparingly
+- **Giant display text** above template defaults
+- **Placeholder copy** the user did not provide or request
+
+## Typography
+
+- One sans-serif stack per theme (system UI fonts).
+- Body: 16–18px equivalent; headings scale in template CSS only.
+- Max line width ~65ch for prose sections.
+
+## Layout
+
+- Mobile-first: single column default, grid at \`min-width: 768px\` where templates define it.
+- Consistent vertical rhythm (section padding from theme tokens).
+- Nav: sticky top bar for multi-page; anchor links for single-page.
+
+## Accessibility
+
+- \`<html lang="...">\` from \`meta.lang\`
+- Every \`<img>\` has meaningful \`alt\` (empty \`alt=""\` only for decorative images)
+- Focus styles on interactive elements (templates include \`:focus-visible\`)
+- Color contrast: theme tokens meet WCAG AA for body text on background
+
+## JavaScript
+
+- Vanilla ES modules or IIFE in \`script.js\` — no bundler.
+- No network calls in generated sites.
+- Progressive enhancement: page works with JS disabled.
+
+## File conventions
+
+| File | Role |
+|------|------|
+| \`index.html\` | Entry point (always present) |
+| \`styles.css\` | Shared styles |
+| \`script.js\` | Optional interactions (nav toggle, smooth scroll) |
+| \`*.html\` | Additional pages (multi-page templates only) |
+`,
+      },
+      "refs/site-structure.md": {
+        category: "ref",
+        encoding: "utf8",
+        content: `# Site structure reference
+
+## Workspace
+
+Select a **project folder** in the chat toolbar before starting. The agent previews in the sandbox, then promotes the site into that workspace (e.g. \`public/\`, \`docs/\`, or project root) when you confirm.
+
+## Single-page (\`site_type: single\`)
+
+\`\`\`
+output/results/<slug>/
+├── index.html
+├── styles.css
+└── script.js          # optional
+\`\`\`
+
+Content blocks in \`site.json\`:
+- \`hero\` — headline, subheadline, optional CTA
+- \`sections[]\` — id, heading, body, optional \`items[]\` for feature grids
+- \`projects[]\` — portfolio template only
+- \`contact\` — email, social links
+
+Nav uses in-page anchors (\`#section-id\`) unless the user specifies external URLs.
+
+## Multi-page (\`site_type: multi\`)
+
+\`\`\`
+output/results/<slug>/
+├── index.html
+├── guide.html
+├── ...
+├── styles.css
+└── script.js
+\`\`\`
+
+Content blocks:
+- \`nav[]\` — \`{ label, href }\` with filenames (\`index.html\`, \`guide.html\`)
+- \`pages[]\` — \`{ slug, title, sections[] }\`; \`slug: "index"\` → \`index.html\`
+
+Shared layout wraps each page (header nav + footer from \`site.json\`).
+
+## Theme selection
+
+Set \`theme\` in \`site.json\` or inherit default from manifest \`style.theme\`:
+
+| Theme key | Best for |
+|-----------|----------|
+| \`minimal-light\` | SaaS landing, product pages |
+| \`portfolio-dark\` | Personal portfolio |
+| \`docs-neutral\` | Documentation sites |
+`,
+      },
+      "scripts/validate-site.mjs": {
+        category: "script",
+        encoding: "utf8",
+        content: `#!/usr/bin/env node
+/**
+ * Optional deeper validation — checks index.html and link targets under a site dir.
+ * Usage: node validate-site.mjs <site-dir-relative-to-cwd>
+ */
+import fs from 'node:fs'
+import path from 'node:path'
+
+const siteDir = process.argv[2]
+if (!siteDir) {
+  console.error('usage: node validate-site.mjs <site-dir>')
+  process.exit(1)
 }
 
-export const BUNDLED_SKILL_IDS = ["coding","coding-pr","coding-review","default","documents","google-workspace","research"] as const
+const abs = path.resolve(siteDir)
+const indexPath = path.join(abs, 'index.html')
+const errors = []
+
+if (!fs.existsSync(indexPath)) {
+  errors.push('missing index.html')
+} else {
+  const html = fs.readFileSync(indexPath, 'utf-8')
+  if (!/<html[^>]*lang=/i.test(html)) errors.push('index.html: missing lang on <html>')
+  if (!/<title>[^<]+<\\/title>/i.test(html)) errors.push('index.html: missing <title>')
+  const hrefs = [...html.matchAll(/href="([^"#][^"]*)"/g)].map((m) => m[1])
+  for (const href of hrefs) {
+    if (href.startsWith('http') || href.startsWith('mailto:')) continue
+    const target = path.join(abs, href.split('?')[0])
+    if (!fs.existsSync(target)) errors.push(\`broken link: \${href}\`)
+  }
+}
+
+if (errors.length) {
+  console.error(errors.join('\\n'))
+  process.exit(1)
+}
+
+console.log('OK')
+`,
+      },
+      "templates/landing/minimal/index.html": {
+        category: "ref",
+        encoding: "utf8",
+        content: `<!doctype html>
+<html lang="{{meta.lang}}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{title}}</title>
+  {{#meta.description}}<meta name="description" content="{{meta.description}}" />{{/meta.description}}
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="#top">{{title}}</a>
+      {{#navItems}}
+      <nav class="site-nav" aria-label="Primary">
+        <ul>
+          {{#.}}<li><a href="{{href}}">{{label}}</a></li>{{/.}}
+        </ul>
+      </nav>
+      {{/navItems}}
+      <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="container hero-inner">
+        <h1>{{hero.headline}}</h1>
+        {{#hero.subheadline}}<p class="lead">{{hero.subheadline}}</p>{{/hero.subheadline}}
+        {{#hero.cta}}
+        <p class="hero-cta"><a class="btn btn-primary" href="{{href}}">{{label}}</a></p>
+        {{/hero.cta}}
+      </div>
+    </section>
+
+    {{#sections}}
+    <section class="content-section" id="{{id}}">
+      <div class="container">
+        <h2>{{heading}}</h2>
+        {{#body}}<p>{{body}}</p>{{/body}}
+        {{#items}}
+        <ul class="feature-grid">
+          {{#.}}
+          <li class="feature-card">
+            <h3>{{title}}</h3>
+            <p>{{body}}</p>
+          </li>
+          {{/.}}
+        </ul>
+        {{/items}}
+      </div>
+    </section>
+    {{/sections}}
+
+    {{#contact}}
+    <section class="content-section contact-section" id="contact">
+      <div class="container">
+        <h2>Contact</h2>
+        {{#email}}<p><a href="mailto:{{email}}">{{email}}</a></p>{{/email}}
+        {{#social}}
+        <ul class="social-links">
+          {{#.}}<li><a href="{{url}}">{{label}}</a></li>{{/.}}
+        </ul>
+        {{/social}}
+      </div>
+    </section>
+    {{/contact}}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; {{title}}{{#meta.author}} · {{meta.author}}{{/meta.author}}</p>
+    </div>
+  </footer>
+  <script src="script.js" defer></script>
+</body>
+</html>
+`,
+      },
+      "templates/landing/minimal/styles.css": {
+        category: "ref",
+        encoding: "base64",
+        content: `OnJvb3QgewogIC0tYmc6IHt7dGhlbWUuYmd9fTsKICAtLXN1cmZhY2U6IHt7dGhlbWUuc3VyZmFjZX19OwogIC0tdGV4dDoge3t0aGVtZS50ZXh0fX07CiAgLS10ZXh0LW11dGVkOiB7e3RoZW1lLnRleHRNdXRlZH19OwogIC0tYWNjZW50OiB7e3RoZW1lLmFjY2VudH19OwogIC0tYWNjZW50LWhvdmVyOiB7e3RoZW1lLmFjY2VudEhvdmVyfX07CiAgLS1ib3JkZXI6IHt7dGhlbWUuYm9yZGVyfX07CiAgLS1mb250LXNhbnM6IHt7dGhlbWUuZm9udFNhbnN9fTsKfQoKKiwgKjo6YmVmb3JlLCAqOjphZnRlciB7IGJveC1zaXppbmc6IGJvcmRlci1ib3g7IH0KCmJvZHkgewogIG1hcmdpbjogMDsKICBmb250LWZhbWlseTogdmFyKC0tZm9udC1zYW5zKTsKICBmb250LXNpemU6IDFyZW07CiAgbGluZS1oZWlnaHQ6IDEuNjsKICBjb2xvcjogdmFyKC0tdGV4dCk7CiAgYmFja2dyb3VuZDogdmFyKC0tYmcpOwp9CgouY29udGFpbmVyIHsKICB3aWR0aDogbWluKDEwMCUgLSAycmVtLCA2OHJlbSk7CiAgbWFyZ2luLWlubGluZTogYXV0bzsKfQoKLnNpdGUtaGVhZGVyIHsKICBwb3NpdGlvbjogc3RpY2t5OwogIHRvcDogMDsKICB6LWluZGV4OiAxMDsKICBiYWNrZ3JvdW5kOiB2YXIoLS1zdXJmYWNlKTsKICBib3JkZXItYm90dG9tOiAxcHggc29saWQgdmFyKC0tYm9yZGVyKTsKfQoKLmhlYWRlci1pbm5lciB7CiAgZGlzcGxheTogZmxleDsKICBhbGlnbi1pdGVtczogY2VudGVyOwogIGp1c3RpZnktY29udGVudDogc3BhY2UtYmV0d2VlbjsKICBnYXA6IDFyZW07CiAgcGFkZGluZzogMC43NXJlbSAwOwp9CgoubG9nbyB7CiAgZm9udC13ZWlnaHQ6IDcwMDsKICBjb2xvcjogdmFyKC0tdGV4dCk7CiAgdGV4dC1kZWNvcmF0aW9uOiBub25lOwp9Cgouc2l0ZS1uYXYgdWwgewogIGRpc3BsYXk6IGZsZXg7CiAgZ2FwOiAxLjI1cmVtOwogIGxpc3Qtc3R5bGU6IG5vbmU7CiAgbWFyZ2luOiAwOwogIHBhZGRpbmc6IDA7Cn0KCi5zaXRlLW5hdiBhIHsKICBjb2xvcjogdmFyKC0tdGV4dC1tdXRlZCk7CiAgdGV4dC1kZWNvcmF0aW9uOiBub25lOwp9Cgouc2l0ZS1uYXYgYTpob3ZlciwKLnNpdGUtbmF2IGE6Zm9jdXMtdmlzaWJsZSB7CiAgY29sb3I6IHZhcigtLWFjY2VudCk7Cn0KCi5uYXYtdG9nZ2xlIHsKICBkaXNwbGF5OiBub25lOwogIGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWJvcmRlcik7CiAgYmFja2dyb3VuZDogdmFyKC0tc3VyZmFjZSk7CiAgcGFkZGluZzogMC4zNXJlbSAwLjY1cmVtOwogIGJvcmRlci1yYWRpdXM6IDRweDsKfQoKLmhlcm8gewogIHBhZGRpbmc6IDRyZW0gMCAzcmVtOwogIGJhY2tncm91bmQ6IHZhcigtLXN1cmZhY2UpOwogIGJvcmRlci1ib3R0b206IDFweCBzb2xpZCB2YXIoLS1ib3JkZXIpOwp9CgouaGVybyBoMSB7CiAgbWFyZ2luOiAwIDAgMC43NXJlbTsKICBmb250LXNpemU6IGNsYW1wKDJyZW0sIDR2dywgMi43NXJlbSk7CiAgbGluZS1oZWlnaHQ6IDEuMTU7CiAgbWF4LXdpZHRoOiAxOGNoOwp9CgoubGVhZCB7CiAgbWFyZ2luOiAwOwogIGZvbnQtc2l6ZTogMS4xMjVyZW07CiAgY29sb3I6IHZhcigtLXRleHQtbXV0ZWQpOwogIG1heC13aWR0aDogNDJjaDsKfQoKLmJ0biB7CiAgZGlzcGxheTogaW5saW5lLWJsb2NrOwogIHBhZGRpbmc6IDAuNjVyZW0gMS4yNXJlbTsKICBib3JkZXItcmFkaXVzOiA2cHg7CiAgdGV4dC1kZWNvcmF0aW9uOiBub25lOwogIGZvbnQtd2VpZ2h0OiA2MDA7Cn0KCi5idG4tcHJpbWFyeSB7CiAgYmFja2dyb3VuZDogdmFyKC0tYWNjZW50KTsKICBjb2xvcjogI2ZmZjsKfQoKLmJ0bi1wcmltYXJ5OmhvdmVyLAouYnRuLXByaW1hcnk6Zm9jdXMtdmlzaWJsZSB7CiAgYmFja2dyb3VuZDogdmFyKC0tYWNjZW50LWhvdmVyKTsKfQoKLmNvbnRlbnQtc2VjdGlvbiB7CiAgcGFkZGluZzogM3JlbSAwOwp9CgouY29udGVudC1zZWN0aW9uIGgyIHsKICBtYXJnaW46IDAgMCAxcmVtOwogIGZvbnQtc2l6ZTogMS41cmVtOwp9CgouY29udGVudC1zZWN0aW9uIHAgewogIG1hcmdpbjogMCAwIDFyZW07CiAgbWF4LXdpZHRoOiA2NWNoOwogIGNvbG9yOiB2YXIoLS10ZXh0LW11dGVkKTsKfQoKLmZlYXR1cmUtZ3JpZCB7CiAgZGlzcGxheTogZ3JpZDsKICBncmlkLXRlbXBsYXRlLWNvbHVtbnM6IHJlcGVhdChhdXRvLWZpdCwgbWlubWF4KDE0cmVtLCAxZnIpKTsKICBnYXA6IDFyZW07CiAgbGlzdC1zdHlsZTogbm9uZTsKICBtYXJnaW46IDEuNXJlbSAwIDA7CiAgcGFkZGluZzogMDsKfQoKLmZlYXR1cmUtY2FyZCB7CiAgcGFkZGluZzogMS4yNXJlbTsKICBiYWNrZ3JvdW5kOiB2YXIoLS1zdXJmYWNlKTsKICBib3JkZXI6IDFweCBzb2xpZCB2YXIoLS1ib3JkZXIpOwogIGJvcmRlci1yYWRpdXM6IDhweDsKfQoKLmZlYXR1cmUtY2FyZCBoMyB7CiAgbWFyZ2luOiAwIDAgMC41cmVtOwogIGZvbnQtc2l6ZTogMXJlbTsKfQoKLmZlYXR1cmUtY2FyZCBwIHsKICBtYXJnaW46IDA7CiAgZm9udC1zaXplOiAwLjkzNzVyZW07Cn0KCi5zb2NpYWwtbGlua3MgewogIGRpc3BsYXk6IGZsZXg7CiAgZ2FwOiAxcmVtOwogIGxpc3Qtc3R5bGU6IG5vbmU7CiAgbWFyZ2luOiAwOwogIHBhZGRpbmc6IDA7Cn0KCi5zb2NpYWwtbGlua3MgYSB7CiAgY29sb3I6IHZhcigtLWFjY2VudCk7Cn0KCi5zaXRlLWZvb3RlciB7CiAgcGFkZGluZzogMnJlbSAwOwogIGJvcmRlci10b3A6IDFweCBzb2xpZCB2YXIoLS1ib3JkZXIpOwogIGNvbG9yOiB2YXIoLS10ZXh0LW11dGVkKTsKICBmb250LXNpemU6IDAuODc1cmVtOwp9CgpAbWVkaWEgKG1heC13aWR0aDogNzY4cHgpIHsKICAubmF2LXRvZ2dsZSB7IGRpc3BsYXk6IGJsb2NrOyB9CiAgLnNpdGUtbmF2IHsKICAgIGRpc3BsYXk6IG5vbmU7CiAgICBwb3NpdGlvbjogYWJzb2x1dGU7CiAgICB0b3A6IDEwMCU7CiAgICBsZWZ0OiAwOwogICAgcmlnaHQ6IDA7CiAgICBiYWNrZ3JvdW5kOiB2YXIoLS1zdXJmYWNlKTsKICAgIGJvcmRlci1ib3R0b206IDFweCBzb2xpZCB2YXIoLS1ib3JkZXIpOwogICAgcGFkZGluZzogMC43NXJlbSAxcmVtOwogIH0KICAuc2l0ZS1uYXYuaXMtb3BlbiB7IGRpc3BsYXk6IGJsb2NrOyB9CiAgLnNpdGUtbmF2IHVsIHsgZmxleC1kaXJlY3Rpb246IGNvbHVtbjsgZ2FwOiAwLjVyZW07IH0KfQo=`,
+      },
+      "templates/landing/portfolio/index.html": {
+        category: "ref",
+        encoding: "utf8",
+        content: `<!doctype html>
+<html lang="{{meta.lang}}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{title}}</title>
+  {{#meta.description}}<meta name="description" content="{{meta.description}}" />{{/meta.description}}
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="#top">{{title}}</a>
+      <nav class="site-nav" aria-label="Primary">
+        <ul>
+          <li><a href="#work">Work</a></li>
+          <li><a href="#about">About</a></li>
+          {{#contact.email}}<li><a href="#contact">Contact</a></li>{{/contact.email}}
+        </ul>
+      </nav>
+      <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="container hero-inner">
+        <p class="eyebrow">Portfolio</p>
+        <h1>{{hero.headline}}</h1>
+        {{#hero.subheadline}}<p class="lead">{{hero.subheadline}}</p>{{/hero.subheadline}}
+      </div>
+    </section>
+
+    {{#projectsBlock}}
+    <section class="content-section" id="work">
+      <div class="container">
+        <h2>Selected work</h2>
+        <ul class="project-grid">
+          {{#items}}
+          <li class="project-card">
+            <h3>{{#url}}<a href="{{url}}">{{title}}</a>{{/url}}{{^url}}{{title}}{{/url}}</h3>
+            <p>{{description}}</p>
+          </li>
+          {{/items}}
+        </ul>
+      </div>
+    </section>
+    {{/projectsBlock}}
+
+    {{#sections}}
+    <section class="content-section" id="{{id}}">
+      <div class="container">
+        <h2>{{heading}}</h2>
+        {{#body}}<p>{{body}}</p>{{/body}}
+      </div>
+    </section>
+    {{/sections}}
+
+    {{#contact}}
+    <section class="content-section contact-section" id="contact">
+      <div class="container">
+        <h2>Contact</h2>
+        {{#email}}<p><a href="mailto:{{email}}">{{email}}</a></p>{{/email}}
+      </div>
+    </section>
+    {{/contact}}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>{{title}}{{#meta.author}} · {{meta.author}}{{/meta.author}}</p>
+    </div>
+  </footer>
+  <script src="script.js" defer></script>
+</body>
+</html>
+`,
+      },
+      "templates/landing/portfolio/styles.css": {
+        category: "ref",
+        encoding: "base64",
+        content: `OnJvb3QgewogIC0tYmc6IHt7dGhlbWUuYmd9fTsKICAtLXN1cmZhY2U6IHt7dGhlbWUuc3VyZmFjZX19OwogIC0tdGV4dDoge3t0aGVtZS50ZXh0fX07CiAgLS10ZXh0LW11dGVkOiB7e3RoZW1lLnRleHRNdXRlZH19OwogIC0tYWNjZW50OiB7e3RoZW1lLmFjY2VudH19OwogIC0tYWNjZW50LWhvdmVyOiB7e3RoZW1lLmFjY2VudEhvdmVyfX07CiAgLS1ib3JkZXI6IHt7dGhlbWUuYm9yZGVyfX07CiAgLS1mb250LXNhbnM6IHt7dGhlbWUuZm9udFNhbnN9fTsKfQoKKiwgKjo6YmVmb3JlLCAqOjphZnRlciB7IGJveC1zaXppbmc6IGJvcmRlci1ib3g7IH0KCmJvZHkgewogIG1hcmdpbjogMDsKICBmb250LWZhbWlseTogdmFyKC0tZm9udC1zYW5zKTsKICBmb250LXNpemU6IDFyZW07CiAgbGluZS1oZWlnaHQ6IDEuNjsKICBjb2xvcjogdmFyKC0tdGV4dCk7CiAgYmFja2dyb3VuZDogdmFyKC0tYmcpOwp9CgouY29udGFpbmVyIHsKICB3aWR0aDogbWluKDEwMCUgLSAycmVtLCA2OHJlbSk7CiAgbWFyZ2luLWlubGluZTogYXV0bzsKfQoKLnNpdGUtaGVhZGVyIHsKICBwYWRkaW5nOiAxcmVtIDA7CiAgYm9yZGVyLWJvdHRvbTogMXB4IHNvbGlkIHZhcigtLWJvcmRlcik7Cn0KCi5oZWFkZXItaW5uZXIgewogIGRpc3BsYXk6IGZsZXg7CiAgYWxpZ24taXRlbXM6IGNlbnRlcjsKICBqdXN0aWZ5LWNvbnRlbnQ6IHNwYWNlLWJldHdlZW47Cn0KCi5sb2dvIHsKICBmb250LXdlaWdodDogNzAwOwogIGNvbG9yOiB2YXIoLS10ZXh0KTsKICB0ZXh0LWRlY29yYXRpb246IG5vbmU7Cn0KCi5zaXRlLW5hdiB1bCB7CiAgZGlzcGxheTogZmxleDsKICBnYXA6IDEuMjVyZW07CiAgbGlzdC1zdHlsZTogbm9uZTsKICBtYXJnaW46IDA7CiAgcGFkZGluZzogMDsKfQoKLnNpdGUtbmF2IGEgewogIGNvbG9yOiB2YXIoLS10ZXh0LW11dGVkKTsKICB0ZXh0LWRlY29yYXRpb246IG5vbmU7Cn0KCi5zaXRlLW5hdiBhOmhvdmVyIHsgY29sb3I6IHZhcigtLWFjY2VudCk7IH0KCi5uYXYtdG9nZ2xlIHsKICBkaXNwbGF5OiBub25lOwogIGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWJvcmRlcik7CiAgYmFja2dyb3VuZDogdmFyKC0tc3VyZmFjZSk7CiAgY29sb3I6IHZhcigtLXRleHQpOwogIHBhZGRpbmc6IDAuMzVyZW0gMC42NXJlbTsKfQoKLmhlcm8gewogIHBhZGRpbmc6IDVyZW0gMCAzcmVtOwp9CgouZXllYnJvdyB7CiAgbWFyZ2luOiAwIDAgMC41cmVtOwogIHRleHQtdHJhbnNmb3JtOiB1cHBlcmNhc2U7CiAgbGV0dGVyLXNwYWNpbmc6IDAuMDhlbTsKICBmb250LXNpemU6IDAuNzVyZW07CiAgY29sb3I6IHZhcigtLWFjY2VudCk7Cn0KCi5oZXJvIGgxIHsKICBtYXJnaW46IDAgMCAxcmVtOwogIGZvbnQtc2l6ZTogY2xhbXAoMi4yNXJlbSwgNXZ3LCAzLjI1cmVtKTsKICBsaW5lLWhlaWdodDogMS4xOwogIG1heC13aWR0aDogMTZjaDsKfQoKLmxlYWQgewogIG1hcmdpbjogMDsKICBmb250LXNpemU6IDEuMTI1cmVtOwogIGNvbG9yOiB2YXIoLS10ZXh0LW11dGVkKTsKICBtYXgtd2lkdGg6IDQwY2g7Cn0KCi5jb250ZW50LXNlY3Rpb24gewogIHBhZGRpbmc6IDNyZW0gMDsKfQoKLmNvbnRlbnQtc2VjdGlvbiBoMiB7CiAgbWFyZ2luOiAwIDAgMS41cmVtOwogIGZvbnQtc2l6ZTogMS4yNXJlbTsKICBjb2xvcjogdmFyKC0tdGV4dC1tdXRlZCk7CiAgZm9udC13ZWlnaHQ6IDYwMDsKfQoKLnByb2plY3QtZ3JpZCB7CiAgZGlzcGxheTogZ3JpZDsKICBncmlkLXRlbXBsYXRlLWNvbHVtbnM6IHJlcGVhdChhdXRvLWZpdCwgbWlubWF4KDE2cmVtLCAxZnIpKTsKICBnYXA6IDFyZW07CiAgbGlzdC1zdHlsZTogbm9uZTsKICBtYXJnaW46IDA7CiAgcGFkZGluZzogMDsKfQoKLnByb2plY3QtY2FyZCB7CiAgcGFkZGluZzogMS41cmVtOwogIGJhY2tncm91bmQ6IHZhcigtLXN1cmZhY2UpOwogIGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWJvcmRlcik7CiAgYm9yZGVyLXJhZGl1czogOHB4Owp9CgoucHJvamVjdC1jYXJkIGgzIHsKICBtYXJnaW46IDAgMCAwLjVyZW07CiAgZm9udC1zaXplOiAxLjA2MjVyZW07Cn0KCi5wcm9qZWN0LWNhcmQgaDMgYSB7CiAgY29sb3I6IHZhcigtLXRleHQpOwogIHRleHQtZGVjb3JhdGlvbjogbm9uZTsKfQoKLnByb2plY3QtY2FyZCBoMyBhOmhvdmVyIHsgY29sb3I6IHZhcigtLWFjY2VudCk7IH0KCi5wcm9qZWN0LWNhcmQgcCB7CiAgbWFyZ2luOiAwOwogIGNvbG9yOiB2YXIoLS10ZXh0LW11dGVkKTsKICBmb250LXNpemU6IDAuOTM3NXJlbTsKfQoKLmNvbnRhY3Qtc2VjdGlvbiBhIHsgY29sb3I6IHZhcigtLWFjY2VudCk7IH0KCi5zaXRlLWZvb3RlciB7CiAgcGFkZGluZzogMnJlbSAwOwogIGJvcmRlci10b3A6IDFweCBzb2xpZCB2YXIoLS1ib3JkZXIpOwogIGNvbG9yOiB2YXIoLS10ZXh0LW11dGVkKTsKICBmb250LXNpemU6IDAuODc1cmVtOwp9CgpAbWVkaWEgKG1heC13aWR0aDogNzY4cHgpIHsKICAubmF2LXRvZ2dsZSB7IGRpc3BsYXk6IGJsb2NrOyB9CiAgLnNpdGUtbmF2IHsgZGlzcGxheTogbm9uZTsgfQogIC5zaXRlLW5hdi5pcy1vcGVuIHsgZGlzcGxheTogYmxvY2s7IH0KICAuc2l0ZS1uYXYgdWwgeyBmbGV4LWRpcmVjdGlvbjogY29sdW1uOyB9Cn0K`,
+      },
+      "templates/manifest.json": {
+        category: "ref",
+        encoding: "utf8",
+        content: `{
+  "templates": [
+    {
+      "id": "landing-minimal",
+      "label": "Minimal landing",
+      "site_types": ["single"],
+      "schema": "schemas/landing.schema.json",
+      "renderer": "single",
+      "html": "landing/minimal/index.html",
+      "css": "landing/minimal/styles.css",
+      "js": "shared/base.js",
+      "style": {
+        "theme": "minimal-light"
+      }
+    },
+    {
+      "id": "landing-portfolio",
+      "label": "Portfolio",
+      "site_types": ["single"],
+      "schema": "schemas/landing.schema.json",
+      "renderer": "single",
+      "html": "landing/portfolio/index.html",
+      "css": "landing/portfolio/styles.css",
+      "js": "shared/base.js",
+      "style": {
+        "theme": "portfolio-dark"
+      }
+    },
+    {
+      "id": "docs-site",
+      "label": "Documentation site",
+      "site_types": ["multi"],
+      "schema": "schemas/site.schema.json",
+      "renderer": "multi",
+      "layout": "multi/docs/layout.html",
+      "page": "multi/docs/page.html",
+      "css": "multi/docs/styles.css",
+      "js": "shared/base.js",
+      "style": {
+        "theme": "docs-neutral"
+      }
+    }
+  ]
+}
+`,
+      },
+      "templates/multi/docs/page.html": {
+        category: "ref",
+        encoding: "utf8",
+        content: `<!doctype html>
+<html lang="{{meta.lang}}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{pageTitle}} · {{siteTitle}}</title>
+  {{#metaDescription}}<meta name="description" content="{{metaDescription}}" />{{/metaDescription}}
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="index.html">{{siteTitle}}</a>
+      <nav class="site-nav" aria-label="Primary">
+        <ul>
+          {{#nav}}
+          <li><a href="{{href}}"{{#active}} aria-current="page"{{/active}}>{{label}}</a></li>
+          {{/nav}}
+        </ul>
+      </nav>
+      <button type="button" class="nav-toggle" aria-expanded="false">Menu</button>
+    </div>
+  </header>
+
+  <main class="container docs-main">
+    <article>
+      <h1>{{pageTitle}}</h1>
+      {{#sections}}
+      <section class="doc-section">
+        <h2>{{heading}}</h2>
+        {{#body}}<p>{{body}}</p>{{/body}}
+      </section>
+      {{/sections}}
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>{{siteTitle}}{{#tagline}} · {{tagline}}{{/tagline}}</p>
+    </div>
+  </footer>
+  <script src="script.js" defer></script>
+</body>
+</html>
+`,
+      },
+      "templates/multi/docs/styles.css": {
+        category: "ref",
+        encoding: "base64",
+        content: `OnJvb3QgewogIC0tYmc6IHt7dGhlbWUuYmd9fTsKICAtLXN1cmZhY2U6IHt7dGhlbWUuc3VyZmFjZX19OwogIC0tdGV4dDoge3t0aGVtZS50ZXh0fX07CiAgLS10ZXh0LW11dGVkOiB7e3RoZW1lLnRleHRNdXRlZH19OwogIC0tYWNjZW50OiB7e3RoZW1lLmFjY2VudH19OwogIC0tYWNjZW50LWhvdmVyOiB7e3RoZW1lLmFjY2VudEhvdmVyfX07CiAgLS1ib3JkZXI6IHt7dGhlbWUuYm9yZGVyfX07CiAgLS1mb250LXNhbnM6IHt7dGhlbWUuZm9udFNhbnN9fTsKfQoKKiwgKjo6YmVmb3JlLCAqOjphZnRlciB7IGJveC1zaXppbmc6IGJvcmRlci1ib3g7IH0KCmJvZHkgewogIG1hcmdpbjogMDsKICBmb250LWZhbWlseTogdmFyKC0tZm9udC1zYW5zKTsKICBmb250LXNpemU6IDFyZW07CiAgbGluZS1oZWlnaHQ6IDEuNjU7CiAgY29sb3I6IHZhcigtLXRleHQpOwogIGJhY2tncm91bmQ6IHZhcigtLWJnKTsKfQoKLmNvbnRhaW5lciB7CiAgd2lkdGg6IG1pbigxMDAlIC0gMnJlbSwgNDhyZW0pOwogIG1hcmdpbi1pbmxpbmU6IGF1dG87Cn0KCi5zaXRlLWhlYWRlciB7CiAgYm9yZGVyLWJvdHRvbTogMXB4IHNvbGlkIHZhcigtLWJvcmRlcik7CiAgYmFja2dyb3VuZDogdmFyKC0tc3VyZmFjZSk7CiAgcG9zaXRpb246IHN0aWNreTsKICB0b3A6IDA7CiAgei1pbmRleDogNTsKfQoKLmhlYWRlci1pbm5lciB7CiAgZGlzcGxheTogZmxleDsKICBhbGlnbi1pdGVtczogY2VudGVyOwogIGp1c3RpZnktY29udGVudDogc3BhY2UtYmV0d2VlbjsKICBwYWRkaW5nOiAwLjc1cmVtIDA7CiAgZ2FwOiAxcmVtOwp9CgoubG9nbyB7CiAgZm9udC13ZWlnaHQ6IDcwMDsKICBjb2xvcjogdmFyKC0tdGV4dCk7CiAgdGV4dC1kZWNvcmF0aW9uOiBub25lOwp9Cgouc2l0ZS1uYXYgdWwgewogIGRpc3BsYXk6IGZsZXg7CiAgZmxleC13cmFwOiB3cmFwOwogIGdhcDogMXJlbTsKICBsaXN0LXN0eWxlOiBub25lOwogIG1hcmdpbjogMDsKICBwYWRkaW5nOiAwOwp9Cgouc2l0ZS1uYXYgYSB7CiAgY29sb3I6IHZhcigtLXRleHQtbXV0ZWQpOwogIHRleHQtZGVjb3JhdGlvbjogbm9uZTsKICBmb250LXNpemU6IDAuOTM3NXJlbTsKfQoKLnNpdGUtbmF2IGE6aG92ZXIsCi5zaXRlLW5hdiBhW2FyaWEtY3VycmVudD0icGFnZSJdIHsKICBjb2xvcjogdmFyKC0tYWNjZW50KTsKfQoKLm5hdi10b2dnbGUgewogIGRpc3BsYXk6IG5vbmU7CiAgYm9yZGVyOiAxcHggc29saWQgdmFyKC0tYm9yZGVyKTsKICBiYWNrZ3JvdW5kOiB2YXIoLS1iZyk7CiAgcGFkZGluZzogMC4zNXJlbSAwLjY1cmVtOwp9CgouZG9jcy1tYWluIHsKICBwYWRkaW5nOiAyLjVyZW0gMCAzcmVtOwp9CgouZG9jcy1tYWluIGgxIHsKICBtYXJnaW46IDAgMCAxLjVyZW07CiAgZm9udC1zaXplOiAycmVtOwogIGxpbmUtaGVpZ2h0OiAxLjI7Cn0KCi5kb2Mtc2VjdGlvbiB7CiAgbWFyZ2luLWJvdHRvbTogMnJlbTsKfQoKLmRvYy1zZWN0aW9uIGgyIHsKICBtYXJnaW46IDAgMCAwLjc1cmVtOwogIGZvbnQtc2l6ZTogMS4yNXJlbTsKfQoKLmRvYy1zZWN0aW9uIHAgewogIG1hcmdpbjogMDsKICBjb2xvcjogdmFyKC0tdGV4dC1tdXRlZCk7CiAgbWF4LXdpZHRoOiA2NWNoOwp9Cgouc2l0ZS1mb290ZXIgewogIHBhZGRpbmc6IDEuNXJlbSAwIDJyZW07CiAgYm9yZGVyLXRvcDogMXB4IHNvbGlkIHZhcigtLWJvcmRlcik7CiAgY29sb3I6IHZhcigtLXRleHQtbXV0ZWQpOwogIGZvbnQtc2l6ZTogMC44NzVyZW07Cn0KCkBtZWRpYSAobWF4LXdpZHRoOiA3NjhweCkgewogIC5uYXYtdG9nZ2xlIHsgZGlzcGxheTogYmxvY2s7IH0KICAuc2l0ZS1uYXYgeyBkaXNwbGF5OiBub25lOyB3aWR0aDogMTAwJTsgfQogIC5zaXRlLW5hdi5pcy1vcGVuIHsgZGlzcGxheTogYmxvY2s7IH0KICAuc2l0ZS1uYXYgdWwgeyBmbGV4LWRpcmVjdGlvbjogY29sdW1uOyB9CiAgLmhlYWRlci1pbm5lciB7IGZsZXgtd3JhcDogd3JhcDsgfQp9Cg==`,
+      },
+      "templates/schemas/landing.schema.json": {
+        category: "ref",
+        encoding: "utf8",
+        content: `{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["title"],
+  "properties": {
+    "title": { "type": "string" },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "description": { "type": "string" },
+        "author": { "type": "string" },
+        "lang": { "type": "string" }
+      }
+    },
+    "hero": {
+      "type": "object",
+      "properties": {
+        "headline": { "type": "string" },
+        "subheadline": { "type": "string" },
+        "cta": {
+          "type": "object",
+          "properties": {
+            "label": { "type": "string" },
+            "href": { "type": "string" }
+          }
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["heading"],
+        "properties": {
+          "id": { "type": "string" },
+          "heading": { "type": "string" },
+          "body": { "type": "string" },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": { "type": "string" },
+                "body": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "url": { "type": "string" }
+        }
+      }
+    },
+    "contact": {
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "social": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`,
+      },
+      "templates/schemas/site.schema.json": {
+        category: "ref",
+        encoding: "utf8",
+        content: `{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["title", "pages"],
+  "properties": {
+    "title": { "type": "string" },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "description": { "type": "string" },
+        "author": { "type": "string" },
+        "lang": { "type": "string" }
+      }
+    },
+    "nav": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "href"],
+        "properties": {
+          "label": { "type": "string" },
+          "href": { "type": "string" }
+        }
+      }
+    },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["slug", "title"],
+        "properties": {
+          "slug": { "type": "string" },
+          "title": { "type": "string" },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["heading"],
+              "properties": {
+                "heading": { "type": "string" },
+                "body": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`,
+      },
+      "templates/shared/base.js": {
+        category: "ref",
+        encoding: "utf8",
+        content: `(function () {
+  const toggle = document.querySelector('.nav-toggle')
+  const nav = document.querySelector('.site-nav')
+  if (!toggle || !nav) return
+
+  toggle.addEventListener('click', () => {
+    const open = nav.classList.toggle('is-open')
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+  })
+
+  document.querySelectorAll('a[href^="#"]').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      const id = link.getAttribute('href')
+      if (!id || id === '#') return
+      const target = document.querySelector(id)
+      if (!target) return
+      event.preventDefault()
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  })
+})()
+`,
+      },
+      "templates/styles/themes.json": {
+        category: "ref",
+        encoding: "utf8",
+        content: `{
+  "minimal-light": {
+    "bg": "#fafafa",
+    "surface": "#ffffff",
+    "text": "#1a1a1a",
+    "textMuted": "#5c5c5c",
+    "accent": "#2563eb",
+    "accentHover": "#1d4ed8",
+    "border": "#e5e7eb",
+    "fontSans": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+  },
+  "portfolio-dark": {
+    "bg": "#0f1117",
+    "surface": "#1a1d27",
+    "text": "#f3f4f6",
+    "textMuted": "#9ca3af",
+    "accent": "#38bdf8",
+    "accentHover": "#0ea5e9",
+    "border": "#2d3340",
+    "fontSans": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+  },
+  "docs-neutral": {
+    "bg": "#ffffff",
+    "surface": "#f8fafc",
+    "text": "#0f172a",
+    "textMuted": "#64748b",
+    "accent": "#0f766e",
+    "accentHover": "#0d9488",
+    "border": "#e2e8f0",
+    "fontSans": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+  }
+}
+`,
+      },
+    },
+  },
+}
+
+export const BUNDLED_SKILL_IDS = ["coding","coding-pr","coding-review","default","documents","google-workspace","research","website"] as const

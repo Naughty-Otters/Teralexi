@@ -15,7 +15,7 @@
         </button>
         <button
           class="file-tree-refresh"
-          title="Refresh"
+          title="Refresh files, git status, and editor"
           @click="emit('refresh')"
         >
           <UIcon
@@ -83,7 +83,11 @@
         >
           <UIcon
             v-if="row.entry.isDir"
-            name="i-lucide-folder"
+            :name="
+              isExpanded(row.entry.path)
+                ? 'i-lucide-folder-open'
+                : 'i-lucide-folder'
+            "
             class="file-tree-icon"
             :class="{ 'file-tree-icon--dir': row.entry.isDir }"
           />
@@ -166,6 +170,7 @@ const {
   filesError: error,
   editorPath,
   consoleOpen,
+  filesRefreshSeq,
 } = storeToRefs(gitStore)
 const { highlightPath } = storeToRefs(navStore)
 
@@ -290,9 +295,36 @@ function resetExpandedTree() {
   childErrorByDir.value = {}
 }
 
+async function refreshExpandedTree() {
+  const dirs = Object.keys(expandedDirs.value).filter(
+    (dir) => expandedDirs.value[dir],
+  )
+  for (const dir of dirs) {
+    childLoadingByDir.value = { ...childLoadingByDir.value, [dir]: true }
+    childErrorByDir.value = { ...childErrorByDir.value, [dir]: null }
+    const nextEntries = await gitStore.listFiles(dir)
+    childLoadingByDir.value = { ...childLoadingByDir.value, [dir]: false }
+    if (!nextEntries) {
+      childErrorByDir.value = {
+        ...childErrorByDir.value,
+        [dir]: 'Failed to load folder.',
+      }
+      continue
+    }
+    childEntriesByDir.value = {
+      ...childEntriesByDir.value,
+      [dir]: sortEntries(nextEntries),
+    }
+  }
+}
+
 watch(currentDir, () => {
   rowRefs.clear()
   resetExpandedTree()
+})
+
+watch(filesRefreshSeq, () => {
+  void refreshExpandedTree()
 })
 
 watch(highlightPath, async (path) => {

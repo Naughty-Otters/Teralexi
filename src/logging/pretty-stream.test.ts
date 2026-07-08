@@ -47,18 +47,16 @@ describe('pretty-stream', () => {
     )
   })
 
-  it('createAgentRunLogDestination wraps rotating sink with pino-pretty in development', async () => {
+  it('createAgentRunLogDestination uses pino-pretty with file path in development', async () => {
     process.env.NODE_ENV = 'development'
     const pinoPretty = (await import('pino-pretty')).default
     const { createAgentRunLogDestination } = await import('./pretty-stream')
-    const rotatingSink = { write: vi.fn(), end: vi.fn() }
-    createRotatingPinoFileDestination.mockReturnValueOnce(rotatingSink)
 
     createAgentRunLogDestination('/tmp/run.log')
 
-    expect(createRotatingPinoFileDestination).toHaveBeenCalledWith('/tmp/run.log')
+    expect(createRotatingPinoFileDestination).not.toHaveBeenCalled()
     expect(pinoPretty).toHaveBeenCalledWith(
-      expect.objectContaining({ destination: rotatingSink }),
+      expect.objectContaining({ destination: '/tmp/run.log' }),
     )
   })
 })

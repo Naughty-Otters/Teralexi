@@ -2,11 +2,13 @@ import type { SkillTool } from './types'
 import { tools as documentsActionTools } from '../../../skills/documents/actions/index'
 import { tools as researchActionTools } from '../../../skills/research/actions/index'
 import { tools as googleWorkspaceActionTools } from '../../../skills/google-workspace/actions/index'
+import { tools as websiteActionTools } from '../../../skills/website/actions/index'
 
 const BUNDLED_ACTION_TOOLS: Record<string, readonly SkillTool[]> = {
   documents: documentsActionTools,
   research: researchActionTools,
   'google-workspace': googleWorkspaceActionTools,
+  website: websiteActionTools,
 }
 
 export function getBundledSkillActionTools(

@@ -135,6 +135,7 @@ import { useWorkspaceStore } from '@store/workspace'
 import { useWorkspaceGitStore } from '@store/workspace-git'
 import { useWorkspaceNavigationStore } from '@store/workspace-navigation'
 import { useHorizontalPanelResize } from '@renderer/composables/useHorizontalPanelResize'
+import { useWorkspaceLiveSync } from '@renderer/composables/useWorkspaceLiveSync'
 
 const PanelResizeHandle = defineAsyncComponent(
   () => import('@renderer/components/PanelResizeHandle.vue'),
@@ -169,6 +170,13 @@ const { diff, diffLoading, diffError, diffStaged, diffFiles } =
   storeToRefs(gitStore)
 
 const workspaceLabel = computed(() => activeLabel.value)
+
+/** Changes when workspace folder vs sandbox root changes — restarts file watch. */
+const filesRootKey = computed(
+  () => activeWorkspacePath.value?.trim() || '__sandbox__',
+)
+
+useWorkspaceLiveSync(() => conversationId.value, () => filesRootKey.value)
 
 const TABS = [
   { id: 'files' as const, label: 'Files', icon: 'i-lucide-files' },
@@ -220,7 +228,7 @@ watch(
     gitStore.setWorkspace(path ?? null, convId ?? null)
     if (!convId) return
     if (path) {
-      onRefreshAll()
+      void gitStore.refreshWorkspaceView({ includeLog: true })
       return
     }
     if (prevConvId !== convId) {
@@ -228,13 +236,13 @@ watch(
     } else {
       activeTab.value = navStore.getWorkspacePanelTab(convId)
     }
-    void gitStore.refreshFiles()
+    void gitStore.refreshWorkspaceView()
   },
   { immediate: true },
 )
 
 function onRefreshGit() {
-  void gitStore.refreshStatus()
+  void gitStore.refreshWorkspaceView()
 }
 
 function onRefreshLog() {
@@ -242,12 +250,7 @@ function onRefreshLog() {
 }
 
 function onRefreshFiles() {
-  void gitStore.refreshFiles()
-}
-
-function onRefreshAll() {
-  void gitStore.refreshAll()
-  void gitStore.refreshLog()
+  void gitStore.refreshWorkspaceView()
 }
 
 function onShowDiff(opts: { staged: boolean; files?: string[] }) {
@@ -284,8 +287,8 @@ watch(highlightPath, (path) => {
 
 onMounted(() => {
   if (!workspaceStore.conversationId) return
-  if (activeWorkspacePath.value) onRefreshAll()
-  else void gitStore.refreshFiles()
+  if (activeWorkspacePath.value) void gitStore.refreshWorkspaceView({ includeLog: true })
+  else void gitStore.refreshWorkspaceView()
 })
 </script>
 

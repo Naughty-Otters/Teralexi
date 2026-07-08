@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="{{meta.lang}}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{title}}</title>
+  {{#meta.description}}<meta name="description" content="{{meta.description}}" />{{/meta.description}}
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="#top">{{title}}</a>
+      <nav class="site-nav" aria-label="Primary">
+        <ul>
+          <li><a href="#work">Work</a></li>
+          <li><a href="#about">About</a></li>
+          {{#contact.email}}<li><a href="#contact">Contact</a></li>{{/contact.email}}
+        </ul>
+      </nav>
+      <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="container hero-inner">
+        <p class="eyebrow">Portfolio</p>
+        <h1>{{hero.headline}}</h1>
+        {{#hero.subheadline}}<p class="lead">{{hero.subheadline}}</p>{{/hero.subheadline}}
+      </div>
+    </section>
+
+    {{#projectsBlock}}
+    <section class="content-section" id="work">
+      <div class="container">
+        <h2>Selected work</h2>
+        <ul class="project-grid">
+          {{#items}}
+          <li class="project-card">
+            <h3>{{#url}}<a href="{{url}}">{{title}}</a>{{/url}}{{^url}}{{title}}{{/url}}</h3>
+            <p>{{description}}</p>
+          </li>
+          {{/items}}
+        </ul>
+      </div>
+    </section>
+    {{/projectsBlock}}
+
+    {{#sections}}
+    <section class="content-section" id="{{id}}">
+      <div class="container">
+        <h2>{{heading}}</h2>
+        {{#body}}<p>{{body}}</p>{{/body}}
+      </div>
+    </section>
+    {{/sections}}
+
+    {{#contact}}
+    <section class="content-section contact-section" id="contact">
+      <div class="container">
+        <h2>Contact</h2>
+        {{#email}}<p><a href="mailto:{{email}}">{{email}}</a></p>{{/email}}
+      </div>
+    </section>
+    {{/contact}}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>{{title}}{{#meta.author}} · {{meta.author}}{{/meta.author}}</p>
+    </div>
+  </footer>
+  <script src="script.js" defer></script>
+</body>
+</html>
