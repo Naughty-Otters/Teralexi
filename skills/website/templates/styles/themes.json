@@ -1,0 +1,32 @@
+{
+  "minimal-light": {
+    "bg": "#fafafa",
+    "surface": "#ffffff",
+    "text": "#1a1a1a",
+    "textMuted": "#5c5c5c",
+    "accent": "#2563eb",
+    "accentHover": "#1d4ed8",
+    "border": "#e5e7eb",
+    "fontSans": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+  },
+  "portfolio-dark": {
+    "bg": "#0f1117",
+    "surface": "#1a1d27",
+    "text": "#f3f4f6",
+    "textMuted": "#9ca3af",
+    "accent": "#38bdf8",
+    "accentHover": "#0ea5e9",
+    "border": "#2d3340",
+    "fontSans": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+  },
+  "docs-neutral": {
+    "bg": "#ffffff",
+    "surface": "#f8fafc",
+    "text": "#0f172a",
+    "textMuted": "#64748b",
+    "accent": "#0f766e",
+    "accentHover": "#0d9488",
+    "border": "#e2e8f0",
+    "fontSans": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+  }
+}

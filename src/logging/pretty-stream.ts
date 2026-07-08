@@ -46,9 +46,10 @@ export function createPrettyLogStream(
 
 /** Per-run agent log file destination (pretty text in dev, JSON lines in production). */
 export function createAgentRunLogDestination(logFilePath: string): DestinationStream {
-  const fileDestination = createRotatingPinoFileDestination(logFilePath)
   if (usePrettyLogs()) {
-    return createPrettyLogStream(fileDestination)
+    // pino-pretty requires a file path or Node Writable (with .on); the rotating
+    // sync sink is pino-only and breaks pretty printing in development.
+    return createPrettyLogStream(logFilePath)
   }
-  return fileDestination
+  return createRotatingPinoFileDestination(logFilePath)
 }

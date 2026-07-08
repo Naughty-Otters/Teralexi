@@ -39,6 +39,28 @@ describe('teralexi-protocol', () => {
     })
   })
 
+  it('parses token from hash fragment', () => {
+    expect(parseTeralexiProtocolUrl('teralexi://open#token=hash-token')).toEqual({
+      type: 'open',
+      accessToken: 'hash-token',
+      refreshToken: undefined,
+      expiresIn: undefined,
+      scope: undefined,
+    })
+  })
+
+  it('prefers query params over hash when both set', () => {
+    expect(
+      parseTeralexiProtocolUrl('teralexi://open?token=query#token=hash'),
+    ).toEqual({
+      type: 'open',
+      accessToken: 'query',
+      refreshToken: undefined,
+      expiresIn: undefined,
+      scope: undefined,
+    })
+  })
+
   it('returns null for unknown host or missing token', () => {
     expect(parseTeralexiProtocolUrl('teralexi://other?token=x')).toBeNull()
     expect(parseTeralexiProtocolUrl('teralexi://open')).toBeNull()

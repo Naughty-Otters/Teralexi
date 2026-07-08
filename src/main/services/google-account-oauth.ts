@@ -263,12 +263,7 @@ export async function handleGoogleAccountOAuthDeepLink(
 
 async function startGoogleAccountSignInImpl(): Promise<GoogleAccount> {
   if (inFlightGoogleSignIn) {
-    clearPendingGoogleSignIn('Restarting Google account sign-in')
-    try {
-      await inFlightGoogleSignIn
-    } catch {
-      /* prior attempt failed or was cancelled */
-    }
+    return inFlightGoogleSignIn
   }
 
   const flow = runGoogleAccountSignInFlow()
@@ -285,7 +280,6 @@ async function startGoogleAccountSignInImpl(): Promise<GoogleAccount> {
 async function runGoogleAccountSignInFlow(): Promise<GoogleAccount> {
   assertGoogleAccountSignInConfigured()
   log.info('Starting Teralexi Google account sign-in via browser')
-  clearPendingGoogleSignIn('Starting a new Google account sign-in')
 
   const loginUrl = buildAuthLoginUrl()
   const tokenPromise = new Promise<GoogleAccount>((resolve, reject) => {

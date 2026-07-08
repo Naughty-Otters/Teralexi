@@ -89,10 +89,28 @@ vi.mock('@main/cache/cache-warmer', () => ({
   scheduleDeferredAppCacheAgentWarm: vi.fn(() => Promise.resolve()),
 }))
 
+vi.mock('./check-update', () => ({
+  scheduleStartupUpdateCheck: vi.fn(),
+}))
+
 vi.mock('@config/system-prop', () => ({
   getSystemPropValue: vi.fn(() => undefined),
   getSystemPropValues: vi.fn(() => ({})),
   setSystemPropValue: vi.fn(),
+}))
+
+const setTeralexiProtocolHandlerReady = vi.fn()
+const dispatchTeralexiUrl = vi.fn(async () => {})
+const syncStoredGoogleAccountToRenderers = vi.fn()
+
+vi.mock('./teralexi-protocol-handler', () => ({
+  setTeralexiProtocolHandlerReady: (...args: unknown[]) =>
+    setTeralexiProtocolHandlerReady(...args),
+  dispatchTeralexiUrl: (...args: unknown[]) => dispatchTeralexiUrl(...args),
+}))
+
+vi.mock('./google-account-notify', () => ({
+  syncStoredGoogleAccountToRenderers: () => syncStoredGoogleAccountToRenderers(),
 }))
 
 import MainInit from './window-manager'
@@ -108,6 +126,11 @@ describe('window-manager', () => {
     expect(BrowserWindow).toHaveBeenCalled()
     expect(init.mainWindow).toBeDefined()
     expect(warmAppCacheOnStartup).toHaveBeenCalledWith('default')
+    init.mainWindow?.emitReadyToShow()
+    expect(setTeralexiProtocolHandlerReady).toHaveBeenCalledTimes(1)
+    expect(setTeralexiProtocolHandlerReady.mock.calls[0]?.[0]).toEqual(
+      expect.any(Function),
+    )
   })
 
   it('starts main window when the splash is ready without a fixed delay', () => {

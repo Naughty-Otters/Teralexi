@@ -77,6 +77,8 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
   const filesDirectory = ref('.')
   const filesLoading = ref(false)
   const filesError = ref<string | null>(null)
+  /** Bumped after each workspace view refresh so the file tree re-fetches expanded folders. */
+  const filesRefreshSeq = ref(0)
 
   const editorTabs = ref<WorkspaceEditorTab[]>([])
   const activeEditorPath = ref<string | null>(null)
@@ -390,7 +392,7 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
 
       if (result.ok) {
         consoleCommand.value = ''
-        await refreshFiles()
+        await refreshWorkspaceView()
         return true
       }
       consoleError.value = result.error ?? 'Command failed.'
@@ -853,6 +855,37 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     await loadEditorTabContent(activeEditorPath.value)
   }
 
+  /** Reload open editor tabs from disk when they have no unsaved edits. */
+  async function reloadEditorTabsFromDisk(): Promise<void> {
+    const paths = [
+      ...new Set(
+        editorTabs.value
+          .filter((tab) => !tab.loading && tab.content === tab.original)
+          .map((tab) => tab.path),
+      ),
+    ]
+    await Promise.all(paths.map((path) => loadEditorTabContent(path)))
+  }
+
+  /**
+   * Refresh file list, git status, diff (when open), and reload clean editor tabs.
+   * Use for manual refresh, filesystem watch, and post-agent-run sync.
+   */
+  async function refreshWorkspaceView(options?: {
+    includeLog?: boolean
+  }): Promise<void> {
+    if (workspacePath.value) {
+      await refreshAll()
+      if (options?.includeLog) {
+        await refreshLog()
+      }
+    } else {
+      await refreshFiles()
+    }
+    await reloadEditorTabsFromDisk()
+    filesRefreshSeq.value += 1
+  }
+
   async function saveEditorFile(): Promise<boolean> {
     if (isMutationsDisabled.value) return false
     const cid = requireConversationId()
@@ -915,6 +948,7 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     filesDirectory,
     filesLoading,
     filesError,
+    filesRefreshSeq,
     editorTabs,
     activeEditorPath,
     openEditorPaths,
@@ -969,11 +1003,13 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     copyEditorSessionToConversation,
     isEditorTabDirty,
     reloadEditorFile,
+    reloadEditorTabsFromDisk,
     saveEditorFile,
     toggleConsole,
     clearConsole,
     runConsoleCommand,
     cancelConsoleCommand,
     refreshAll,
+    refreshWorkspaceView,
   }
 })

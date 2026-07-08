@@ -881,6 +881,10 @@ const selectedAgentIsGoogleWorkspace = computed(() =>
 const workspaceComposerHint = computed(() => {
   if (!selectedAgentRequiresWorkspace.value) return null
   if (workspaceStore.activeWorkspacePath) return null
+  const skillId = agentStore.selectedAgent?.skillId?.trim()
+  if (skillId === 'website') {
+    return 'Select a project folder (toolbar folder icon) — the site will be built there or promoted into it after preview.'
+  }
   return 'Select a project folder (toolbar folder icon) to edit and review code in this agent.'
 })
 

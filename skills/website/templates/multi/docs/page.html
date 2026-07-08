@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="{{meta.lang}}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{pageTitle}} · {{siteTitle}}</title>
+  {{#metaDescription}}<meta name="description" content="{{metaDescription}}" />{{/metaDescription}}
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="index.html">{{siteTitle}}</a>
+      <nav class="site-nav" aria-label="Primary">
+        <ul>
+          {{#nav}}
+          <li><a href="{{href}}"{{#active}} aria-current="page"{{/active}}>{{label}}</a></li>
+          {{/nav}}
+        </ul>
+      </nav>
+      <button type="button" class="nav-toggle" aria-expanded="false">Menu</button>
+    </div>
+  </header>
+
+  <main class="container docs-main">
+    <article>
+      <h1>{{pageTitle}}</h1>
+      {{#sections}}
+      <section class="doc-section">
+        <h2>{{heading}}</h2>
+        {{#body}}<p>{{body}}</p>{{/body}}
+      </section>
+      {{/sections}}
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>{{siteTitle}}{{#tagline}} · {{tagline}}{{/tagline}}</p>
+    </div>
+  </footer>
+  <script src="script.js" defer></script>
+</body>
+</html>

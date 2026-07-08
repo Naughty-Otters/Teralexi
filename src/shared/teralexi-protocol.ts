@@ -12,7 +12,7 @@ export type TeralexiOpenAction = {
 
 export type TeralexiProtocolAction = TeralexiOpenAction
 
-/** Parse `teralexi://open?token=<xxx>` (also accepts `access_token`). */
+/** Parse `teralexi://open?token=<xxx>` (also accepts `access_token`, hash fragments). */
 export function parseTeralexiProtocolUrl(rawUrl: string): TeralexiProtocolAction | null {
   try {
     const url = new URL(rawUrl)
@@ -21,19 +21,29 @@ export function parseTeralexiProtocolUrl(rawUrl: string): TeralexiProtocolAction
     const host = url.hostname || url.pathname.replace(/^\//, '').split('/')[0]
     if (host !== TERALEXI_OPEN_HOST) return null
 
+    const params = new URLSearchParams(url.search)
+    // OAuth servers often return tokens in the hash fragment (#token=...).
+    const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash
+    if (hash) {
+      const hashParams = new URLSearchParams(hash)
+      for (const [key, value] of hashParams.entries()) {
+        if (!params.has(key)) params.set(key, value)
+      }
+    }
+
     const accessToken =
-      url.searchParams.get('token')?.trim() ||
-      url.searchParams.get('id_token')?.trim() ||
-      url.searchParams.get('access_token')?.trim()
+      params.get('token')?.trim() ||
+      params.get('id_token')?.trim() ||
+      params.get('access_token')?.trim()
     if (!accessToken) return null
 
-    const refreshToken = url.searchParams.get('refresh_token')?.trim()
-    const expiresRaw = url.searchParams.get('expires_in')?.trim()
+    const refreshToken = params.get('refresh_token')?.trim()
+    const expiresRaw = params.get('expires_in')?.trim()
     const expiresIn =
       expiresRaw && Number.isFinite(Number(expiresRaw))
         ? Number(expiresRaw)
         : undefined
-    const scope = url.searchParams.get('scope')?.trim()
+    const scope = params.get('scope')?.trim()
 
     return {
       type: 'open',

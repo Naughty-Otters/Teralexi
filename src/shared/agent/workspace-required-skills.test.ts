@@ -21,4 +21,9 @@ describe('workspace-required-skills', () => {
     expect(skillRequiresWorkspace('default')).toBe(false)
     expect(agentRequiresWorkspace({ skillId: 'documents' })).toBe(false)
   })
+
+  it('flags website skill', () => {
+    expect(skillRequiresWorkspace('website')).toBe(true)
+    expect(agentRequiresWorkspace({ skillId: 'website' })).toBe(true)
+  })
 })

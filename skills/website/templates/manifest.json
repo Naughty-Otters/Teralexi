@@ -1,0 +1,44 @@
+{
+  "templates": [
+    {
+      "id": "landing-minimal",
+      "label": "Minimal landing",
+      "site_types": ["single"],
+      "schema": "schemas/landing.schema.json",
+      "renderer": "single",
+      "html": "landing/minimal/index.html",
+      "css": "landing/minimal/styles.css",
+      "js": "shared/base.js",
+      "style": {
+        "theme": "minimal-light"
+      }
+    },
+    {
+      "id": "landing-portfolio",
+      "label": "Portfolio",
+      "site_types": ["single"],
+      "schema": "schemas/landing.schema.json",
+      "renderer": "single",
+      "html": "landing/portfolio/index.html",
+      "css": "landing/portfolio/styles.css",
+      "js": "shared/base.js",
+      "style": {
+        "theme": "portfolio-dark"
+      }
+    },
+    {
+      "id": "docs-site",
+      "label": "Documentation site",
+      "site_types": ["multi"],
+      "schema": "schemas/site.schema.json",
+      "renderer": "multi",
+      "layout": "multi/docs/layout.html",
+      "page": "multi/docs/page.html",
+      "css": "multi/docs/styles.css",
+      "js": "shared/base.js",
+      "style": {
+        "theme": "docs-neutral"
+      }
+    }
+  ]
+}

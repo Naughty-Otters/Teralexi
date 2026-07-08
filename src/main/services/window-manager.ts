@@ -22,6 +22,8 @@ import {
 import { scheduleStartupUpdateCheck } from './check-update'
 import { DEFAULT_USER_ID } from '@main/agent/config/config'
 import { attachSandboxPreviewNavigation } from './sandbox-preview-navigation'
+import { setTeralexiProtocolHandlerReady, dispatchTeralexiUrl } from './teralexi-protocol-handler'
+import { syncStoredGoogleAccountToRenderers } from './google-account-notify'
 import {
   createSplashWindowOptions,
   showSplashOnReady,
@@ -124,8 +126,12 @@ class MainInit {
     this.mainWindow.once('ready-to-show', () => {
       this.mainWindow.show()
       this.destroyLoadingWindow()
+      setTeralexiProtocolHandlerReady(dispatchTeralexiUrl)
       scheduleDeferredAppCacheAgentWarm(DEFAULT_USER_ID)
       scheduleStartupUpdateCheck(this.mainWindow)
+    })
+    this.mainWindow.on('focus', () => {
+      syncStoredGoogleAccountToRenderers()
     })
     if (process.env.NODE_ENV === 'development') {
       this.mainWindow.webContents.openDevTools({

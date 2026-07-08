@@ -25,7 +25,6 @@ import { registerMainProcessSupportHandlers } from './services/support-event-sto
 import { getLspManager, initBundledLspBin } from './agent/lsp'
 import { createLogger } from './logger'
 import { prewarmMcpRuntimeEnvironment } from './services/mcp-runtime-check'
-import { setTeralexiProtocolHandlerReady } from './services/teralexi-protocol-handler'
 
 const log = createLogger('app')
 
@@ -138,7 +137,8 @@ export async function startMainApp(options: {
     log.info('Installed vue-devtools extension')
   }
 
-  setTeralexiProtocolHandlerReady()
+  // Protocol OAuth callbacks are enabled from window-manager when the main
+  // window is ready-to-show (renderer can receive GoogleAccountChanged).
 }
 
 export async function shutdownMainApp(): Promise<void> {

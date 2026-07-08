@@ -194,6 +194,10 @@ import {
   resolveFilesFileOpen,
 } from '@main/agent/workspace/workspace-ipc-helpers'
 import {
+  unwatchWorkspaceFiles,
+  watchWorkspaceFiles,
+} from '@main/agent/workspace/workspace-file-watcher'
+import {
   clearWorkspacePath,
   getWorkspacePath,
   getWorkspaceStack,
@@ -2286,6 +2290,19 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     )
     if (!listed.ok) return { ok: false, entries: [], error: listed.error }
     return { ok: true, entries: listed.entries }
+  }
+
+  WatchWorkspaceFiles: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string },
+  ) => Promise<{ ok: boolean; error?: string }> = async (_event, args) =>
+    watchWorkspaceFiles(args?.conversationId ?? '')
+
+  UnwatchWorkspaceFiles: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string },
+  ) => void = (_event, args) => {
+    unwatchWorkspaceFiles(args?.conversationId ?? '')
   }
 
   SearchWorkspaceFiles: (

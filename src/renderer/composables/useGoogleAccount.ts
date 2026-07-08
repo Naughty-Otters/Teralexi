@@ -6,45 +6,73 @@ export type GoogleAccountSummary = {
   picture: string
 }
 
-export function useGoogleAccount() {
-  const account = ref<GoogleAccountSummary | null>(null)
+// Shared across all composable callers so sign-in from one panel updates the whole app.
+const account = ref<GoogleAccountSummary | null>(null)
+let listenerCount = 0
 
-  async function refresh(): Promise<void> {
-    const channel = window.ipcRendererChannel?.GetGoogleAccount
-    if (!channel?.invoke) {
-      account.value = null
-      return
-    }
-    try {
-      account.value = (await channel.invoke()) ?? null
-    } catch {
-      account.value = null
-    }
+async function refreshGoogleAccount(): Promise<void> {
+  const channel = window.ipcRendererChannel?.GetGoogleAccount
+  if (!channel?.invoke) {
+    account.value = null
+    return
   }
-
-  function onWindowFocus() {
-    void refresh()
+  try {
+    account.value = (await channel.invoke()) ?? null
+  } catch {
+    account.value = null
   }
+}
 
-  function onGoogleAccountChanged(
-    _event: unknown,
-    payload: { account: GoogleAccountSummary | null },
-  ) {
-    account.value = payload?.account ?? null
+function onWindowFocus() {
+  void refreshGoogleAccount()
+}
+
+function onDocumentVisible() {
+  if (document.visibilityState === 'visible') {
+    void refreshGoogleAccount()
   }
+}
 
-  onMounted(() => {
-    void refresh()
+function onGoogleAccountChanged(
+  _event: unknown,
+  payload: { account: GoogleAccountSummary | null },
+) {
+  account.value = payload?.account ?? null
+}
+
+function registerGoogleAccountListeners(): void {
+  if (listenerCount === 0) {
+    void refreshGoogleAccount()
     window.addEventListener('focus', onWindowFocus)
+    document.addEventListener('visibilitychange', onDocumentVisible)
     window.ipcRendererChannel?.GoogleAccountChanged?.on?.(onGoogleAccountChanged)
-  })
+  }
+  listenerCount += 1
+}
 
-  onUnmounted(() => {
+function unregisterGoogleAccountListeners(): void {
+  listenerCount = Math.max(0, listenerCount - 1)
+  if (listenerCount === 0) {
     window.removeEventListener('focus', onWindowFocus)
+    document.removeEventListener('visibilitychange', onDocumentVisible)
     window.ipcRendererChannel?.GoogleAccountChanged?.removeListener?.(
       onGoogleAccountChanged,
     )
+  }
+}
+
+export function useGoogleAccount() {
+  onMounted(() => {
+    registerGoogleAccountListeners()
   })
+
+  onUnmounted(() => {
+    unregisterGoogleAccountListeners()
+  })
+
+  async function refresh(): Promise<void> {
+    await refreshGoogleAccount()
+  }
 
   async function signIn(): Promise<GoogleAccountSummary | null> {
     const channel = window.ipcRendererChannel?.GoogleSignIn

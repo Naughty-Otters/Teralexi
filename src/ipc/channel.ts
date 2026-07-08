@@ -1648,6 +1648,16 @@ export class IpcChannelMainClass {
       error?: string
     }
   > = null
+  /** Start (or restart) filesystem watch for workspace/sandbox files. */
+  WatchWorkspaceFiles: IpcMainEventListener<
+    { conversationId: string },
+    { ok: boolean; error?: string }
+  > = null
+  /** Stop filesystem watch for a conversation. */
+  UnwatchWorkspaceFiles: IpcMainEventListener<
+    { conversationId: string },
+    void
+  > = null
   /** Fuzzy file search for composer `@file` mentions. */
   SearchWorkspaceFiles: IpcMainEventListener<
     { conversationId: string; query?: string; limit?: number },
@@ -2045,6 +2055,10 @@ export class IpcChannelRendererClass {
     conversationId: string
     exitCode: number
     signal?: number
+  }> = null
+  /** Workspace or sandbox files changed on disk — refresh file browser / git. */
+  WorkspaceFilesChanged: IpcRendererEventListener<{
+    conversationId: string
   }> = null
   /** LSP notification pushed from main (diagnostics, etc.). */
   EditorLspNotification: IpcRendererEventListener<{

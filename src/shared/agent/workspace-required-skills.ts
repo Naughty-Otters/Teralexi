@@ -1,7 +1,7 @@
 import { skillIsCodingFamily } from './coding-agent'
 
 /** Skill folder ids that require a user workspace folder before sending messages. */
-export const WORKSPACE_REQUIRED_SKILL_IDS = ['coding'] as const
+export const WORKSPACE_REQUIRED_SKILL_IDS = ['coding', 'website'] as const
 
 export type WorkspaceRequiredSkillId = (typeof WORKSPACE_REQUIRED_SKILL_IDS)[number]
 
