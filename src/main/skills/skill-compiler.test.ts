@@ -108,4 +108,10 @@ describe('skill-compiler', () => {
   it('computeSkillSourceFingerprint returns empty string for unknown skill', () => {
     expect(computeSkillSourceFingerprint('__missing_skill__')).toBe('')
   })
+
+  it('computeSkillSourceFingerprint hashes embedded bundled skills', () => {
+    const fingerprint = computeSkillSourceFingerprint('default')
+    expect(fingerprint).toMatch(/^[a-f0-9]{64}$/)
+    expect(computeSkillSourceFingerprint('default')).toBe(fingerprint)
+  })
 })

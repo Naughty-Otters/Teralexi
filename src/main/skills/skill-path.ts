@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import { getTeralexiSkillsDir, getTeralexiToolSetDir } from '@config/teralexi-home'
 import { joinAppResourcePath } from '@main/config/app-paths'
+import { getBundledSkillIds, isBundledSkillId } from './bundled-skills-manifest'
 import type { SkillToolOs } from './types'
 import { SKILL_FILES, SKILLS_RESERVED_DIR_NAMES } from './constants'
 import { buildDefaultPropertiesYaml } from './llm-constants'
@@ -98,6 +99,17 @@ export function resolveToolSetSourceRoots(): string[] {
   return [resolveBundledToolSetDirectory(), resolveUserToolSetDirectory()]
 }
 
+/** True when the user has a disk folder that overrides a shipped bundled skill. */
+export function userOverridesBundledSkill(skillId: string): boolean {
+  const userDir = resolveUserSkillsDirectory()
+  return isLoadableSkillFolder(userDir, skillId)
+}
+
+/** Shipped bundled skill that is not replaced by a user folder on disk. */
+export function isEffectiveBundledSkill(skillId: string): boolean {
+  return isBundledSkillId(skillId) && !userOverridesBundledSkill(skillId)
+}
+
 /** Which skills tree owns the effective folder for this id. */
 export function resolveSkillCompilationSource(
   skillId: string,
@@ -105,6 +117,7 @@ export function resolveSkillCompilationSource(
   const { bundled, user } = resolveSkillsSources()
   if (isLoadableSkillFolder(user, skillId)) return 'user'
   if (isLoadableSkillFolder(bundled, skillId)) return 'bundled'
+  if (isEffectiveBundledSkill(skillId)) return 'bundled'
   return null
 }
 
@@ -124,6 +137,11 @@ export function resolveLoadableSkillIds(): string[] {
   for (const root of resolveSkillsSourceRoots()) {
     for (const id of listLoadableSkillIds(root)) {
       byId.set(id, true)
+    }
+  }
+  for (const skillId of getBundledSkillIds()) {
+    if (isEffectiveBundledSkill(skillId)) {
+      byId.set(skillId, true)
     }
   }
   return Array.from(byId.keys())

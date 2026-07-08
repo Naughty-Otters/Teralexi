@@ -8,11 +8,14 @@ import { formatCompileError, shortFingerprint } from './skill-compiler-log'
 import {
   resolveLoadableSkillIds,
   resolvePropertiesRaw,
+  resolvePropertiesRawFromContent,
   resolveSkillCompilationSource,
   resolveSkillFolder,
   extractYamlFrontmatterBlock,
   stripYamlFrontmatter,
+  isEffectiveBundledSkill,
 } from './skill-path'
+import { bundledSkillFolder, getBundledSkillSource } from './bundled-skills-manifest'
 import { parseSkillMarkdown } from './skill-markdown'
 import { loadSkillCompileSettings } from './skill-compile-settings'
 import {
@@ -48,16 +51,42 @@ export type SkillCompilationBatchResult = {
 
 function readSkillProperties(skillId: string) {
   const folder = resolveSkillFolder(skillId)
-  if (!folder) return null
+  if (folder) {
+    try {
+      let skillMd = readFileSync(join(folder, SKILL_FILES.SKILL_MD), 'utf-8')
+      const propertiesRaw = resolvePropertiesRaw(skillId, folder, skillMd)
+      if (extractYamlFrontmatterBlock(skillMd)) {
+        skillMd = stripYamlFrontmatter(skillMd)
+      }
+      return parseSkillMarkdown(
+        skillId,
+        folder,
+        propertiesRaw,
+        skillMd,
+        undefined,
+        undefined,
+      )
+    } catch {
+      return null
+    }
+  }
+
+  if (!isEffectiveBundledSkill(skillId)) return null
+  const source = getBundledSkillSource(skillId)
+  if (!source) return null
   try {
-    let skillMd = readFileSync(join(folder, SKILL_FILES.SKILL_MD), 'utf-8')
-    const propertiesRaw = resolvePropertiesRaw(skillId, folder, skillMd)
+    let skillMd = source.skillMd
+    const propertiesRaw = resolvePropertiesRawFromContent(
+      skillId,
+      skillMd,
+      source.propertiesMd,
+    )
     if (extractYamlFrontmatterBlock(skillMd)) {
       skillMd = stripYamlFrontmatter(skillMd)
     }
     return parseSkillMarkdown(
       skillId,
-      folder,
+      bundledSkillFolder(skillId),
       propertiesRaw,
       skillMd,
       undefined,
