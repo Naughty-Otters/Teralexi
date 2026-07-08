@@ -1,7 +1,9 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
-const MAIN_JS = join(process.cwd(), 'dist', 'electron', 'main', 'main.js')
+const MAIN_DIR = join(process.cwd(), 'dist', 'electron', 'main')
+const BOOTSTRAP_JS = join(MAIN_DIR, 'bootstrap.js')
+const MAIN_APP_JS = join(MAIN_DIR, 'main-app.js')
 
 /** Runtime dynamic imports that must stay external in the main bundle. */
 const ALLOWED_DYNAMIC_IMPORTS = new Set([
@@ -10,6 +12,7 @@ const ALLOWED_DYNAMIC_IMPORTS = new Set([
   'node:http',
   'node:https',
   'electron',
+  'esbuild',
   'playwright-core',
   'cloakbrowser',
   'mmdb-lib',
@@ -49,6 +52,8 @@ const SOURCE_SCAN_SKIP = /\.(test|integration\.test|mocked\.test)\.ts$/
 const RUNTIME_DYNAMIC_IMPORT_RE =
   /(?:await\s+import|void\s+import)\(\s*['"]([^'"]+)['"]/g
 
+const BOOTSTRAP_ALLOWED_DYNAMIC_IMPORTS = new Set(['./main-app', './main-app.js'])
+
 function isAllowedRuntimeDynamicImport(spec: string): boolean {
   if (ALLOWED_DYNAMIC_IMPORTS.has(spec)) return true
   if (spec.startsWith('node:')) return true
@@ -74,7 +79,14 @@ export function scanSourceTextForForbiddenDynamicImports(
   const violations: string[] = []
   for (const match of content.matchAll(RUNTIME_DYNAMIC_IMPORT_RE)) {
     const spec = match[1]
-    if (!spec || !isForbiddenRuntimeDynamicImport(spec)) continue
+    if (!spec) continue
+    if (
+      BOOTSTRAP_ALLOWED_DYNAMIC_IMPORTS.has(spec) &&
+      relPath.endsWith('bootstrap.ts')
+    ) {
+      continue
+    }
+    if (!isForbiddenRuntimeDynamicImport(spec)) continue
     violations.push(`${relPath}: import('${spec}')`)
   }
   return violations
@@ -111,14 +123,32 @@ export function verifyMainBundleContents(code: string): void {
   const forbidden = findForbiddenSubstringsInMainJs(code)
   if (forbidden.length > 0) {
     throw new Error(
-      `main.js still references forbidden paths: ${forbidden.join(', ')}`,
+      `main-app.js still references forbidden paths: ${forbidden.join(', ')}`,
     )
   }
 
   const bad = findUnbundledDynamicImportsInMainJs(code)
   if (bad.length > 0) {
     throw new Error(
-      `main.js has unexpected filesystem dynamic imports: ${bad.join(', ')}`,
+      `main-app.js has unexpected filesystem dynamic imports: ${bad.join(', ')}`,
+    )
+  }
+}
+
+export function verifyBootstrapBundleContents(code: string): void {
+  const forbidden = findForbiddenSubstringsInMainJs(code)
+  if (forbidden.length > 0) {
+    throw new Error(
+      `bootstrap.js still references forbidden paths: ${forbidden.join(', ')}`,
+    )
+  }
+
+  const bad = findUnbundledDynamicImportsInMainJs(code).filter(
+    (spec) => !BOOTSTRAP_ALLOWED_DYNAMIC_IMPORTS.has(spec),
+  )
+  if (bad.length > 0) {
+    throw new Error(
+      `bootstrap.js has unexpected filesystem dynamic imports: ${bad.join(', ')}`,
     )
   }
 }
@@ -167,8 +197,11 @@ export function scanSourcesForForbiddenDynamicImports(
 }
 
 export function verifyMainBundle(): void {
-  const code = readFileSync(MAIN_JS, 'utf8')
-  verifyMainBundleContents(code)
+  const bootstrapCode = readFileSync(BOOTSTRAP_JS, 'utf8')
+  verifyBootstrapBundleContents(bootstrapCode)
+
+  const mainAppCode = readFileSync(MAIN_APP_JS, 'utf8')
+  verifyMainBundleContents(mainAppCode)
 
   const sourceViolations = scanSourcesForForbiddenDynamicImports()
   if (sourceViolations.length > 0) {

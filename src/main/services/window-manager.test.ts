@@ -12,12 +12,16 @@ function makeWindow() {
     show: vi.fn(),
     hide: vi.fn(),
     setAlwaysOnTop: vi.fn(),
+    isVisible: vi.fn(() => false),
     isDestroyed: vi.fn(() => false),
     destroy: vi.fn(),
+    focus: vi.fn(),
     webContents: {
       openDevTools: vi.fn(),
       on: vi.fn(),
+      once: vi.fn(),
       setWindowOpenHandler: vi.fn(),
+      isLoading: vi.fn(() => true),
     },
   }
 }
@@ -66,7 +70,7 @@ vi.mock('@main/hooks/exception-hook', () => ({
 
 vi.mock('../config/static-path', () => ({
   getWinURL: vi.fn(() => 'http://localhost'),
-  getLoadingURL: vi.fn(() => 'http://localhost/loader'),
+  getBootstrapLoadingURL: vi.fn(() => 'file:///loader.html'),
   getPreloadFile: vi.fn(() => '/preload.js'),
   getIconPath: vi.fn((name: string) => `/icons/${name}`),
 }))
@@ -116,5 +120,26 @@ describe('window-manager', () => {
 
     appConfig.UseStartupChart = false
     vi.useRealTimers()
+  })
+
+  it('continues from bootstrap splash using the same ready-to-show sequence', () => {
+    appConfig.UseStartupChart = true
+
+    const splash = makeWindow()
+    splash.isVisible = vi.fn(() => true)
+
+    const windows: ReturnType<typeof makeWindow>[] = [splash]
+    BrowserWindow.mockImplementation(function BrowserWindowMock() {
+      const win = makeWindow()
+      windows.push(win)
+      return win
+    })
+
+    const init = new MainInit()
+    init.adoptBootstrapSplash(splash as never)
+    init.initWindow()
+
+    expect(init.mainWindow).toBeDefined()
+    expect(windows.length).toBeGreaterThan(1)
   })
 })

@@ -7,11 +7,14 @@ import {
   isForbiddenRuntimeDynamicImport,
   scanSourceTextForForbiddenDynamicImports,
   scanSourcesForForbiddenDynamicImports,
+  verifyBootstrapBundleContents,
   verifyMainBundle,
   verifyMainBundleContents,
 } from './verify-main-bundle'
 
-const MAIN_JS = join(process.cwd(), 'dist', 'electron', 'main', 'main.js')
+const MAIN_DIR = join(process.cwd(), 'dist', 'electron', 'main')
+const BOOTSTRAP_JS = join(MAIN_DIR, 'bootstrap.js')
+const MAIN_APP_JS = join(MAIN_DIR, 'main-app.js')
 
 /** Regression specs from packaged Electron failures (unbundled app modules). */
 const REGRESSION_FORBIDDEN_SPECS = [
@@ -70,6 +73,15 @@ describe('scanSourceTextForForbiddenDynamicImports', () => {
     ).toEqual(["step-helpers.ts: import('../hooks/user-hooks')"])
   })
 
+  it('allows bootstrap to import main-app dynamically', () => {
+    expect(
+      scanSourceTextForForbiddenDynamicImports(
+        `await import('./main-app.js')`,
+        'src/main/bootstrap.ts',
+      ),
+    ).toEqual([])
+  })
+
   it('flags void import of app modules', () => {
     expect(
       scanSourceTextForForbiddenDynamicImports(
@@ -99,7 +111,7 @@ describe('scanSourceTextForForbiddenDynamicImports', () => {
 })
 
 describe('verifyMainBundleContents', () => {
-  it('rejects main.js that still references unbundled app paths', () => {
+  it('rejects main-app.js that still references unbundled app paths', () => {
     const leaky = `
       const hooks = await import('../hooks/user-hooks')
       const wf = await import('@main/workflows/workflow-compiler')
@@ -109,7 +121,7 @@ describe('verifyMainBundleContents', () => {
     )
   })
 
-  it('accepts main.js with only allowed runtime dynamic imports', () => {
+  it('accepts main-app.js with only allowed runtime dynamic imports', () => {
     const ok = `
       import('node:fs')
       import('node:crypto')
@@ -117,6 +129,23 @@ describe('verifyMainBundleContents', () => {
       import('cloakbrowser')
     `
     expect(() => verifyMainBundleContents(ok)).not.toThrow()
+  })
+})
+
+describe('verifyBootstrapBundleContents', () => {
+  it('allows bootstrap to dynamically import main-app.js', () => {
+    const ok = `
+      import('./main-app.js')
+      import('electron')
+    `
+    expect(() => verifyBootstrapBundleContents(ok)).not.toThrow()
+  })
+
+  it('rejects bootstrap.js that imports other app modules', () => {
+    const leaky = `import('../hooks/user-hooks')`
+    expect(() => verifyBootstrapBundleContents(leaky)).toThrow(
+      /forbidden paths|unexpected filesystem dynamic imports/,
+    )
   })
 })
 
@@ -180,19 +209,31 @@ describe('packaged main-process dynamic import guard', () => {
     }
   })
 
-  it('passes on the built main bundle when dist/electron/main/main.js exists', () => {
-    if (!existsSync(MAIN_JS)) {
+  it('passes on the built main bundles when dist output exists', () => {
+    if (!existsSync(BOOTSTRAP_JS) || !existsSync(MAIN_APP_JS)) {
       return
     }
     expect(() => verifyMainBundle()).not.toThrow()
   })
 
-  it('built main.js has no string-literal app-module dynamic imports when present', () => {
-    if (!existsSync(MAIN_JS)) {
+  it('built main-app.js has no string-literal app-module dynamic imports when present', () => {
+    if (!existsSync(MAIN_APP_JS)) {
       return
     }
-    const code = readFileSync(MAIN_JS, 'utf8')
+    const code = readFileSync(MAIN_APP_JS, 'utf8')
     expect(findUnbundledDynamicImportsInMainJs(code)).toEqual([])
+    expect(findForbiddenSubstringsInMainJs(code)).toEqual([])
+  })
+
+  it('built bootstrap.js only imports main-app.js when present', () => {
+    if (!existsSync(BOOTSTRAP_JS)) {
+      return
+    }
+    const code = readFileSync(BOOTSTRAP_JS, 'utf8')
+    const bad = findUnbundledDynamicImportsInMainJs(code).filter(
+      (spec) => spec !== './main-app.js' && spec !== './main-app',
+    )
+    expect(bad).toEqual([])
     expect(findForbiddenSubstringsInMainJs(code)).toEqual([])
   })
 })

@@ -10,7 +10,7 @@ describe('findWorkspaceSeedFile', () => {
     const root = await mkdtemp(path.join(tmpdir(), 'teralexi-seed-'))
     await mkdir(path.join(root, 'src', 'main'), { recursive: true })
     await writeFile(path.join(root, 'package.json'), '{}', 'utf-8')
-    const entry = path.join(root, 'src', 'main', 'index.ts')
+    const entry = path.join(root, 'src', 'main', 'bootstrap.ts')
     await writeFile(entry, 'export {}', 'utf-8')
     await writeFile(path.join(root, 'other.ts'), 'export {}', 'utf-8')
 

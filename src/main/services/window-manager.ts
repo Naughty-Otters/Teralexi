@@ -5,12 +5,13 @@ import {
   parseAppAppearance,
   APP_UI_APPEARANCE_KEY,
 } from '@shared/ui/appearance-settings'
+import { glassBrowserWindowOptions } from './window-glass'
+import { app, BrowserWindow } from 'electron'
 import {
-  applyWindowGlassEffect,
-  glassBrowserWindowOptions,
-} from './window-glass'
-import { app, BrowserWindow, dialog, nativeTheme } from 'electron'
-import { getLoadingURL, getPreloadFile, getWinURL } from '../config/static-path'
+  getBootstrapLoadingURL,
+  getPreloadFile,
+  getWinURL,
+} from '../config/static-path'
 import { APP_DISPLAY_NAME, loadWindowIcon } from '../config/app-icons'
 import { useProcessException } from '@main/hooks/exception-hook'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
@@ -21,6 +22,10 @@ import {
 import { scheduleStartupUpdateCheck } from './check-update'
 import { DEFAULT_USER_ID } from '@main/agent/config/config'
 import { attachSandboxPreviewNavigation } from './sandbox-preview-navigation'
+import {
+  createSplashWindowOptions,
+  showSplashOnReady,
+} from './splash-window'
 
 const log = createLogger('services.window-manager')
 
@@ -57,13 +62,13 @@ class MainInit {
     instrumentInstanceMethods(this, log)
     const { childProcessGone, mainWindowGone } = useProcessException()
     this.winURL = getWinURL()
-    this.shartURL = getLoadingURL()
+    this.shartURL = getBootstrapLoadingURL()
     this.childProcessGone = childProcessGone
     this.mainWindowGone = mainWindowGone
   }
-  // Main window constructor
+
   createMainWindow() {
-    log.info('Creating main application window')
+    log.info('Creating main application window', { winURL: this.winURL })
     const windowIcon = loadWindowIcon()
     const appearance = parseAppAppearance(
       getSystemPropValue(APP_UI_APPEARANCE_KEY),
@@ -86,42 +91,29 @@ class MainInit {
       webPreferences: {
         sandbox: false,
         webSecurity: false,
-        // DevTools available in development mode
         devTools: process.env.NODE_ENV === 'development',
-        // Enable rubber-band scrolling on macOS
         scrollBounce: process.platform === 'darwin',
         preload: getPreloadFile('preload'),
       },
     })
 
-    // Load main window
     attachRendererDiagnostics(this.mainWindow.webContents)
     attachSandboxPreviewNavigation(this.mainWindow.webContents, this.winURL)
     this.mainWindow.loadURL(this.winURL)
-    // Show window after dom-ready
     this.mainWindow.once('ready-to-show', () => {
       this.mainWindow.show()
       this.destroyLoadingWindow()
       scheduleDeferredAppCacheAgentWarm(DEFAULT_USER_ID)
       scheduleStartupUpdateCheck(this.mainWindow)
     })
-    // Auto-open devtools in development mode
     if (process.env.NODE_ENV === 'development') {
       this.mainWindow.webContents.openDevTools({
         mode: 'undocked',
         activate: true,
       })
     }
-    // Triggered when the page in this window becomes unresponsive
     this.mainWindowGone(this.mainWindow)
-    /**
-     * GPU crash detection. See: http://www.electronjs.org/docs/api/app
-     * @returns {void}
-     * @author zmr (umbrella22)
-     * @date 2020-11-27
-     */
     this.childProcessGone(this.mainWindow)
-    // Hide to tray instead of closing; actual quit comes from tray menu or app.quit()
     this.mainWindow.on('close', (e) => {
       if (!app.isQuiting) {
         e.preventDefault()
@@ -129,6 +121,7 @@ class MainInit {
       }
     })
   }
+
   private destroyLoadingWindow(): void {
     if (!config.UseStartupChart || !this.loadWindow) return
     if (!this.loadWindow.isDestroyed()) {
@@ -137,56 +130,80 @@ class MainInit {
     this.loadWindow = null
   }
 
-  // Loading window constructor
-  loadingWindow(loadingURL: string) {
-    log.info('Creating loading window')
-    const useDarkSplash = nativeTheme.shouldUseDarkColors
-    this.loadWindow = new BrowserWindow({
-      width: 200,
-      height: 170,
-      frame: false,
-      skipTaskbar: true,
-      transparent: false,
-      backgroundColor: useDarkSplash ? '#18181b' : '#fafafa',
-      resizable: false,
-      show: false,
-      center: true,
-      roundedCorners: true,
-      webPreferences: {
-        experimentalFeatures: true,
-        preload: getPreloadFile('preload'),
-      },
-    })
+  adoptBootstrapSplash(splash: BrowserWindow): void {
+    this.loadWindow = splash
+  }
 
-    const beginMainWindow = () => {
-      if (this.mainWindow) return
-      this.createMainWindow()
+  private beginMainWindowAfterSplash(): void {
+    if (this.mainWindow) return
+    void warmAppCacheOnStartup(DEFAULT_USER_ID)
+    this.createMainWindow()
+  }
+
+  private whenSplashReady(splash: BrowserWindow, onReady: () => void): void {
+    if (splash.isDestroyed()) {
+      onReady()
+      return
     }
 
-    // Register before loadURL so we never miss ready-to-show on a fast/cached load.
-    this.loadWindow.once('ready-to-show', () => {
-      this.loadWindow.show()
-      this.loadWindow.setAlwaysOnTop(true)
-      beginMainWindow()
+    const run = () => {
+      if (!splash.isDestroyed() && !splash.isVisible()) {
+        splash.show()
+        splash.setAlwaysOnTop(true)
+      }
+      onReady()
+    }
+
+    if (splash.isVisible() || !splash.webContents.isLoading()) {
+      run()
+      return
+    }
+
+    splash.once('ready-to-show', run)
+  }
+
+  loadingWindow(loadingURL: string) {
+    log.info('Creating loading window')
+    this.loadWindow = new BrowserWindow(
+      createSplashWindowOptions({
+        experimentalFeatures: true,
+        preload: getPreloadFile('preload'),
+      }),
+    )
+
+    showSplashOnReady(this.loadWindow, () => {
+      this.beginMainWindowAfterSplash()
     })
 
     void warmAppCacheOnStartup(DEFAULT_USER_ID)
     this.loadWindow.loadURL(loadingURL)
   }
-  // Initialize window
+
   initWindow() {
     const useStartupChart = config.UseStartupChart && !isTeralexiTestMode()
     log.info('Initializing window flow', {
       useStartupChart,
       testMode: isTeralexiTestMode(),
+      hasBootstrapSplash: Boolean(this.loadWindow),
     })
+
+    if (useStartupChart && this.loadWindow) {
+      log.info('Continuing with bootstrap splash window')
+      this.whenSplashReady(this.loadWindow, () => {
+        this.beginMainWindowAfterSplash()
+      })
+      return
+    }
+
     if (useStartupChart) {
       return this.loadingWindow(this.shartURL)
     }
+
     void warmAppCacheOnStartup(DEFAULT_USER_ID).then(() => {
       scheduleDeferredAppCacheAgentWarm(DEFAULT_USER_ID)
     })
-    return this.createMainWindow()
+    this.createMainWindow()
   }
 }
+
 export default MainInit

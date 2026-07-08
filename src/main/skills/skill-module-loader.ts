@@ -354,8 +354,16 @@ export async function loadToolSetToolsFromDirectory(
   return []
 }
 
-/** Merges statically bundled tools with user `~/.teralexi/toolSet`; user wins on name conflicts. */
-export async function loadToolSetTools(): Promise<SkillTool[]> {
+let cachedToolSetTools: SkillTool[] | null = null
+let toolSetLoadPromise: Promise<SkillTool[]> | null = null
+
+/** Clears the in-memory toolSet catalog (tests / dev cache bust). */
+export function resetToolSetCatalogCache(): void {
+  cachedToolSetTools = null
+  toolSetLoadPromise = null
+}
+
+async function loadToolSetToolsUncached(): Promise<SkillTool[]> {
   const merged = new Map<string, SkillTool>()
   const sources: Array<{ dir: string; count: number; exists: boolean }> = []
 
@@ -411,6 +419,28 @@ export async function loadToolSetTools(): Promise<SkillTool[]> {
   })
 
   return tools
+}
+
+/** Merges statically bundled tools with user `~/.teralexi/toolSet`; user wins on name conflicts. */
+export async function loadToolSetTools(): Promise<SkillTool[]> {
+  if (cachedToolSetTools) return cachedToolSetTools
+  if (!toolSetLoadPromise) {
+    toolSetLoadPromise = loadToolSetToolsUncached()
+      .then((tools) => {
+        cachedToolSetTools = tools
+        return tools
+      })
+      .catch((err) => {
+        toolSetLoadPromise = null
+        throw err
+      })
+  }
+  return toolSetLoadPromise
+}
+
+/** Fire-and-forget startup load; safe to call alongside renderer boot. */
+export function startToolSetCatalogLoad(): Promise<SkillTool[]> {
+  return loadToolSetTools()
 }
 
 export { clearSkillModuleCache } from './skill-module-cache'

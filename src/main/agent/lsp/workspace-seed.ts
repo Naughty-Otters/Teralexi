@@ -21,7 +21,7 @@ const SKIP_DIRS = new Set([
 /** Common entry points checked before a full tree walk. */
 const PREFERRED_RELATIVE_PATHS: Record<string, string[]> = {
   typescript: [
-    'src/main/index.ts',
+    'src/main/bootstrap.ts',
     'src/index.ts',
     'src/main.ts',
     'index.ts',

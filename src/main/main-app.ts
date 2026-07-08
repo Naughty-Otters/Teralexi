@@ -1,34 +1,20 @@
 'use strict'
 
-import { app, session } from 'electron'
-import { configureAppBranding, loadDockIcon } from './config/app-icons'
+import { app, session, dialog, type BrowserWindow } from 'electron'
+import { loadDockIcon } from './config/app-icons'
 import { initStaticPaths } from './config/static-path'
-import { resolveAppRoot } from './config/app-paths'
-
-configureAppBranding()
-initStaticPaths()
-
-import { initializeTeralexiHome, getTeralexiRulesDir } from '@config/teralexi-home'
+import { resolveAppRoot, isPackagedApp } from './config/app-paths'
+import { getTeralexiRulesDir } from '@config/teralexi-home'
 import { isTeralexiTestMode } from '@config/test-mode'
 import { setSystemPropValue } from '@config/system-prop'
-import { isPackagedApp } from './config/app-paths'
 import { seedBundledDefaultRulesIfMissing } from './config/bundled-default-rules'
-import { clearSkillModuleCache, loadToolSetTools } from '@main/skills/skill-module-loader'
-import { ensureClientId } from '@main/services/client-identity'
-
-initializeTeralexiHome(app)
-seedBundledDefaultRulesIfMissing(getTeralexiRulesDir())
-ensureClientId()
-// Dev-only: drop stale esbuild bundles when source changes frequently.
-if (!isPackagedApp()) {
-  clearSkillModuleCache()
-}
-import InitWindow from './services/window-manager'
+import { clearSkillModuleCache, startToolSetCatalogLoad } from '@main/skills/skill-module-loader'
 import { useDisableButton } from './hooks/disable-button-hook'
 import { useProcessException } from '@main/hooks/exception-hook'
 import { useMenu } from '@main/hooks/menu-hook'
 import { useMainDefaultIpc } from './services/ipc-main'
 import { createTray } from './services/tray-manager'
+import InitWindow from './services/window-manager'
 import { getWhatsAppChannelManager } from './channels/whatsapp/manager'
 import { getTelegramChannelManager } from './channels/telegram/manager'
 import { getDiscordChannelManager } from './channels/discord/manager'
@@ -39,32 +25,42 @@ import { registerMainProcessSupportHandlers } from './services/support-event-sto
 import { getLspManager, initBundledLspBin } from './agent/lsp'
 import { createLogger } from './logger'
 import { prewarmMcpRuntimeEnvironment } from './services/mcp-runtime-check'
-import {
-  registerTeralexiProtocolClient,
-  registerTeralexiProtocolHandlers,
-  requestTeralexiSingleInstanceLock,
-  setTeralexiProtocolHandlerReady,
-} from './services/teralexi-protocol-handler'
+import { setTeralexiProtocolHandlerReady } from './services/teralexi-protocol-handler'
 
-let isQuiting = false
 const log = createLogger('app')
 
-if (!requestTeralexiSingleInstanceLock()) {
-  app.quit()
-} else {
-  registerTeralexiProtocolClient()
-  registerTeralexiProtocolHandlers()
+let lifecycleHooksRegistered = false
+
+function registerLifecycleHooks(): void {
+  if (lifecycleHooksRegistered) return
+  lifecycleHooksRegistered = true
+
+  app.on('before-quit', () => {
+    Object.assign(app, { isQuiting: true })
+    try {
+      getLspManager().closeAll()
+    } catch (err) {
+      log.warn('LSP cleanup on quit failed', { err })
+    }
+  })
+
+  app.on('browser-window-created', () => {
+    log.info('Browser window created')
+  })
 }
 
-async function onAppReady() {
-  log.info('App ready; initializing desktop services')
+/** Heavy main-process startup — mirrors the original index.ts sequence. */
+export async function startMainApp(options: {
+  splashWindow?: BrowserWindow
+} = {}): Promise<void> {
+  // bootstrap.js and main-app.js are separate bundles — each must initialize paths.
+  initStaticPaths()
+  registerLifecycleHooks()
+  log.info('Main app module loaded; initializing desktop services')
 
-  try {
-    await loadToolSetTools()
-  } catch (err) {
-    log.error('toolSet failed to load during startup; exiting', { err })
-    app.exit(1)
-    return
+  seedBundledDefaultRulesIfMissing(getTeralexiRulesDir())
+  if (!isPackagedApp()) {
+    clearSkillModuleCache()
   }
 
   const { disableF12 } = useDisableButton()
@@ -77,9 +73,6 @@ async function onAppReady() {
   defaultIpc()
   createMenu()
 
-  // Publish the app-bundled node_modules/.bin so language servers
-  // (typescript-language-server, pyright) resolve in any workspace.
-  // Best-effort — must never crash startup.
   try {
     let appPath = ''
     try {
@@ -93,7 +86,6 @@ async function onAppReady() {
     log.warn('LSP bundled bin init failed', { err })
   }
 
-  // Set dock icon (macOS) — overrides default Electron icon in dev.
   if (process.platform === 'darwin' && app.dock) {
     const icon = loadDockIcon()
     if (!icon.isEmpty()) {
@@ -101,14 +93,25 @@ async function onAppReady() {
     }
   }
 
-  // Warm MCP PATH caches in the background so Settings → MCP opens instantly.
   prewarmMcpRuntimeEnvironment()
   log.info('MCP runtime PATH prewarm requested')
 
   const initWindow = new InitWindow()
+  if (options.splashWindow) {
+    initWindow.adoptBootstrapSplash(options.splashWindow)
+  }
   initWindow.initWindow()
   createTray(() => initWindow.mainWindow)
   log.info('Main window and tray initialized')
+
+  void startToolSetCatalogLoad().catch((err) => {
+    log.error('toolSet failed to load during startup; exiting', { err })
+    dialog.showErrorBox(
+      'Teralexi failed to start',
+      'The tool catalog could not be loaded. The app will now close.',
+    )
+    app.exit(1)
+  })
 
   if (isTeralexiTestMode()) {
     setSystemPropValue('settings.onboarding.completed', 'true')
@@ -116,29 +119,13 @@ async function onAppReady() {
   }
 
   if (!isTeralexiTestMode()) {
-    // Auto-start WhatsApp channel so it's ready (or showing QR) before the user opens settings
     void getWhatsAppChannelManager().ensureStarted()
-    log.info('WhatsApp channel manager startup requested')
-
-    // Auto-start Telegram bot if a token is configured
     void getTelegramChannelManager().ensureStarted()
-    log.info('Telegram channel manager startup requested')
-
-    // Auto-start Discord bot if a token is configured
     void getDiscordChannelManager().ensureStarted()
-    log.info('Discord channel manager startup requested')
-
-    // Auto-start WeChat Work bot if credentials are configured
     void getWeChatChannelManager().ensureStarted()
-    log.info('WeChat channel manager startup requested')
-
-    // Auto-start Slack bot if tokens are configured
     void getSlackChannelManager().ensureStarted()
-    log.info('Slack channel manager startup requested')
-
-    // Run scheduler jobs in the main process.
     getSchedulerManager().ensureStarted()
-    log.info('Scheduler manager startup requested')
+    log.info('Background channel and scheduler services requested')
   } else {
     log.info('Test mode: skipped external channel and scheduler auto-start')
   }
@@ -154,26 +141,10 @@ async function onAppReady() {
   setTeralexiProtocolHandlerReady()
 }
 
-app.whenReady().then(onAppReady)
-// Required for Electron 9.x to disable CORS
-app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
-
-app.on('before-quit', () => {
-  isQuiting = true
-  // main window close handler checks app.isQuiting (see window-manager)
-  Object.assign(app, { isQuiting: true })
-  // Kill any language servers spawned for workspace diagnostics.
+export async function shutdownMainApp(): Promise<void> {
   try {
     getLspManager().closeAll()
-  } catch (err) {
-    log.warn('LSP cleanup on quit failed', { err })
+  } catch {
+    /* main-app may not have initialized LSP yet */
   }
-})
-
-app.on('window-all-closed', () => {
-  // Only quit when all windows are truly closed (not just hidden)
-  if (isQuiting) app.quit()
-})
-app.on('browser-window-created', () => {
-  log.info('Browser window created')
-})
+}

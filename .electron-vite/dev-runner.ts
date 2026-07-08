@@ -27,7 +27,8 @@ function escapeShellToken(token: string) {
 
 const { target = 'client', controlledRestart = false } = getArgv()
 
-const mainOpt = rollupOptions(process.env.NODE_ENV, 'main')
+const bootstrapOpt = rollupOptions(process.env.NODE_ENV, 'bootstrap')
+const mainAppOpt = rollupOptions(process.env.NODE_ENV, 'main-app')
 const preloadOpt = rollupOptions(process.env.NODE_ENV, 'preload')
 
 let electronProcess: ChildProcess | null = null
@@ -81,18 +82,49 @@ async function startRenderer(port: number): Promise<void> {
 
 function startMain(): Promise<void> {
   return new Promise((resolve, reject) => {
-    const MainWatcher = watch(mainOpt)
+    let bootstrapDone = false
+    let mainAppDone = false
+
+    const maybeResolve = () => {
+      if (bootstrapDone && mainAppDone) {
+        resolve()
+      }
+    }
+
+    const MainWatcher = watch(bootstrapOpt)
     MainWatcher.on('change', (filename) => {
-      // Main process log section
-      logStats(`Main-FileChange`, filename)
+      logStats(`Main-Bootstrap-FileChange`, filename)
     })
     MainWatcher.on('event', (event) => {
       if (event.code === 'END') {
+        bootstrapDone = true
         if (electronProcess && !controlledRestart) {
           restartElectron()
         }
+        maybeResolve()
+      } else if (event.code === 'ERROR') {
+        reject(event.error)
+      }
+      if (controlledRestart) {
+        process.stdout.write('\x1B[2J\x1B[3J')
+        logStats(
+          'cli tips',
+          `Controlled restart is enabled, please manually enter r + Enter to restart`,
+        )
+      }
+    })
 
-        resolve()
+    const MainAppWatcher = watch(mainAppOpt)
+    MainAppWatcher.on('change', (filename) => {
+      logStats(`Main-App-FileChange`, filename)
+    })
+    MainAppWatcher.on('event', (event) => {
+      if (event.code === 'END') {
+        mainAppDone = true
+        if (electronProcess && !controlledRestart) {
+          restartElectron()
+        }
+        maybeResolve()
       } else if (event.code === 'ERROR') {
         reject(event.error)
       }
