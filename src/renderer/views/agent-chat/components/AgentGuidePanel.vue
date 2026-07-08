@@ -11,11 +11,7 @@
         >
           {{ row.label }}
         </h3>
-        <div
-          v-else
-          class="agent-guide__row"
-          :class="`agent-guide__row--count-${row.tiles.length}`"
-        >
+        <div v-else class="agent-guide__row">
           <button
             v-for="tile in row.tiles"
             :key="tile.id"
@@ -64,8 +60,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const TILES_PER_ROW = 4
-
 type GuideTile = {
   id: string
   color: Agent['color']
@@ -77,17 +71,6 @@ type GuideTile = {
 type GuideDisplayRow =
   | { kind: 'header'; key: string; label: string }
   | { kind: 'tiles'; key: string; tiles: GuideTile[] }
-
-function pushTileRows(rows: GuideDisplayRow[], tiles: GuideTile[]): void {
-  for (let index = 0; index < tiles.length; index += TILES_PER_ROW) {
-    const slice = tiles.slice(index, index + TILES_PER_ROW)
-    rows.push({
-      kind: 'tiles',
-      key: `tiles:${slice.map((tile) => tile.id).join('-')}`,
-      tiles: slice,
-    })
-  }
-}
 
 const guideRows = computed((): GuideDisplayRow[] => {
   const refs: SkillGroupAgentRef[] = props.agents.map((agent) => ({
@@ -109,7 +92,11 @@ const guideRows = computed((): GuideDisplayRow[] => {
 
   const flushPendingTiles = () => {
     if (pendingTiles.length === 0) return
-    pushTileRows(rows, pendingTiles)
+    rows.push({
+      kind: 'tiles',
+      key: `tiles:${pendingTiles.map((tile) => tile.id).join('-')}`,
+      tiles: pendingTiles,
+    })
     pendingTiles = []
   }
 
@@ -172,7 +159,8 @@ const guideRows = computed((): GuideDisplayRow[] => {
 }
 
 .agent-guide__layout {
-  width: min(960px, 100%);
+  width: 100%;
+  max-width: 1100px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -191,8 +179,7 @@ const guideRows = computed((): GuideDisplayRow[] => {
 
 .agent-guide__row {
   display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: stretch;
   gap: 14px;
@@ -202,11 +189,12 @@ const guideRows = computed((): GuideDisplayRow[] => {
 .agent-guide__tile {
   box-sizing: border-box;
   display: flex;
-  flex: 0 0 220px;
+  flex: 0 1 200px;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  width: 220px;
+  width: min(220px, 100%);
+  max-width: 100%;
   min-width: 0;
   padding: 18px 16px;
   border: 1px solid var(--ui-border);
@@ -254,30 +242,5 @@ const guideRows = computed((): GuideDisplayRow[] => {
   font-weight: 600;
   color: var(--color-primary-600, var(--color-primary-500, #6366f1));
   background: color-mix(in srgb, var(--color-primary-500, #6366f1) 12%, transparent);
-}
-
-@media (max-width: 960px) {
-  .agent-guide__tile {
-    flex-basis: calc((100% - 3 * 14px) / 4);
-    width: calc((100% - 3 * 14px) / 4);
-  }
-}
-
-@media (max-width: 720px) {
-  .agent-guide__row {
-    flex-wrap: wrap;
-  }
-
-  .agent-guide__tile {
-    flex: 0 1 calc((100% - 14px) / 2);
-    width: calc((100% - 14px) / 2);
-  }
-}
-
-@media (max-width: 420px) {
-  .agent-guide__tile {
-    flex: 1 1 100%;
-    width: 100%;
-  }
 }
 </style>
