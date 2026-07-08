@@ -55,30 +55,6 @@
       </button>
       <button
         class="footer-btn"
-        :class="{ 'footer-btn--active': rightPanelView === 'workspace' }"
-        :title="
-          rightPanelView === 'workspace'
-            ? t.sidebar.backToConversation
-            : t.sidebar.openWorkspace
-        "
-        :aria-label="
-          rightPanelView === 'workspace'
-            ? t.sidebar.backToConversation
-            : t.sidebar.openWorkspace
-        "
-        @click="emit('open-workspace')"
-      >
-        <UIcon
-          :name="
-            rightPanelView === 'workspace'
-              ? 'i-lucide-messages-square'
-              : 'i-lucide-git-branch'
-          "
-          class="footer-btn-icon"
-        />
-      </button>
-      <button
-        class="footer-btn"
         :title="isDark ? t.sidebar.switchToLight : t.sidebar.switchToDark"
         :aria-label="isDark ? t.sidebar.switchToLight : t.sidebar.switchToDark"
         @click="toggle"
@@ -120,7 +96,6 @@ const props = withDefaults(
 const emit = defineEmits<{
   'toggle-settings': []
   'open-monitor': []
-  'open-workspace': []
   'open-setup-wizard': []
 }>()
 

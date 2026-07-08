@@ -9,9 +9,11 @@ export type TitleBarChatControlsState = {
   activeAgentModel: string
   sidebarCollapsed: boolean
   showChatActions: boolean
+  showWorkspacePanel: boolean
   showReportPanel: boolean
   isBusy: boolean
   onToggleSidebar: TitleBarChatAction
+  onToggleWorkspacePanel: TitleBarChatAction
   onToggleReportPanel: TitleBarChatAction
   onStop: TitleBarChatAction
   onNewSession: TitleBarChatAction
@@ -25,9 +27,11 @@ function createDefaultState(): TitleBarChatControlsState {
     activeAgentModel: '',
     sidebarCollapsed: true,
     showChatActions: false,
+    showWorkspacePanel: false,
     showReportPanel: false,
     isBusy: false,
     onToggleSidebar: null,
+    onToggleWorkspacePanel: null,
     onToggleReportPanel: null,
     onStop: null,
     onNewSession: null,

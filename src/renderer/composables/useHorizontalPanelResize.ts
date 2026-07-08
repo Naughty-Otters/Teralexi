@@ -1,5 +1,9 @@
 import { onBeforeUnmount, ref, type Ref } from 'vue'
 
+export type HorizontalPanelMaxSize =
+  | number
+  | { fraction: number; reservePx?: number }
+
 export type HorizontalPanelResizeOptions = {
   /** Measured against this element's bounding box. */
   containerRef: Ref<HTMLElement | null>
@@ -7,11 +11,14 @@ export type HorizontalPanelResizeOptions = {
   panelSide: 'start' | 'end'
   defaultSize: number
   minSize: number
-  /** Fixed max or fraction of container width (0–1). */
-  maxSize: number | { fraction: number }
+  /** Fixed max or fraction of container width (0–1), optionally reserving peer space. */
+  maxSize: HorizontalPanelMaxSize
   storageKey?: string
   enabled?: Ref<boolean>
 }
+
+/** Minimal width left for the adjacent panel when a split panel is maximized. */
+export const SPLIT_PANEL_PEER_MIN_PX = 48
 
 function readStoredSize(key: string, fallback: number): number {
   try {
@@ -26,10 +33,13 @@ function readStoredSize(key: string, fallback: number): number {
 
 function resolveMaxSize(
   container: HTMLElement,
-  maxSize: HorizontalPanelResizeOptions['maxSize'],
+  maxSize: HorizontalPanelMaxSize,
+  minSize: number,
 ): number {
   if (typeof maxSize === 'number') return maxSize
-  return Math.max(0, container.clientWidth * maxSize.fraction)
+  const reserve = maxSize.reservePx ?? 0
+  const fromFraction = container.clientWidth * maxSize.fraction
+  return Math.max(minSize, fromFraction - reserve)
 }
 
 export function useHorizontalPanelResize(options: HorizontalPanelResizeOptions) {
@@ -47,7 +57,7 @@ export function useHorizontalPanelResize(options: HorizontalPanelResizeOptions) 
     if (!container) {
       return Math.max(options.minSize, Math.min(next, options.defaultSize))
     }
-    const max = resolveMaxSize(container, options.maxSize)
+    const max = resolveMaxSize(container, options.maxSize, options.minSize)
     return Math.max(options.minSize, Math.min(next, max))
   }
 

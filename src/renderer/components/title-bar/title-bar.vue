@@ -30,6 +30,25 @@
       </button>
 
       <button
+        v-if="chatControls.visible"
+        type="button"
+        class="cp-icon-btn window-title__btn"
+        :class="{ 'cp-icon-btn--on': chatControls.showWorkspacePanel }"
+        :title="workspaceToggleTitle"
+        :aria-label="workspaceToggleTitle"
+        @click="chatControls.onToggleWorkspacePanel?.()"
+      >
+        <UIcon
+          class="cp-icon-btn__glyph"
+          :name="
+            chatControls.showWorkspacePanel
+              ? 'i-lucide-messages-square'
+              : 'i-lucide-git-branch'
+          "
+        />
+      </button>
+
+      <button
         v-if="updateHighlight.visible"
         type="button"
         class="window-title__update-flag"
@@ -166,6 +185,12 @@ const workspaceInlineLabel = computed((): string | null => {
   if (!path) return null
   return path
 })
+
+const workspaceToggleTitle = computed(() =>
+  chatControls.showWorkspacePanel
+    ? t.value.sidebar.backToConversation
+    : t.value.sidebar.openWorkspace,
+)
 
 const workspaceBarTitle = computed(() => {
   const path = workspacePathDisplay.value
