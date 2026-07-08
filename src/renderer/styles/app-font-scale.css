@@ -1,0 +1,11 @@
+/**
+ * Font-size scale derived from --app-font-size (default 14px).
+ * Smaller chrome labels use these; editor tabs and file browser rows use
+ * --app-font-size directly to match the font setting.
+ */
+html {
+  --app-font-size-xs: calc(var(--app-font-size) * 10 / 13);
+  --app-font-size-sm: calc(var(--app-font-size) * 11 / 13);
+  --app-font-size-secondary: calc(var(--app-font-size) * 12 / 13);
+  --app-font-size-lg: calc(var(--app-font-size) * 14 / 13);
+}

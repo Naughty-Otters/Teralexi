@@ -227,14 +227,14 @@ function onCreatePr() {
   gap: 6px;
   padding: 8px 10px;
   border-bottom: 1px solid var(--ui-border);
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   flex-shrink: 0;
 }
 .git-branch-icon { width: 13px; height: 13px; color: var(--ui-text-muted); flex-shrink: 0; }
 .git-branch-name { font-weight: 600; color: var(--ui-text); }
-.git-upstream { color: var(--ui-text-muted); font-size: 11px; }
-.git-ahead { color: var(--color-success-600, #16a34a); font-size: 11px; font-weight: 600; }
-.git-behind { color: var(--color-warning-600, #d97706); font-size: 11px; font-weight: 600; }
+.git-upstream { color: var(--ui-text-muted); font-size: var(--app-font-size-sm); }
+.git-ahead { color: var(--color-success-600, #16a34a); font-size: var(--app-font-size-sm); font-weight: 600; }
+.git-behind { color: var(--color-warning-600, #d97706); font-size: var(--app-font-size-sm); font-weight: 600; }
 .git-refresh-btn {
   margin-left: auto;
   border: none;
@@ -251,11 +251,11 @@ function onCreatePr() {
 .git-refresh-icon--spin { animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.git-error { margin: 8px 10px; font-size: 12px; color: var(--color-error-600, #dc2626); }
+.git-error { margin: 8px 10px; font-size: var(--app-font-size-secondary); color: var(--color-error-600, #dc2626); }
 .git-clean {
   display: flex; align-items: center; gap: 6px;
   margin: 12px 10px;
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   color: var(--ui-text-muted);
 }
 .git-clean-icon { width: 14px; height: 14px; color: var(--color-success-500, #22c55e); }
@@ -266,7 +266,7 @@ function onCreatePr() {
   justify-content: space-between;
   align-items: center;
   padding: 5px 10px 3px;
-  font-size: 11px;
+  font-size: var(--app-font-size-sm);
   font-weight: 600;
   color: var(--ui-text-muted);
   text-transform: uppercase;
@@ -281,7 +281,7 @@ function onCreatePr() {
   background: transparent;
   cursor: pointer;
   color: var(--color-primary-500, #6366f1);
-  font-size: 11px;
+  font-size: var(--app-font-size-sm);
   padding: 0;
 }
 .git-link-btn:hover { text-decoration: underline; }
@@ -291,7 +291,7 @@ function onCreatePr() {
   align-items: center;
   gap: 8px;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   cursor: pointer;
   font-family: var(--app-font-family);
 }
@@ -310,7 +310,7 @@ function onCreatePr() {
   border: 1px solid var(--ui-border);
   background: transparent;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--app-font-size);
   font-weight: 700;
   color: var(--color-success-600, #16a34a);
   border-radius: 3px;
@@ -335,7 +335,7 @@ function onCreatePr() {
   border: 1px solid var(--ui-border);
   border-radius: 6px;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   font-family: inherit;
   background: var(--ui-bg);
   color: var(--ui-text);
@@ -353,7 +353,7 @@ function onCreatePr() {
   border: 1px solid var(--ui-border);
   background: var(--ui-bg);
   color: var(--ui-text);
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   cursor: pointer;
   transition: background 0.12s;
 }
@@ -365,8 +365,8 @@ function onCreatePr() {
   border-color: transparent;
 }
 .git-btn--primary:hover:not(:disabled) { background: var(--color-primary-600, #4f46e5); }
-.git-op-error { margin: 0; font-size: 11px; color: var(--color-error-600, #dc2626); }
-.git-op-success { margin: 0; font-size: 11px; color: var(--color-success-600, #16a34a); }
+.git-op-error { margin: 0; font-size: var(--app-font-size-sm); color: var(--color-error-600, #dc2626); }
+.git-op-success { margin: 0; font-size: var(--app-font-size-sm); color: var(--color-success-600, #16a34a); }
 
 .git-pr-section {
   margin-top: 8px;
@@ -374,7 +374,7 @@ function onCreatePr() {
   border-top: 1px dashed var(--ui-border);
 }
 .git-pr-summary {
-  font-size: 11px;
+  font-size: var(--app-font-size-sm);
   font-weight: 600;
   color: var(--ui-text-muted);
   cursor: pointer;
@@ -386,7 +386,7 @@ function onCreatePr() {
   border: 1px solid var(--ui-border);
   border-radius: 6px;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   margin-bottom: 6px;
   background: var(--ui-bg);
   color: var(--ui-text);
@@ -395,7 +395,7 @@ function onCreatePr() {
 .git-pr-link {
   display: block;
   margin-top: 6px;
-  font-size: 11px;
+  font-size: var(--app-font-size-sm);
   color: var(--color-primary-500, #6366f1);
   word-break: break-all;
 }

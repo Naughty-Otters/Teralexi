@@ -241,7 +241,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--app-font-size-sm);
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--ui-text);

@@ -223,7 +223,7 @@ function onInputKeydown(event: KeyboardEvent) {
   border-bottom: 1px solid var(--ui-border);
   background: transparent;
   color: var(--ui-text);
-  font-size: 13px;
+  font-size: var(--app-font-size);
   font-family: var(--app-font-family);
   padding: 12px 14px;
   outline: none;
@@ -232,7 +232,7 @@ function onInputKeydown(event: KeyboardEvent) {
 .workspace-quick-open-hint {
   margin: 0;
   padding: 14px;
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   color: var(--ui-text-muted);
 }
 
@@ -257,7 +257,7 @@ function onInputKeydown(event: KeyboardEvent) {
   border-radius: 6px;
   background: transparent;
   color: var(--ui-text);
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   font-family: var(--app-font-family);
   text-align: left;
   padding: 7px 10px;
@@ -287,13 +287,13 @@ function onInputKeydown(event: KeyboardEvent) {
   margin: 0;
   padding: 8px 12px;
   border-top: 1px solid var(--ui-border);
-  font-size: 10px;
+  font-size: var(--app-font-size-xs);
   color: var(--ui-text-muted);
 }
 
 .workspace-quick-open-footer kbd {
   font-family: var(--app-font-family);
-  font-size: 10px;
+  font-size: var(--app-font-size-xs);
   padding: 1px 4px;
   border-radius: 4px;
   border: 1px solid var(--ui-border);

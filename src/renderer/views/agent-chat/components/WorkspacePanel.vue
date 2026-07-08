@@ -298,6 +298,8 @@ onMounted(() => {
   min-height: 0;
   background: var(--ui-bg);
   overflow: hidden;
+  font-family: var(--app-font-family);
+  font-size: var(--app-font-size);
 }
 
 .workspace-panel--split {
@@ -339,7 +341,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--app-font-size);
   font-weight: 600;
   color: var(--ui-text);
   min-width: 0;
@@ -368,7 +370,7 @@ onMounted(() => {
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--app-font-size);
   font-weight: 500;
   color: var(--ui-text-muted);
   border-bottom: 2px solid transparent;
@@ -409,7 +411,7 @@ onMounted(() => {
   padding: 24px;
   text-align: center;
   color: var(--ui-text-muted);
-  font-size: 13px;
+  font-size: var(--app-font-size);
 }
 
 .wp-empty-icon {
@@ -419,7 +421,7 @@ onMounted(() => {
 }
 
 .wp-empty-hint {
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   opacity: 0.7;
 }
 
@@ -494,7 +496,7 @@ onMounted(() => {
   gap: 10px;
   flex: 1;
   color: var(--ui-text-muted);
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   text-align: center;
   padding: 24px;
 }
@@ -508,7 +510,7 @@ onMounted(() => {
 .wp-diff-loading,
 .wp-diff-error {
   padding: 12px;
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   color: var(--ui-text-muted);
 }
 
@@ -531,7 +533,7 @@ onMounted(() => {
   padding: 6px 12px;
   border-bottom: 1px solid var(--ui-border);
   background: var(--ui-bg-elevated);
-  font-size: 11px;
+  font-size: var(--app-font-size-sm);
   flex-shrink: 0;
 }
 

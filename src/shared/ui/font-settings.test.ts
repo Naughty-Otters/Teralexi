@@ -10,10 +10,10 @@ import {
 } from './font-settings'
 
 describe('font-settings', () => {
-  it('defaults to Menlo / Monaco at 13px', () => {
+  it('defaults to Menlo / Monaco at 14px', () => {
     expect(DEFAULT_FONT_SETTINGS).toEqual({
       fontFamily: "Menlo, Monaco, 'Courier New', monospace",
-      fontSize: 13,
+      fontSize: 14,
     })
   })
 
