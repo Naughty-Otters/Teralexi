@@ -15,6 +15,9 @@ html {
   --app-title-bar-height: 30px;
   --app-font-family: Menlo, Monaco, 'Courier New', monospace;
   --app-font-size: 14px;
+  /* Shared height for the workspace/editor/preview tab strips and the file
+     browser header so they line up across panels. */
+  --wp-tab-strip-height: 38px;
   color-scheme: light;
   background-color: var(--ui-bg);
   color: var(--ui-text);

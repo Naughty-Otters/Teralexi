@@ -51,7 +51,7 @@ describe('workspace-file-watcher', () => {
 
     writeFileSync(join(tempDir, 'new-file.txt'), 'hello')
 
-    await new Promise((resolve) => setTimeout(resolve, 400))
+    await new Promise((resolve) => setTimeout(resolve, 700))
 
     expect(webContentSend.WorkspaceFilesChanged).toHaveBeenCalledWith(
       {},
@@ -75,7 +75,7 @@ describe('workspace-file-watcher', () => {
     unwatchWorkspaceFiles('conv-1')
 
     writeFileSync(join(tempDir, 'after-unwatch.txt'), 'x')
-    await vi.advanceTimersByTimeAsync(350)
+    await vi.advanceTimersByTimeAsync(600)
 
     expect(webContentSend.WorkspaceFilesChanged).not.toHaveBeenCalled()
   })

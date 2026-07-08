@@ -410,7 +410,8 @@ async function toggleDirectory(relativePath: string) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;
+  height: var(--wp-tab-strip-height, 38px);
+  padding: 0 10px;
   font-size: var(--app-font-size-sm);
   font-weight: 600;
   text-transform: uppercase;

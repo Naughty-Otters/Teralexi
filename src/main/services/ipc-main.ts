@@ -5,12 +5,29 @@ import { createLogger, instrumentObjectMethods } from '@main/logger'
 
 const log = createLogger('ipc.main')
 
+// High-frequency, read-only handlers that are polled by the renderer (workspace
+// file browser, git panel, editor, and config lookups). Instrumenting them
+// floods the logs with per-invocation input/output entries without adding much
+// diagnostic value, so we skip method-level instrumentation for them. Mutating
+// operations (commit/push/write/etc.) are intentionally left instrumented.
+const NOISY_IPC_HANDLERS = new Set<string>([
+  'GetSystemConfigs',
+  'GetConversationWorkspace',
+  'ListWorkspaceFiles',
+  'SearchWorkspaceFiles',
+  'ReadWorkspaceFile',
+  'GetWorkspaceGitStatus',
+  'GetWorkspaceGitDiff',
+  'GetWorkspaceGitLog',
+])
+
 export const useMainDefaultIpc = () => {
   return instrumentObjectMethods({
     defaultIpc: () => {
       const ipcMainHandle = instrumentObjectMethods(
         new IpcMainHandleClass() as unknown as Record<PropertyKey, unknown>,
         log.child({ scope: 'ipc.main.handlers' }),
+        { skip: (methodName) => NOISY_IPC_HANDLERS.has(methodName) },
       )
       const channels = Object.keys(ipcMainHandle)
       log.info('Registering main IPC handlers', {
