@@ -26,6 +26,17 @@ import {
   createSplashWindowOptions,
   showSplashOnReady,
 } from './splash-window'
+import {
+  attachMainWindowStatePersistence,
+  ensureBoundsOnScreen,
+  loadMainWindowBounds,
+} from './main-window-state'
+import {
+  DEFAULT_MAIN_WINDOW_HEIGHT,
+  DEFAULT_MAIN_WINDOW_WIDTH,
+  MAIN_WINDOW_MIN_HEIGHT,
+  MAIN_WINDOW_MIN_WIDTH,
+} from '@shared/ui/main-window-state'
 
 const log = createLogger('services.window-manager')
 
@@ -74,16 +85,21 @@ class MainInit {
       getSystemPropValue(APP_UI_APPEARANCE_KEY),
     )
 
+    const savedBounds = ensureBoundsOnScreen(loadMainWindowBounds())
+
     this.mainWindow = new BrowserWindow({
       title: APP_DISPLAY_NAME,
       titleBarOverlay: {
         color: '#fff',
       },
       titleBarStyle: config.IsUseSysTitle ? 'default' : 'hidden',
-      height: 800,
+      height: savedBounds.height || DEFAULT_MAIN_WINDOW_HEIGHT,
       useContentSize: true,
-      width: 1700,
-      minWidth: 1366,
+      width: savedBounds.width || DEFAULT_MAIN_WINDOW_WIDTH,
+      x: Number.isFinite(savedBounds.x) ? savedBounds.x : undefined,
+      y: Number.isFinite(savedBounds.y) ? savedBounds.y : undefined,
+      minWidth: MAIN_WINDOW_MIN_WIDTH,
+      minHeight: MAIN_WINDOW_MIN_HEIGHT,
       show: false,
       frame: config.IsUseSysTitle,
       icon: windowIcon,
@@ -97,6 +113,11 @@ class MainInit {
       },
     })
 
+    if (savedBounds.isMaximized) {
+      this.mainWindow.maximize()
+    }
+
+    attachMainWindowStatePersistence(this.mainWindow)
     attachRendererDiagnostics(this.mainWindow.webContents)
     attachSandboxPreviewNavigation(this.mainWindow.webContents, this.winURL)
     this.mainWindow.loadURL(this.winURL)

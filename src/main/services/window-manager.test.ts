@@ -11,9 +11,13 @@ function makeWindow() {
     emitReadyToShow: () => onceHandlers.get('ready-to-show')?.(),
     show: vi.fn(),
     hide: vi.fn(),
+    maximize: vi.fn(),
     setAlwaysOnTop: vi.fn(),
     isVisible: vi.fn(() => false),
     isDestroyed: vi.fn(() => false),
+    isMaximized: vi.fn(() => false),
+    getBounds: vi.fn(() => ({ x: 0, y: 0, width: 1700, height: 800 })),
+    getNormalBounds: vi.fn(() => ({ x: 0, y: 0, width: 1700, height: 800 })),
     destroy: vi.fn(),
     focus: vi.fn(),
     webContents: {
@@ -36,7 +40,12 @@ vi.mock('electron', () => ({
   app: { isQuiting: false },
   BrowserWindow,
   nativeTheme: { shouldUseDarkColors: false },
-  screen: { getPrimaryDisplay: () => ({ workAreaSize: { width: 1920, height: 1080 } }) },
+  screen: {
+    getPrimaryDisplay: () => ({ workAreaSize: { width: 1920, height: 1080 } }),
+    getDisplayMatching: () => ({
+      workArea: { x: 0, y: 0, width: 1920, height: 1080 },
+    }),
+  },
   nativeImage: {
     createFromPath: vi.fn(() => ({
       isEmpty: () => false,
@@ -78,6 +87,12 @@ vi.mock('../config/static-path', () => ({
 vi.mock('@main/cache/cache-warmer', () => ({
   warmAppCacheOnStartup: vi.fn(() => Promise.resolve()),
   scheduleDeferredAppCacheAgentWarm: vi.fn(() => Promise.resolve()),
+}))
+
+vi.mock('@config/system-prop', () => ({
+  getSystemPropValue: vi.fn(() => undefined),
+  getSystemPropValues: vi.fn(() => ({})),
+  setSystemPropValue: vi.fn(),
 }))
 
 import MainInit from './window-manager'
