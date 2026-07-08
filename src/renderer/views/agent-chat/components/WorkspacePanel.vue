@@ -225,7 +225,6 @@ watch(
     }
     if (prevConvId !== convId) {
       activeTab.value = navStore.getWorkspacePanelTab(convId)
-      gitStore.closeAllEditorTabs()
     } else {
       activeTab.value = navStore.getWorkspacePanelTab(convId)
     }

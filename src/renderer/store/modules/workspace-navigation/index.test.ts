@@ -85,4 +85,16 @@ describe('workspace-navigation store', () => {
     expect(store.getWorkspacePanelTab('conv-1')).toBe('files')
     expect(store.consumeOpenSplitPanelRequest()).toBe(true)
   })
+
+  it('copies workspace panel layout between conversations', () => {
+    const store = useWorkspaceNavigationStore()
+    store.setWorkspacePanelOpen('conv-a', true)
+    store.setWorkspacePanelTab('conv-a', 'git')
+
+    store.copyLayoutToConversation('conv-a', 'conv-b')
+
+    expect(store.isWorkspacePanelOpen('conv-a')).toBe(true)
+    expect(store.isWorkspacePanelOpen('conv-b')).toBe(true)
+    expect(store.getWorkspacePanelTab('conv-b')).toBe('git')
+  })
 })

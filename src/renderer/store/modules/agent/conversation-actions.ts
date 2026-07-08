@@ -2,8 +2,11 @@ import {
   classifyConversationSessionId,
   canDeleteConversationFromUi,
 } from '@shared/conversation/session-id'
+import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
 import { randomShortUuid } from '@shared/utils/short-uuid'
 import { useWorkspaceStore } from '@store/workspace'
+import { useWorkspaceGitStore } from '@store/workspace-git'
+import { useWorkspaceNavigationStore } from '@store/workspace-navigation'
 import {
   LAYOUT_PREF_KEYS,
   readStoredString,
@@ -15,6 +18,15 @@ import {
 import type { AgentStoreContext } from './agent-store-context'
 import type { AgentPersistenceActions } from './agent-persistence'
 import type { Agent, Conversation, Message } from './types'
+
+export type CreateNewConversationMode =
+  | 'default'
+  | 'fresh'
+  | 'replicate-current'
+
+export type CreateNewConversationOptions = {
+  mode?: CreateNewConversationMode
+}
 
 export function createConversationActions(
   ctx: AgentStoreContext,
@@ -37,6 +49,41 @@ export function createConversationActions(
     sandboxSelectedRunIdByConversation,
     currentConversationId,
   } = ctx
+
+  function pickDefaultChatAgentId(): string | null {
+    const pickFrom = agents.value.filter(
+      (agent) => agent.enabled && !isWorkflowPanelAgentId(agent.id),
+    )
+    const defaultAgent = pickFrom.find((agent) => agent.name === 'Default')
+    return (defaultAgent ?? pickFrom[0])?.id ?? null
+  }
+
+  async function applyWorkspacePathToConversation(
+    targetConversationId: string,
+    path: string,
+  ): Promise<void> {
+    const trimmedPath = path.trim()
+    const trimmedConversationId = targetConversationId.trim()
+    if (!trimmedPath || !trimmedConversationId) return
+
+    const setCh = window.ipcRendererChannel?.SetConversationWorkspace
+    if (!setCh?.invoke) return
+    await setCh.invoke({
+      conversationId: trimmedConversationId,
+      path: trimmedPath,
+    })
+  }
+
+  function replicateConversationUiState(
+    sourceConversationId: string,
+    targetConversationId: string,
+  ): void {
+    const sourceId = sourceConversationId.trim()
+    const targetId = targetConversationId.trim()
+    if (!sourceId || !targetId || sourceId === targetId) return
+    useWorkspaceNavigationStore().copyLayoutToConversation(sourceId, targetId)
+    useWorkspaceGitStore().copyEditorSessionToConversation(sourceId, targetId)
+  }
 
   function findConversationMeta(
     conversationId: string,
@@ -518,8 +565,29 @@ export function createConversationActions(
 
   async function createNewConversation(
     title?: string,
+    options?: CreateNewConversationOptions,
   ): Promise<Conversation | null> {
-    const agentId = selectedAgentId.value
+    const mode = options?.mode ?? 'default'
+    const workspaceStore = useWorkspaceStore()
+    let agentId: string | null = null
+    let workspacePathToApply: string | null = null
+    let sourceConversationId: string | null = null
+
+    if (mode === 'replicate-current') {
+      sourceConversationId = currentConversationId.value?.trim() || null
+      const meta = sourceConversationId
+        ? findConversationMeta(sourceConversationId)
+        : undefined
+      agentId = meta?.agentId ?? selectedAgentId.value
+      workspacePathToApply = workspaceStore.activeWorkspacePath?.trim() || null
+    } else if (mode === 'fresh') {
+      workspaceStore.pendingWorkspacePath = null
+      agentId = pickDefaultChatAgentId()
+      if (agentId) selectedAgentId.value = agentId
+    } else {
+      agentId = selectedAgentId.value
+    }
+
     if (!agentId) return null
     const now = new Date()
     const conv: Conversation = {
@@ -544,7 +612,13 @@ export function createConversationActions(
       conv,
       ...(conversationList.value[agentId] ?? []),
     ]
-    await useWorkspaceStore().commitPendingWorkspace(conv.id)
+    await workspaceStore.commitPendingWorkspace(conv.id)
+    if (workspacePathToApply) {
+      await applyWorkspacePathToConversation(conv.id, workspacePathToApply)
+    }
+    if (sourceConversationId) {
+      replicateConversationUiState(sourceConversationId, conv.id)
+    }
     focusedConversationId.value = conv.id
     persistFocusedConversationId(conv.id)
     activeConversationId.value[agentId] = conv.id
