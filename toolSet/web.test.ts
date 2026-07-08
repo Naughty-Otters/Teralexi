@@ -257,6 +257,15 @@ describe('extractPageText', () => {
   })
 })
 
+describe('extractPageContent truncation', () => {
+  it('truncates HTML when maxChars is set', () => {
+    const $ = cheerio.load(`<html><body>${'x'.repeat(200)}</body></html>`)
+    const { html, truncated } = extractPageContent($, { maxChars: 50 })
+    expect(html.length).toBe(50)
+    expect(truncated).toBe(true)
+  })
+})
+
 describe('webSearch tool', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -312,6 +321,20 @@ const engineSampleHtml: Record<(typeof engineIds)[number], string> = {
     </div>
   `,
 }
+
+describe('webScrape tool', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('requires url or urls', async () => {
+    const result = await webScrape.execute({})
+    expect(result).toMatchObject({
+      success: false,
+      error: 'Provide `url` or a non-empty `urls` array.',
+    })
+  })
+})
 
 describe('scrape helpers', () => {
   it('detects JS shell HTML', () => {

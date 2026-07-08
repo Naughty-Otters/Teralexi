@@ -12,6 +12,8 @@ import { codingModeInstructionsInjector } from './injectors/coding-mode-instruct
 import { previousStepInjector } from './injectors/previous-step'
 import { sandboxStructureInjector } from './injectors/sandbox-structure'
 import { workspaceStructureInjector } from './injectors/workspace-structure'
+import { workspaceOpenFilesInjector } from './injectors/workspace-open-files'
+import { gitStatusInjector } from './injectors/git-status'
 import { languageInjector } from './injectors/language'
 import { planModeInjector } from './injectors/plan-mode'
 import { subAgentsInjector } from './injectors/sub-agents'
@@ -45,6 +47,8 @@ const ALL_INJECTORS: AgentInjector[] = [
   previousStepInjector,
   sandboxStructureInjector,
   diagramOutputInjector,
+  workspaceOpenFilesInjector,
+  gitStatusInjector,
   workspaceStructureInjector,
   languageInjector,
   planModeInjector,
