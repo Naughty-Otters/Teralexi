@@ -43,7 +43,7 @@
           :name="
             chatControls.showWorkspacePanel
               ? 'i-lucide-messages-square'
-              : 'i-lucide-git-branch'
+              : 'i-lucide-layout-list'
           "
         />
       </button>
