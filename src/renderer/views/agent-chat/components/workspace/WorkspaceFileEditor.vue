@@ -558,6 +558,8 @@ onUnmounted(() => {
   min-height: 0;
   height: 100%;
   background: var(--ui-bg);
+  font-family: var(--app-font-family);
+  font-size: var(--app-font-size);
 }
 
 .file-editor-empty {
@@ -570,7 +572,7 @@ onUnmounted(() => {
   padding: 20px;
   text-align: center;
   color: var(--ui-text-muted);
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   outline: none;
 }
 
@@ -581,7 +583,7 @@ onUnmounted(() => {
 }
 
 .file-editor-empty-hint {
-  font-size: 11px;
+  font-size: var(--app-font-size-sm);
   opacity: 0.85;
   max-width: 280px;
   line-height: 1.5;
@@ -594,7 +596,7 @@ onUnmounted(() => {
 
 .file-editor-empty-hint kbd {
   font-family: var(--app-font-family);
-  font-size: 10px;
+  font-size: var(--app-font-size-xs);
   padding: 1px 5px;
   border-radius: 4px;
   border: 1px solid var(--ui-border);
@@ -629,7 +631,7 @@ onUnmounted(() => {
   border-right: 1px solid var(--ui-border);
   background: transparent;
   color: var(--ui-text-muted);
-  font-size: 11px;
+  font-size: var(--app-font-size);
   font-family: var(--app-font-family);
   cursor: pointer;
   flex-shrink: 0;
@@ -698,14 +700,14 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: var(--app-font-size-sm);
   font-family: var(--app-font-family);
   color: var(--ui-text);
 }
 
 .file-editor-lsp-status {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--app-font-size-xs);
   color: var(--ui-text-muted);
   text-transform: lowercase;
 }
@@ -720,14 +722,14 @@ onUnmounted(() => {
 
 .file-editor-lsp-hint {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--app-font-size-xs);
   color: var(--ui-text-muted);
   opacity: 0.85;
 }
 
 .file-editor-dirty {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--app-font-size-xs);
   font-weight: 600;
   color: var(--color-warning-600, #d97706);
   text-transform: uppercase;
@@ -751,7 +753,7 @@ onUnmounted(() => {
   color: var(--ui-text-muted);
   border-radius: 6px;
   padding: 4px 8px;
-  font-size: 11px;
+  font-size: var(--app-font-size-sm);
   font-weight: 500;
   cursor: pointer;
 }
@@ -781,7 +783,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   color: var(--ui-text-muted);
 }
 
@@ -804,7 +806,7 @@ onUnmounted(() => {
   justify-content: center;
   margin: 0;
   padding: 16px;
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   color: var(--ui-text-muted);
   text-align: center;
 }

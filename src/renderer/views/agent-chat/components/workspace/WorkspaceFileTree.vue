@@ -371,13 +371,15 @@ async function toggleDirectory(relativePath: string) {
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  font-family: var(--app-font-family);
+  font-size: var(--app-font-size);
 }
 .file-tree-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 6px 10px;
-  font-size: 11px;
+  font-size: var(--app-font-size-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -451,7 +453,7 @@ async function toggleDirectory(relativePath: string) {
   gap: 0;
   min-width: 0;
   overflow-x: auto;
-  font-size: 11px;
+  font-size: var(--app-font-size);
   font-family: var(--app-font-family);
 }
 .file-tree-crumb {
@@ -477,7 +479,7 @@ async function toggleDirectory(relativePath: string) {
 }
 
 .file-tree-msg {
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   color: var(--ui-text-muted);
   margin: 8px 10px;
 }
@@ -496,7 +498,7 @@ async function toggleDirectory(relativePath: string) {
   background: transparent;
   text-align: left;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--app-font-size);
   color: var(--ui-text);
   font-family: inherit;
 }
@@ -554,7 +556,7 @@ async function toggleDirectory(relativePath: string) {
 }
 .file-tree-kind {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--app-font-size-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
   padding: 1px 5px;
@@ -572,7 +574,7 @@ async function toggleDirectory(relativePath: string) {
   min-height: 26px;
   padding-top: 4px;
   padding-bottom: 4px;
-  font-size: 11px;
+  font-size: var(--app-font-size-sm);
   color: var(--ui-text-muted);
 }
 .file-tree-state-row--error {
@@ -585,7 +587,7 @@ async function toggleDirectory(relativePath: string) {
 }
 .file-tree-badge {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--app-font-size-xs);
   font-weight: 700;
   padding: 0 4px;
   border-radius: 3px;

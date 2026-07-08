@@ -35,7 +35,7 @@ const emit = defineEmits<{ refresh: [] }>()
   justify-content: space-between;
   align-items: center;
   padding: 6px 10px;
-  font-size: 11px;
+  font-size: var(--app-font-size-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -45,21 +45,21 @@ const emit = defineEmits<{ refresh: [] }>()
 }
 .git-log-refresh { border: none; background: transparent; cursor: pointer; padding: 2px; color: var(--ui-text-muted); border-radius: 4px; }
 .git-log-refresh:hover { color: var(--ui-text); }
-.git-log-error, .git-log-empty { font-size: 12px; color: var(--ui-text-muted); margin: 8px 10px; }
+.git-log-error, .git-log-empty { font-size: var(--app-font-size-secondary); color: var(--ui-text-muted); margin: 8px 10px; }
 .git-log-list { overflow-y: auto; max-height: 200px; }
 .git-log-entry {
   display: flex;
   align-items: baseline;
   gap: 8px;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--app-font-size-secondary);
   font-family: var(--app-font-family);
   border-bottom: 1px solid var(--ui-border);
 }
 .git-log-entry:last-child { border-bottom: none; }
 .git-log-hash { flex-shrink: 0; color: var(--color-primary-500, #6366f1); font-weight: 600; }
 .git-log-msg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-text); }
-.git-log-author { flex-shrink: 0; color: var(--ui-text-muted); font-size: 11px; }
+.git-log-author { flex-shrink: 0; color: var(--ui-text-muted); font-size: var(--app-font-size-sm); }
 .spin { animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>

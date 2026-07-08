@@ -1,6 +1,7 @@
 @use '@nuxt/ui';
 @use './nuxt-ui-theme-fallbacks.scss';
 @use './glass-theme.scss';
+@import './app-font-scale.css';
 @import '../views/agent-chat/components/settings/sp-shared.css';
 
 html,
@@ -13,7 +14,7 @@ body,
 html {
   --app-title-bar-height: 30px;
   --app-font-family: Menlo, Monaco, 'Courier New', monospace;
-  --app-font-size: 13px;
+  --app-font-size: 14px;
   color-scheme: light;
   background-color: var(--ui-bg);
   color: var(--ui-text);

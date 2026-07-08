@@ -51,7 +51,7 @@ export type FontSettings = {
 
 export const DEFAULT_FONT_SETTINGS: FontSettings = {
   fontFamily: DEFAULT_APP_FONT_FAMILY,
-  fontSize: 13,
+  fontSize: 14,
 }
 
 export function clampAppFontSize(value: number): number {
