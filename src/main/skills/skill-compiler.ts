@@ -21,11 +21,17 @@ import {
 } from './skill-attachments'
 import {
   resolvePropertiesRaw,
+  resolvePropertiesRawFromContent,
   resolveSkillCompilationSource,
   resolveSkillFolder,
   extractYamlFrontmatterBlock,
   stripYamlFrontmatter,
+  isEffectiveBundledSkill,
 } from './skill-path'
+import {
+  bundledSkillFolder,
+  getBundledSkillSource,
+} from './bundled-skills-manifest'
 import type { SkillProvider } from './types'
 import { parseSkillMarkdown } from './skill-markdown'
 import {
@@ -92,9 +98,34 @@ function fileFingerprint(path: string): string {
   }
 }
 
+function bundledContentFingerprint(label: string, content: string): string {
+  const hash = createHash('sha256').update(content).digest('hex')
+  return `${label}|${content.length}|${hash}`
+}
+
 export function computeSkillSourceFingerprint(skillId: string): string {
   const folder = resolveSkillFolder(skillId)
-  if (!folder) return ''
+  if (!folder) {
+    if (!isEffectiveBundledSkill(skillId)) return ''
+    const source = getBundledSkillSource(skillId)
+    if (!source) return ''
+
+    const parts: string[] = [
+      bundledContentFingerprint('skill.md', source.skillMd),
+    ]
+    if (source.propertiesMd.trim()) {
+      parts.push(
+        bundledContentFingerprint('properties.md', source.propertiesMd),
+      )
+    }
+    for (const [relativePath, attachment] of Object.entries(
+      source.attachments,
+    ).sort(([a], [b]) => a.localeCompare(b))) {
+      parts.push(bundledContentFingerprint(relativePath, attachment.content))
+    }
+    parts.sort()
+    return createHash('sha256').update(parts.join('\n')).digest('hex')
+  }
 
   const parts: string[] = []
   const markerFiles = [SKILL_FILES.SKILL_MD, SKILL_FILES.PROPERTIES_MD]
@@ -128,14 +159,36 @@ export function gatherSkillCompileInput(
   skillId: string,
 ): SkillCompileGatheredInput | null {
   const source = resolveSkillCompilationSource(skillId)
-  const folder = resolveSkillFolder(skillId)
-  if (!source || !folder) {
+  if (!source) {
+    log.warn({ skillId }, 'skill compile gather: skill not found')
+    return null
+  }
+
+  let folder = resolveSkillFolder(skillId)
+  let skillMd: string
+  let propertiesRaw: string
+
+  if (folder) {
+    skillMd = readFileSync(join(folder, SKILL_FILES.SKILL_MD), 'utf-8')
+    propertiesRaw = resolvePropertiesRaw(skillId, folder, skillMd)
+  } else if (isEffectiveBundledSkill(skillId)) {
+    const bundled = getBundledSkillSource(skillId)
+    if (!bundled) {
+      log.warn({ skillId }, 'skill compile gather: bundled source missing')
+      return null
+    }
+    folder = bundledSkillFolder(skillId)
+    skillMd = bundled.skillMd
+    propertiesRaw = resolvePropertiesRawFromContent(
+      skillId,
+      skillMd,
+      bundled.propertiesMd,
+    )
+  } else {
     log.warn({ skillId }, 'skill compile gather: skill folder not found')
     return null
   }
 
-  let skillMd = readFileSync(join(folder, SKILL_FILES.SKILL_MD), 'utf-8')
-  const propertiesRaw = resolvePropertiesRaw(skillId, folder, skillMd)
   if (extractYamlFrontmatterBlock(skillMd)) {
     skillMd = stripYamlFrontmatter(skillMd)
   }

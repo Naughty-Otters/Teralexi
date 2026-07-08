@@ -14,6 +14,7 @@ import {
   isLoadableSkillFolder,
   resolveSkillsSources,
   resolveUserSkillsDirectory,
+  userOverridesBundledSkill,
 } from './skill-path'
 
 export type { SkillAttachmentCategory } from './skill-attachment-dirs'
@@ -130,11 +131,6 @@ function listDiskSkillAttachments(
   }
 
   return out
-}
-
-function userOverridesBundledSkill(skillId: string): boolean {
-  const userDir = resolveUserSkillsDirectory()
-  return isLoadableSkillFolder(userDir, skillId)
 }
 
 /**

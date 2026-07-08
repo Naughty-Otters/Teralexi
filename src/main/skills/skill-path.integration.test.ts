@@ -105,6 +105,18 @@ describe('skill-path integration', () => {
     expect(ids).toContain('user-only')
   })
 
+  it('resolveLoadableSkillIds includes embedded bundled skills without disk folder', async () => {
+    const { resolveLoadableSkillIds } = await import('./skill-path')
+    const ids = resolveLoadableSkillIds()
+    expect(ids).toContain('default')
+    expect(ids).toContain('coding')
+  })
+
+  it('resolveSkillCompilationSource returns bundled for embedded skills', async () => {
+    const { resolveSkillCompilationSource } = await import('./skill-path')
+    expect(resolveSkillCompilationSource('default')).toBe('bundled')
+  })
+
   it('resolvePropertiesRaw builds default yaml without properties file', async () => {
     const folder = join(projectRoot, 'skills', 'my-skill')
     await seedSkill(join(projectRoot, 'skills'), 'my-skill')
