@@ -264,7 +264,7 @@ ipcRendererChannel.IsUseSysTitle.invoke().then((res) => {
   height: var(--app-title-bar-height);
   line-height: var(--app-title-bar-height);
   background-color: var(--ui-bg-elevated);
-  border-bottom: 1px solid var(--ui-border);
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-text) 8%, transparent);
   display: flex;
   align-items: stretch;
   position: fixed;
