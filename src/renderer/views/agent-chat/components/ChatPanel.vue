@@ -304,7 +304,7 @@ import {
 } from './chat/chatToolPartHelpers'
 import { lastAssistantMessageIsCompleteWithCollectFormResponses } from './chat/chatSendAutomaticallyWhen'
 
-import { useHorizontalPanelResize } from '@renderer/composables/useHorizontalPanelResize'
+import { useHorizontalPanelResize, SPLIT_PANEL_PEER_MIN_PX } from '@renderer/composables/useHorizontalPanelResize'
 import {
   LAYOUT_PREF_KEYS,
   useLayoutPreference,
@@ -450,10 +450,15 @@ const showReportPanel = useLayoutPreference(
   LAYOUT_PREF_KEYS.reportPanelOpen,
   false,
 )
-const showWorkspaceSplitPanel = useLayoutPreference(
-  LAYOUT_PREF_KEYS.workspaceSplitPanelOpen,
-  false,
-)
+const showWorkspaceSplitPanel = computed({
+  get: () =>
+    workspaceNavStore.isWorkspacePanelOpen(agentStore.currentConversationId),
+  set: (open: boolean) => {
+    const conversationId = agentStore.currentConversationId?.trim()
+    if (!conversationId) return
+    workspaceNavStore.setWorkspacePanelOpen(conversationId, open)
+  },
+})
 const previewLinkTabsByConversation = ref<Record<string, PreviewLinkTab[]>>({})
 const activePreviewLinkTabIdByConversation = ref<Record<string, string | null>>(
   {},
@@ -477,8 +482,8 @@ const {
   containerRef: chatBodyEl,
   panelSide: 'end',
   defaultSize: 480,
-  minSize: 280,
-  maxSize: { fraction: 0.78 },
+  minSize: SPLIT_PANEL_PEER_MIN_PX,
+  maxSize: { fraction: 1, reservePx: SPLIT_PANEL_PEER_MIN_PX },
   storageKey: 'teralexi.agent.reportPanelWidth',
   enabled: reportPanelResizeEnabled,
 })
@@ -496,8 +501,8 @@ const {
   containerRef: chatBodyEl,
   panelSide: 'start',
   defaultSize: 420,
-  minSize: 320,
-  maxSize: { fraction: 0.62 },
+  minSize: SPLIT_PANEL_PEER_MIN_PX,
+  maxSize: { fraction: 1, reservePx: SPLIT_PANEL_PEER_MIN_PX },
   storageKey: 'teralexi.agent.workspaceSplitPanelWidth',
   enabled: workspaceSplitPanelResizeEnabled,
 })
@@ -509,6 +514,14 @@ function onReportPanelKeyboardResize(delta: number) {
 function onWorkspaceSplitPanelKeyboardResize(delta: number) {
   setWorkspaceSplitPanelWidth(workspaceSplitPanelWidthPx.value + delta)
 }
+
+watch(workspaceSplitPanelResizeEnabled, (enabled) => {
+  if (enabled) setWorkspaceSplitPanelWidth(workspaceSplitPanelWidthPx.value)
+})
+
+watch(reportPanelResizeEnabled, (enabled) => {
+  if (enabled) setReportPanelWidth(reportPanelWidthPx.value)
+})
 
 const currentPreviewLinkTabs = computed(() => {
   const cid = agentStore.currentConversationId

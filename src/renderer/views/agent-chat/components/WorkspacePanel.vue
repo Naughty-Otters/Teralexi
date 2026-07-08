@@ -176,7 +176,11 @@ const TABS = [
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
-const activeTab = ref<TabId>('files')
+const activeTab = ref<TabId>(navStore.getWorkspacePanelTab(conversationId.value))
+
+watch(conversationId, (cid) => {
+  activeTab.value = navStore.getWorkspacePanelTab(cid)
+})
 
 const filesLayoutEl = ref<HTMLElement | null>(null)
 const fileBrowserResizeEnabled = computed(
@@ -204,6 +208,8 @@ function onFileBrowserKeyboardResize(delta: number) {
 
 function setTab(id: TabId) {
   activeTab.value = id
+  const cid = conversationId.value?.trim()
+  if (cid) navStore.setWorkspacePanelTab(cid, id)
   if (id === 'files') onRefreshFiles()
   if (id === 'git') onRefreshGit()
 }
@@ -217,9 +223,11 @@ watch(
       onRefreshAll()
       return
     }
-    activeTab.value = 'files'
     if (prevConvId !== convId) {
+      activeTab.value = navStore.getWorkspacePanelTab(convId)
       gitStore.closeAllEditorTabs()
+    } else {
+      activeTab.value = navStore.getWorkspacePanelTab(convId)
     }
     void gitStore.refreshFiles()
   },
@@ -294,7 +302,7 @@ onMounted(() => {
 
 .workspace-panel--split {
   flex-shrink: 0;
-  min-width: 320px;
+  min-width: 0;
   min-height: 0;
   border-right: 1px solid var(--ui-border);
 }

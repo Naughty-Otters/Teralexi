@@ -43,12 +43,14 @@
 import { computed, defineAsyncComponent, ref } from 'vue'
 import type { FileChangeAction, FileChangePreview } from '@shared/file-change/types'
 import { useWorkspaceNavigationStore } from '@store/workspace-navigation'
+import { useWorkspaceStore } from '@store/workspace'
 
 const UnifiedDiffView = defineAsyncComponent(
   () => import('./UnifiedDiffView.vue'),
 )
 
 const navStore = useWorkspaceNavigationStore()
+const workspaceStore = useWorkspaceStore()
 
 const props = withDefaults(
   defineProps<{
@@ -90,7 +92,10 @@ const actionLabel = computed(() => {
 function onOpenPath() {
   const target = props.file.path?.trim()
   if (!target) return
-  navStore.openInWorkspace(target, { tab: 'files' })
+  navStore.openInWorkspace(target, {
+    tab: 'files',
+    conversationId: workspaceStore.conversationId ?? undefined,
+  })
 }
 </script>
 

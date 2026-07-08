@@ -26,9 +26,6 @@
             rightPanelView = rightPanelView === 'settings' ? 'chat' : 'settings'
           "
           @open-monitor="onOpenMonitor"
-          @open-workspace="
-            rightPanelView = rightPanelView === 'workspace' ? 'chat' : 'workspace'
-          "
           @open-setup-wizard="onOpenSetupWizard"
         />
       </aside>
@@ -197,6 +194,7 @@ const { statusMessage: startupStatus, run: runStartupBootstrap } =
 const workspaceStore = useWorkspaceStore()
 const { activeLabel: workspaceActiveLabel } = storeToRefs(workspaceStore)
 const workspaceNavStore = useWorkspaceNavigationStore()
+const { workspacePanelOpenByConversation } = storeToRefs(workspaceNavStore)
 const rightPanelView = ref<
   'chat' | 'settings' | 'monitor' | 'workspace' | 'workflows'
 >('chat')
@@ -287,13 +285,29 @@ function toggleSidebarFromTitleBar() {
   sidebarCollapsed.value = !sidebarCollapsed.value
 }
 
+function toggleWorkspaceFromTitleBar() {
+  const conversationId = agentStore.currentConversationId
+  if (!conversationId) return
+  const opening = !workspaceNavStore.isWorkspacePanelOpen(conversationId)
+  if (opening && rightPanelView.value !== 'chat') {
+    rightPanelView.value = 'chat'
+  }
+  workspaceNavStore.toggleWorkspacePanelOpen(conversationId)
+}
+
 watchEffect(() => {
   const isChatView = rightPanelView.value === 'chat'
+  const conversationId = agentStore.currentConversationId
+  const workspacePanelOpen = conversationId
+    ? workspacePanelOpenByConversation.value[conversationId] === true
+    : false
   const shell = {
     visible: true,
     sidebarCollapsed: sidebarCollapsed.value,
     onToggleSidebar: toggleSidebarFromTitleBar,
     showChatActions: isChatView,
+    showWorkspacePanel: workspacePanelOpen,
+    onToggleWorkspacePanel: toggleWorkspaceFromTitleBar,
   }
 
   if (isChatView) {
