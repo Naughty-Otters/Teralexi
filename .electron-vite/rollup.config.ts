@@ -16,6 +16,7 @@ const config = getConfig()
 /** Native / heavy deps loaded from node_modules at runtime (not bundled). */
 const EXTERNAL_PACKAGES = new Set([
   'electron',
+  'esbuild',
   'better-sqlite3',
   'bindings',
   'express',
@@ -129,12 +130,30 @@ const pathAliases = {
   ],
 }
 
-export default (env = 'production', type = 'main') => {
+const MAIN_ENTRY_FILES = {
+  bootstrap: path.join(__dirname, '..', 'src', 'main', 'bootstrap.ts'),
+  'main-app': path.join(__dirname, '..', 'src', 'main', 'main-app.ts'),
+} as const
+
+type MainBuildType = keyof typeof MAIN_ENTRY_FILES | 'preload' | 'main'
+
+function resolveMainBuildType(type: MainBuildType): keyof typeof MAIN_ENTRY_FILES | 'preload' {
+  if (type === 'main') return 'main-app'
+  return type
+}
+
+function isBootstrapMainAppExternal(id: string): boolean {
+  return id === './main-app.js' || id === './main-app'
+}
+
+export default (env = 'production', type: MainBuildType = 'main-app') => {
+  const resolvedType = resolveMainBuildType(type)
+  const isPreload = resolvedType === 'preload'
+
   return defineConfig({
-    input:
-      type === 'main'
-        ? path.join(__dirname, '..', 'src', 'main', 'index.ts')
-        : path.join(__dirname, '..', 'src', 'preload', 'index.ts'),
+    input: isPreload
+      ? path.join(__dirname, '..', 'src', 'preload', 'index.ts')
+      : MAIN_ENTRY_FILES[resolvedType],
     output: {
       file: path.join(
         __dirname,
@@ -142,10 +161,14 @@ export default (env = 'production', type = 'main') => {
         'dist',
         'electron',
         'main',
-        `${type === 'main' ? type : 'preload'}.js`,
+        `${isPreload ? 'preload' : resolvedType}.js`,
       ),
       format: 'cjs',
-      name: type === 'main' ? 'MainProcess' : 'MainPreloadProcess',
+      name: isPreload
+        ? 'MainPreloadProcess'
+        : resolvedType === 'bootstrap'
+          ? 'MainBootstrapProcess'
+          : 'MainAppProcess',
       inlineDynamicImports: true,
       sourcemap: env !== 'production',
     },
@@ -199,6 +222,11 @@ export default (env = 'production', type = 'main') => {
       }),
       process.env.NODE_ENV == 'production' && obfuscator({}),
     ],
-    external: isRollupExternal,
+    external: (id) => {
+      if (resolvedType === 'bootstrap' && isBootstrapMainAppExternal(id)) {
+        return true
+      }
+      return isRollupExternal(id)
+    },
   })
 }

@@ -37,12 +37,14 @@ import {
   loadSkillActions,
   loadToolSetTools,
   loadToolSetToolsFromDirectory,
+  resetToolSetCatalogCache,
 } from './skill-module-loader'
 
 describe('skill-module-loader', () => {
   let skillRoot: string
 
   beforeEach(async () => {
+    resetToolSetCatalogCache()
     vi.mocked(existsSync).mockImplementation(
       (await vi.importActual<typeof import('fs')>('fs')).existsSync,
     )

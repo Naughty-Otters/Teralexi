@@ -14,7 +14,8 @@ import { applyBuildEnvFromArgv, getArgv } from './utils'
 
 applyBuildEnvFromArgv()
 
-const mainOpt = rollupOptions(process.env.NODE_ENV, 'main')
+const bootstrapOpt = rollupOptions(process.env.NODE_ENV, 'bootstrap')
+const mainAppOpt = rollupOptions(process.env.NODE_ENV, 'main-app')
 const preloadOpt = rollupOptions(process.env.NODE_ENV, 'preload')
 
 const { clean = false, target = 'client' } = getArgv()
@@ -50,8 +51,10 @@ async function unionBuild() {
           try {
             generateBundledSkillsManifest()
             verifyBundledTeralexiRules()
-            const build = await rollup(mainOpt)
-            await build.write(mainOpt.output as OutputOptions)
+            const bootstrapBuild = await rollup(bootstrapOpt)
+            await bootstrapBuild.write(bootstrapOpt.output as OutputOptions)
+            const mainAppBuild = await rollup(mainAppOpt)
+            await mainAppBuild.write(mainAppOpt.output as OutputOptions)
             verifyMainBundle()
             verifyBundledToolSetCatalog()
             const { verifyBundledSkillsCatalog } = await import(

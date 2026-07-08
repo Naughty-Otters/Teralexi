@@ -86,6 +86,7 @@ export function registerTeralexiProtocolHandlers(): void {
   })
 
   app.on('second-instance', (_event, argv) => {
+    focusMainWindow()
     const url = extractProtocolUrlFromArgv(argv)
     if (url) handleTeralexiProtocolUrl(url)
   })

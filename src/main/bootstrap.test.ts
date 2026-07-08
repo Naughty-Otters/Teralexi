@@ -22,6 +22,7 @@ vi.mock('electron', () => ({
     isPackaged: false,
     getAppPath: vi.fn(() => '/app'),
   },
+  dialog: { showErrorBox: vi.fn() },
   session: { defaultSession: { loadExtension: vi.fn() } },
   nativeImage: {
     createFromPath: vi.fn(() => ({
@@ -31,6 +32,10 @@ vi.mock('electron', () => ({
       }),
     })),
   },
+}))
+
+vi.mock('@config/index', () => ({
+  default: { UseStartupChart: false },
 }))
 
 vi.mock('@config/teralexi-home', () => ({
@@ -48,14 +53,16 @@ vi.mock('@main/services/client-identity', () => ({
 
 vi.mock('@main/skills/skill-module-loader', () => ({
   clearSkillModuleCache: vi.fn(),
-  loadToolSetTools: vi.fn(async () => []),
+  startToolSetCatalogLoad: vi.fn(async () => []),
 }))
 
-vi.mock('./services/window-manager', () => ({
-  default: class MockInitWindow {
-    mainWindow = {}
-    initWindow = vi.fn()
-  },
+vi.mock('./bootstrap-splash', () => ({
+  createBootstrapSplash: vi.fn(),
+}))
+
+vi.mock('./main-app.js', () => ({
+  startMainApp: vi.fn(async () => undefined),
+  shutdownMainApp: vi.fn(async () => undefined),
 }))
 
 vi.mock('./hooks/disable-button-hook', () => ({
@@ -83,6 +90,7 @@ vi.mock('./config/static-path', () => ({
   initStaticPaths: vi.fn(),
   getWinURL: vi.fn(() => 'http://localhost'),
   getLoadingURL: vi.fn(() => 'http://localhost/loader'),
+  getBootstrapLoadingURL: vi.fn(() => 'file:///loader.html'),
   getPreloadFile: vi.fn((name: string) => `/app/${name}.js`),
 }))
 
@@ -117,7 +125,7 @@ vi.mock('./services/teralexi-protocol-handler', () => ({
   setTeralexiProtocolHandlerReady: vi.fn(),
 }))
 
-describe('main index', () => {
+describe('main bootstrap', () => {
   it('bootstraps app on ready without throwing', async () => {
     vi.stubGlobal('process', {
       ...process,
@@ -127,7 +135,7 @@ describe('main index', () => {
       platform: process.platform,
       on: vi.fn(),
     })
-    await import('./index')
+    await import('./bootstrap')
     expect(whenReady).toHaveBeenCalled()
   })
 })

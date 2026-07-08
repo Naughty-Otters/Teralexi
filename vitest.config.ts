@@ -67,7 +67,7 @@ export default defineConfig({
         '**/index.ts',
         'src/renderer/**',
         'src/preload/**',
-        'src/main/index.ts',
+        'src/main/bootstrap.ts',
         'src/teralexi-ai/**',
         'src/ipc/**',
         'src/logging/**',

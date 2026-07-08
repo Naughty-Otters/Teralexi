@@ -8,7 +8,7 @@ const mockApp = {
 
 vi.mock('electron', () => ({ app: mockApp }))
 vi.mock('@config/index', () => ({
-  default: { DllFolder: 'dll', HotUpdateFolder: 'update' },
+  default: { DllFolder: 'dll', HotUpdateFolder: 'update', dev: { port: 9080 } },
 }))
 
 describe('static-path', () => {
@@ -27,6 +27,19 @@ describe('static-path', () => {
     expect(typeof mod.getIconPath).toBe('function')
   })
 
+  it('falls back to config.dev.port when PORT is unset', async () => {
+    delete process.env.PORT
+    const mod = await import('./static-path')
+    mod.initStaticPaths()
+    expect(mod.getWinURL()).toBe('http://localhost:9080')
+    expect(mod.getLoadingURL()).toBe('http://localhost:9080/loader.html')
+  })
+
+  it('getWinURL throws when paths were not initialized', async () => {
+    const mod = await import('./static-path')
+    expect(() => mod.getWinURL()).toThrow(/initStaticPaths/)
+  })
+
   it('getPreloadFile points at dist/electron/main in development', async () => {
     const { getPreloadFile, initStaticPaths } = await import('./static-path')
     initStaticPaths()
@@ -39,6 +52,14 @@ describe('static-path', () => {
     const { getIconPath, initStaticPaths } = await import('./static-path')
     initStaticPaths()
     expect(getIconPath('icon.png')).toContain(join('build', 'icons', 'icon.png'))
+  })
+
+  it('getBootstrapLoadingURL uses a local file path (not Vite)', async () => {
+    const { getBootstrapLoadingURL, initStaticPaths } = await import('./static-path')
+    initStaticPaths()
+    expect(getBootstrapLoadingURL()).toMatch(/^file:\/\//)
+    expect(getBootstrapLoadingURL()).toContain('loader.html')
+    expect(getBootstrapLoadingURL()).not.toContain('localhost')
   })
 
   it('uses production paths when packaged', async () => {
