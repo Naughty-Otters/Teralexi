@@ -44,6 +44,10 @@ vi.mock('./support-upload-tracker', () => ({
   recordSupportBundleUpload,
 }))
 
+vi.mock('./entitlement-session', () => ({
+  isEntitlementFeatureAllowed: vi.fn(() => true),
+}))
+
 import { submitSupportReport } from './support-report'
 
 const built = {

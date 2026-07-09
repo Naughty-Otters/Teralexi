@@ -19,6 +19,10 @@ vi.mock('@main/services/teralexi-server-auth', () => ({
   getTeralexiServerAccessToken,
 }))
 
+vi.mock('./entitlement-session', () => ({
+  isEntitlementFeatureAllowed: vi.fn(() => true),
+}))
+
 import {
   buildAddProviderMetricInput,
   reportProviderMetric,
