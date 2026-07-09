@@ -8,6 +8,13 @@ vi.mock('@main/services/google-account-oauth', () => ({
   getTeralexiAccountGoogleIdToken,
 }))
 
+vi.mock('./server-auth-store', () => ({
+  clearPersistedServerAuth: vi.fn(),
+  getPersistedServerAccessToken: vi.fn(() => null),
+  loadPersistedServerAuth: vi.fn(() => null),
+  savePersistedServerAuth: vi.fn(),
+}))
+
 import {
   clearTeralexiServerAuthCache,
   exchangeGoogleIdTokenForServerAccessToken,
@@ -15,6 +22,7 @@ import {
   refreshServerAccessToken,
   resolveMetricsApiBaseUrl,
 } from './teralexi-server-auth'
+import { savePersistedServerAuth } from './server-auth-store'
 
 function makeTestJwt(expSeconds: number): string {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
@@ -50,6 +58,12 @@ describe('teralexi-server-auth', () => {
     })
 
     expect(token).toBe(serverJwt)
+    expect(savePersistedServerAuth).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiBaseUrl: 'http://127.0.0.1:8000',
+        accessToken: serverJwt,
+      }),
+    )
     expect(fetch).toHaveBeenCalledWith(
       'http://127.0.0.1:8000/api/v1/auth/google',
       expect.objectContaining({

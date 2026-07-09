@@ -7,6 +7,11 @@ const mockHandleDeepLink = vi.fn(async () => ({
 }))
 const mockClearCache = vi.fn()
 const mockSyncStored = vi.fn()
+const mockRevokeLocal = vi.fn()
+
+vi.mock('@main/services/local-auth-session', () => ({
+  revokeLocalTeralexiAuthSession: (...args: unknown[]) => mockRevokeLocal(...args),
+}))
 
 vi.mock('@main/services/google-account-oauth', () => ({
   handleGoogleAccountOAuthDeepLink: (...args: unknown[]) =>
@@ -55,6 +60,7 @@ describe('teralexi-protocol-handler', () => {
     mockHandleDeepLink.mockClear()
     mockClearCache.mockClear()
     mockSyncStored.mockClear()
+    mockRevokeLocal.mockClear()
   })
 
   it('queues OAuth URLs until main-app registers dispatch', async () => {
@@ -86,6 +92,19 @@ describe('teralexi-protocol-handler', () => {
     await Promise.resolve()
     expect(customDispatch).toHaveBeenCalledWith('teralexi://open?token=live')
     expect(mockHandleDeepLink).not.toHaveBeenCalled()
+  })
+
+  it('revokes local auth on teralexi://logout', async () => {
+    const mod = await import('./teralexi-protocol-handler')
+    mod.setTeralexiProtocolHandlerReady(mod.dispatchTeralexiUrl)
+    mod.handleTeralexiProtocolUrl('teralexi://logout')
+    await Promise.resolve()
+
+    expect(mockRevokeLocal).toHaveBeenCalledWith(
+      'Signed out from Teralexi web authentication',
+    )
+    expect(mockHandleDeepLink).not.toHaveBeenCalled()
+    expect(mockSyncStored).toHaveBeenCalled()
   })
 
   it('focuses the non-always-on-top window', async () => {

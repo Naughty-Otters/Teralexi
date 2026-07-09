@@ -14,6 +14,8 @@ import {
 } from '@shared/provider-metrics/usage-mapper'
 import type { LanguageModelUsage } from '@teralexi-ai'
 import { createLogger } from '@main/logger'
+import { ENTITLEMENT_FEATURES } from '@shared/subscription/entitlement-types'
+import { isEntitlementFeatureAllowed } from './entitlement-session'
 
 const log = createLogger('services.provider-metrics-reporter')
 
@@ -117,6 +119,12 @@ export async function reportProviderMetric(
   }
 
   const apiBaseUrl = getProviderMetricsApiBaseUrl()
+  if (
+    apiBaseUrl &&
+    !isEntitlementFeatureAllowed(ENTITLEMENT_FEATURES.METRICS_WRITE)
+  ) {
+    throw new Error('Provider metrics are not included in the current plan')
+  }
   const bearerToken =
     serverAccessToken?.trim() ||
     (await getTeralexiServerAccessToken(apiBaseUrl))

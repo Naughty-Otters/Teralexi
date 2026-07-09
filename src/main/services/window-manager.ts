@@ -23,7 +23,7 @@ import { scheduleStartupUpdateCheck } from './check-update'
 import { DEFAULT_USER_ID } from '@main/agent/config/config'
 import { attachSandboxPreviewNavigation } from './sandbox-preview-navigation'
 import { setTeralexiProtocolHandlerReady, dispatchTeralexiUrl } from './teralexi-protocol-handler'
-import { syncStoredGoogleAccountToRenderers } from './google-account-notify'
+import { onMainWindowActive } from './entitlement-session'
 import {
   createSplashWindowOptions,
   showSplashOnReady,
@@ -131,7 +131,7 @@ class MainInit {
       scheduleStartupUpdateCheck(this.mainWindow)
     })
     this.mainWindow.on('focus', () => {
-      syncStoredGoogleAccountToRenderers()
+      onMainWindowActive()
     })
     if (process.env.NODE_ENV === 'development') {
       this.mainWindow.webContents.openDevTools({

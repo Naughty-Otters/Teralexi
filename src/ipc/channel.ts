@@ -937,6 +937,20 @@ export class IpcChannelMainClass {
     } | null
   > = null
   /**
+   * Return verified subscription entitlement snapshot for the signed-in user.
+   */
+  GetEntitlement: IpcMainEventListener<
+    void,
+    import('@shared/subscription/entitlement-types').EntitlementUiSnapshot | null
+  > = null
+  /**
+   * Refresh auth + entitlement from the server and return the latest snapshot.
+   */
+  RefreshEntitlement: IpcMainEventListener<
+    void,
+    import('@shared/subscription/entitlement-types').EntitlementUiSnapshot | null
+  > = null
+  /**
    * Start Google Workspace OAuth2 sign-in flow (Gmail, Calendar, Drive)
    */
   GoogleWorkspaceSignIn: IpcMainEventListener<
@@ -2074,6 +2088,10 @@ export class IpcChannelRendererClass {
       name: string
       picture: string
     } | null
+  }> = null
+  /** Subscription entitlement verified or cleared. */
+  EntitlementChanged: IpcRendererEventListener<{
+    entitlement: import('@shared/subscription/entitlement-types').EntitlementUiSnapshot | null
   }> = null
   /** Google Workspace account linked or cleared. */
   GoogleWorkspaceAccountChanged: IpcRendererEventListener<{

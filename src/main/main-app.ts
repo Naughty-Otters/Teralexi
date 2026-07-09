@@ -22,6 +22,8 @@ import { getWeChatChannelManager } from './channels/wechat/manager'
 import { getSlackChannelManager } from './channels/slack/manager'
 import { getSchedulerManager } from './services/scheduler-manager'
 import { registerMainProcessSupportHandlers } from './services/support-event-store'
+import { refreshAuthAndEntitlement } from './services/entitlement-session'
+import { loadStoredAccount } from './services/google-account-oauth'
 import { getLspManager, initBundledLspBin } from './agent/lsp'
 import { createLogger } from './logger'
 import { prewarmMcpRuntimeEnvironment } from './services/mcp-runtime-check'
@@ -94,6 +96,16 @@ export async function startMainApp(options: {
 
   prewarmMcpRuntimeEnvironment()
   log.info('MCP runtime PATH prewarm requested')
+
+  if (loadStoredAccount()) {
+    try {
+      await refreshAuthAndEntitlement('launch')
+    } catch (err) {
+      log.warn('Launch authorization refresh failed; signing out if session revoked', {
+        err,
+      })
+    }
+  }
 
   const initWindow = new InitWindow()
   if (options.splashWindow) {

@@ -74,6 +74,7 @@ export const ENV_ONLY_PROPERTY_KEYS = [
   'app.base.apiUrl',
   'app.teralexi.googleAuthLoginUrl',
   'app.desktop.forceDevUpdateConfig',
+  'app.entitlement.signingPublicKeyPem',
 ] as const
 
 const ENV_ONLY_PROPERTY_KEY_SET = new Set<string>(ENV_ONLY_PROPERTY_KEYS)
