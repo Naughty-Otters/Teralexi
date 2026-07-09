@@ -18,14 +18,17 @@ vi.mock('@renderer/utils/logger', () => ({
   }),
 }))
 
-beforeEach(() => {
+export function integrationTestBeforeEach(): void {
   resetOnboardingRouteCache()
   resetChatUiFlushState()
   installFakeIpcChannel()
-})
+}
 
-afterEach(() => {
+export function integrationTestAfterEach(): void {
   uninstallFakeIpcChannel()
   resetOnboardingRouteCache()
   resetChatUiFlushState()
-})
+}
+
+beforeEach(integrationTestBeforeEach)
+afterEach(integrationTestAfterEach)
