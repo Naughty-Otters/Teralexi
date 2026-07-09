@@ -77,12 +77,8 @@ export function useGoogleAccount() {
   async function signIn(): Promise<GoogleAccountSummary | null> {
     const channel = window.ipcRendererChannel?.GoogleSignIn
     if (!channel?.invoke) return null
-    try {
-      account.value = (await channel.invoke()) ?? null
-      return account.value
-    } catch {
-      return null
-    }
+    account.value = (await channel.invoke()) ?? null
+    return account.value
   }
 
   async function signOut(): Promise<void> {

@@ -22,6 +22,8 @@ const {
   closeAllLsp,
   loadDockIcon,
   dockSetIcon,
+  loadStoredAccount,
+  refreshAuthAndEntitlement,
 } = vi.hoisted(() => ({
   initStaticPaths: vi.fn(),
   seedBundledDefaultRulesIfMissing: vi.fn(),
@@ -54,6 +56,8 @@ const {
   closeAllLsp: vi.fn(),
   loadDockIcon: vi.fn(() => ({ isEmpty: () => false })),
   dockSetIcon: vi.fn(),
+  loadStoredAccount: vi.fn(() => null),
+  refreshAuthAndEntitlement: vi.fn(async () => null),
 }))
 
 vi.mock('./config/static-path', () => ({
@@ -146,6 +150,14 @@ vi.mock('./channels/slack/manager', () => ({
 }))
 vi.mock('./services/scheduler-manager', () => ({
   getSchedulerManager: () => ({ ensureStarted: schedulerEnsureStarted }),
+}))
+
+vi.mock('./services/google-account-oauth', () => ({
+  loadStoredAccount,
+}))
+
+vi.mock('./services/entitlement-session', () => ({
+  refreshAuthAndEntitlement,
 }))
 
 vi.mock('./logger', () => ({

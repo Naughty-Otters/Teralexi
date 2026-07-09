@@ -5,6 +5,7 @@ vi.mock('fs', () => ({
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
+  unlinkSync: vi.fn(),
 }))
 
 const electronMock = vi.hoisted(() => ({

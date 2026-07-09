@@ -12,6 +12,8 @@ import {
   recordSupportBundleUpload,
 } from './support-upload-tracker'
 import { createLogger } from '@main/logger'
+import { ENTITLEMENT_FEATURES } from '@shared/subscription/entitlement-types'
+import { isEntitlementFeatureAllowed } from './entitlement-session'
 
 const log = createLogger('services.support-report')
 
@@ -26,6 +28,14 @@ function checkUploadAllowed(): SupportReportResult | null {
       reportId: '',
       error:
         'Sign in with your Teralexi Google account before uploading a support report.',
+    }
+  }
+
+  if (!isEntitlementFeatureAllowed(ENTITLEMENT_FEATURES.SUPPORT_UPLOAD)) {
+    return {
+      ok: false,
+      reportId: '',
+      error: 'Support upload is not included in the current plan.',
     }
   }
 

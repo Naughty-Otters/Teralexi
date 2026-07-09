@@ -291,6 +291,12 @@ export type AppLabels = {
     signInRequiredDesc: string
     localLlmHint: string
     openLocalLlmSettings: string
+    authorizationBlockedTitle: string
+    authorizationBlockedDesc: string
+    authorizationRetry: string
+    authorizationRetrying: string
+    authorizationSignInAgain: string
+    authorizationSignOut: string
   }
   agentGuide: {
     title: string

@@ -1,5 +1,6 @@
 export const TERALEXI_PROTOCOL = 'teralexi'
 export const TERALEXI_OPEN_HOST = 'open'
+export const TERALEXI_LOGOUT_HOST = 'logout'
 export const TERALEXI_CALLBACK_URL = `${TERALEXI_PROTOCOL}://${TERALEXI_OPEN_HOST}`
 
 export type TeralexiOpenAction = {
@@ -10,15 +11,22 @@ export type TeralexiOpenAction = {
   scope?: string
 }
 
-export type TeralexiProtocolAction = TeralexiOpenAction
+export type TeralexiLogoutAction = {
+  type: 'logout'
+}
 
-/** Parse `teralexi://open?token=<xxx>` (also accepts `access_token`, hash fragments). */
+export type TeralexiProtocolAction = TeralexiOpenAction | TeralexiLogoutAction
+
+/** Parse `teralexi://open?token=<xxx>` or `teralexi://logout`. */
 export function parseTeralexiProtocolUrl(rawUrl: string): TeralexiProtocolAction | null {
   try {
     const url = new URL(rawUrl)
     if (url.protocol !== `${TERALEXI_PROTOCOL}:`) return null
 
     const host = url.hostname || url.pathname.replace(/^\//, '').split('/')[0]
+    if (host === TERALEXI_LOGOUT_HOST) {
+      return { type: 'logout' }
+    }
     if (host !== TERALEXI_OPEN_HOST) return null
 
     const params = new URLSearchParams(url.search)

@@ -4,6 +4,9 @@ export const BAKED_BASE_API = '__TERALEXI_BASE_API__'
 /** Replaced in main bundle by rollup. */
 export const BAKED_DESKTOP_UPDATE_FORCE_DEV = '__TERALEXI_DESKTOP_UPDATE_FORCE_DEV__'
 
+/** Replaced in main bundle by rollup. */
+export const BAKED_ENTITLEMENT_PUBLIC_KEY_PEM = '__TERALEXI_ENTITLEMENT_PUBLIC_KEY_PEM__'
+
 /** Rollup replace touches every `__TERALEXI_*__` literal — detect unresolved placeholders by shape. */
 export function isUnresolvedBakedPlaceholder(value: string): boolean {
   return /^__TERALEXI_[A-Z0-9_]+__$/.test(value)
@@ -42,6 +45,17 @@ export function readBakedDesktopUpdateForceDev(
   return fromEnv ? stripEnvValue(fromEnv) : ''
 }
 
+export function readBakedEntitlementPublicKeyPem(
+  processEnv: NodeJS.ProcessEnv = process.env,
+): string {
+  const baked = BAKED_ENTITLEMENT_PUBLIC_KEY_PEM
+  if (baked && !isUnresolvedBakedPlaceholder(baked)) {
+    return stripEnvValue(baked)
+  }
+  const fromEnv = processEnv.ENTITLEMENT_SIGNING_PUBLIC_KEY_PEM?.trim()
+  return fromEnv ? stripEnvValue(fromEnv) : ''
+}
+
 /** Env-only values inlined at build time for packaged apps. */
 export function loadBakedEnvOverrides(
   knownKeys: readonly string[],
@@ -55,6 +69,13 @@ export function loadBakedEnvOverrides(
   const forceDev = readBakedDesktopUpdateForceDev(processEnv)
   if (forceDev && knownKeys.includes('app.desktop.forceDevUpdateConfig')) {
     merged.set('app.desktop.forceDevUpdateConfig', forceDev)
+  }
+  const entitlementPem = readBakedEntitlementPublicKeyPem(processEnv)
+  if (
+    entitlementPem &&
+    knownKeys.includes('app.entitlement.signingPublicKeyPem')
+  ) {
+    merged.set('app.entitlement.signingPublicKeyPem', entitlementPem)
   }
   return merged
 }

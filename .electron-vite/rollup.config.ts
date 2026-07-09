@@ -186,6 +186,9 @@ export default (env = 'production', type: MainBuildType = 'main-app') => {
         __TERALEXI_DESKTOP_UPDATE_FORCE_DEV__: JSON.stringify(
           config?.DESKTOP_UPDATE_FORCE_DEV ?? '',
         ),
+        __TERALEXI_ENTITLEMENT_PUBLIC_KEY_PEM__: JSON.stringify(
+          config?.ENTITLEMENT_SIGNING_PUBLIC_KEY_PEM ?? '',
+        ),
       }),
       alias(pathAliases),
       nodeResolve({

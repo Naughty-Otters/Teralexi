@@ -8,7 +8,7 @@
  */
 
 import { shell } from 'electron'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
 import { join, dirname } from 'path'
 import { request as httpsRequest } from 'node:https'
 import { parse as parseUrl } from 'url'
@@ -27,6 +27,7 @@ import {
 } from '@shared/google-id-token'
 import { createLogger, traceFunction } from '@main/logger'
 import { notifyGoogleAccountChanged } from '@main/services/google-account-notify'
+import { onGoogleAccountSignedIn } from '@main/services/entitlement-session'
 
 export interface GoogleAccountTokens {
   access_token: string
@@ -126,9 +127,7 @@ function persistAccount(account: GoogleAccount): void {
 function clearStoredAccountImpl(): void {
   try {
     const filePath = getTokenFilePath()
-    if (existsSync(filePath)) {
-      writeFileSync(filePath, '', 'utf-8')
-    }
+    if (existsSync(filePath)) unlinkSync(filePath)
   } catch {
     // ignore
   }
@@ -245,6 +244,7 @@ async function applyGoogleAccountOAuthCallbackImpl(
   const account: GoogleAccount = { tokens, userInfo }
   persistAccount(account)
   notifyGoogleAccountChanged(googleAccountInfoForUi(account))
+  void onGoogleAccountSignedIn()
   return account
 }
 

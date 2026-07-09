@@ -7,6 +7,7 @@ import {
 import { handleGoogleAccountOAuthDeepLink } from '@main/services/google-account-oauth'
 import { syncStoredGoogleAccountToRenderers } from '@main/services/google-account-notify'
 import { clearTeralexiServerAuthCache } from '@main/services/teralexi-server-auth'
+import { revokeLocalTeralexiAuthSession } from '@main/services/local-auth-session'
 import { getTeralexiProtocolBridge } from '@main/services/teralexi-protocol-bridge'
 
 const log = createLogger('services.teralexi-protocol')
@@ -36,6 +37,12 @@ export async function dispatchTeralexiUrl(rawUrl: string): Promise<void> {
 
   log.info('Handling teralexi protocol URL', { host: action.type })
   focusMainWindow()
+
+  if (action.type === 'logout') {
+    revokeLocalTeralexiAuthSession('Signed out from Teralexi web authentication')
+    syncStoredGoogleAccountToRenderers()
+    return
+  }
 
   if (action.type === 'open') {
     try {

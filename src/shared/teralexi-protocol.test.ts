@@ -61,6 +61,12 @@ describe('teralexi-protocol', () => {
     })
   })
 
+  it('parses teralexi://logout', () => {
+    expect(parseTeralexiProtocolUrl('teralexi://logout')).toEqual({
+      type: 'logout',
+    })
+  })
+
   it('returns null for unknown host or missing token', () => {
     expect(parseTeralexiProtocolUrl('teralexi://other?token=x')).toBeNull()
     expect(parseTeralexiProtocolUrl('teralexi://open')).toBeNull()

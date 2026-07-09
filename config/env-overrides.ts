@@ -75,6 +75,10 @@ export function parseEnvFile(
       entries.set('app.base.apiUrl', stripEnvValue(rawValue))
       continue
     }
+    if (rawKey === 'ENTITLEMENT_SIGNING_PUBLIC_KEY_PEM') {
+      entries.set('app.entitlement.signingPublicKeyPem', stripEnvValue(rawValue))
+      continue
+    }
     if (rawKey === 'DESKTOP_UPDATE_FORCE_DEV') {
       entries.set('app.desktop.forceDevUpdateConfig', stripEnvValue(rawValue))
       continue
@@ -154,6 +158,14 @@ export function loadEnvOverrides(args: {
   const baseApi = env.BASE_API?.trim()
   if (baseApi) {
     merged.set('app.base.apiUrl', stripEnvValue(baseApi))
+  }
+
+  const entitlementPem = env.ENTITLEMENT_SIGNING_PUBLIC_KEY_PEM?.trim()
+  if (entitlementPem) {
+    merged.set(
+      'app.entitlement.signingPublicKeyPem',
+      stripEnvValue(entitlementPem),
+    )
   }
 
   const forceDevUpdate = env.DESKTOP_UPDATE_FORCE_DEV?.trim()

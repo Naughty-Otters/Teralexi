@@ -311,6 +311,13 @@ export const lang: AppLocaleBundle = {
     localLlmHint:
       '未登录时仍可在 设置 → LLM 中配置本地模型（Ollama 或 llama.cpp）。',
     openLocalLlmSettings: '改为配置本地 LLM',
+    authorizationBlockedTitle: '需要授权验证',
+    authorizationBlockedDesc:
+      'Teralexi 无法验证您的账户或订阅。在授权成功前，应用将暂停使用。',
+    authorizationRetry: '重试授权',
+    authorizationRetrying: '正在重试…',
+    authorizationSignInAgain: '重新登录',
+    authorizationSignOut: '退出登录',
   },
   agentGuide: {
     title: '我想要',

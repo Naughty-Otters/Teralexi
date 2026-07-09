@@ -109,6 +109,12 @@ import {
 import { notifyGoogleWorkspaceAccountChanged } from './google-workspace-account-notify'
 import { clearTeralexiServerAuthCache } from './teralexi-server-auth'
 import {
+  clearEntitlementSession,
+  getEntitlementUiSnapshot,
+  onConversationStarted,
+  refreshAuthAndEntitlement,
+} from './entitlement-session'
+import {
   startGitHubSignIn,
   loadStoredAccount as loadStoredGitHubAccount,
   clearStoredAccount as clearStoredGitHubAccount,
@@ -828,15 +834,17 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     args: { id: string; agentId: string; title: string; createdAt: string },
   ) => ReturnType<
     ReturnType<typeof getConversationStore>['createConversation']
-  > = (_event, args) => {
+  > = (_event, args  ) => {
     const now = args.createdAt
-    return getConversationStore().createConversation({
+    const created = getConversationStore().createConversation({
       id: args.id,
       agentId: args.agentId,
       title: args.title,
       createdAt: now,
       updatedAt: now,
     })
+    onConversationStarted()
+    return created
   }
 
   UpdateConversationTitle: (
@@ -1384,12 +1392,21 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     clearTeralexiServerAuthCache()
     const account = await startGoogleAccountSignIn()
     clearTeralexiServerAuthCache()
-    return googleAccountInfoForUi(account)
+    const ui = googleAccountInfoForUi(account)
+    await refreshAuthAndEntitlement('sign-in')
+    return ui
+  }
+
+  RefreshEntitlement: (_event: Electron.IpcMainInvokeEvent) => Promise<
+    import('@shared/subscription/entitlement-types').EntitlementUiSnapshot | null
+  > = async () => {
+    return refreshAuthAndEntitlement('manual')
   }
 
   GoogleSignOut: (_event: Electron.IpcMainInvokeEvent) => void = () => {
     clearStoredAccount()
     clearTeralexiServerAuthCache()
+    clearEntitlementSession()
     notifyGoogleAccountChanged(null)
   }
 
@@ -1401,6 +1418,12 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     const account = loadStoredAccount()
     if (!account) return null
     return googleAccountInfoForUi(account)
+  }
+
+  GetEntitlement: (_event: Electron.IpcMainInvokeEvent) => Promise<
+    import('@shared/subscription/entitlement-types').EntitlementUiSnapshot | null
+  > = async () => {
+    return getEntitlementUiSnapshot()
   }
 
   GoogleWorkspaceSignIn: (_event: Electron.IpcMainInvokeEvent) => Promise<{

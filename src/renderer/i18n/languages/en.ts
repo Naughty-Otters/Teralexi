@@ -318,6 +318,13 @@ export const lang: AppLocaleBundle = {
     localLlmHint:
       'Without an account you can still configure local models (Ollama or llama.cpp) under Settings → LLM.',
     openLocalLlmSettings: 'Configure local LLM instead',
+    authorizationBlockedTitle: 'Authorization required',
+    authorizationBlockedDesc:
+      'Teralexi could not verify your account or subscription. The app is paused until authorization succeeds.',
+    authorizationRetry: 'Retry authorization',
+    authorizationRetrying: 'Retrying…',
+    authorizationSignInAgain: 'Sign in again',
+    authorizationSignOut: 'Sign out',
   },
   agentGuide: {
     title: 'I want to',
