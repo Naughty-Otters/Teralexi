@@ -4,6 +4,7 @@ import {
   APP_FONT_SIZE_KEY,
   DEFAULT_FONT_SETTINGS,
   FONT_SETTINGS_PROP_KEYS,
+  buildAppFontScaleStyleProperties,
   clampAppFontSize,
   normalizeAppFontFamily,
   parseFontSettings,
@@ -26,7 +27,11 @@ export function applyFontSettings(settings: FontSettings): void {
 
   const root = document.documentElement
   root.style.setProperty('--app-font-family', fontFamily)
-  root.style.setProperty('--app-font-size', `${fontSize}px`)
+  for (const [key, value] of Object.entries(
+    buildAppFontScaleStyleProperties(fontSize),
+  )) {
+    root.style.setProperty(key, value)
+  }
 }
 
 export async function loadFontSettings(): Promise<FontSettings> {

@@ -87,7 +87,7 @@ watch(
 .shiki-diff__more {
   margin: 0;
   padding: 2px 12px 4px;
-  font-size: 11px;
+  font-size: var(--app-font-size-sm);
   line-height: 1;
   color: var(--ui-text-muted);
 }

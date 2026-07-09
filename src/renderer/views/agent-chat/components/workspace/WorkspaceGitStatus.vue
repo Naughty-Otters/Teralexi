@@ -7,7 +7,7 @@
       <span v-if="upstream" class="git-upstream">→ {{ upstream }}</span>
       <span v-if="ahead > 0" class="git-ahead">↑{{ ahead }}</span>
       <span v-if="behind > 0" class="git-behind">↓{{ behind }}</span>
-      <button class="git-refresh-btn" title="Refresh files and git status" :disabled="statusLoading" @click="emit('refresh')">
+      <button class="git-refresh-btn" title="Refresh git status and file list" :disabled="statusLoading" @click="emit('refresh')">
         <UIcon name="i-lucide-refresh-cw" :class="['git-refresh-icon', { 'git-refresh-icon--spin': statusLoading }]" />
       </button>
     </div>
@@ -220,7 +220,15 @@ function onCreatePr() {
 </script>
 
 <style scoped>
-.git-status { display: flex; flex-direction: column; gap: 0; height: 100%; overflow-y: auto; }
+.git-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  height: 100%;
+  overflow-y: auto;
+  font-family: var(--app-font-family);
+  font-size: var(--app-font-size);
+}
 .git-branch-bar {
   display: flex;
   align-items: center;
@@ -291,9 +299,9 @@ function onCreatePr() {
   align-items: center;
   gap: 8px;
   padding: 4px 10px;
-  font-size: var(--app-font-size-secondary);
+  font-size: var(--app-font-size);
   cursor: pointer;
-  font-family: var(--app-font-family);
+  font-family: inherit;
 }
 .git-file-row:hover { background: var(--ui-bg-elevated, rgba(0,0,0,0.04)); }
 .git-file-code {
@@ -335,8 +343,8 @@ function onCreatePr() {
   border: 1px solid var(--ui-border);
   border-radius: 6px;
   padding: 6px 8px;
-  font-size: var(--app-font-size-secondary);
-  font-family: inherit;
+  font-size: var(--app-font-size);
+  font-family: var(--app-font-family);
   background: var(--ui-bg);
   color: var(--ui-text);
   outline: none;
@@ -386,7 +394,8 @@ function onCreatePr() {
   border: 1px solid var(--ui-border);
   border-radius: 6px;
   padding: 6px 8px;
-  font-size: var(--app-font-size-secondary);
+  font-size: var(--app-font-size);
+  font-family: var(--app-font-family);
   margin-bottom: 6px;
   background: var(--ui-bg);
   color: var(--ui-text);

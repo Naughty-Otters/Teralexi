@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useAgentStore } from '@store/agent'
 import {
   LAYOUT_PREF_KEYS,
@@ -51,6 +51,21 @@ export type WorkspaceEditorTab = {
   fileUrl: string | null
 }
 
+/** Electron IPC cannot structured-clone Vue reactive proxies. */
+function toIpcStringList(values: string[]): string[] {
+  return values.map((value) => String(value))
+}
+
+function sortFileEntries(items: readonly GitFileEntry[]): GitFileEntry[] {
+  const dirs = items
+    .filter((e) => e.isDir)
+    .sort((a, b) => a.name.localeCompare(b.name))
+  const files = items
+    .filter((e) => !e.isDir)
+    .sort((a, b) => a.name.localeCompare(b.name))
+  return [...dirs, ...files]
+}
+
 export const useWorkspaceGitStore = defineStore('workspace-git', () => {
   const workspacePath = ref<string | null>(null)
   const conversationId = ref<string | null>(null)
@@ -77,7 +92,12 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
   const filesDirectory = ref('.')
   const filesLoading = ref(false)
   const filesError = ref<string | null>(null)
-  /** Bumped after each workspace view refresh so the file tree re-fetches expanded folders. */
+  /** Inline-expanded folders in the file browser (survives passive refresh). */
+  const expandedFileTreeDirs = ref<Record<string, boolean>>({})
+  const expandedFileTreeChildren = ref<Record<string, GitFileEntry[]>>({})
+  const expandedFileTreeLoading = ref<Record<string, boolean>>({})
+  const expandedFileTreeErrors = ref<Record<string, string | null>>({})
+  /** @deprecated Prefer store-driven expanded tree refresh; kept for compatibility. */
   const filesRefreshSeq = ref(0)
 
   const editorTabs = ref<WorkspaceEditorTab[]>([])
@@ -307,6 +327,7 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     workspacePath.value = path
     conversationId.value = nextConvId
     filesDirectory.value = '.'
+    resetExpandedFileTree()
     if (!path) {
       branch.value = ''
       upstream.value = null
@@ -448,14 +469,17 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     }
   }
 
-  async function refreshStatus(): Promise<void> {
+  async function refreshStatus(options?: { silent?: boolean }): Promise<void> {
     const cid = requireConversationId()
     if (!cid) return
     const ch = window.ipcRendererChannel?.GetWorkspaceGitStatus
     if (!ch?.invoke) return
 
-    statusLoading.value = true
-    statusError.value = null
+    const silent = options?.silent === true
+    if (!silent) {
+      statusLoading.value = true
+      statusError.value = null
+    }
     try {
       const result = await ch.invoke({ conversationId: cid })
       if (result.ok) {
@@ -463,14 +487,14 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
         upstream.value = result.upstream
         ahead.value = result.ahead
         behind.value = result.behind
-        statusEntries.value = result.entries
-      } else {
+        statusEntries.value = result.entries.map((entry) => ({ ...entry }))
+      } else if (!silent) {
         statusError.value = result.error ?? 'git status failed.'
       }
     } catch (err) {
-      statusError.value = String(err)
+      if (!silent) statusError.value = String(err)
     } finally {
-      statusLoading.value = false
+      if (!silent) statusLoading.value = false
     }
   }
 
@@ -483,12 +507,17 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     const ch = window.ipcRendererChannel?.GetWorkspaceGitDiff
     if (!ch?.invoke) return
 
+    const fileList = toIpcStringList(files)
     diffStaged.value = staged
-    diffFiles.value = files
+    diffFiles.value = fileList
     diffLoading.value = true
     diffError.value = null
     try {
-      const result = await ch.invoke({ conversationId: cid, staged, files })
+      const result = await ch.invoke({
+        conversationId: cid,
+        staged,
+        files: fileList,
+      })
       if (result.ok) {
         diff.value = result.diff
       } else {
@@ -524,7 +553,10 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     }
   }
 
-  async function refreshFiles(relativePath?: string): Promise<void> {
+  async function refreshFiles(
+    relativePath?: string,
+    options?: { silent?: boolean },
+  ): Promise<void> {
     const cid = requireConversationId()
     if (!cid) return
     const ch = window.ipcRendererChannel?.ListWorkspaceFiles
@@ -534,24 +566,131 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
       filesDirectory.value = normalizeFilesDirectory(relativePath)
     }
 
-    filesLoading.value = true
-    filesError.value = null
+    const silent = options?.silent === true
+    if (!silent) {
+      filesLoading.value = true
+      filesError.value = null
+    }
     try {
       const result = await ch.invoke({
         conversationId: cid,
         relativePath: filesDirectory.value,
       })
       if (result.ok) {
-        fileEntries.value = result.entries
-      } else {
+        fileEntries.value = result.entries.map((entry) => ({ ...entry }))
+      } else if (!silent) {
         filesError.value = result.error ?? 'Failed to list files.'
       }
     } catch (err) {
-      filesError.value = String(err)
+      if (!silent) filesError.value = String(err)
     } finally {
-      filesLoading.value = false
+      if (!silent) filesLoading.value = false
     }
   }
+
+  function resetExpandedFileTree(): void {
+    expandedFileTreeDirs.value = {}
+    expandedFileTreeChildren.value = {}
+    expandedFileTreeLoading.value = {}
+    expandedFileTreeErrors.value = {}
+  }
+
+  function isFileTreeDirExpanded(relativePath: string): boolean {
+    return expandedFileTreeDirs.value[normalizeFilesDirectory(relativePath)] === true
+  }
+
+  async function refreshExpandedFileTreeDirs(options?: {
+    silent?: boolean
+  }): Promise<void> {
+    const dirs = Object.keys(expandedFileTreeDirs.value).filter(
+      (dir) => expandedFileTreeDirs.value[dir],
+    )
+    if (!dirs.length) return
+
+    const silent = options?.silent === true
+    await Promise.all(
+      dirs.map(async (dir) => {
+        if (!silent) {
+          expandedFileTreeLoading.value = {
+            ...expandedFileTreeLoading.value,
+            [dir]: true,
+          }
+          expandedFileTreeErrors.value = {
+            ...expandedFileTreeErrors.value,
+            [dir]: null,
+          }
+        }
+        const nextEntries = await listFiles(dir)
+        if (!silent) {
+          expandedFileTreeLoading.value = {
+            ...expandedFileTreeLoading.value,
+            [dir]: false,
+          }
+        }
+        if (!nextEntries) {
+          if (!silent) {
+            expandedFileTreeErrors.value = {
+              ...expandedFileTreeErrors.value,
+              [dir]: 'Failed to load folder.',
+            }
+          }
+          return
+        }
+        expandedFileTreeChildren.value = {
+          ...expandedFileTreeChildren.value,
+          [dir]: sortFileEntries(nextEntries),
+        }
+      }),
+    )
+  }
+
+  async function toggleFileTreeDirectory(relativePath: string): Promise<void> {
+    const normalized = normalizeFilesDirectory(relativePath)
+    if (isFileTreeDirExpanded(normalized)) {
+      const next = { ...expandedFileTreeDirs.value }
+      delete next[normalized]
+      expandedFileTreeDirs.value = next
+      return
+    }
+
+    expandedFileTreeDirs.value = {
+      ...expandedFileTreeDirs.value,
+      [normalized]: true,
+    }
+    if (expandedFileTreeChildren.value[normalized]) return
+
+    expandedFileTreeLoading.value = {
+      ...expandedFileTreeLoading.value,
+      [normalized]: true,
+    }
+    expandedFileTreeErrors.value = {
+      ...expandedFileTreeErrors.value,
+      [normalized]: null,
+    }
+
+    const nextEntries = await listFiles(normalized)
+    expandedFileTreeLoading.value = {
+      ...expandedFileTreeLoading.value,
+      [normalized]: false,
+    }
+
+    if (!nextEntries) {
+      expandedFileTreeErrors.value = {
+        ...expandedFileTreeErrors.value,
+        [normalized]: 'Failed to load folder.',
+      }
+      return
+    }
+
+    expandedFileTreeChildren.value = {
+      ...expandedFileTreeChildren.value,
+      [normalized]: sortFileEntries(nextEntries),
+    }
+  }
+
+  watch(filesDirectory, () => {
+    resetExpandedFileTree()
+  })
 
   async function navigateFilesToDirectory(relativePath: string): Promise<void> {
     await refreshFiles(relativePath)
@@ -607,9 +746,10 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     opError.value = null
     opSuccess.value = null
     try {
-      const result = await ch.invoke({ conversationId: cid, files })
+      const fileList = toIpcStringList(files)
+      const result = await ch.invoke({ conversationId: cid, files: fileList })
       if (result.ok) {
-        opSuccess.value = `Staged ${files.length} file(s).`
+        opSuccess.value = `Staged ${fileList.length} file(s).`
         await refreshStatus()
         return true
       }
@@ -868,25 +1008,27 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
   }
 
   /**
-   * Refresh file list, git status, and diff (when open).
+   * Passive refresh for file browser + git status when the workspace changes.
    *
-   * Open editor tabs are intentionally left untouched: reloading their content
-   * from disk on every refresh caused visible flicker (Monaco remount, cursor
-   * and undo-stack reset) and could race with in-progress edits. Use the
-   * per-file "Reload from disk" action (`reloadEditorFile`) to pull disk changes
-   * into an open editor on demand.
+   * Open editor tabs and the active git diff are intentionally left untouched:
+   * reloading them on every filesystem notification caused flicker (Monaco remount,
+   * diff panel flash). Re-open a file or click a git status row to refresh its
+   * diff; use per-tab "Reload from disk" for editors.
    */
   async function refreshWorkspaceView(options?: {
     includeLog?: boolean
+    silent?: boolean
   }): Promise<void> {
+    const silent = options?.silent === true
     if (workspacePath.value) {
-      await refreshAll()
+      await refreshAll({ silent })
       if (options?.includeLog) {
         await refreshLog()
       }
     } else {
-      await refreshFiles()
+      await refreshFiles(undefined, { silent })
     }
+    await refreshExpandedFileTreeDirs({ silent })
     filesRefreshSeq.value += 1
   }
 
@@ -923,11 +1065,12 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     }
   }
 
-  async function refreshAll(): Promise<void> {
-    await Promise.all([refreshStatus(), refreshFiles()])
-    if (diff.value !== '' || diffStaged.value) {
-      await refreshDiff(diffStaged.value, diffFiles.value)
-    }
+  async function refreshAll(options?: { silent?: boolean }): Promise<void> {
+    const silent = options?.silent === true
+    await Promise.all([
+      refreshStatus({ silent }),
+      refreshFiles(undefined, { silent }),
+    ])
   }
 
   return {
@@ -952,6 +1095,10 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     filesDirectory,
     filesLoading,
     filesError,
+    expandedFileTreeDirs,
+    expandedFileTreeChildren,
+    expandedFileTreeLoading,
+    expandedFileTreeErrors,
     filesRefreshSeq,
     editorTabs,
     activeEditorPath,
@@ -990,6 +1137,10 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     refreshLog,
     refreshFiles,
     listFiles,
+    resetExpandedFileTree,
+    isFileTreeDirExpanded,
+    refreshExpandedFileTreeDirs,
+    toggleFileTreeDirectory,
     navigateFilesToDirectory,
     navigateFilesUp,
     navigateFilesToHighlight,
