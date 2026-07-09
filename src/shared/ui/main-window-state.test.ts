@@ -46,4 +46,27 @@ describe('main-window-state', () => {
       height: 600,
     })
   })
+
+  it('treats isMaximized value "1" as true', () => {
+    expect(
+      parseMainWindowBounds({
+        [MAIN_WINDOW_IS_MAXIMIZED_KEY]: '1',
+      }).isMaximized,
+    ).toBe(true)
+  })
+
+  it('serializes unset coordinates as empty strings', () => {
+    expect(
+      serializeMainWindowBounds({
+        width: 1500,
+        height: 900,
+        x: Number.NaN,
+        y: Number.NaN,
+        isMaximized: false,
+      }),
+    ).toMatchObject({
+      [MAIN_WINDOW_X_KEY]: '',
+      [MAIN_WINDOW_Y_KEY]: '',
+    })
+  })
 })

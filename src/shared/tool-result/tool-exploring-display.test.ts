@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatToolExploringDetails,
+  formatToolExploringCommand,
   formatToolExploringResult,
 } from './tool-exploring-display'
 
@@ -69,5 +70,39 @@ describe('formatToolExploringResult', () => {
     )
     expect(result?.headline).toBe('Search results')
     expect(result?.bullets).toEqual(['First hit', 'Second hit'])
+  })
+})
+
+describe('formatToolExploringCommand', () => {
+  it('formats workspace command arrays', () => {
+    expect(
+      formatToolExploringCommand({ command: ['git', 'status', '--short'] }),
+    ).toBe('git status --short')
+  })
+
+  it('formats script relative paths', () => {
+    expect(
+      formatToolExploringCommand({ scriptRelativePath: 'scripts/build.ts' }),
+    ).toBe('scripts/build.ts')
+  })
+})
+
+describe('formatToolExploringResult extras', () => {
+  it('summarizes read_file output', () => {
+    const result = formatToolExploringResult('read_file', { path: 'src/a.ts' }, {
+      content: 'line one\nline two\nline three',
+    })
+    expect(result?.headline).toBe('Read 3 lines')
+    expect(result?.note).toContain('line one')
+  })
+
+  it('surfaces terminal errors', () => {
+    const result = formatToolExploringResult(
+      'run_workspace_command',
+      { command: 'npm test' },
+      { success: false, exitCode: 1, error: 'Tests failed' },
+    )
+    expect(result?.headline).toBe('Command finished with code 1')
+    expect(result?.note).toBe('Tests failed')
   })
 })

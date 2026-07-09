@@ -7,6 +7,7 @@ import {
   planModeTodoItemsFromContext,
   reconcilePlanExecutionStateFromDisk,
   shouldRunPlanTodoForeach,
+  runApprovedPlanTodoForeach,
   todoItemsToTrackedTodos,
   trackedTodosToTodoItems,
   isPlanModeTodosAllDoneOnDisk,
@@ -44,6 +45,12 @@ vi.mock('@main/services/conversation-store', () => ({
   })),
 }))
 
+const runForEachItemBatch = vi.hoisted(() => vi.fn())
+
+vi.mock('../steps/foreach-item/batch-runner', () => ({
+  runForEachItemBatch,
+}))
+
 import { getAgentRunSandboxRoot } from '@main/agent/sandbox/run-context'
 import { bootstrapPlanModeStorage } from './plan-mode-state'
 import {
@@ -57,6 +64,7 @@ describe('plan-mode-execution-bridge', () => {
 
   beforeEach(() => {
     resetAllPlanRemindersForTests()
+    runForEachItemBatch.mockReset()
     sandboxRoot = mkdtempSync(join(tmpdir(), 'plan-bridge-'))
     Object.assign(planState, {
       status: 'plan_tool_execute',
@@ -269,5 +277,36 @@ describe('plan-mode-execution-bridge', () => {
     } as never)
     expect(items).toHaveLength(1)
     expect(items[0]?.name).toBe('Ship feature')
+  })
+
+  it('runApprovedPlanTodoForeach runs foreach batch when todos are pending', async () => {
+    writePlanModeTodoList(
+      'conv-1',
+      replaceTodos([{ content: 'Step one', status: 'pending' }]),
+      { sandboxRoot },
+    )
+    const ctx = {
+      opts: { conversationId: 'conv-1' },
+      sandbox: { getRoot: () => sandboxRoot },
+    } as never
+
+    await expect(runApprovedPlanTodoForeach(ctx)).resolves.toBe(true)
+    expect(runForEachItemBatch).toHaveBeenCalledTimes(1)
+  })
+
+  it('runApprovedPlanTodoForeach skips when execution should not run', async () => {
+    planState.status = 'planning'
+    writePlanModeTodoList(
+      'conv-1',
+      replaceTodos([{ content: 'Step one', status: 'pending' }]),
+      { sandboxRoot },
+    )
+
+    await expect(
+      runApprovedPlanTodoForeach({
+        opts: { conversationId: 'conv-1' },
+      } as never),
+    ).resolves.toBe(false)
+    expect(runForEachItemBatch).not.toHaveBeenCalled()
   })
 })

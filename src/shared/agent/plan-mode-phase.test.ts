@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_AGENT_PLAN_MODE_STATE } from './plan-mode'
 import {
+  defaultPlanModeView,
   planModeComposerHint,
   resolvePlanModeDisplayStatus,
+  statusToLegacyPhase,
   toPlanModeView,
 } from './plan-mode-phase'
 
@@ -41,5 +43,18 @@ describe('plan-mode-phase', () => {
         true,
       ),
     ).toBe('tool_execute')
+  })
+
+  it('statusToLegacyPhase maps persisted statuses to legacy phases', () => {
+    expect(statusToLegacyPhase('planning')).toBe('planning')
+    expect(statusToLegacyPhase('plan_tool_execute')).toBe('executing')
+    expect(statusToLegacyPhase('tool_execute')).toBe('idle')
+  })
+
+  it('defaultPlanModeView matches the idle execution default', () => {
+    expect(defaultPlanModeView()).toEqual({
+      status: 'tool_execute',
+      planSlug: null,
+    })
   })
 })

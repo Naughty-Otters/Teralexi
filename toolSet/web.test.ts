@@ -3,6 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import {
   decodeDuckDuckGoResultUrl,
   decodeGoogleResultUrl,
+  cascadeWebSearch,
   extractPageContent,
   extractPageText,
   isScrapeHtmlInsufficient,
@@ -290,6 +291,19 @@ describe('webSearch tool', () => {
       ]),
     })
   })
+
+  it('cascadeWebSearch reports failure when every engine returns no results', async () => {
+    await mockSearchHandlers(() => '<html><body>no results here</body></html>')
+
+    const outcome = await cascadeWebSearch('empty query', 3, ['duckduckgo'])
+    expect(outcome.success).toBe(false)
+    if (!outcome.success) {
+      expect(outcome.query).toBe('empty query')
+      expect(outcome.attempts).toEqual([
+        expect.objectContaining({ engine: 'duckduckgo', success: false }),
+      ])
+    }
+  })
 })
 
 const engineIds = [
@@ -351,5 +365,61 @@ describe('scrape helpers', () => {
         `<html><body>${'x'.repeat(100)}</body></html>`,
       ),
     ).toBe(false)
+  })
+})
+
+const scrapeHtml = `<html><head><title>Scrape Page</title></head><body><p>${'content '.repeat(20)}</p></body></html>`
+
+describe('scrapePage', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('returns cheerio-scraped HTML for sufficient pages', async () => {
+    const { scrapePage } = await import('./web')
+    await mockSearchHandlers(() => scrapeHtml)
+
+    const page = await scrapePage('https://example.com/article')
+    expect(page.title).toBe('Scrape Page')
+    expect(page.fetchMode).toBe('cheerio')
+    expect(page.html).toContain('content')
+  })
+})
+
+describe('searchWithEngineMode', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('returns parsed results for a single crawl mode', async () => {
+    const { searchWithEngineMode } = await import('./web')
+    await mockSearchHandlers(() => ddgSampleHtml)
+
+    const result = await searchWithEngineMode(
+      'duckduckgo',
+      'test query',
+      5,
+      'cheerio',
+    )
+    expect(result.mode).toBe('cheerio')
+    expect(result.results.length).toBeGreaterThan(0)
+    expect(result.searchUrl).toContain('duckduckgo')
+  })
+})
+
+describe('webScrape execute', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('scrapes provided urls', async () => {
+    await mockSearchHandlers(() => scrapeHtml)
+    const result = await webScrape.execute({
+      urls: ['https://example.com/a', 'https://example.com/b'],
+    })
+    expect(result).toMatchObject({
+      success: true,
+      pageCount: 2,
+    })
   })
 })
