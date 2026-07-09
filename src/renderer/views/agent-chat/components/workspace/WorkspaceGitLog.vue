@@ -29,7 +29,12 @@ const emit = defineEmits<{ refresh: [] }>()
 </script>
 
 <style scoped>
-.git-log { display: flex; flex-direction: column; }
+.git-log {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--app-font-family);
+  font-size: var(--app-font-size);
+}
 .git-log-header {
   display: flex;
   justify-content: space-between;
@@ -52,8 +57,8 @@ const emit = defineEmits<{ refresh: [] }>()
   align-items: baseline;
   gap: 8px;
   padding: 4px 10px;
-  font-size: var(--app-font-size-secondary);
-  font-family: var(--app-font-family);
+  font-size: var(--app-font-size);
+  font-family: inherit;
   border-bottom: 1px solid var(--ui-border);
 }
 .git-log-entry:last-child { border-bottom: none; }

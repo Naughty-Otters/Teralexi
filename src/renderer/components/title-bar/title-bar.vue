@@ -339,7 +339,6 @@ ipcRendererChannel.IsUseSysTitle.invoke().then((res) => {
 
 .window-title--update-available,
 .window-title--update-downloading {
-  border-bottom-color: color-mix(in srgb, var(--color-primary-500) 55%, var(--ui-border));
   box-shadow: inset 0 2px 0 color-mix(in srgb, var(--color-primary-500) 65%, transparent);
 }
 

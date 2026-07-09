@@ -150,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useWorkspaceGitStore } from '@store/workspace-git'
 import { useWorkspaceNavigationStore } from '@store/workspace-navigation'
@@ -170,17 +170,15 @@ const {
   filesError: error,
   editorPath,
   consoleOpen,
-  filesRefreshSeq,
+  expandedFileTreeChildren: childEntriesByDir,
+  expandedFileTreeLoading: childLoadingByDir,
+  expandedFileTreeErrors: childErrorByDir,
 } = storeToRefs(gitStore)
 const { highlightPath } = storeToRefs(navStore)
 
 const emit = defineEmits<{ refresh: []; 'toggle-console': [] }>()
 
 const rowRefs = new Map<string, HTMLElement>()
-const expandedDirs = ref<Record<string, boolean>>({})
-const childEntriesByDir = ref<Record<string, GitFileEntry[]>>({})
-const childLoadingByDir = ref<Record<string, boolean>>({})
-const childErrorByDir = ref<Record<string, string | null>>({})
 
 type EntryTreeRow = {
   kind: 'entry'
@@ -272,7 +270,7 @@ function isHighlighted(filePath: string): boolean {
 }
 
 function isExpanded(filePath: string): boolean {
-  return expandedDirs.value[filePath] === true
+  return gitStore.isFileTreeDirExpanded(filePath)
 }
 
 function fileTypeToneClass(filePath: string): string {
@@ -288,43 +286,8 @@ function fileTypeNameClass(entry: GitFileEntry): string | null {
   return fileTypeToneClass(entry.path)
 }
 
-function resetExpandedTree() {
-  expandedDirs.value = {}
-  childEntriesByDir.value = {}
-  childLoadingByDir.value = {}
-  childErrorByDir.value = {}
-}
-
-async function refreshExpandedTree() {
-  const dirs = Object.keys(expandedDirs.value).filter(
-    (dir) => expandedDirs.value[dir],
-  )
-  for (const dir of dirs) {
-    childLoadingByDir.value = { ...childLoadingByDir.value, [dir]: true }
-    childErrorByDir.value = { ...childErrorByDir.value, [dir]: null }
-    const nextEntries = await gitStore.listFiles(dir)
-    childLoadingByDir.value = { ...childLoadingByDir.value, [dir]: false }
-    if (!nextEntries) {
-      childErrorByDir.value = {
-        ...childErrorByDir.value,
-        [dir]: 'Failed to load folder.',
-      }
-      continue
-    }
-    childEntriesByDir.value = {
-      ...childEntriesByDir.value,
-      [dir]: sortEntries(nextEntries),
-    }
-  }
-}
-
 watch(currentDir, () => {
   rowRefs.clear()
-  resetExpandedTree()
-})
-
-watch(filesRefreshSeq, () => {
-  void refreshExpandedTree()
 })
 
 watch(highlightPath, async (path) => {
@@ -353,45 +316,11 @@ function goUp() {
 
 async function onOpen(entry: GitFileEntry) {
   if (entry.isDir) {
-    await toggleDirectory(entry.path)
+    await gitStore.toggleFileTreeDirectory(entry.path)
     return
   }
   navStore.clearHighlight()
   await gitStore.openFileInEditor(entry.path)
-}
-
-async function toggleDirectory(relativePath: string) {
-  if (isExpanded(relativePath)) {
-    const next = { ...expandedDirs.value }
-    delete next[relativePath]
-    expandedDirs.value = next
-    return
-  }
-
-  expandedDirs.value = { ...expandedDirs.value, [relativePath]: true }
-  if (childEntriesByDir.value[relativePath]) return
-
-  childLoadingByDir.value = { ...childLoadingByDir.value, [relativePath]: true }
-  childErrorByDir.value = { ...childErrorByDir.value, [relativePath]: null }
-
-  const nextEntries = await gitStore.listFiles(relativePath)
-  childLoadingByDir.value = {
-    ...childLoadingByDir.value,
-    [relativePath]: false,
-  }
-
-  if (!nextEntries) {
-    childErrorByDir.value = {
-      ...childErrorByDir.value,
-      [relativePath]: 'Failed to load folder.',
-    }
-    return
-  }
-
-  childEntriesByDir.value = {
-    ...childEntriesByDir.value,
-    [relativePath]: sortEntries(nextEntries),
-  }
 }
 </script>
 

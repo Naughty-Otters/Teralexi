@@ -75,6 +75,18 @@ export function resolveFontFamilyPresetId(
   return match?.id ?? 'custom'
 }
 
+/** Derived font-size tokens from `--app-font-size` (see app-font-scale.css). */
+export function buildAppFontScaleStyleProperties(fontSize: number): Record<string, string> {
+  const basePx = `${clampAppFontSize(fontSize)}px`
+  return {
+    '--app-font-size': basePx,
+    '--app-font-size-xs': `calc(${basePx} * 10 / 13)`,
+    '--app-font-size-sm': `calc(${basePx} * 11 / 13)`,
+    '--app-font-size-secondary': `calc(${basePx} * 12 / 13)`,
+    '--app-font-size-lg': `calc(${basePx} * 14 / 13)`,
+  }
+}
+
 export function parseFontSettings(
   values: Record<string, string | undefined>,
 ): FontSettings {

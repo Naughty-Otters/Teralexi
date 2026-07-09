@@ -1,24 +1,16 @@
 import { onMounted, onUnmounted, watch } from 'vue'
 import { useWorkspaceGitStore } from '@store/workspace-git'
 
-// Refresh cadence: coalesce all change notifications into at most one refresh
-// every 5 seconds. The refresh is driven passively by the main-process
-// filesystem watcher, so bursts of edits collapse into a single 5s-throttled
-// refresh of the file browser / git panel.
-const DEBOUNCE_MS = 5000
-// Safety valve so a long, continuous stream of changes still refreshes at least
-// this often instead of being perpetually pushed back by the debounce.
-const MAX_WAIT_MS = 5000
-
 /**
- * Refresh the file browser + git panel when the workspace/sandbox changes.
+ * Refresh the file browser + git status panel when the workspace/sandbox changes.
  *
- * Refreshes are PASSIVE: the main process watches the workspace/sandbox
- * directory (`fs.watch`) and pushes `WorkspaceFilesChanged`; the renderer only
- * reacts to those notifications (debounced). We do not poll, and we do not
- * proactively re-read on every agent output event. Agent stream completion
- * triggers a single reconciliation refresh as a safety net in case the watcher
- * missed the final write.
+ * Refreshes are passive: the main process watches the workspace/sandbox directory
+ * (`fs.watch`, debounced) and pushes `WorkspaceFilesChanged`; the renderer reacts
+ * immediately to those notifications. We do not poll. Open editor tabs and the
+ * active git diff view are left untouched (same as {@link refreshWorkspaceView}).
+ *
+ * Agent stream completion triggers a single reconciliation refresh as a safety net
+ * in case the watcher missed the final write.
  *
  * `filesRootKey` should change when the browsed root switches between a workspace
  * folder and the conversation sandbox (or when the workspace path changes).
@@ -28,28 +20,10 @@ export function useWorkspaceLiveSync(
   filesRootKey: () => string | null | undefined,
 ) {
   const gitStore = useWorkspaceGitStore()
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null
-  let lastRefreshAt = 0
   let watchedConversationId: string | null = null
 
-  function clearDebounce() {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer)
-      debounceTimer = null
-    }
-  }
-
-  function runRefresh() {
-    debounceTimer = null
-    lastRefreshAt = Date.now()
-    void gitStore.refreshWorkspaceView()
-  }
-
-  function scheduleRefresh() {
-    clearDebounce()
-    const sinceLast = Date.now() - lastRefreshAt
-    const wait = sinceLast >= MAX_WAIT_MS ? 0 : DEBOUNCE_MS
-    debounceTimer = setTimeout(runRefresh, wait)
+  function runPassiveRefresh() {
+    void gitStore.refreshWorkspaceView({ silent: true })
   }
 
   async function restartWatch() {
@@ -83,7 +57,7 @@ export function useWorkspaceLiveSync(
   ) {
     const cid = conversationId()?.trim()
     if (!cid || payload.conversationId !== cid) return
-    scheduleRefresh()
+    runPassiveRefresh()
   }
 
   function onAgentStreamFinished(
@@ -95,7 +69,7 @@ export function useWorkspaceLiveSync(
     // Single reconciliation at end of run: make sure the watcher is attached to
     // the (possibly newly created) sandbox and pull the final state once.
     void restartWatch()
-    scheduleRefresh()
+    runPassiveRefresh()
   }
 
   function onAgentSandboxOutput(
@@ -113,7 +87,6 @@ export function useWorkspaceLiveSync(
     [conversationId, filesRootKey],
     ([cid]) => {
       stopWatch()
-      clearDebounce()
       const id = cid?.trim()
       if (id) void restartWatch()
     },
@@ -127,7 +100,6 @@ export function useWorkspaceLiveSync(
   })
 
   onUnmounted(() => {
-    clearDebounce()
     stopWatch()
     window.ipcRendererChannel?.WorkspaceFilesChanged?.removeListener?.(
       onFilesChanged,

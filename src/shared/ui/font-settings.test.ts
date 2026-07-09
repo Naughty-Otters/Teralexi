@@ -4,6 +4,7 @@ import {
   APP_FONT_SIZE_KEY,
   DEFAULT_FONT_SETTINGS,
   FONT_FAMILY_PRESETS,
+  buildAppFontScaleStyleProperties,
   clampAppFontSize,
   parseFontSettings,
   resolveFontFamilyPresetId,
@@ -49,5 +50,15 @@ describe('font-settings', () => {
       'menlo',
     )
     expect(resolveFontFamilyPresetId('Custom Font, monospace')).toBe('custom')
+  })
+
+  it('builds font scale CSS variables from base size', () => {
+    expect(buildAppFontScaleStyleProperties(14)).toEqual({
+      '--app-font-size': '14px',
+      '--app-font-size-xs': 'calc(14px * 10 / 13)',
+      '--app-font-size-sm': 'calc(14px * 11 / 13)',
+      '--app-font-size-secondary': 'calc(14px * 12 / 13)',
+      '--app-font-size-lg': 'calc(14px * 14 / 13)',
+    })
   })
 })
