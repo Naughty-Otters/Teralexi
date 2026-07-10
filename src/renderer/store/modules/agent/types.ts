@@ -147,6 +147,8 @@ export interface ProviderCredentials {
   geminiBaseURL: string
   deepseekApiKey: string
   deepseekApiUrl: string
+  xaiApiKey: string
+  xaiBaseURL: string
   zhipuApiKey: string
   zhipuBaseURL: string
 }

@@ -67,6 +67,13 @@ export const DEEPSEEK_MODELS = [
   'deepseek-reasoner',
 ]
 
+export const XAI_MODELS = [
+  'grok-3',
+  'grok-3-mini',
+  'grok-2-1212',
+  'grok-2-vision-1212',
+]
+
 export const ZHIPU_MODELS = [
   'glm-5.2',
   'glm-5.1',
@@ -93,6 +100,8 @@ export const SYSTEM_PROP_KEYS = {
   geminiBaseURL: 'settings.gemini.baseUrl',
   deepseekApiKey: 'settings.deepseek.apiKey',
   deepseekApiUrl: 'settings.deepseek.baseUrl',
+  xaiApiKey: 'settings.xai.apiKey',
+  xaiBaseURL: 'settings.xai.baseUrl',
   zhipuApiKey: 'settings.zhipu.apiKey',
   zhipuBaseURL: 'settings.zhipu.baseUrl',
 } as const

@@ -29,6 +29,8 @@ function baseOpts(
     geminiBaseURL: '',
     deepseekApiKey: '',
     deepseekApiUrl: '',
+    xaiApiKey: '',
+    xaiBaseURL: '',
     zhipuApiKey: '',
     zhipuBaseURL: '',
     openAiCompatible: {} as AgentResponseOpts['openAiCompatible'],

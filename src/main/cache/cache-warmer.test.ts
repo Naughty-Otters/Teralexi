@@ -23,8 +23,9 @@ vi.mock('@main/agent/utils/agent-run-context', () => ({
     openaiBaseURL: 'https://api.openai.com/v1',
     geminiApiKey: '',
     deepseekApiKey: '',
+    xaiApiKey: '',
+    xaiBaseURL: '',
     zhipuApiKey: '',
-    zhipuBaseURL: '',
   })),
   loadMcpToolsForAgentFromServers: vi.fn(async (_userId: string, agent: { id: string }) => [
     { name: `mcp-${agent.id}`, source: 'mcp' },

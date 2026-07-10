@@ -66,6 +66,11 @@ export function loadAgentRunCredentialsFromDisk(): AgentRunCredentials {
       propValues[ConfigContext.SYSTEM_PROP_KEYS.deepseekApiUrl] ?? '',
       'https://api.deepseek.com/v1',
     ),
+    xaiApiKey: propValues[ConfigContext.SYSTEM_PROP_KEYS.xaiApiKey] ?? '',
+    xaiBaseURL: config.normalizeBaseURL(
+      propValues[ConfigContext.SYSTEM_PROP_KEYS.xaiBaseURL] ?? '',
+      'https://api.x.ai/v1',
+    ),
     zhipuApiKey: propValues[ConfigContext.SYSTEM_PROP_KEYS.zhipuApiKey] ?? '',
     zhipuBaseURL: config.normalizeBaseURL(
       propValues[ConfigContext.SYSTEM_PROP_KEYS.zhipuBaseURL] ?? '',

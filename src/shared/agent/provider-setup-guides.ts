@@ -46,6 +46,11 @@ const CLOUD_DEFAULTS: Partial<
     docsUrl: 'https://api-docs.deepseek.com/',
     keyPlaceholder: 'sk-…',
   },
+  xai: {
+    consoleUrl: 'https://console.x.ai/',
+    docsUrl: 'https://docs.x.ai/docs/overview',
+    keyPlaceholder: 'xai-…',
+  },
   zhipu: {
     consoleUrl: 'https://z.ai/manage-apikey/apikey-list',
     docsUrl: 'https://open.bigmodel.cn/dev/api',
@@ -129,6 +134,13 @@ export const PROVIDER_SETUP_META: Record<ProviderType, ProviderSetupMeta> = {
     requiresApiKey: true,
     defaultBaseUrl: 'https://api.deepseek.com/v1',
     ...CLOUD_DEFAULTS.deepseek,
+  },
+  xai: {
+    id: 'xai',
+    category: 'vendor',
+    requiresApiKey: true,
+    defaultBaseUrl: 'https://api.x.ai/v1',
+    ...CLOUD_DEFAULTS.xai,
   },
   zhipu: {
     id: 'zhipu',

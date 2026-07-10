@@ -15,6 +15,7 @@ function emptyCreds(
     anthropicApiKey: '',
     geminiApiKey: '',
     deepseekApiKey: '',
+    xaiApiKey: '',
     zhipuApiKey: '',
     openAiCompatible: {
       moonshot: { apiKey: '' },

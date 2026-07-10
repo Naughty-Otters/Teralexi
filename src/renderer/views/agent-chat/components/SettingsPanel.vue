@@ -100,6 +100,10 @@
               v-else-if="llmVendorTab === 'deepseek'"
               class="sp-panel-view"
             />
+            <XaiSetting
+              v-else-if="llmVendorTab === 'xai'"
+              class="sp-panel-view"
+            />
             <ZhipuSetting
               v-else-if="llmVendorTab === 'zhipu'"
               class="sp-panel-view"
@@ -215,6 +219,7 @@ import OpenAISetting from './settings/OpenAISetting.vue'
 import AnthropicSetting from './settings/AnthropicSetting.vue'
 import GeminiSetting from './settings/GeminiSetting.vue'
 import DeepSeekSetting from './settings/DeepSeekSetting.vue'
+import XaiSetting from './settings/XaiSetting.vue'
 import ZhipuSetting from './settings/ZhipuSetting.vue'
 import OpenAiCompatibleProviderSetting from './settings/OpenAiCompatibleProviderSetting.vue'
 

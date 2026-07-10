@@ -16,6 +16,7 @@ const {
   createTogetherAI,
   createGroq,
   createDeepInfra,
+  createXai,
 } = vi.hoisted(() => ({
   createOllama: vi.fn(() => vi.fn(() => ({ provider: 'ollama' }))),
   createOpenAI: vi.fn(() => vi.fn(() => ({ provider: 'openai' }))),
@@ -32,6 +33,7 @@ const {
   createTogetherAI: vi.fn(() => vi.fn(() => ({ provider: 'togetherai' }))),
   createGroq: vi.fn(() => vi.fn(() => ({ provider: 'groq' }))),
   createDeepInfra: vi.fn(() => vi.fn(() => ({ provider: 'deepinfra' }))),
+  createXai: vi.fn(() => vi.fn(() => ({ provider: 'xai' }))),
 }))
 
 vi.mock('@teralexi-ai', () => ({
@@ -50,6 +52,7 @@ vi.mock('@teralexi-ai', () => ({
   createTogetherAI,
   createGroq,
   createDeepInfra,
+  createXai,
 }))
 
 import {
@@ -60,6 +63,7 @@ import {
   DeepInfraAdapter,
   AnthropicAdapter,
   DeepSeekAdapter,
+  XaiAdapter,
   GeminiAdapter,
   HuggingFaceAdapter,
   LlamaCppAdapter,
@@ -148,6 +152,17 @@ describe('ProviderAdapter', () => {
     expect(createDeepSeek).toHaveBeenCalledWith({
       apiKey: 'ds-key',
       baseURL: 'https://api.deepseek.com/v1',
+    })
+  })
+
+  it('XaiAdapter passes api key and base URL', () => {
+    new XaiAdapter().createModel('grok-3', {
+      xaiApiKey: 'xai-key',
+      xaiBaseURL: 'https://api.x.ai/v1',
+    } as never)
+    expect(createXai).toHaveBeenCalledWith({
+      apiKey: 'xai-key',
+      baseURL: 'https://api.x.ai/v1',
     })
   })
 
@@ -320,6 +335,7 @@ describe('PROVIDER_ADAPTERS', () => {
       'openrouter',
       'qwen',
       'togetherai',
+      'xai',
       'zhipu',
     ])
   })

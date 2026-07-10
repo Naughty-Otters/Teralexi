@@ -102,6 +102,8 @@ export const useAgentStore = defineStore('agent', () => {
   )
   const deepseekApiKey = ref('')
   const deepseekApiUrl = ref('https://api.deepseek.com/v1')
+  const xaiApiKey = ref('')
+  const xaiBaseURL = ref('https://api.x.ai/v1')
   const zhipuApiKey = ref('')
   const zhipuBaseURL = ref('https://api.z.ai/api/paas/v4')
   const openAiCompatibleApiKeys = ref(createInitialOpenAiCompatibleApiKeys())
@@ -231,6 +233,8 @@ export const useAgentStore = defineStore('agent', () => {
     geminiBaseURL,
     deepseekApiKey,
     deepseekApiUrl,
+    xaiApiKey,
+    xaiBaseURL,
     zhipuApiKey,
     zhipuBaseURL,
     openAiCompatibleApiKeys,
@@ -471,6 +475,8 @@ export const useAgentStore = defineStore('agent', () => {
     geminiBaseURL,
     deepseekApiKey,
     deepseekApiUrl,
+    xaiApiKey,
+    xaiBaseURL,
     zhipuApiKey,
     zhipuBaseURL,
     openAiCompatibleApiKeys,
@@ -504,6 +510,8 @@ export const useAgentStore = defineStore('agent', () => {
     updateGeminiBaseURL: llm.updateGeminiBaseURL,
     updateDeepSeekApiKey: llm.updateDeepSeekApiKey,
     updateDeepSeekApiUrl: llm.updateDeepSeekApiUrl,
+    updateXaiApiKey: llm.updateXaiApiKey,
+    updateXaiBaseURL: llm.updateXaiBaseURL,
     updateZhipuApiKey: llm.updateZhipuApiKey,
     updateZhipuBaseURL: llm.updateZhipuBaseURL,
     getOpenAiCompatibleApiKey: llm.getOpenAiCompatibleApiKey,

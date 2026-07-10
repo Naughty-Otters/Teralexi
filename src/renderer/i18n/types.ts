@@ -88,6 +88,7 @@ export type AppLabels = {
       anthropic: string
       gemini: string
       deepseek: string
+      xai: string
       zhipu: string
       whatsapp: string
       telegram: string

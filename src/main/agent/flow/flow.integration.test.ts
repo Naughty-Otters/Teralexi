@@ -130,6 +130,7 @@ function makeBaseOpts() {
     openaiBaseURL: '',
     geminiApiKey: '',
     deepseekApiKey: '',
+    xaiApiKey: '',
     conversationId: 'test-conv-id',
     skillId: 'demo',
     executionSteps: {

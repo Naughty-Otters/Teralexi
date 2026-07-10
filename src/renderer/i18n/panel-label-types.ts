@@ -91,6 +91,7 @@ export type SettingsPanelLabels = {
       anthropicBaseUrl: string
       geminiBaseUrl: string
       deepseekBaseUrl: string
+      xaiBaseUrl: string
       zhipuBaseUrl: string
       llamacppApiKey: string
       openaiCompatibleBaseUrl: string

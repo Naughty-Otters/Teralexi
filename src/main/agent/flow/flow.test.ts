@@ -76,6 +76,7 @@ const baseOpts = {
   openaiBaseURL: '',
   geminiApiKey: '',
   deepseekApiKey: '',
+  xaiApiKey: '',
 }
 
 describe('AgentFlow fluent pipeline', () => {

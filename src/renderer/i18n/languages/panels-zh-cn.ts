@@ -94,6 +94,7 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
       anthropicBaseUrl: '（可选，用于代理或网关）',
       geminiBaseUrl: '（可选，用于 Vertex AI 或代理）',
       deepseekBaseUrl: '（可选，用于代理或网关）',
+      xaiBaseUrl: '（可选，用于代理或网关）',
       zhipuBaseUrl: '（可选，用于代理或网关）',
       llamacppApiKey: 'API 密钥（可选）',
       openaiCompatibleBaseUrl: '（可选）',

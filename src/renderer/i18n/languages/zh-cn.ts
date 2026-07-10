@@ -89,6 +89,7 @@ export const lang: AppLocaleBundle = {
       anthropic: 'Anthropic',
       gemini: 'Gemini',
       deepseek: 'DeepSeek',
+      xai: 'xAI',
       zhipu: '智谱 GLM',
       whatsapp: 'WhatsApp 频道',
       telegram: 'Telegram 机器人频道',

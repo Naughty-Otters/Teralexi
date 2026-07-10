@@ -13,6 +13,7 @@ import {
   createTogetherAI,
   createGroq,
   createDeepInfra,
+  createXai,
   createZhipu,
 } from '@teralexi-ai'
 import type { ProviderCredentials, ProviderType } from '../types'
@@ -73,6 +74,15 @@ export class GeminiAdapter extends ProviderAdapter {
 export class DeepSeekAdapter extends ProviderAdapter {
   createModel(modelId: string, creds: ProviderCredentials) {
     return createDeepSeek({ apiKey: creds.deepseekApiKey, baseURL: creds.deepseekApiUrl })(modelId)
+  }
+}
+
+export class XaiAdapter extends ProviderAdapter {
+  createModel(modelId: string, creds: ProviderCredentials) {
+    return createXai({
+      apiKey: creds.xaiApiKey,
+      baseURL: creds.xaiBaseURL,
+    })(modelId)
   }
 }
 
@@ -201,6 +211,7 @@ export const PROVIDER_ADAPTERS: Record<ProviderType, ProviderAdapter> = {
     new DeepSeekAdapter(),
     log.child({ provider: 'deepseek' }),
   ),
+  xai: instrumentInstanceMethods(new XaiAdapter(), log.child({ provider: 'xai' })),
   zhipu: instrumentInstanceMethods(new ZhipuAdapter(), log.child({ provider: 'zhipu' })),
   moonshot: instrumentInstanceMethods(new MoonshotAdapter(), log.child({ provider: 'moonshot' })),
   qwen: instrumentInstanceMethods(new QwenAdapter(), log.child({ provider: 'qwen' })),

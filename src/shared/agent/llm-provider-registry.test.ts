@@ -30,6 +30,8 @@ describe('llm-provider-registry', () => {
     expect(AGENT_PROVIDER_SQL_CHECK).toContain("'togetherai'")
     expect(AGENT_PROVIDER_SQL_CHECK).toContain("'groq'")
     expect(AGENT_PROVIDER_SQL_CHECK).toContain("'deepinfra'")
+    expect(LLM_PROVIDER_IDS).toContain('xai')
+    expect(AGENT_PROVIDER_SQL_CHECK).toContain("'xai'")
   })
 
   it('labels local and wholesale providers distinctly', () => {
@@ -47,6 +49,7 @@ describe('llm-provider-registry', () => {
   it('categorizes providers into local, vendor, and wholesale', () => {
     expect(LOCAL_LLM_PROVIDER_IDS).toEqual(['ollama', 'llamacpp'])
     expect(VENDOR_LLM_PROVIDER_IDS).toContain('openai')
+    expect(VENDOR_LLM_PROVIDER_IDS).toContain('xai')
     expect(VENDOR_LLM_PROVIDER_IDS).toContain('nvidia-nim')
     expect(WHOLESALE_LLM_PROVIDER_IDS).toEqual([
       'fireworks',

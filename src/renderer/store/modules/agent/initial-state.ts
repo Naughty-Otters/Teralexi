@@ -10,6 +10,7 @@ import {
 import {
   ANTHROPIC_MODELS,
   DEEPSEEK_MODELS,
+  XAI_MODELS,
   ZHIPU_MODELS,
 } from './config'
 import type { Agent, AgentExecutionSteps, ProviderType } from './types'
@@ -21,6 +22,7 @@ export function createInitialModelsByProvider(): Record<ProviderType, string[]> 
   for (const id of LLM_PROVIDER_IDS) {
     if (id === 'anthropic') out[id] = [...ANTHROPIC_MODELS]
     else if (id === 'deepseek') out[id] = [...DEEPSEEK_MODELS]
+    else if (id === 'xai') out[id] = [...XAI_MODELS]
     else if (id === 'zhipu') out[id] = [...ZHIPU_MODELS]
     else if (isOpenAiCompatibleProvider(id)) {
       out[id] = [...OPENAI_COMPATIBLE_LLM_PROVIDERS[id].defaultModels]

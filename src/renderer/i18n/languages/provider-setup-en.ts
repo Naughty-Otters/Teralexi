@@ -118,6 +118,14 @@ export const providerSetupEn: ProviderSetupLabels = {
         'Paste the key below and click Test & save.',
       ],
     },
+    xai: {
+      intro: 'xAI Grok models are accessed with an API key from the xAI console.',
+      steps: [
+        'Sign in at console.x.ai and open API keys.',
+        'Create an API key and copy it.',
+        'Paste the key below and click Test & save.',
+      ],
+    },
     zhipu: {
       intro: 'Zhipu GLM models use the BigModel Open Platform.',
       steps: [
