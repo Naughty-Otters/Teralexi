@@ -29,7 +29,7 @@ export const ELECTRON_BUILDER_SIGNING_KEYS = [
 export type ElectronBuilderSigningKey =
   (typeof ELECTRON_BUILDER_SIGNING_KEYS)[number]
 
-/** Azure Trusted Signing (Windows) — see docs/CODE-SIGNING.md. */
+/** Azure Trusted Signing (Windows) — see docs/CODE-SIGNING-WINDOWS.md. */
 export const AZURE_TRUSTED_SIGNING_ENV_KEYS = [
   'AZURE_TENANT_ID',
   'AZURE_CLIENT_ID',
@@ -202,7 +202,7 @@ export function formatAzureTrustedSigningValidationBanner(
   lines.push(
     'Fix: add every AZURE_* variable to env/.signing.env or GitHub Actions secrets',
   )
-  lines.push('     (release + mac_signs environments for CI). See docs/CODE-SIGNING.md')
+  lines.push('     (release + mac_signs environments for CI). See docs/CODE-SIGNING-WINDOWS.md')
   lines.push(
     'Fallback: build continues with WIN_SIGN_CERTIFICATE (.pfx) if set, otherwise self-signed/unsigned.',
   )
