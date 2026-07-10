@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { normalize } from 'node:path'
+import { normalize, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const prewarm = vi.hoisted(() => vi.fn())
 const syncEditorDocument = vi.hoisted(() => vi.fn())
@@ -188,11 +189,15 @@ describe('editor-lsp-bridge', () => {
   })
 
   it('resolves relative paths and diagnostic URIs', () => {
+    // resolve() yields a drive-qualified path on Windows; bare file:///tmp/... is invalid there.
+    const absTmp = resolve('/tmp/a.ts')
+    const fileUri = pathToFileURL(absTmp).href
+
     expect(resolveEditorRelativePath(WS, REL_A_TS)).toBe(ABS_A_TS)
     expect(relativePathFromAbs(WS, ABS_A_TS)).toBe(REL_A_TS)
     expect(relativePathFromAbs(WS, normalize('/other/a.ts'))).toBeNull()
-    expect(absPathFromDiagnosticUri('file:///tmp/a.ts')).toBe(normalize('/tmp/a.ts'))
-    expect(absPathFromDiagnosticUri(normalize('/tmp/a.ts'))).toBe(normalize('/tmp/a.ts'))
+    expect(absPathFromDiagnosticUri(fileUri)).toBe(normalize(absTmp))
+    expect(absPathFromDiagnosticUri(absTmp)).toBe(normalize(absTmp))
     expect(absPathFromDiagnosticUri('file:///%E0%A4%A')).toBeNull()
   })
 })
