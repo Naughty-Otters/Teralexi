@@ -5,6 +5,7 @@ import {
   openAiCompatibleProviderConfigKeys,
 } from '@shared/agent/llm-provider-registry'
 import { normalizeLlamaCppBaseURL } from '@shared/agent/llamacpp-url'
+import { syncOnboardingRouteMirror } from '@renderer/lib/onboarding-route-state'
 import {
   SYSTEM_PROP_KEYS,
   PROVIDER_SETUP_DISMISSED_KEY,
@@ -141,6 +142,8 @@ export function createSettingsInitActions(
     onboardingCompleted.value =
       values[ONBOARDING_COMPLETED_KEY] === 'true' ||
       values[ONBOARDING_COMPLETED_KEY] === '1'
+    // Keep router gate in sync with system config (clears stale localStorage skip).
+    syncOnboardingRouteMirror(onboardingCompleted.value)
 
     if (!values[SYSTEM_PROP_KEYS.ollamaBaseURL]) {
       void setSystemConfigValue(
