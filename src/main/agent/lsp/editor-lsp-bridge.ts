@@ -265,8 +265,9 @@ export function relativePathFromAbs(
   const root = normalize(workspaceRoot)
   const abs = normalize(absPath)
   if (!abs.startsWith(root)) return null
-  const rel = abs.slice(root.length).replace(/^[/\\]/, '')
-  return rel || null
+  const rel = abs.slice(root.length).replace(/^[/\\]+/, '')
+  // Editor relative paths are always forward-slash (IPC / UI contract).
+  return rel ? rel.replace(/\\/g, '/') : null
 }
 
 export function absPathFromDiagnosticUri(uri: string): string | null {

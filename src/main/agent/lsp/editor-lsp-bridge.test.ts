@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { normalize } from 'node:path'
 
 const prewarm = vi.hoisted(() => vi.fn())
 const syncEditorDocument = vi.hoisted(() => vi.fn())
@@ -16,7 +17,8 @@ vi.mock('@main/logger', () => ({
   createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn() }),
 }))
 vi.mock('@main/agent/sandbox', () => ({
-  resolveUserProjectPath: (cwd: string, rel: string) => `${cwd}/${rel}`,
+  resolveUserProjectPath: (cwd: string, rel: string) =>
+    normalize(`${cwd.replace(/[/\\]+$/, '')}/${rel}`),
 }))
 vi.mock('@main/services/web-content-send', () => ({
   webContentSend,
@@ -45,6 +47,9 @@ import {
 } from './editor-lsp-bridge'
 
 const BRIDGE_KEY = '__TERALEXI_EDITOR_LSP_BRIDGE__'
+const WS = normalize('/ws')
+const ABS_A_TS = normalize('/ws/src/a.ts')
+const REL_A_TS = 'src/a.ts'
 
 describe('editor-lsp-bridge', () => {
   beforeEach(() => {
@@ -64,8 +69,8 @@ describe('editor-lsp-bridge', () => {
   it('starts and stops an editor session', () => {
     const bridge = getEditorLspBridge()
 
-    expect(bridge.startSession('conv-1', '/ws', null)).toEqual({ ok: true })
-    expect(prewarm).toHaveBeenCalledWith('/ws')
+    expect(bridge.startSession('conv-1', WS, null)).toEqual({ ok: true })
+    expect(prewarm).toHaveBeenCalledWith(WS)
 
     bridge.stopSession('conv-1')
     expect(closeEditorDocument).not.toHaveBeenCalled()
@@ -74,7 +79,7 @@ describe('editor-lsp-bridge', () => {
   it('validates session start inputs', () => {
     const bridge = getEditorLspBridge()
 
-    expect(bridge.startSession('', '/ws', null)).toEqual({
+    expect(bridge.startSession('', WS, null)).toEqual({
       ok: false,
       error: 'conversationId is required.',
     })
@@ -86,18 +91,18 @@ describe('editor-lsp-bridge', () => {
 
   it('queues document sync and debounces LSP updates', async () => {
     const bridge = getEditorLspBridge()
-    bridge.startSession('conv-1', '/ws', null)
+    bridge.startSession('conv-1', WS, null)
 
     expect(
-      bridge.queueSyncDocument('conv-1', 'src/a.ts', 'const x = 1', 'typescript'),
+      bridge.queueSyncDocument('conv-1', REL_A_TS, 'const x = 1', 'typescript'),
     ).toEqual({ ok: true })
     expect(syncEditorDocument).not.toHaveBeenCalled()
 
     await vi.advanceTimersByTimeAsync(SYNC_DEBOUNCE_MS)
 
     expect(syncEditorDocument).toHaveBeenCalledWith(
-      '/ws',
-      '/ws/src/a.ts',
+      WS,
+      ABS_A_TS,
       'const x = 1',
       'typescript',
     )
@@ -106,7 +111,7 @@ describe('editor-lsp-bridge', () => {
   it('returns ok for unsupported files without syncing', () => {
     isLspSupportedFile.mockReturnValue(false)
     const bridge = getEditorLspBridge()
-    bridge.startSession('conv-1', '/ws', null)
+    bridge.startSession('conv-1', WS, null)
 
     expect(
       bridge.queueSyncDocument('conv-1', 'README.md', '# title', 'markdown'),
@@ -116,27 +121,27 @@ describe('editor-lsp-bridge', () => {
 
   it('closes documents and untracks owned content', async () => {
     const bridge = getEditorLspBridge()
-    bridge.startSession('conv-1', '/ws', null)
-    bridge.queueSyncDocument('conv-1', 'src/a.ts', 'v1', 'typescript')
+    bridge.startSession('conv-1', WS, null)
+    bridge.queueSyncDocument('conv-1', REL_A_TS, 'v1', 'typescript')
     await vi.advanceTimersByTimeAsync(SYNC_DEBOUNCE_MS)
 
-    expect(bridge.closeDocument('conv-1', 'src/a.ts')).toEqual({ ok: true })
-    expect(closeEditorDocument).toHaveBeenCalledWith('/ws', '/ws/src/a.ts')
-    expect(bridge.getOwnedContent('/ws', '/ws/src/a.ts')).toBeNull()
+    expect(bridge.closeDocument('conv-1', REL_A_TS)).toEqual({ ok: true })
+    expect(closeEditorDocument).toHaveBeenCalledWith(WS, ABS_A_TS)
+    expect(bridge.getOwnedContent(WS, ABS_A_TS)).toBeNull()
   })
 
   it('forwards LSP requests for open documents', async () => {
     const bridge = getEditorLspBridge()
-    bridge.startSession('conv-1', '/ws', null)
-    bridge.queueSyncDocument('conv-1', 'src/a.ts', 'const x = 1', 'typescript')
+    bridge.startSession('conv-1', WS, null)
+    bridge.queueSyncDocument('conv-1', REL_A_TS, 'const x = 1', 'typescript')
 
-    const result = await bridge.request('conv-1', 'src/a.ts', 'textDocument/completion', {
+    const result = await bridge.request('conv-1', REL_A_TS, 'textDocument/completion', {
       position: { line: 0, character: 6 },
     })
 
     expect(editorLspRequest).toHaveBeenCalledWith(
-      '/ws',
-      '/ws/src/a.ts',
+      WS,
+      ABS_A_TS,
       'const x = 1',
       'typescript',
       'textDocument/completion',
@@ -148,10 +153,10 @@ describe('editor-lsp-bridge', () => {
   it('publishes diagnostics to the active web contents', () => {
     const webContents = { isDestroyed: () => false }
     const bridge = getEditorLspBridge()
-    bridge.startSession('conv-1', '/ws', webContents as never)
-    bridge.queueSyncDocument('conv-1', 'src/a.ts', 'const x = 1', 'typescript')
+    bridge.startSession('conv-1', WS, webContents as never)
+    bridge.queueSyncDocument('conv-1', REL_A_TS, 'const x = 1', 'typescript')
 
-    bridge.publishDiagnostics('/ws', '/ws/src/a.ts', [
+    bridge.publishDiagnostics(WS, ABS_A_TS, [
       {
         range: {
           start: { line: 0, character: 0 },
@@ -164,10 +169,10 @@ describe('editor-lsp-bridge', () => {
 
     expect(webContentSend.EditorLspNotification).toHaveBeenCalledWith(webContents, {
       conversationId: 'conv-1',
-      relativePath: 'src/a.ts',
+      relativePath: REL_A_TS,
       method: 'textDocument/publishDiagnostics',
       params: {
-        uri: '/ws/src/a.ts',
+        uri: ABS_A_TS,
         diagnostics: [
           {
             range: {
@@ -183,11 +188,11 @@ describe('editor-lsp-bridge', () => {
   })
 
   it('resolves relative paths and diagnostic URIs', () => {
-    expect(resolveEditorRelativePath('/ws', 'src/a.ts')).toBe('/ws/src/a.ts')
-    expect(relativePathFromAbs('/ws', '/ws/src/a.ts')).toBe('src/a.ts')
-    expect(relativePathFromAbs('/ws', '/other/a.ts')).toBeNull()
-    expect(absPathFromDiagnosticUri('file:///tmp/a.ts')).toMatch(/\/tmp\/a\.ts$/)
-    expect(absPathFromDiagnosticUri('/tmp/a.ts')).toBe('/tmp/a.ts')
+    expect(resolveEditorRelativePath(WS, REL_A_TS)).toBe(ABS_A_TS)
+    expect(relativePathFromAbs(WS, ABS_A_TS)).toBe(REL_A_TS)
+    expect(relativePathFromAbs(WS, normalize('/other/a.ts'))).toBeNull()
+    expect(absPathFromDiagnosticUri('file:///tmp/a.ts')).toBe(normalize('/tmp/a.ts'))
+    expect(absPathFromDiagnosticUri(normalize('/tmp/a.ts'))).toBe(normalize('/tmp/a.ts'))
     expect(absPathFromDiagnosticUri('file:///%E0%A4%A')).toBeNull()
   })
 })
