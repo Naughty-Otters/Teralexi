@@ -124,7 +124,14 @@ Restart the dev app after changing env files.
 
 Installers must be **signed** for production auto-update install (especially macOS ShipIt / Gatekeeper). Signing is configured at **build time**, not in the running app.
 
-Configure via **`env/.signing.env`** locally or **GitHub Actions secrets** in CI/Release workflows. Full guide: **[CODE-SIGNING.md](./CODE-SIGNING.md)**.
+Configure via **`env/.signing.env`** locally or **GitHub Actions secrets** in CI/Release workflows.
+
+| Platform | Guide |
+| --- | --- |
+| **macOS** (Developer ID + notarization) | **[CODE-SIGNING-APPLE.md](./CODE-SIGNING-APPLE.md)** |
+| **Windows** (Authenticode or Azure Trusted Signing) | **[CODE-SIGNING-WINDOWS.md](./CODE-SIGNING-WINDOWS.md)** |
+
+Overview: **[CODE-SIGNING.md](./CODE-SIGNING.md)**.
 
 ### Summary — local (`env/.signing.env`)
 
@@ -237,41 +244,11 @@ Configure in repository **Settings → Secrets and variables → Actions**.
 
 ### macOS code signing + notarization
 
-Used by **Release** (macOS job) and **CI** (macOS job). Injected as `MAC_SIGN_*` env vars at build time.
+Used by **Release** (macOS job) and **CI** (macOS job). Full setup, secrets, and verification: **[CODE-SIGNING-APPLE.md](./CODE-SIGNING-APPLE.md)**.
 
-| Secret | Build env var | Purpose |
-| --- | --- | --- |
-| `MAC_SIGN_CERTIFICATE_BASE64` | `MAC_SIGN_CERTIFICATE` | Base64-encoded `.p12` |
-| `MAC_SIGN_CERTIFICATE_PASSWORD` | `MAC_SIGN_CERTIFICATE_PASSWORD` | `.p12` password |
-| `MAC_SIGN_IDENTITY` | `MAC_SIGN_IDENTITY` | e.g. `Developer ID Application: … (TEAMID)` |
-| `APPLE_ID` | `MAC_APPLE_ID` | Notarization |
-| `APPLE_APP_SPECIFIC_PASSWORD` | `MAC_APPLE_APP_SPECIFIC_PASSWORD` | Notarization |
-| `APPLE_TEAM_ID` | `MAC_APPLE_TEAM_ID` | Notarization |
+### Windows code signing (Authenticode / Azure)
 
-Encode certificate:
-
-```bash
-base64 -i teralexi.p12 | pbcopy
-```
-
-### Windows code signing (Authenticode)
-
-Used by **Release** (Windows job) and **CI** (Windows job).
-
-| Secret | Build env var | Purpose |
-| --- | --- | --- |
-| `WIN_SIGN_CERTIFICATE_BASE64` | `WIN_SIGN_CERTIFICATE` | Base64-encoded `.pfx` |
-| `WIN_SIGN_CERTIFICATE_PASSWORD` | `WIN_SIGN_CERTIFICATE_PASSWORD` | `.pfx` password |
-
-Encode certificate:
-
-```bash
-# macOS / Linux
-base64 -i teralexi.pfx | pbcopy
-
-# Windows PowerShell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes('teralexi.pfx')) | Set-Clipboard
-```
+Used by **Release** (Windows job) and **CI** (Windows job). Full setup (`.pfx` or Azure Trusted Signing), secrets, and verification: **[CODE-SIGNING-WINDOWS.md](./CODE-SIGNING-WINDOWS.md)**.
 
 If signing secrets are missing, workflows still produce **unsigned** installers (fine for internal testing; not for public auto-update install on macOS).
 
@@ -298,7 +275,7 @@ Staging and production use the **same key layout** under their respective API ho
 
 ```bash
 export TERALEXI_BUILD_ENV=prod
-# Signing: env/.signing.env (see CODE-SIGNING.md)
+# Signing: env/.signing.env (see CODE-SIGNING-APPLE.md / CODE-SIGNING-WINDOWS.md)
 # S3:
 export AWS_ACCESS_KEY_ID=...
 export AWS_SECRET_ACCESS_KEY=...
@@ -426,7 +403,7 @@ Never embed CI or signing credentials in the desktop app.
 | “Set BASE_API…” in packaged app | `env/.prod.env` not loaded at runtime (rebuild after env path fix) or missing `BASE_API` | Set `BASE_API` in `env/.prod.env`; rebuild |
 | Dev stuck on “Checking for updates” | `DESKTOP_UPDATE_FORCE_DEV` not set | Add to `env/.dev.env`, restart dev app |
 | Download fails: `dev-app-update.yml` ENOENT | Dev mode without generated config | Set `DESKTOP_UPDATE_FORCE_DEV=true` (app writes `~/.teralexi/config/dev-app-update.yml`) |
-| Install fails: ShipIt / code signature | Unsigned or mismatched signing | Sign + notarize macOS builds; see [CODE-SIGNING.md](./CODE-SIGNING.md) |
+| Install fails: ShipIt / code signature | Unsigned or mismatched signing | Sign + notarize macOS builds; see [CODE-SIGNING-APPLE.md](./CODE-SIGNING-APPLE.md) |
 | `sha512 checksum mismatch` | Feed `sha512`/`size` does not match zip | Re-upload matching artifact; use electron-builder-generated YAML |
 | Windows SmartScreen warnings | Unsigned `.exe` | Set `WIN_SIGN_*` secrets / local `.pfx` |
 
@@ -439,8 +416,8 @@ Never embed CI or signing credentials in the desktop app.
 | `BASE_API` | Runtime | `app.base.apiUrl` — platform API + default update feed base |
 | `app.desktop.releasesUrl` | Runtime | Override feed path under `BASE_API` |
 | `DESKTOP_UPDATE_FORCE_DEV` | Runtime (dev only) | `app.desktop.forceDevUpdateConfig` |
-| `MAC_SIGN_*` | Build | macOS signing + notarization — see [CODE-SIGNING.md](./CODE-SIGNING.md) |
-| `WIN_SIGN_*` | Build | Windows Authenticode — see [CODE-SIGNING.md](./CODE-SIGNING.md) |
+| `MAC_SIGN_*` | Build | macOS signing + notarization — see [CODE-SIGNING-APPLE.md](./CODE-SIGNING-APPLE.md) |
+| `WIN_SIGN_*` / `AZURE_*` | Build | Windows signing — see [CODE-SIGNING-WINDOWS.md](./CODE-SIGNING-WINDOWS.md) |
 | `TERALEXI_BUILD_ENV` | Build | `dev` / `sit` / `prod` → selects `env/.dev.env`, `.sit.env`, `.prod.env` |
 | `AWS_*`, `S3_RELEASE_BUCKET` | CI / local upload | S3 publish via `npm run release:upload-s3` |
 
@@ -448,7 +425,9 @@ Never embed CI or signing credentials in the desktop app.
 
 ## Related docs
 
-- [CODE-SIGNING.md](./CODE-SIGNING.md) — certificates, notarization, secret encoding
+- [CODE-SIGNING.md](./CODE-SIGNING.md) — overview
+- [CODE-SIGNING-APPLE.md](./CODE-SIGNING-APPLE.md) — macOS Developer ID + notarization
+- [CODE-SIGNING-WINDOWS.md](./CODE-SIGNING-WINDOWS.md) — Windows Authenticode / Azure Trusted Signing
 - [RELEASE.md](./RELEASE.md) — version bumps and Release workflow checklist
 - [BUILD-AND-RELEASE.md](../BUILD-AND-RELEASE.md) — build environments and local commands
 - [SUPPORT-UPLOAD.md](./SUPPORT-UPLOAD.md) — support upload (requires sign-in; separate from updates)

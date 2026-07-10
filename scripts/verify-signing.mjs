@@ -2,7 +2,7 @@
 /**
  * Verify code-signing / notarization of built artifacts.
  *
- * Runs the same checks documented in docs/CODE-SIGNING.md:
+ * Runs the same checks documented in docs/CODE-SIGNING-APPLE.md and docs/CODE-SIGNING-WINDOWS.md:
  *   macOS  → codesign --verify, codesign -dv, spctl --assess, stapler validate
  *   Windows→ Get-AuthenticodeSignature (+ signtool verify /pa when available)
  *

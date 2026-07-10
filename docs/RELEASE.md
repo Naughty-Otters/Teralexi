@@ -62,7 +62,7 @@ In GitHub **Settings → Secrets**, set:
 | Windows | `WIN_SIGN_CERTIFICATE_BASE64` | Base64-encoded `.pfx` |
 | Windows | `WIN_SIGN_CERTIFICATE_PASSWORD` | Password for the `.pfx` |
 
-See [CODE-SIGNING.md](./CODE-SIGNING.md) for `env/.signing.env` setup and certificate encoding.
+See [CODE-SIGNING-APPLE.md](./CODE-SIGNING-APPLE.md) and [CODE-SIGNING-WINDOWS.md](./CODE-SIGNING-WINDOWS.md) for `env/.signing.env` setup and certificate encoding.
 
 #### macOS notarization (`APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`)
 
@@ -76,7 +76,7 @@ You **do not** need these for local dev or unsigned builds. Set them only when p
 
 **Signing vs notarization:** `MAC_SIGN_*` signs the app with your Developer ID certificate. The three `MAC_APPLE_*` vars let electron-builder **notarize** the build with Apple. Both are required for production macOS distribution; signing alone is not enough for Gatekeeper on other machines.
 
-**Local release build (optional):** configure `env/.signing.env` (see [CODE-SIGNING.md](./CODE-SIGNING.md)), then:
+**Local release build (optional):** configure `env/.signing.env` (see [CODE-SIGNING-APPLE.md](./CODE-SIGNING-APPLE.md)), then:
 
 ```bash
 npm run release:mac
@@ -140,12 +140,12 @@ Feed URL: `{BASE_API}/desktop/releases/stable/` (override with `app.desktop.rele
 
 ## Code signing (before public launch)
 
-See **[docs/CODE-SIGNING.md](./CODE-SIGNING.md)** for full setup (Developer ID certificate, `.p12` export, Windows Authenticode, CI encoding).
+| Platform | Guide |
+| -------- | ----- |
+| **macOS** | [CODE-SIGNING-APPLE.md](./CODE-SIGNING-APPLE.md) — Developer ID signing + notarization |
+| **Windows** | [CODE-SIGNING-WINDOWS.md](./CODE-SIGNING-WINDOWS.md) — Authenticode `.pfx` or Azure Trusted Signing |
 
-| Platform | Requirement |
-| -------- | ----------- |
-| **macOS** | Developer ID signing + notarization for smooth in-app updates on other Macs |
-| **Windows** | Authenticode certificate to reduce SmartScreen warnings |
+Overview: [CODE-SIGNING.md](./CODE-SIGNING.md).
 
 Set signing credentials via **shell environment variables** (local) or **GitHub Actions secrets** (Release workflow). Unsigned builds still work for internal testing on your own machine.
 

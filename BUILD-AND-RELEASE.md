@@ -27,7 +27,7 @@ Configure the Teralexi platform backend once with `BASE_API`. At runtime it maps
 - **Build-time (main + renderer):** `BASE_API` is baked into both bundles from `env/.{mode}.env`. Packaged apps do not read env files at runtime — rebuild to change API targets.
 - **Runtime (main process):** optional overrides such as `app.metrics.graphqlUrl` may be relative paths or legacy absolute URLs (via `config.properties` only).
 
-**Code signing:** builds are **unsigned by default** (macOS and Windows). Copy `env/.signing.env.example` → `env/.signing.env` for local signed builds (sit and prod). CI/Release uses GitHub Actions secrets — see [docs/CODE-SIGNING.md](./docs/CODE-SIGNING.md).
+**Code signing:** builds are **unsigned by default** (macOS and Windows). Copy `env/.signing.env.example` → `env/.signing.env` for local signed builds (sit and prod). CI/Release uses GitHub Actions secrets — see [docs/CODE-SIGNING.md](./docs/CODE-SIGNING.md) (overview), [CODE-SIGNING-APPLE.md](./docs/CODE-SIGNING-APPLE.md), [CODE-SIGNING-WINDOWS.md](./docs/CODE-SIGNING-WINDOWS.md).
 
 Example `env/.dev.env`:
 
@@ -125,7 +125,7 @@ Or set `TERALEXI_BUILD_ENV` (`dev` | `sit` | `prod`) before running a build scri
 
 **Scripts:** `build:mac:sit`, `build:win64:sit`
 
-**Signing:** macOS and Windows jobs each receive platform-specific secrets (`MAC_SIGN_*` / `WIN_SIGN_*`). See [docs/CODE-SIGNING.md](./docs/CODE-SIGNING.md).
+**Signing:** macOS and Windows jobs each receive platform-specific secrets. See [CODE-SIGNING-APPLE.md](./docs/CODE-SIGNING-APPLE.md) and [CODE-SIGNING-WINDOWS.md](./docs/CODE-SIGNING-WINDOWS.md).
 
 **Outputs:**
 
@@ -291,7 +291,7 @@ These scripts use `-m prod` and `env/.prod.env`. See [`docs/DESKTOP-RELEASES.md`
 
 Packaged apps check `{BASE_API}/desktop/releases/stable/` via `electron-updater` (generic provider). CI uploads installers to private S3; the update feed is served publicly (no sign-in).
 
-**macOS in-app install** requires signed + notarized release builds. See [docs/CODE-SIGNING.md](./docs/CODE-SIGNING.md).
+**macOS in-app install** requires signed + notarized release builds. See [CODE-SIGNING-APPLE.md](./docs/CODE-SIGNING-APPLE.md).
 
 See [`docs/DESKTOP-RELEASES.md`](./docs/DESKTOP-RELEASES.md) and [`docs/RELEASE.md`](./docs/RELEASE.md).
 
