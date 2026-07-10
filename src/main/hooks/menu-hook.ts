@@ -68,12 +68,12 @@ const menu: Array<MenuItemConstructorOptions | MenuItem> = [
           dialog.showMessageBox({
             title: 'About',
             type: 'info',
-            message: 'electron-Vue Framework',
-            detail: `Version：${version}\n: ${
+            message: 'Teralexi',
+            detail: `Version：${version}\nElectron：${process.versions.electron}\nV8：${
               process.versions.v8
-            }\nCurrent system：${type()} ${arch()} ${release()}`,
+            }\nCurrent system：${type()} ${arch()} ${release()}\n\nSupport：info@teralexi.com`,
             noLink: true,
-            buttons: ['View GitHub', 'OK'],
+            buttons: ['OK'],
           })
         },
       },
