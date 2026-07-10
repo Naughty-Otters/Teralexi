@@ -84,7 +84,8 @@ function guessMimeType(fileName: string, text: boolean): string {
 
 /** Virtual folder path for bundled skills when sources are not shipped on disk. */
 export function bundledSkillFolder(skillId: string): string {
-  return join('bundled-skills', skillId)
+  // Always forward slashes — this is a virtual catalog path, not an OS filesystem path.
+  return `bundled-skills/${skillId}`
 }
 
 /** Write bundled skill sources to disk (sandbox mirror or dev fallback). */
