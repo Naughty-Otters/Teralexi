@@ -100,8 +100,10 @@ vi.mock('@main/services/conversation-store', () => ({
       conversationMessages.filter((m) => m.conversationId === conversationId),
     saveMessage: saveMessageMock,
     listMcpServers: vi.fn(() => []),
+    getMessageAttachmentsForMessage: vi.fn(() => []),
     upsertConversationSandboxRun: vi.fn(),
     insertTokenUsage: vi.fn(),
+    applyCompactionToConversation: vi.fn(),
   })),
 }))
 
@@ -137,6 +139,23 @@ vi.mock('electron', () => ({
 
 vi.mock('@main/agent/flow', () => ({
   streamAgentResponse: (...args: unknown[]) => streamAgentResponseMock(...args),
+}))
+
+vi.mock('@main/agent/hooks/user-hooks', () => ({
+  runUserHooks: vi.fn(async () => ({ blocked: false })),
+  loadUserHooksConfig: vi.fn(() => ({ hooks: [] })),
+  clearUserHooksCache: vi.fn(),
+}))
+
+vi.mock('@main/agent/compaction', () => ({
+  autoCompactStoredConversationIfNeeded: vi.fn(async () => ({ compacted: false })),
+}))
+
+vi.mock('@main/services/chat-attachments', () => ({
+  ensureUserAttachmentsUploadedBeforeAgentRun: vi.fn(async () => ({
+    attachments: [],
+  })),
+  resolveUserAttachmentsForTurn: vi.fn(async () => ({ attachments: [] })),
 }))
 
 vi.mock('@main/agent/memory', () => ({
@@ -239,6 +258,9 @@ function seedChannelConversation(userText: string): {
 describe('channel → engine integration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    conversationMessages.length = 0
+    conversations.clear()
+    capturedStreamOpts.current = null
     streamAgentResponseMock.mockImplementation(async (opts: AgentResponseOpts) => {
       capturedStreamOpts.current = opts
       return {
@@ -250,10 +272,6 @@ describe('channel → engine integration', () => {
   })
 
   it('runAgentForConversation passes multi-turn store history in opts.messages', async () => {
-    conversationMessages.length = 0
-    conversations.clear()
-    capturedStreamOpts.current = null
-
     const now = '2026-03-20T12:00:00.000Z'
     conversations.set(CHANNEL_CONVERSATION_ID, {
       id: CHANNEL_CONVERSATION_ID,
@@ -298,9 +316,11 @@ describe('channel → engine integration', () => {
       userId: 'default',
     })
 
-    const opts = capturedStreamOpts.current!
-    expect(opts.messages.length).toBeGreaterThan(1)
-    expect(opts.messages.map((m) => m.content)).toEqual([
+    expect(streamAgentResponseMock).toHaveBeenCalledTimes(1)
+    const opts = capturedStreamOpts.current
+    expect(opts).not.toBeNull()
+    expect(opts!.messages.length).toBeGreaterThan(1)
+    expect(opts!.messages.map((m) => m.content)).toEqual([
       'First question',
       'First answer',
       'Follow-up question',
