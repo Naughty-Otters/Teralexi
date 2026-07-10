@@ -1,4 +1,4 @@
-import { normalize } from 'node:path'
+import { normalize, relative, isAbsolute } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { WebContents } from 'electron'
 import { createLogger } from '@main/logger'
@@ -264,10 +264,11 @@ export function relativePathFromAbs(
 ): string | null {
   const root = normalize(workspaceRoot)
   const abs = normalize(absPath)
-  if (!abs.startsWith(root)) return null
-  const rel = abs.slice(root.length).replace(/^[/\\]+/, '')
+  const rel = relative(root, abs)
+  // Outside the workspace, or still absolute (Windows different-drive case).
+  if (!rel || rel.startsWith('..') || isAbsolute(rel)) return null
   // Editor relative paths are always forward-slash (IPC / UI contract).
-  return rel ? rel.replace(/\\/g, '/') : null
+  return rel.replace(/\\/g, '/')
 }
 
 export function absPathFromDiagnosticUri(uri: string): string | null {
