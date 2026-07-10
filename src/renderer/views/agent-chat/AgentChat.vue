@@ -118,6 +118,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch, watchEffect, defineAsyncComponent } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
 import { useAgentStore } from '@store/agent'
 import { useWorkspaceStore } from '@store/workspace'
 import { useWorkspaceNavigationStore } from '@store/workspace-navigation'
@@ -183,6 +184,7 @@ import {
 import StartupStatusBar from './components/StartupStatusBar.vue'
 
 const { t } = useI18n()
+const router = useRouter()
 const { isSignedIn } = useGoogleAccount()
 
 const toast = useToast()
@@ -235,6 +237,35 @@ function onOpenLocalLlmFromGate() {
 function onProviderSetupFinished() {
   providerSetupOpen.value = false
 }
+
+function openProviderSetupWizardIfNeeded() {
+  // After settings load: stale route mirror may have let chat mount — send back to first-run.
+  if (agentStore.shouldRequireFirstTimeRampUp) {
+    void router.replace('/onboarding')
+    return
+  }
+  if (sessionStorage.getItem(PROVIDER_SETUP_SESSION_KEY) === '1') {
+    sessionStorage.removeItem(PROVIDER_SETUP_SESSION_KEY)
+    if (isSignedIn.value) {
+      providerSetupOpen.value = true
+    }
+  } else if (agentStore.shouldShowProviderSetupWizard && isSignedIn.value) {
+    providerSetupOpen.value = true
+  }
+}
+
+/** First-run incomplete → send back to auth/setup; after sign-in reopen wizard if needed. */
+watch(
+  isSignedIn,
+  (signedIn) => {
+    if (!signedIn) return
+    if (agentStore.shouldRequireFirstTimeRampUp) {
+      void router.replace('/onboarding')
+      return
+    }
+    openProviderSetupWizardIfNeeded()
+  },
+)
 
 watch(
   () => appUpdateState.phase,
@@ -558,17 +589,6 @@ onMounted(() => {
 
   void runStartupBootstrap(openProviderSetupWizardIfNeeded)
 })
-
-function openProviderSetupWizardIfNeeded() {
-  if (sessionStorage.getItem(PROVIDER_SETUP_SESSION_KEY) === '1') {
-    sessionStorage.removeItem(PROVIDER_SETUP_SESSION_KEY)
-    if (isSignedIn.value) {
-      providerSetupOpen.value = true
-    }
-  } else if (agentStore.shouldShowProviderSetupWizard && isSignedIn.value) {
-    providerSetupOpen.value = true
-  }
-}
 
 onUnmounted(() => {
   registerAppUpdateAboutHandler(null)

@@ -17,6 +17,7 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { useEntitlement } from '@renderer/composables/useEntitlement'
 
@@ -31,11 +32,17 @@ import {
   loadAppVersion,
 } from '@renderer/composables/useAppUpdate'
 
+const route = useRoute()
 const { isSignedIn } = useGoogleAccount()
 const { isAuthorizationBlocked, authorizationErrorMessage } = useEntitlement()
 
+/** Never block first-run auth → setup → summary behind the entitlement overlay. */
 const authorizationBlocked = computed(
-  () => isSignedIn.value && isAuthorizationBlocked.value,
+  () =>
+    isSignedIn.value &&
+    isAuthorizationBlocked.value &&
+    route.path !== '/onboarding' &&
+    route.path !== '/landing',
 )
 
 let unbindAppUpdate: (() => void) | null = null

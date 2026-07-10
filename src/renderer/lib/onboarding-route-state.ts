@@ -43,20 +43,25 @@ async function withTimeout<T>(
   ])
 }
 
+function parseOnboardingCompletedFlag(
+  value: string | undefined,
+): boolean {
+  return value === 'true' || value === '1'
+}
+
 /** Persist onboarding flag for synchronous router reads on next launch. */
 export function syncOnboardingRouteMirror(complete: boolean): void {
   cachedOnboardingComplete = complete
   writeLocalOnboardingMirror(complete)
 }
 
+/**
+ * Prefer system config over the localStorage mirror so a stale `1` cannot
+ * permanently skip first-run auth → setup → summary. Mirror is only a
+ * fallback when config read times out / fails.
+ */
 export async function isOnboardingComplete(): Promise<boolean> {
   if (cachedOnboardingComplete !== null) return cachedOnboardingComplete
-
-  const localMirror = readLocalOnboardingMirror()
-  if (localMirror !== null) {
-    cachedOnboardingComplete = localMirror
-    return localMirror
-  }
 
   try {
     const values = await withTimeout(
@@ -64,14 +69,21 @@ export async function isOnboardingComplete(): Promise<boolean> {
       ONBOARDING_CONFIG_TIMEOUT_MS,
       'getSystemConfigValues(onboarding)',
     )
-    cachedOnboardingComplete =
-      values[ONBOARDING_COMPLETED_KEY] === 'true' ||
-      values[ONBOARDING_COMPLETED_KEY] === '1'
+    cachedOnboardingComplete = parseOnboardingCompletedFlag(
+      values[ONBOARDING_COMPLETED_KEY],
+    )
+    writeLocalOnboardingMirror(cachedOnboardingComplete)
+    return cachedOnboardingComplete
   } catch {
+    const localMirror = readLocalOnboardingMirror()
+    if (localMirror !== null) {
+      cachedOnboardingComplete = localMirror
+      return localMirror
+    }
     cachedOnboardingComplete = false
+    writeLocalOnboardingMirror(false)
+    return false
   }
-  writeLocalOnboardingMirror(cachedOnboardingComplete)
-  return cachedOnboardingComplete
 }
 
 export function markOnboardingCompleteInRouteCache(): void {

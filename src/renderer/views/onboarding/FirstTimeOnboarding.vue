@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from '@renderer/composables/useI18n'
 import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
@@ -33,24 +33,39 @@ import SignInRequiredPanel from '../agent-chat/components/SignInRequiredPanel.vu
 
 const router = useRouter()
 const { t } = useI18n()
-const { isSignedIn } = useGoogleAccount()
+const { isSignedIn, refresh } = useGoogleAccount()
 const agentStore = useAgentStore()
 
 const ready = ref(false)
 const showWizard = ref(true)
 const continuingLocal = ref(false)
 
-onMounted(async () => {
-  await agentStore.initializeSettingsFromConfig()
-  ready.value = true
-
-  // Cloud API keys are known from config; local providers are probed in the setup wizard.
-  if (agentStore.hasLlmProviderReady && agentStore.areAllAgentsLlmReady) {
-    await agentStore.completeOnboarding()
-    markOnboardingCompleteInRouteCache()
-    void router.replace('/')
-    return
+/**
+ * First-run path: auth (unless local escape) → LLM/agents wizard → /landing summary.
+ * Only auto-skip when already signed in and fully configured.
+ */
+async function maybeSkipIfAlreadyConfigured(): Promise<boolean> {
+  if (!isSignedIn.value) return false
+  if (!agentStore.hasLlmProviderReady || !agentStore.areAllAgentsLlmReady) {
+    return false
   }
+  await agentStore.completeOnboarding()
+  markOnboardingCompleteInRouteCache()
+  void router.replace('/')
+  return true
+}
+
+onMounted(async () => {
+  await Promise.all([agentStore.initializeSettingsFromConfig(), refresh()])
+  if (await maybeSkipIfAlreadyConfigured()) return
+  ready.value = true
+})
+
+watch(isSignedIn, async (signedIn) => {
+  if (!signedIn || !ready.value) return
+  continuingLocal.value = false
+  if (await maybeSkipIfAlreadyConfigured()) return
+  showWizard.value = true
 })
 
 function onSignedIn() {
