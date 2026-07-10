@@ -28,6 +28,8 @@ const {
   conversationMessages,
   conversations,
   capturedStreamOpts,
+  mockEngineAgent,
+  loadEngineAgentsMock,
 } = vi.hoisted(() => {
   const conversationMessages: StoredMessage[] = []
   const conversations = new Map<
@@ -35,6 +37,21 @@ const {
     { id: string; agentId: string; title: string; createdAt: string; updatedAt: string }
   >()
   const capturedStreamOpts: { current: AgentResponseOpts | null } = { current: null }
+  const mockEngineAgent = {
+    id: 'skill:demo',
+    name: 'Demo',
+    description: '',
+    model: 'test-model',
+    systemPrompt: 'You are helpful.',
+    provider: 'ollama' as const,
+    isSkill: true,
+    skillId: 'demo',
+    availableSkillTools: [] as unknown[],
+    availableSet: [] as unknown[],
+    availableSetTouched: false,
+    toolNeedsApprovalOverrides: {} as Record<string, boolean>,
+  }
+  const loadEngineAgentsMock = vi.fn(async () => [mockEngineAgent])
 
   return {
     streamAgentResponseMock: vi.fn(async (opts: AgentResponseOpts) => {
@@ -53,6 +70,8 @@ const {
     conversationMessages,
     conversations,
     capturedStreamOpts,
+    mockEngineAgent,
+    loadEngineAgentsMock,
   }
 })
 
@@ -100,6 +119,8 @@ vi.mock('@main/services/conversation-store', () => ({
       conversationMessages.filter((m) => m.conversationId === conversationId),
     saveMessage: saveMessageMock,
     listMcpServers: vi.fn(() => []),
+    listAgentConfigurations: vi.fn(() => []),
+    getConversationSettings: vi.fn(() => null),
     getMessageAttachmentsForMessage: vi.fn(() => []),
     upsertConversationSandboxRun: vi.fn(),
     insertTokenUsage: vi.fn(),
@@ -169,55 +190,84 @@ vi.mock('@main/agent/providers/context', () => ({
   },
 }))
 
+vi.mock('@main/agent/workspace/conversation-workspace', () => ({
+  getWorkspacePath: vi.fn(() => null),
+}))
+
+vi.mock('@main/agent/coding/plan-mode-session-reminders', () => ({
+  clearPlanExecutionCompleted: vi.fn(),
+}))
+
+/** Keep real history loading; stub credential/MCP paths that can hang on Windows CI. */
+vi.mock('@main/agent/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@main/agent/utils')>()
+  return {
+    ...actual,
+    loadMcpToolsForAgent: vi.fn(async () => []),
+    loadAgentRunCredentials: vi.fn(() => ({
+      ollamaBaseURL: 'http://127.0.0.1:11434',
+      llamacppBaseURL: 'http://127.0.0.1:8080/v1',
+      llamacppApiKey: '',
+      anthropicApiKey: '',
+      anthropicBaseURL: '',
+      openaiApiKey: '',
+      openaiBaseURL: '',
+      geminiApiKey: '',
+      geminiBaseURL: '',
+      deepseekApiKey: '',
+      deepseekApiUrl: '',
+      xaiApiKey: '',
+      xaiBaseURL: '',
+      zhipuApiKey: '',
+      zhipuBaseURL: '',
+      openAiCompatible: {},
+    })),
+  }
+})
+
 vi.mock('@main/channels/framework/channel-registry', () => ({
   getChannelRegistry: vi.fn(() => ({
     get: vi.fn(() => ({ sendToTarget: sendToTargetMock })),
   })),
 }))
 
-const mockEngineAgent = {
-  id: CHANNEL_AGENT_ID,
-  name: 'Demo',
-  description: '',
-  model: 'test-model',
-  systemPrompt: 'You are helpful.',
-  provider: 'ollama' as const,
-  isSkill: true,
-  skillId: 'demo',
-  availableSkillTools: [],
-  availableSet: [],
-  availableSetTouched: false,
-  toolNeedsApprovalOverrides: {},
-}
+/**
+ * Do not importOriginal ConfigContext — that pulls catalog → loadSkills/toolSet and can
+ * hang past Vitest's 5s timeout on Windows CI. Subclassing statics is also unreliable there.
+ */
+vi.mock('@main/agent/config/context', async () => {
+  const { AGENT_DEFAULTS, AGENT_ERRORS, ENGINE_LOG } = await import(
+    '@main/agent/config/constants'
+  )
+  class ConfigContext {
+    static DEFAULTS = AGENT_DEFAULTS
+    static ERRORS = AGENT_ERRORS
+    static ENGINE_LOG = ENGINE_LOG
+    static DEFAULT_USER_ID = AGENT_DEFAULTS.USER_ID
+    static DEFAULT_RESPONSE_LANGUAGE = AGENT_DEFAULTS.RESPONSE_LANGUAGE
+    static ANTHROPIC_MODELS: string[] = []
+    static SYSTEM_PROP_KEYS: Record<string, string> = {}
+    static loadEngineAgents = loadEngineAgentsMock
 
-vi.mock('@main/agent/config/context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@main/agent/config/context')>()
-  return {
-    ...actual,
-    ConfigContext: class extends actual.ConfigContext {
-      static loadEngineAgents = vi.fn(async () => [mockEngineAgent])
-    },
+    normalizeBaseURL(url: string, fallback: string): string {
+      const raw = (url || fallback).trim() || fallback
+      return raw.endsWith('/') ? raw : `${raw}/`
+    }
   }
+  return { ConfigContext, loadEngineAgents: loadEngineAgentsMock }
 })
 
-/** Patch stream bridge mock to capture notifyFinished while keeping real chunk handlers. */
-vi.mock('@main/agent/agent-stream-bridge', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@main/agent/agent-stream-bridge')>()
-  return {
-    ...actual,
-    createAgentStreamBridge: vi.fn((args) => {
-      const bridge = actual.createAgentStreamBridge(args)
-      return {
-        ...bridge,
-        notifyFinished: (...notifyArgs: unknown[]) => {
-          notifyFinishedMock(...notifyArgs)
-          return bridge.notifyFinished()
-        },
-      }
-    }),
-  }
-})
+vi.mock('@main/agent/agent-stream-bridge', () => ({
+  createAgentStreamBridge: vi.fn(() => ({
+    onChunk: vi.fn(),
+    onUIMessageChunk: vi.fn(),
+    onStepProgress: vi.fn(),
+    onSubAgentRunEvent: vi.fn(),
+    onSandboxReady: vi.fn(),
+    onSandboxResultWritten: vi.fn(),
+    notifyFinished: notifyFinishedMock,
+  })),
+}))
 
 import { runAgentForConversation } from '@main/engine'
 import { getChannelConversationBridge } from './conversation-bridge'

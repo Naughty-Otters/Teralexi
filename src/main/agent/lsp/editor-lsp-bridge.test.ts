@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { normalize, resolve } from 'node:path'
+import { join, normalize, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const prewarm = vi.hoisted(() => vi.fn())
@@ -19,7 +19,7 @@ vi.mock('@main/logger', () => ({
 }))
 vi.mock('@main/agent/sandbox', () => ({
   resolveUserProjectPath: (cwd: string, rel: string) =>
-    normalize(`${cwd.replace(/[/\\]+$/, '')}/${rel}`),
+    normalize(join(cwd, ...rel.split(/[/\\]+/).filter(Boolean))),
 }))
 vi.mock('@main/services/web-content-send', () => ({
   webContentSend,
@@ -48,9 +48,12 @@ import {
 } from './editor-lsp-bridge'
 
 const BRIDGE_KEY = '__TERALEXI_EDITOR_LSP_BRIDGE__'
-const WS = normalize('/ws')
-const ABS_A_TS = normalize('/ws/src/a.ts')
+// cwd-based abs paths are drive-qualified on Windows (unlike normalize('/ws')).
+const WS = resolve('test-ws-root')
+const ABS_A_TS = join(WS, 'src', 'a.ts')
 const REL_A_TS = 'src/a.ts'
+const ABS_OTHER = join(resolve('test-other-root'), 'a.ts')
+const ABS_DIAG = join(resolve('test-diag-root'), 'a.ts')
 
 describe('editor-lsp-bridge', () => {
   beforeEach(() => {
@@ -189,15 +192,13 @@ describe('editor-lsp-bridge', () => {
   })
 
   it('resolves relative paths and diagnostic URIs', () => {
-    // resolve() yields a drive-qualified path on Windows; bare file:///tmp/... is invalid there.
-    const absTmp = resolve('/tmp/a.ts')
-    const fileUri = pathToFileURL(absTmp).href
+    const fileUri = pathToFileURL(ABS_DIAG).href
 
-    expect(resolveEditorRelativePath(WS, REL_A_TS)).toBe(ABS_A_TS)
+    expect(resolveEditorRelativePath(WS, REL_A_TS)).toBe(normalize(ABS_A_TS))
     expect(relativePathFromAbs(WS, ABS_A_TS)).toBe(REL_A_TS)
-    expect(relativePathFromAbs(WS, normalize('/other/a.ts'))).toBeNull()
-    expect(absPathFromDiagnosticUri(fileUri)).toBe(normalize(absTmp))
-    expect(absPathFromDiagnosticUri(absTmp)).toBe(normalize(absTmp))
+    expect(relativePathFromAbs(WS, ABS_OTHER)).toBeNull()
+    expect(absPathFromDiagnosticUri(fileUri)).toBe(normalize(ABS_DIAG))
+    expect(absPathFromDiagnosticUri(ABS_DIAG)).toBe(normalize(ABS_DIAG))
     expect(absPathFromDiagnosticUri('file:///%E0%A4%A')).toBeNull()
   })
 })
