@@ -227,6 +227,8 @@ const baseUrlHint = computed(() => {
       return p.value.llm.hints.anthropicBaseUrl
     case 'deepseek':
       return p.value.llm.hints.deepseekBaseUrl
+    case 'xai':
+      return p.value.llm.hints.xaiBaseUrl
     case 'gemini':
       return p.value.llm.hints.geminiBaseUrl
     case 'zhipu':
@@ -260,6 +262,9 @@ function syncDraftFromStore() {
   } else if (id === 'deepseek') {
     draftApiKey.value = agentStore.deepseekApiKey
     draftBaseUrl.value = agentStore.deepseekApiUrl
+  } else if (id === 'xai') {
+    draftApiKey.value = agentStore.xaiApiKey
+    draftBaseUrl.value = agentStore.xaiBaseURL
   } else if (id === 'zhipu') {
     draftApiKey.value = agentStore.zhipuApiKey
     draftBaseUrl.value = agentStore.zhipuBaseURL
@@ -279,6 +284,7 @@ function buildCredentialsSnapshot() {
     anthropicApiKey: agentStore.anthropicApiKey,
     geminiApiKey: agentStore.geminiApiKey,
     deepseekApiKey: agentStore.deepseekApiKey,
+    xaiApiKey: agentStore.xaiApiKey,
     zhipuApiKey: agentStore.zhipuApiKey,
     openAiCompatible: agentStore.openAiCompatibleApiKeys,
   }
@@ -314,6 +320,9 @@ function persistDraftCredentials() {
   } else if (id === 'deepseek') {
     agentStore.updateDeepSeekApiKey(draftApiKey.value)
     agentStore.updateDeepSeekApiUrl(draftBaseUrl.value)
+  } else if (id === 'xai') {
+    agentStore.updateXaiApiKey(draftApiKey.value)
+    agentStore.updateXaiBaseURL(draftBaseUrl.value)
   } else if (id === 'zhipu') {
     agentStore.updateZhipuApiKey(draftApiKey.value)
     agentStore.updateZhipuBaseURL(draftBaseUrl.value)

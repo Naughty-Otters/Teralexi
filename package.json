@@ -71,6 +71,7 @@
     "@ai-sdk/openai-compatible": "^2.0.50",
     "@ai-sdk/togetherai": "^2.0.62",
     "@ai-sdk/vue": "^3.0.177",
+    "@ai-sdk/xai": "^4.0.10",
     "@nuxt/ui": "^4.7.0",
     "@openrouter/ai-sdk-provider": "^2.10.0",
     "@slack/bolt": "^4.7.2",

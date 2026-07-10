@@ -94,6 +94,7 @@ export const settingsPanelsEn: SettingsPanelLabels = {
       anthropicBaseUrl: '(optional, for proxies or gateways)',
       geminiBaseUrl: '(optional, for Vertex AI or proxies)',
       deepseekBaseUrl: '(optional, for proxies or gateways)',
+      xaiBaseUrl: '(optional, for proxies or gateways)',
       zhipuBaseUrl: '(optional, for proxies or gateways)',
       llamacppApiKey: 'API key (optional)',
       openaiCompatibleBaseUrl: '(optional)',

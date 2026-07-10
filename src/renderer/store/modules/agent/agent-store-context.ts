@@ -59,6 +59,8 @@ export type AgentStoreContext = {
   geminiBaseURL: Ref<string>
   deepseekApiKey: Ref<string>
   deepseekApiUrl: Ref<string>
+  xaiApiKey: Ref<string>
+  xaiBaseURL: Ref<string>
   zhipuApiKey: Ref<string>
   zhipuBaseURL: Ref<string>
   openAiCompatibleApiKeys: Ref<Record<OpenAiCompatibleProviderId, string>>

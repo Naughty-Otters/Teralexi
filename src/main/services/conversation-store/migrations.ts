@@ -30,6 +30,7 @@ export function runMigrations(db: Database.Database): void {
   migrateAgentProviderWholesale(db)
   migrateAgentProviderTogetherAi(db)
   migrateAgentProviderGroqDeepinfra(db)
+  migrateAgentProviderXai(db)
   migrateAgentStageLlmColumns(db)
   migrateWorkflowsSchema(db)
   migrateSchedulersRunWorkflow(db)
@@ -384,6 +385,12 @@ function migrateAgentProviderGroqDeepinfra(db: Database.Database): void {
   const sql = agentConfigurationsProviderCheckSql(db)
   if (!sql || sql.includes("'groq'")) return
   rebuildAgentConfigurationsProviderCheck(db, 'provider_legacy_groq_deepinfra')
+}
+
+function migrateAgentProviderXai(db: Database.Database): void {
+  const sql = agentConfigurationsProviderCheckSql(db)
+  if (!sql || sql.includes("'xai'")) return
+  rebuildAgentConfigurationsProviderCheck(db, 'provider_legacy_xai')
 }
 
 /** Legacy DDL retained for intermediate migrations only. */

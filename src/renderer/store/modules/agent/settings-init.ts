@@ -40,6 +40,8 @@ export function createSettingsInitActions(
     geminiBaseURL,
     deepseekApiKey,
     deepseekApiUrl,
+    xaiApiKey,
+    xaiBaseURL,
     zhipuApiKey,
     zhipuBaseURL,
     openAiCompatibleApiKeys,
@@ -78,6 +80,8 @@ export function createSettingsInitActions(
         SYSTEM_PROP_KEYS.geminiBaseURL,
         SYSTEM_PROP_KEYS.deepseekApiKey,
         SYSTEM_PROP_KEYS.deepseekApiUrl,
+        SYSTEM_PROP_KEYS.xaiApiKey,
+        SYSTEM_PROP_KEYS.xaiBaseURL,
         SYSTEM_PROP_KEYS.zhipuApiKey,
         SYSTEM_PROP_KEYS.zhipuBaseURL,
         PROVIDER_SETUP_DISMISSED_KEY,
@@ -120,6 +124,11 @@ export function createSettingsInitActions(
     deepseekApiUrl.value = normalizeBaseURL(
       values[SYSTEM_PROP_KEYS.deepseekApiUrl] ?? deepseekApiUrl.value,
       'https://api.deepseek.com/v1',
+    )
+    xaiApiKey.value = (values[SYSTEM_PROP_KEYS.xaiApiKey] ?? '').trim()
+    xaiBaseURL.value = normalizeBaseURL(
+      values[SYSTEM_PROP_KEYS.xaiBaseURL] ?? xaiBaseURL.value,
+      'https://api.x.ai/v1',
     )
     zhipuApiKey.value = (values[SYSTEM_PROP_KEYS.zhipuApiKey] ?? '').trim()
     zhipuBaseURL.value = normalizeBaseURL(
@@ -198,6 +207,12 @@ export function createSettingsInitActions(
         SYSTEM_PROP_KEYS.deepseekApiUrl,
         deepseekApiUrl.value,
       )
+    }
+    if (!values[SYSTEM_PROP_KEYS.xaiApiKey]) {
+      void setSystemConfigValue(SYSTEM_PROP_KEYS.xaiApiKey, xaiApiKey.value)
+    }
+    if (!values[SYSTEM_PROP_KEYS.xaiBaseURL]) {
+      void setSystemConfigValue(SYSTEM_PROP_KEYS.xaiBaseURL, xaiBaseURL.value)
     }
     if (!values[SYSTEM_PROP_KEYS.zhipuApiKey]) {
       void setSystemConfigValue(

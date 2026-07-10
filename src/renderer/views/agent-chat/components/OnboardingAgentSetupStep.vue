@@ -268,6 +268,7 @@ function buildCreds() {
     anthropicApiKey: agentStore.anthropicApiKey,
     geminiApiKey: agentStore.geminiApiKey,
     deepseekApiKey: agentStore.deepseekApiKey,
+    xaiApiKey: agentStore.xaiApiKey,
     zhipuApiKey: agentStore.zhipuApiKey,
     openAiCompatible: agentStore.openAiCompatibleApiKeys,
   }

@@ -114,6 +114,14 @@ export const providerSetupZhCn: ProviderSetupLabels = {
         '粘贴到下方并点击「测试并保存」。',
       ],
     },
+    xai: {
+      intro: 'xAI Grok 模型通过 xAI 控制台的 API 密钥访问。',
+      steps: [
+        '登录 console.x.ai 并打开 API 密钥页面。',
+        '创建 API 密钥并复制。',
+        '粘贴到下方并点击「测试并保存」。',
+      ],
+    },
     zhipu: {
       intro: '智谱 GLM 使用 BigModel 开放平台。',
       steps: [

@@ -12,6 +12,7 @@ import { markOnboardingCompleteInRouteCache } from '@renderer/lib/onboarding-rou
 import {
   ANTHROPIC_MODELS,
   DEEPSEEK_MODELS,
+  XAI_MODELS,
   ZHIPU_MODELS,
   SYSTEM_PROP_KEYS,
   PROVIDER_SETUP_DISMISSED_KEY,
@@ -47,6 +48,8 @@ export function createLlmProviderActions(
     geminiBaseURL,
     deepseekApiKey,
     deepseekApiUrl,
+    xaiApiKey,
+    xaiBaseURL,
     zhipuApiKey,
     zhipuBaseURL,
     openAiCompatibleApiKeys,
@@ -90,6 +93,7 @@ export function createLlmProviderActions(
       anthropicApiKey: anthropicApiKey.value,
       geminiApiKey: geminiApiKey.value,
       deepseekApiKey: deepseekApiKey.value,
+      xaiApiKey: xaiApiKey.value,
       zhipuApiKey: zhipuApiKey.value,
       openAiCompatible: compatible,
     }
@@ -202,6 +206,26 @@ export function createLlmProviderActions(
         return { ok: true, modelCount }
       }
 
+      if (provider === 'xai') {
+        const key = xaiApiKey.value.trim()
+        if (key.length < 8) return { ok: false, error: 'API key is required' }
+        const res = await fetch(`${xaiBaseURL.value}/models`, {
+          headers: { Authorization: `Bearer ${key}` },
+          signal: AbortSignal.timeout(8000),
+        })
+        if (!res.ok) {
+          updateXaiApiKey(key)
+          await fetchModelsForProvider('xai')
+          const modelCount = availableModelsByProvider.value.xai?.length ?? 0
+          return modelCount > 0
+            ? { ok: true, modelCount }
+            : { ok: false, error: `xAI API returned ${res.status}` }
+        }
+        await fetchModelsForProvider('xai')
+        const modelCount = availableModelsByProvider.value.xai?.length ?? 0
+        return { ok: true, modelCount }
+      }
+
       if (provider === 'zhipu') {
         const key = zhipuApiKey.value.trim()
         if (key.length < 8) return { ok: false, error: 'API key is required' }
@@ -297,6 +321,11 @@ export function createLlmProviderActions(
         availableModelsByProvider.value = {
           ...availableModelsByProvider.value,
           deepseek: [...DEEPSEEK_MODELS],
+        }
+      } else if (provider === 'xai') {
+        availableModelsByProvider.value = {
+          ...availableModelsByProvider.value,
+          xai: [...XAI_MODELS],
         }
       } else if (provider === 'zhipu') {
         availableModelsByProvider.value = {
@@ -458,6 +487,16 @@ export function createLlmProviderActions(
     )
   }
 
+  function updateXaiApiKey(key: string) {
+    xaiApiKey.value = key.trim()
+    void setSystemConfigValue(SYSTEM_PROP_KEYS.xaiApiKey, xaiApiKey.value)
+  }
+
+  function updateXaiBaseURL(url: string) {
+    xaiBaseURL.value = normalizeBaseURL(url, 'https://api.x.ai/v1')
+    void setSystemConfigValue(SYSTEM_PROP_KEYS.xaiBaseURL, xaiBaseURL.value)
+  }
+
   function updateZhipuApiKey(key: string) {
     zhipuApiKey.value = key.trim()
     void setSystemConfigValue(SYSTEM_PROP_KEYS.zhipuApiKey, zhipuApiKey.value)
@@ -531,6 +570,8 @@ export function createLlmProviderActions(
     updateGeminiBaseURL,
     updateDeepSeekApiKey,
     updateDeepSeekApiUrl,
+    updateXaiApiKey,
+    updateXaiBaseURL,
     updateZhipuApiKey,
     updateZhipuBaseURL,
     getOpenAiCompatibleApiKey,

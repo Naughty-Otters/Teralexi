@@ -10,6 +10,7 @@ export type LlmProviderCredentialsSnapshot = {
   anthropicApiKey: string
   geminiApiKey: string
   deepseekApiKey: string
+  xaiApiKey: string
   zhipuApiKey: string
   openAiCompatible: Record<OpenAiCompatibleProviderId, { apiKey: string }>
 }
@@ -35,6 +36,8 @@ export function isLlmProviderConfigured(
       return cloudKeyConfigured(creds.geminiApiKey)
     case 'deepseek':
       return cloudKeyConfigured(creds.deepseekApiKey)
+    case 'xai':
+      return cloudKeyConfigured(creds.xaiApiKey)
     case 'zhipu':
       return cloudKeyConfigured(creds.zhipuApiKey)
     default:
@@ -57,6 +60,7 @@ export function hasAnyLlmProviderConfigured(
     'anthropic',
     'gemini',
     'deepseek',
+    'xai',
     'zhipu',
     ...OPENAI_COMPATIBLE_PROVIDER_IDS,
   ]
