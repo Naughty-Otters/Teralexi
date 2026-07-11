@@ -40,6 +40,7 @@ const {
   conversationStoreChangedMock,
   notifyConversationStoreChangedMock,
   ensureUserAttachmentsUploadedBeforeAgentRunMock,
+  loadConversationHistoryMock,
 } =
   vi.hoisted(() => ({
     streamAgentResponseMock: vi.fn(async () => ({
@@ -53,6 +54,7 @@ const {
     ensureUserAttachmentsUploadedBeforeAgentRunMock: vi.fn(async () => ({
       attachments: [],
     })),
+    loadConversationHistoryMock: vi.fn(() => []),
   }))
 
 vi.mock('@main/services/chat-attachments', () => ({
@@ -106,7 +108,7 @@ vi.mock('@main/agent/utils', () => ({
     xaiBaseURL: '',
     zhipuApiKey: '',
   })),
-  loadConversationHistory: vi.fn(() => []),
+  loadConversationHistory: loadConversationHistoryMock,
   loadMcpToolsForAgent: vi.fn(async () => []),
   resolveEnabledSkillToolNames: vi.fn(() => []),
 }))
@@ -154,6 +156,36 @@ describe('agent engine', () => {
     expect(result.finalContent).toBe('done')
     expect(result.hasError).toBe(false)
     expect(enqueueAgentMemoryExchange).toHaveBeenCalled()
+  })
+
+  it('passes multi-turn store history in opts.messages', async () => {
+    loadConversationHistoryMock.mockReturnValueOnce([
+      { role: 'user', content: 'First question' },
+      { role: 'assistant', content: 'First answer' },
+      { role: 'user', content: 'Follow-up question' },
+    ])
+    streamAgentResponseMock.mockResolvedValueOnce({
+      structuredContent: 'done',
+      shouldPersistMemory: false,
+      hitlPaused: false,
+    })
+
+    await runAgentForConversation({
+      conversationId: 'c-multi',
+      agentId: 'skill:demo',
+      assistantMessageId: 'a-multi',
+      userId: 'default',
+    })
+
+    expect(streamAgentResponseMock).toHaveBeenCalled()
+    const opts = streamAgentResponseMock.mock.calls.at(-1)?.[0] as {
+      messages: Array<{ role: string; content: string }>
+    }
+    expect(opts.messages.map((m) => m.content)).toEqual([
+      'First question',
+      'First answer',
+      'Follow-up question',
+    ])
   })
 
   it('forwards attachment source paths to attachment ingest', async () => {

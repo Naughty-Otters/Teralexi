@@ -1,9 +1,9 @@
 /**
- * Integration tests: external channel path (Telegram, Slack, …) → engine → agent pipeline.
+ * Channel → engine contract tests.
  *
- * Channels call {@link runAgentForConversation} without `uiMessages`; user text is loaded
- * from the conversation store. Verifies the event-driven LLM migration did not break that
- * contract (history replay, eventBus wiring, HITL pause semantics, bridge reply send).
+ * Fully hermetic: never importOriginal heavy agent modules. On Windows CI,
+ * importOriginal('@main/agent/utils'|config/context) pulls skills/MCP/native
+ * addons and hangs past Vitest's timeout on the first test.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { AgentResponseOpts } from '@main/agent/types'
@@ -92,16 +92,12 @@ vi.mock('@logging', () => ({
   runWithAgentRunLog: (_ctx: unknown, fn: () => unknown) => fn(),
 }))
 
-vi.mock('@config/system-prop', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@config/system-prop')>()
-  return {
-    ...actual,
-    getSystemPropValues: vi.fn(() => ({
-      'settings.ollama.baseUrl': 'http://localhost:11434/',
-      'settings.openai.baseUrl': 'https://api.openai.com/v1/',
-    })),
-  }
-})
+vi.mock('@config/system-prop', () => ({
+  getSystemPropValues: vi.fn(() => ({})),
+  getSystemPropValue: vi.fn(() => undefined),
+  setSystemPropValue: vi.fn(),
+  isValidSystemPropKey: () => true,
+}))
 
 vi.mock('@main/services/conversation-store', () => ({
   getConversationStore: vi.fn(() => ({
@@ -159,7 +155,7 @@ vi.mock('electron', () => ({
 }))
 
 vi.mock('@main/agent/flow', () => ({
-  streamAgentResponse: (...args: unknown[]) => streamAgentResponseMock(...args),
+  streamAgentResponse: streamAgentResponseMock,
 }))
 
 vi.mock('@main/agent/hooks/user-hooks', () => ({
@@ -190,6 +186,18 @@ vi.mock('@main/agent/providers/context', () => ({
   },
 }))
 
+vi.mock('@main/agent/providers/stage-model-registry', () => ({
+  StageModelRegistry: class StageModelRegistry {},
+}))
+
+vi.mock('@main/agent/run/agent-run', () => ({
+  AgentRun: class AgentRun {},
+}))
+
+vi.mock('@main/agent/run/sub-flow-output-text', () => ({
+  mergeSubFlowOutputText: (text: string) => text,
+}))
+
 vi.mock('@main/agent/workspace/conversation-workspace', () => ({
   getWorkspacePath: vi.fn(() => null),
 }))
@@ -198,32 +206,81 @@ vi.mock('@main/agent/coding/plan-mode-session-reminders', () => ({
   clearPlanExecutionCompleted: vi.fn(),
 }))
 
-/** Keep real history loading; stub credential/MCP paths that can hang on Windows CI. */
-vi.mock('@main/agent/utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@main/agent/utils')>()
-  return {
-    ...actual,
-    loadMcpToolsForAgent: vi.fn(async () => []),
-    loadAgentRunCredentials: vi.fn(() => ({
-      ollamaBaseURL: 'http://127.0.0.1:11434',
-      llamacppBaseURL: 'http://127.0.0.1:8080/v1',
-      llamacppApiKey: '',
-      anthropicApiKey: '',
-      anthropicBaseURL: '',
-      openaiApiKey: '',
-      openaiBaseURL: '',
-      geminiApiKey: '',
-      geminiBaseURL: '',
-      deepseekApiKey: '',
-      deepseekApiUrl: '',
-      xaiApiKey: '',
-      xaiBaseURL: '',
-      zhipuApiKey: '',
-      zhipuBaseURL: '',
-      openAiCompatible: {},
-    })),
-  }
-})
+vi.mock('@main/agent/coding/plan-mode-state', () => ({
+  isPlanModeActive: vi.fn(() => false),
+}))
+
+vi.mock('@main/agent/expr/thread-context-builder', () => ({
+  resolveEffectiveThreadTag: vi.fn(() => 'general'),
+  detectTopicSwitch: vi.fn(() => ({ switched: false })),
+}))
+
+vi.mock('@main/agent/llm/llm-debug-writer', () => ({
+  createLlmDebugRunId: vi.fn(() => 'debug-run-1'),
+}))
+
+vi.mock('@main/agent/llm/log-llm-error', () => ({
+  formatLlmErrorForUi: (err: unknown) =>
+    err instanceof Error ? err.message : String(err),
+  llmErrorFields: () => ({}),
+}))
+
+vi.mock('@main/i18n/resolve-response-language', () => ({
+  resolveResponseLanguageForAgent: vi.fn(() => 'English'),
+}))
+
+vi.mock('@main/agent/utils/chat-context-settings', () => ({
+  loadChatContextWindowMessages: vi.fn(() => 200),
+}))
+
+vi.mock('@main/agent/bus/agent-event-bus', () => ({
+  createAgentEventBus: vi.fn(() => ({
+    publish: vi.fn(),
+    subscribe: vi.fn(() => () => undefined),
+  })),
+}))
+
+vi.mock('@main/agent/bus/ipc-projector', () => ({
+  attachIpcProjector: vi.fn(() => () => undefined),
+}))
+
+/** Inline history loader — do not importOriginal the utils barrel (hangs on Win CI). */
+vi.mock('@main/agent/utils', () => ({
+  extractTrailingUserForPersistence: vi.fn(() => null),
+  parseClientUiMessages: vi.fn(() => undefined),
+  serializeAssistantMessageForExternalReply: (content: string) => content,
+  serializeAssistantMessageForHistory: (content: string) => content,
+  loadAgentRunCredentials: vi.fn(() => ({
+    ollamaBaseURL: 'http://127.0.0.1:11434',
+    llamacppBaseURL: 'http://127.0.0.1:8080/v1',
+    llamacppApiKey: '',
+    anthropicApiKey: '',
+    anthropicBaseURL: '',
+    openaiApiKey: '',
+    openaiBaseURL: '',
+    geminiApiKey: '',
+    geminiBaseURL: '',
+    deepseekApiKey: '',
+    deepseekApiUrl: '',
+    xaiApiKey: '',
+    xaiBaseURL: '',
+    zhipuApiKey: '',
+    zhipuBaseURL: '',
+    openAiCompatible: {},
+  })),
+  loadConversationHistory: (
+    conversationId: string,
+    assistantMessageId: string,
+  ) =>
+    conversationMessages
+      .filter(
+        (m) =>
+          m.conversationId === conversationId && m.id !== assistantMessageId,
+      )
+      .map((m) => ({ role: m.role, content: m.content })),
+  loadMcpToolsForAgent: vi.fn(async () => []),
+  resolveEnabledSkillToolNames: vi.fn(() => undefined),
+}))
 
 vi.mock('@main/channels/framework/channel-registry', () => ({
   getChannelRegistry: vi.fn(() => ({
@@ -231,22 +288,28 @@ vi.mock('@main/channels/framework/channel-registry', () => ({
   })),
 }))
 
-/**
- * Do not importOriginal ConfigContext — that pulls catalog → loadSkills/toolSet and can
- * hang past Vitest's 5s timeout on Windows CI. Subclassing statics is also unreliable there.
- */
-vi.mock('@main/agent/config/context', async () => {
-  const { AGENT_DEFAULTS, AGENT_ERRORS, ENGINE_LOG } = await import(
-    '@main/agent/config/constants'
-  )
+vi.mock('@main/agent/config/context', () => {
   class ConfigContext {
-    static DEFAULTS = AGENT_DEFAULTS
-    static ERRORS = AGENT_ERRORS
-    static ENGINE_LOG = ENGINE_LOG
-    static DEFAULT_USER_ID = AGENT_DEFAULTS.USER_ID
-    static DEFAULT_RESPONSE_LANGUAGE = AGENT_DEFAULTS.RESPONSE_LANGUAGE
+    static ERRORS = { NOT_FOUND: 'Agent not found: {agentId}' }
+    static ENGINE_LOG = {
+      EXECUTION_ABORTED: 'aborted',
+      PREPARED_CONTEXT: 'prepared',
+      COMPLETED: 'completed',
+      FAILED: 'failed',
+      ABORTED: 'aborted-run',
+      PERSIST_ASSISTANT_OK: 'persist-ok',
+      PERSIST_ASSISTANT_FAIL: 'persist-fail',
+      PERSIST_USER_OK: 'user-ok',
+      PERSIST_USER_FAIL: 'user-fail',
+      PERSIST_SANDBOX_FAIL: 'sandbox-fail',
+      MEMORY_RECORD_ENQUEUED: 'memory-enqueued',
+      MEMORY_RECORD_FAIL: 'memory-fail',
+    }
+    static DEFAULT_USER_ID = 'default'
+    static DEFAULT_RESPONSE_LANGUAGE = 'English'
     static ANTHROPIC_MODELS: string[] = []
     static SYSTEM_PROP_KEYS: Record<string, string> = {}
+    static DEFAULTS = {}
     static loadEngineAgents = loadEngineAgentsMock
 
     normalizeBaseURL(url: string, fallback: string): string {
@@ -289,9 +352,8 @@ function seedChannelConversation(userText: string): {
     updatedAt: now,
   })
 
-  const userMessageId = 'u-channel-1'
   conversationMessages.push({
-    id: userMessageId,
+    id: 'u-channel-1',
     conversationId: CHANNEL_CONVERSATION_ID,
     agentId: CHANNEL_AGENT_ID,
     role: 'user',
@@ -305,20 +367,26 @@ function seedChannelConversation(userText: string): {
   }
 }
 
+function resetStreamMock() {
+  streamAgentResponseMock.mockReset()
+  streamAgentResponseMock.mockImplementation(async (opts: AgentResponseOpts) => {
+    capturedStreamOpts.current = opts
+    return {
+      structuredContent: 'Hello from the agent pipeline.',
+      shouldPersistMemory: false,
+      hitlPaused: false,
+    }
+  })
+  loadEngineAgentsMock.mockReset()
+  loadEngineAgentsMock.mockResolvedValue([mockEngineAgent])
+}
+
 describe('channel → engine integration', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
     conversationMessages.length = 0
     conversations.clear()
     capturedStreamOpts.current = null
-    streamAgentResponseMock.mockImplementation(async (opts: AgentResponseOpts) => {
-      capturedStreamOpts.current = opts
-      return {
-        structuredContent: 'Hello from the agent pipeline.',
-        shouldPersistMemory: false,
-        hitlPaused: false,
-      }
-    })
+    resetStreamMock()
   })
 
   it('runAgentForConversation passes multi-turn store history in opts.messages', async () => {
@@ -359,17 +427,18 @@ describe('channel → engine integration', () => {
     )
 
     const assistantMessageId = 'a-channel-2'
-    await runAgentForConversation({
+    const result = await runAgentForConversation({
       conversationId: CHANNEL_CONVERSATION_ID,
       agentId: CHANNEL_AGENT_ID,
       assistantMessageId,
       userId: 'default',
     })
 
+    expect(result.hasError).toBe(false)
+    expect(loadEngineAgentsMock).toHaveBeenCalled()
     expect(streamAgentResponseMock).toHaveBeenCalledTimes(1)
     const opts = capturedStreamOpts.current
     expect(opts).not.toBeNull()
-    expect(opts!.messages.length).toBeGreaterThan(1)
     expect(opts!.messages.map((m) => m.content)).toEqual([
       'First question',
       'First answer',
@@ -387,7 +456,6 @@ describe('channel → engine integration', () => {
       agentId: CHANNEL_AGENT_ID,
       assistantMessageId,
       userId: 'default',
-      // No uiMessages, no pendingUserMessage — same as conversation-bridge.
     })
 
     expect(result.hasError).toBe(false)
@@ -475,17 +543,10 @@ describe('channel → engine integration', () => {
 
 describe('channel bridge integration', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
     conversationMessages.length = 0
     conversations.clear()
-    streamAgentResponseMock.mockImplementation(async (opts: AgentResponseOpts) => {
-      capturedStreamOpts.current = opts
-      return {
-        structuredContent: 'Reply for Telegram user.',
-        shouldPersistMemory: false,
-        hitlPaused: false,
-      }
-    })
+    capturedStreamOpts.current = null
+    resetStreamMock()
   })
 
   it('onIncomingMessage saves user text, runs agent, and sends channel reply', async () => {
@@ -500,7 +561,6 @@ describe('channel bridge integration', () => {
       agentId: CHANNEL_AGENT_ID,
     })
 
-    // Bridge fires runAgentAndReply without awaiting; flush microtasks.
     await vi.waitFor(() => {
       expect(streamAgentResponseMock).toHaveBeenCalledTimes(1)
     })
@@ -511,7 +571,7 @@ describe('channel bridge integration', () => {
 
     expect(sendToTargetMock).toHaveBeenCalledWith(
       'chat-99',
-      'Reply for Telegram user.',
+      'Hello from the agent pipeline.',
     )
 
     expect(conversationMessages).toEqual(
@@ -524,7 +584,7 @@ describe('channel bridge integration', () => {
         expect.objectContaining({
           conversationId: CHANNEL_CONVERSATION_ID,
           role: 'assistant',
-          content: 'Reply for Telegram user.',
+          content: 'Hello from the agent pipeline.',
         }),
       ]),
     )
@@ -557,7 +617,6 @@ describe('channel bridge integration', () => {
       expect(streamAgentResponseMock).toHaveBeenCalledTimes(1)
     })
 
-    // Allow runAgentAndReply to settle.
     await new Promise((r) => setTimeout(r, 20))
 
     expect(sendToTargetMock).not.toHaveBeenCalled()
@@ -597,6 +656,12 @@ describe('channel bridge integration', () => {
     conversationMessages.length = 0
     streamAgentResponseMock.mockClear()
     sendToTargetMock.mockClear()
+    resetStreamMock()
+    streamAgentResponseMock.mockResolvedValueOnce({
+      structuredContent: 'Second reply',
+      shouldPersistMemory: false,
+      hitlPaused: false,
+    })
 
     bridge.onIncomingMessage({
       channelId,
