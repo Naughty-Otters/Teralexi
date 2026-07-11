@@ -32,9 +32,9 @@ jobs:
           - os: macos-latest
             platform: mac
             npm_script: release:mac
-          # - os: windows-latest
-          #   platform: win
-          #   npm_script: release:win
+          - os: windows-latest
+            platform: win
+            npm_script: release:win
 
     steps:
       - name: Check out repository
@@ -57,12 +57,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # - name: Install sharp for Windows
-      #   if: runner.os == 'Windows'
-      #   run: npm install --include=optional sharp
+      - name: Install sharp for Windows
+        if: runner.os == 'Windows'
+        run: npm install --include=optional sharp
 
-      # - name: Run unit tests
-      #   run: npm run test:unit
+      - name: Run unit tests
+        run: npm run test:unit
 
       - name: Build production installers (env/.prod.env)
         env:
