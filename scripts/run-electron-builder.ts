@@ -23,13 +23,54 @@ applyBuildEnvFromArgv()
 const userArgs = stripTeralexiCliArgs(process.argv.slice(2))
 const { buildingMac, buildingWin } = detectElectronBuilderTargets(userArgs)
 
+const forceUnsigned =
+  process.env.TERALEXI_FORCE_UNSIGNED === '1' ||
+  process.env.TERALEXI_FORCE_UNSIGNED === 'true'
+
 const signingEnv = applyCodeSigningEnv()
+
+if (forceUnsigned) {
+  // Drop any signing material so CI/staging builds stay unsigned even if
+  // env/.signing.env or runner secrets are present.
+  for (const key of [
+    'CSC_LINK',
+    'CSC_KEY_PASSWORD',
+    'CSC_NAME',
+    'WIN_CSC_LINK',
+    'WIN_CSC_KEY_PASSWORD',
+    'APPLE_ID',
+    'APPLE_APP_SPECIFIC_PASSWORD',
+    'APPLE_TEAM_ID',
+    'MAC_SIGN_CERTIFICATE',
+    'MAC_SIGN_CERTIFICATE_PASSWORD',
+    'MAC_SIGN_IDENTITY',
+    'MAC_APPLE_ID',
+    'MAC_APPLE_APP_SPECIFIC_PASSWORD',
+    'MAC_APPLE_TEAM_ID',
+    'WIN_SIGN_CERTIFICATE',
+    'WIN_SIGN_CERTIFICATE_PASSWORD',
+    ...[
+      'AZURE_TENANT_ID',
+      'AZURE_CLIENT_ID',
+      'AZURE_CLIENT_SECRET',
+      'AZURE_SIGNING_ENDPOINT',
+      'AZURE_SIGNING_ACCOUNT_NAME',
+      'AZURE_SIGNING_CERTIFICATE_PROFILE',
+      'AZURE_SIGNING_PUBLISHER_NAME',
+    ],
+  ]) {
+    delete process.env[key]
+    signingEnv.delete(key)
+  }
+  process.env.CSC_IDENTITY_AUTO_DISCOVERY = 'false'
+  console.log('[code-sign] TERALEXI_FORCE_UNSIGNED=1 — building without code signing')
+}
 
 // Report presence/absence of every required signing variable up front (before
 // the self-signed fallback injects anything), so the log reflects real inputs.
 logCodeSigningEnv(signingEnv, { buildingMac, buildingWin })
 
-if (buildingWin) {
+if (buildingWin && !forceUnsigned) {
   logAzureTrustedSigningValidation(process.env)
 }
 
@@ -37,7 +78,7 @@ if (buildingWin) {
 // ephemeral self-signed certificate so the build still produces a signed
 // installer instead of failing. If generation fails, we drop through to the
 // existing unsigned path (signAndEditExecutable disabled).
-if (buildingWin && !isWindowsCodeSigningConfigured(signingEnv)) {
+if (buildingWin && !forceUnsigned && !isWindowsCodeSigningConfigured(signingEnv)) {
   const selfSigned = generateSelfSignedWindowsCert()
   if (selfSigned) {
     console.log(

@@ -49,7 +49,6 @@ jobs:
     # needs: unit-tests
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
-    environment: mac_signs
 
     strategy:
       fail-fast: false
@@ -89,25 +88,13 @@ jobs:
         if: runner.os == 'Windows'
         run: npm install --include=optional sharp
 
-      - name: Build desktop app (staging / env/.sit.env)
+      - name: Build desktop app (staging / env/.sit.env, unsigned)
         env:
           NODE_OPTIONS: --max-old-space-size=6144
           TERALEXI_BUILD_ENV: sit
-          MAC_SIGN_CERTIFICATE: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_CERTIFICATE_BASE64 || '' }}
-          MAC_SIGN_CERTIFICATE_PASSWORD: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_CERTIFICATE_PASSWORD || '' }}
-          MAC_SIGN_IDENTITY: ${{ matrix.platform == 'mac' && secrets.MAC_SIGN_IDENTITY || '' }}
-          MAC_APPLE_ID: ${{ matrix.platform == 'mac' && secrets.MAC_APPLE_ID || '' }}
-          MAC_APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.platform == 'mac' && secrets.MAC_APPLE_APP_SPECIFIC_PASSWORD || '' }}
-          MAC_APPLE_TEAM_ID: ${{ matrix.platform == 'mac' && secrets.MAC_APPLE_TEAM_ID || '' }}
-          WIN_SIGN_CERTIFICATE: ${{ matrix.platform == 'win' && secrets.WIN_SIGN_CERTIFICATE_BASE64 || '' }}
-          WIN_SIGN_CERTIFICATE_PASSWORD: ${{ matrix.platform == 'win' && secrets.WIN_SIGN_CERTIFICATE_PASSWORD || '' }}
-          AZURE_TENANT_ID: ${{ matrix.platform == 'win' && secrets.AZURE_TENANT_ID || '' }}
-          AZURE_CLIENT_ID: ${{ matrix.platform == 'win' && secrets.AZURE_CLIENT_ID || '' }}
-          AZURE_CLIENT_SECRET: ${{ matrix.platform == 'win' && secrets.AZURE_CLIENT_SECRET || '' }}
-          AZURE_SIGNING_ENDPOINT: ${{ matrix.platform == 'win' && secrets.AZURE_SIGNING_ENDPOINT || '' }}
-          AZURE_SIGNING_ACCOUNT_NAME: ${{ matrix.platform == 'win' && secrets.AZURE_SIGNING_ACCOUNT_NAME || '' }}
-          AZURE_SIGNING_CERTIFICATE_PROFILE: ${{ matrix.platform == 'win' && secrets.AZURE_SIGNING_CERTIFICATE_PROFILE || '' }}
-          AZURE_SIGNING_PUBLISHER_NAME: ${{ matrix.platform == 'win' && secrets.AZURE_SIGNING_PUBLISHER_NAME || '' }}
+          # CI staging artifacts are unsigned; release.yml handles signing.
+          TERALEXI_FORCE_UNSIGNED: '1'
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npm run ${{ matrix.npm_script }}
 
       - name: Upload desktop build (internal)
