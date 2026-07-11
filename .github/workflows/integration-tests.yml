@@ -1,6 +1,9 @@
 name: Integration tests
 
 on:
+  # Nightly at 08:00 UTC (~01:00 America/Los_Angeles).
+  schedule:
+    - cron: '0 8 * * *'
   workflow_dispatch:
 
 concurrency:
