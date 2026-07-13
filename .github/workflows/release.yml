@@ -57,8 +57,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install sharp for Windows
-        if: runner.os == 'Windows'
+      - name: Install sharp platform bindings
         run: npm install --include=optional sharp
 
       - name: Run unit tests
