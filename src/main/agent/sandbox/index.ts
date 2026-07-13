@@ -27,6 +27,7 @@ export type {
 export {
   getOrCreateSandboxForConversation,
   peekSandboxRootForConversation,
+  resolveSandboxRootForConversation,
   releaseConversationSandbox,
 } from './registry'
 

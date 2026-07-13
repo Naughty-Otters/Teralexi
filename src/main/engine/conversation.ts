@@ -310,20 +310,46 @@ async function executeAgentForConversation(
     webContents,
   } = args
 
+  let workspacePath: string | null = null
   try {
-    let workspacePath: string | null = null
-    try {
-      workspacePath = getWorkspacePath(conversationId)
-    } catch {
-      workspacePath = null
-    }
+    workspacePath = getWorkspacePath(conversationId)
+  } catch {
+    workspacePath = null
+  }
+
+  try {
     await runUserHooks({
       event: 'onSessionStart',
       conversationId,
+      agentId,
       workspacePath,
     })
   } catch {
     // Hooks are optional; do not block agent runs when misconfigured.
+  }
+
+  const conversationHooks =
+    getConversationStore().getConversationHooks(conversationId).hooks
+  const userMessage =
+    resolveTurnUserContent({ uiMessages, pendingUserMessage }) ?? undefined
+
+  const preHookResult = await runUserHooks(
+    {
+      event: 'preHook',
+      conversationId,
+      agentId,
+      assistantMessageId,
+      workspacePath,
+      userMessage,
+    },
+    conversationHooks,
+  )
+  if (preHookResult.blocked) {
+    return {
+      finalContent: '',
+      hasError: true,
+      errorMessage: preHookResult.message ?? 'Blocked by conversation pre-hook',
+    }
   }
 
   const persistedUserMessageId = persistIncomingUserMessage({
@@ -458,6 +484,23 @@ async function executeAgentForConversation(
         agentId,
         assistantMessageId,
       })
+      try {
+        await runUserHooks(
+          {
+            event: 'postHook',
+            conversationId,
+            agentId,
+            assistantMessageId,
+            workspacePath,
+            userMessage,
+            hasError: false,
+            finalContent: '',
+          },
+          conversationHooks,
+        )
+      } catch {
+        // post-hooks are best-effort
+      }
       return { finalContent: '', hasError: false }
     }
     hasError = true
@@ -542,6 +585,24 @@ async function executeAgentForConversation(
   // Notify the renderer only after persist so ChatPanel.onFinish reload sees the
   // saved assistant row (AgentStreamFinished used to fire from `finally` before save).
   if (!hitlPaused) {
+    try {
+      await runUserHooks(
+        {
+          event: 'postHook',
+          conversationId,
+          agentId,
+          assistantMessageId,
+          workspacePath,
+          userMessage,
+          hasError,
+          errorMessage,
+          finalContent,
+        },
+        conversationHooks,
+      )
+    } catch {
+      // post-hooks are best-effort
+    }
     streamBridge.notifyFinished()
   }
 

@@ -67,6 +67,37 @@ describe('ConversationSettingsRepository', () => {
     expect(repo.getPlanModeState('conv-plan').status).toBe('planning')
   })
 
+  it('persists per-conversation pre/post hooks', () => {
+    const db = createMigrationTestDatabase()
+    runMigrations(db)
+    seedConversation(db, 'conv-hooks')
+    const repo = new ConversationSettingsRepository(db)
+
+    const saved = repo.setHooks('conv-hooks', {
+      hooks: [
+        {
+          id: 'pre-1',
+          event: 'preHook',
+          command: 'node',
+          args: ['pre.js'],
+        },
+        {
+          id: 'post-1',
+          event: 'postHook',
+          command: '/bin/true',
+          enabled: false,
+        },
+      ],
+    })
+    expect(saved.hooks.hooks).toHaveLength(2)
+    expect(repo.getHooks('conv-hooks').hooks[0]).toMatchObject({
+      id: 'pre-1',
+      event: 'preHook',
+      command: 'node',
+    })
+    expect(repo.get('conv-hooks')?.hooks.hooks[1]?.enabled).toBe(false)
+  })
+
   it('reads legacy plan mode as explore', () => {
     const db = createMigrationTestDatabase()
     runMigrations(db)

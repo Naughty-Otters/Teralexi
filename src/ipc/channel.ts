@@ -1802,6 +1802,38 @@ export class IpcChannelMainClass {
     },
     { ok: boolean; mode: import('@shared/agent/coding-mode').CodingMode }
   > = null
+  /** Get per-conversation pre/post turn hooks. */
+  GetConversationHooks: IpcMainEventListener<
+    { conversationId: string },
+    {
+      ok: boolean
+      hooks: import('@shared/agent/conversation-hooks').ConversationHookEntry[]
+    }
+  > = null
+  /** Replace per-conversation pre/post turn hooks. */
+  SetConversationHooks: IpcMainEventListener<
+    {
+      conversationId: string
+      hooks: import('@shared/agent/conversation-hooks').ConversationHookEntry[]
+    },
+    {
+      ok: boolean
+      hooks: import('@shared/agent/conversation-hooks').ConversationHookEntry[]
+    }
+  > = null
+  /** Read follow-up suggestion chips for a conversation (`followup/meta.json`). */
+  GetConversationFollowUps: IpcMainEventListener<
+    { conversationId: string },
+    {
+      ok: boolean
+      followUps: import('@shared/agent/follow-up').FollowUpItem[]
+    }
+  > = null
+  /** Delete follow-up meta for a conversation (clears suggestion chips). */
+  ClearConversationFollowUps: IpcMainEventListener<
+    { conversationId: string },
+    { ok: boolean }
+  > = null
   /** Get high-level planning phase for a conversation. */
   GetPlanModeState: IpcMainEventListener<
     { conversationId: string },
@@ -2012,6 +2044,11 @@ export class IpcChannelRendererClass {
   PlanModeStateChanged: IpcRendererEventListener<{
     conversationId: string
     view: import('@shared/agent/plan-mode-phase').PlanModeView
+  }> = null
+  /** Fired when followup/meta.json is written or cleared for a conversation. */
+  ConversationFollowUpsChanged: IpcRendererEventListener<{
+    conversationId: string
+    followUps: import('@shared/agent/follow-up').FollowUpItem[]
   }> = null
   ChannelIncomingToAgent: IpcRendererEventListener<{
     channelId: string

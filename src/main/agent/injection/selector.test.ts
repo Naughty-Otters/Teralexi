@@ -23,12 +23,14 @@ describe('injector selector', () => {
     expect(instructionIds).toContain('run-script-preference')
     expect(instructionIds).toContain('plan-mode')
     expect(instructionIds).toContain('deep-thinking-after-answer')
+    expect(instructionIds).toContain('follow-up-suggestions')
     const userMessageIds = selectUserMessageInjectors(profile).map((i) => i.id)
     expect(userMessageIds).toEqual([
       'deep-thinking-before-answer',
       'multiple-branch-thinking',
       'current-datetime',
       'user-uploads',
+      'follow-up-suggestions',
       'plan-mode',
     ])
   })
@@ -44,11 +46,15 @@ describe('injector selector', () => {
     expect(selectInjectors(profile).map((i) => i.id)).toContain(
       'deep-thinking-after-answer',
     )
+    expect(selectInjectors(profile).map((i) => i.id)).toContain(
+      'follow-up-suggestions',
+    )
     expect(selectUserMessageInjectors(profile).map((i) => i.id)).toEqual([
       'deep-thinking-before-answer',
       'multiple-branch-thinking',
       'current-datetime',
       'user-uploads',
+      'follow-up-suggestions',
     ])
   })
 
@@ -80,6 +86,7 @@ describe('injector selector', () => {
     expect(ids).not.toContain('base-tool-loop')
     expect(ids).not.toContain('current-datetime')
     expect(ids).not.toContain('deep-thinking-after-answer')
+    expect(ids).not.toContain('follow-up-suggestions')
     expect(selectUserMessageInjectors(profile).map((i) => i.id)).toEqual([
       'deep-thinking-before-answer',
       'multiple-branch-thinking',

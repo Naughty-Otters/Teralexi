@@ -117,6 +117,7 @@ vi.mock('@main/services/conversation-store', () => ({
     listMcpServers: vi.fn(() => []),
     listAgentConfigurations: vi.fn(() => []),
     getConversationSettings: vi.fn(() => null),
+    getConversationHooks: vi.fn(() => ({ hooks: [] })),
     getMessageAttachmentsForMessage: vi.fn(() => []),
     upsertConversationSandboxRun: vi.fn(),
     insertTokenUsage: vi.fn(),
