@@ -24,13 +24,17 @@ describe('notifyConversationFollowUpsChanged', () => {
   })
 
   it('broadcasts follow-ups to renderer windows', () => {
-    notifyConversationFollowUpsChanged('conv-1', [
-      {
-        id: 'a',
-        label: 'Next',
-        action: { type: 'user_input', message: 'next' },
-      },
-    ])
+    notifyConversationFollowUpsChanged(
+      'conv-1',
+      [
+        {
+          id: 'a',
+          label: 'Next',
+          action: { type: 'user_input', message: 'next' },
+        },
+      ],
+      3,
+    )
     expect(followUpsChanged).toHaveBeenCalledWith(
       {},
       {
@@ -42,12 +46,13 @@ describe('notifyConversationFollowUpsChanged', () => {
             action: { type: 'user_input', message: 'next' },
           },
         ],
+        revision: 3,
       },
     )
   })
 
   it('ignores blank conversation ids', () => {
-    notifyConversationFollowUpsChanged('  ', [])
+    notifyConversationFollowUpsChanged('  ', [], 1)
     expect(followUpsChanged).not.toHaveBeenCalled()
   })
 })

@@ -1827,12 +1827,13 @@ export class IpcChannelMainClass {
     {
       ok: boolean
       followUps: import('@shared/agent/follow-up').FollowUpItem[]
+      revision: number
     }
   > = null
   /** Delete follow-up meta for a conversation (clears suggestion chips). */
   ClearConversationFollowUps: IpcMainEventListener<
     { conversationId: string },
-    { ok: boolean }
+    { ok: boolean; revision: number }
   > = null
   /** Get high-level planning phase for a conversation. */
   GetPlanModeState: IpcMainEventListener<
@@ -2049,6 +2050,7 @@ export class IpcChannelRendererClass {
   ConversationFollowUpsChanged: IpcRendererEventListener<{
     conversationId: string
     followUps: import('@shared/agent/follow-up').FollowUpItem[]
+    revision: number
   }> = null
   ChannelIncomingToAgent: IpcRendererEventListener<{
     channelId: string

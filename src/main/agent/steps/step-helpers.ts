@@ -248,12 +248,13 @@ function resolveSandboxGlobalsBindings(
     ? toolLoopFilesystemScopeFromStepKey(rawScope)
     : undefined
   const conversationId = runCtx?.sandbox.getConversationId()?.trim()
+  const assistantMessageId = runCtx?.opts.assistantMessageId?.trim()
   const workspacePath =
     runScope?.workspacePath?.trim() ||
     (conversationId
       ? (getWorkspacePath(conversationId) ?? undefined)
       : undefined)
-  return { root, outputScope, workspacePath, conversationId }
+  return { root, outputScope, workspacePath, conversationId, assistantMessageId }
 }
 
 function buildSubAgentDelegationFromRunCtx(

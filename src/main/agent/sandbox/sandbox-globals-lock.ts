@@ -9,10 +9,12 @@ import {
   TERALEXI_AGENT_SANDBOX_ROOT_ENV,
   TERALEXI_AGENT_WORKSPACE_PATH_ENV,
   TERALEXI_AGENT_CONVERSATION_ID_ENV,
+  TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV,
   SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY,
   SANDBOX_ROOT_GLOBAL_KEY,
   WORKSPACE_PATH_GLOBAL_KEY,
   CONVERSATION_ID_GLOBAL_KEY,
+  ASSISTANT_MESSAGE_ID_GLOBAL_KEY,
   setAgentRunWorkspaceGlobal,
   clearAgentRunWorkspaceGlobal,
 } from './run-context'
@@ -26,6 +28,8 @@ export type SandboxGlobalsBindings = {
   workspacePath?: string
   /** Conversation id for plan-mode and other conversation-scoped tools. */
   conversationId?: string
+  /** Assistant message id for the current turn (follow-up source binding). */
+  assistantMessageId?: string
 }
 
 export type SandboxGlobalsSnapshot = {
@@ -33,6 +37,7 @@ export type SandboxGlobalsSnapshot = {
   outputScope?: string
   workspacePath?: string
   conversationId?: string
+  assistantMessageId?: string
 }
 
 /** Binds process globals/env for skill bundles (tests and exclusive tool runs). */
@@ -75,6 +80,15 @@ function applySandboxGlobalsToProcess(bindings: SandboxGlobalsBindings): void {
     delete process.env[TERALEXI_AGENT_CONVERSATION_ID_ENV]
     delete g[CONVERSATION_ID_GLOBAL_KEY]
   }
+
+  const assistantMessageId = bindings.assistantMessageId?.trim()
+  if (assistantMessageId) {
+    process.env[TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV] = assistantMessageId
+    g[ASSISTANT_MESSAGE_ID_GLOBAL_KEY] = assistantMessageId
+  } else {
+    delete process.env[TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV]
+    delete g[ASSISTANT_MESSAGE_ID_GLOBAL_KEY]
+  }
 }
 
 export function captureSandboxGlobalsFromProcess(): SandboxGlobalsSnapshot {
@@ -85,11 +99,18 @@ export function captureSandboxGlobalsFromProcess(): SandboxGlobalsSnapshot {
       ? fromGlobalConv.trim()
       : process.env[TERALEXI_AGENT_CONVERSATION_ID_ENV]?.trim() || undefined
 
+  const fromGlobalAsst = g[ASSISTANT_MESSAGE_ID_GLOBAL_KEY]
+  const assistantMessageId =
+    typeof fromGlobalAsst === 'string' && fromGlobalAsst.trim()
+      ? fromGlobalAsst.trim()
+      : process.env[TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV]?.trim() || undefined
+
   return {
     root: getSandboxRootFromEnv(),
     outputScope: getSandboxOutputScopeFromEnv(),
     workspacePath: getWorkspacePathFromEnv() ?? undefined,
     conversationId,
+    assistantMessageId,
   }
 }
 

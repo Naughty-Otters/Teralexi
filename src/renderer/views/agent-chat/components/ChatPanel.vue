@@ -135,7 +135,7 @@
               </ul>
             </div>
             <ChatFollowUpSuggestions
-              v-if="!isBusy && followUpItems.length > 0"
+              v-if="!isBusy && !hasPendingHitl && followUpItems.length > 0"
               :items="followUpItems"
               @select="onFollowUpSelect"
             />
@@ -409,6 +409,8 @@ const standardMarkdown = useLazyStandardMarkdown()
 const codingMode = ref<CodingMode>(DEFAULT_CODING_MODE)
 const planModeView = ref<PlanModeView>(defaultPlanModeView())
 const followUpItems = ref<FollowUpItem[]>([])
+/** Monotonic revision from main; ignore notify/load payloads with a lower revision. */
+const followUpRevision = ref(0)
 /** Bumps whenever follow-ups are cleared so late IPC loads cannot resurrect chips. */
 let followUpLoadGeneration = 0
 const backgroundTasks = ref<BackgroundTaskView[]>([])
@@ -1156,10 +1158,14 @@ function resolveActiveConversationId(): string | undefined {
   return agentStore.currentConversationId ?? undefined
 }
 
+const hasPendingHitl = computed(() =>
+  conversationHasPendingHitl(resolveActiveConversationId()),
+)
+
 const planDisplayStatus = computed(() =>
   resolvePlanModeDisplayStatus(
     planModeView.value,
-    conversationHasPendingHitl(resolveActiveConversationId()),
+    hasPendingHitl.value,
   ),
 )
 
@@ -1256,7 +1262,18 @@ watch(isBusy, (busy, wasBusy) => {
   // (meta is often written mid-stream via generate_follow_up).
   if (wasBusy && !busy) {
     void dequeueAndSendNext()
-    void loadFollowUpSuggestions(agentStore.currentConversationId ?? undefined)
+    if (!hasPendingHitl.value) {
+      void loadFollowUpSuggestions(agentStore.currentConversationId ?? undefined)
+    } else {
+      // HITL pause: do not surface post-turn chips while the turn is suspended.
+      followUpItems.value = []
+    }
+  }
+})
+
+watch(hasPendingHitl, (pending) => {
+  if (pending) {
+    followUpItems.value = []
   }
 })
 
@@ -1403,6 +1420,7 @@ watch(
       codingMode.value = DEFAULT_CODING_MODE
       planModeView.value = defaultPlanModeView()
       followUpItems.value = []
+      followUpRevision.value = 0
       backgroundTasks.value = []
       stopBackgroundTaskPolling()
     }
@@ -1425,13 +1443,19 @@ function onConversationFollowUpsChanged(
   payload: {
     conversationId?: string
     followUps?: FollowUpItem[]
+    revision?: number
   },
 ) {
   const conversationId = payload?.conversationId?.trim()
   if (!conversationId || conversationId !== agentStore.currentConversationId) {
     return
   }
-  followUpItems.value = Array.isArray(payload.followUps) ? payload.followUps : []
+  const items = Array.isArray(payload.followUps) ? payload.followUps : []
+  // HITL suspend/resume owns the turn; ignore premature chips until idle after finish.
+  if (hasPendingHitl.value && items.length > 0) {
+    return
+  }
+  applyFollowUpSuggestions(items, payload.revision)
 }
 
 let unregisterConversationStoreUiSync: (() => void) | null = null
@@ -1594,6 +1618,7 @@ async function loadFollowUpSuggestions(conversationId: string | undefined) {
   const id = conversationId?.trim()
   if (!id) {
     followUpItems.value = []
+    followUpRevision.value = 0
     return
   }
   const ch = window.ipcRendererChannel?.GetConversationFollowUps
@@ -1606,7 +1631,15 @@ async function loadFollowUpSuggestions(conversationId: string | undefined) {
     const result = await ch.invoke({ conversationId: id })
     if (loadGeneration !== followUpLoadGeneration) return
     if (agentStore.currentConversationId !== id) return
-    followUpItems.value = result.ok ? result.followUps : []
+    if (result.ok) {
+      if (hasPendingHitl.value && result.followUps.length > 0) {
+        followUpItems.value = []
+        return
+      }
+      applyFollowUpSuggestions(result.followUps, result.revision)
+    } else {
+      followUpItems.value = []
+    }
   } catch {
     if (
       loadGeneration === followUpLoadGeneration &&
@@ -1617,6 +1650,17 @@ async function loadFollowUpSuggestions(conversationId: string | undefined) {
   }
 }
 
+function applyFollowUpSuggestions(
+  items: FollowUpItem[],
+  revision?: number,
+): void {
+  if (typeof revision === 'number' && Number.isFinite(revision)) {
+    if (revision < followUpRevision.value) return
+    followUpRevision.value = revision
+  }
+  followUpItems.value = items
+}
+
 async function clearFollowUpSuggestions(conversationId: string | undefined) {
   followUpLoadGeneration += 1
   followUpItems.value = []
@@ -1625,7 +1669,10 @@ async function clearFollowUpSuggestions(conversationId: string | undefined) {
   const ch = window.ipcRendererChannel?.ClearConversationFollowUps
   if (!ch) return
   try {
-    await ch.invoke({ conversationId: id })
+    const result = await ch.invoke({ conversationId: id })
+    if (typeof result?.revision === 'number' && Number.isFinite(result.revision)) {
+      followUpRevision.value = Math.max(followUpRevision.value, result.revision)
+    }
   } catch {
     /* ignore clear failures — UI already cleared */
   }
