@@ -5,10 +5,10 @@
 
 | | |
 | --- | --- |
-| **Last successful build** | 2026-07-13T17:31:13Z |
+| **Last successful build** | 2026-07-13T18:12:46Z |
 | **Branch** | `main` |
-| **Commit** | [`01356b1`](https://github.com/Naughty-Otters/OpenFDE/commit/01356b1d16ce3e42e82d3f32efdc7829cf7816bd) |
-| **Workflow run** | [View logs](https://github.com/Naughty-Otters/OpenFDE/actions/runs/29269818526) |
+| **Commit** | [`c322adb`](https://github.com/Naughty-Otters/OpenFDE/commit/c322adb21cfab848018fb484484caf2f19fff059) |
+| **Workflow run** | [View logs](https://github.com/Naughty-Otters/OpenFDE/actions/runs/29272495336) |
 <!-- ci-status-end -->
 
 Teralexi is an Electron desktop app for running and managing AI agents in a local desktop workspace. It combines a Vue 3 renderer, Electron main process services, persisted conversations, tool execution, MCP integrations, scheduled jobs, and channel/account integrations inside one desktop app.
