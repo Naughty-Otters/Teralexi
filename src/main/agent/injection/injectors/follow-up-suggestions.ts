@@ -51,7 +51,14 @@ export const followUpSuggestionsInjector: AgentInjector = {
   applies({ profile, ctx }) {
     return profile.stage === 'toolLoop' && isRootRun(ctx)
   },
-  injectUserMessage() {
+  injectUserMessage({ messages }) {
+    // Once per conversation turn; later tool-loop steps reuse the standing reminder.
+    if (
+      messages &&
+      findLastInjectorMessageMeta(messages, FOLLOW_UP_SUGGESTIONS_INJECTOR_ID)
+    ) {
+      return null
+    }
     return buildInjectorUserMessage(
       FOLLOW_UP_SUGGESTIONS_INJECTOR_ID,
       FOLLOW_UP_SUGGESTIONS_STANDING_USER_TEXT,

@@ -62,10 +62,11 @@ describe('injection framework', () => {
       [{ role: 'user', content: 'hi' }],
       0,
     )
-    expect(messages).toHaveLength(4)
+    expect(messages).toHaveLength(5)
     expect(String(messages[1].content)).toContain(DEEP_THINKING_BEFORE_MARKER)
     expect(String(messages[2].content)).toContain(MULTIPLE_BRANCH_THINKING_MARKER)
     expect(String(messages[3].content)).toContain('## Current date and time')
+    expect(String(messages[4].content)).toContain('generate_follow_up')
   })
 
   it('adds current datetime for non-coding skills', async () => {
@@ -74,10 +75,11 @@ describe('injection framework', () => {
       [{ role: 'user', content: 'hi' }],
       0,
     )
-    expect(messages).toHaveLength(4)
+    expect(messages).toHaveLength(5)
     expect(String(messages[1].content)).toContain(DEEP_THINKING_BEFORE_MARKER)
     expect(String(messages[2].content)).toContain(MULTIPLE_BRANCH_THINKING_MARKER)
     expect(String(messages[3].content)).toContain('## Current date and time')
+    expect(String(messages[4].content)).toContain('generate_follow_up')
   })
 
   it('createPrepareStepFromInjectors registers plan-mode hook for non-coding skills', () => {

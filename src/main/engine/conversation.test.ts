@@ -17,6 +17,8 @@ vi.mock('@main/services/conversation-store', () => ({
     saveMessage: vi.fn(),
     upsertConversationSandboxRun: vi.fn(),
     getMessageAttachmentsForMessage: vi.fn(() => []),
+    getMessages: vi.fn(() => []),
+    getConversationHooks: vi.fn(() => ({ hooks: [] })),
   })),
 }))
 
@@ -329,6 +331,8 @@ describe('agent engine', () => {
       }),
       upsertConversationSandboxRun: vi.fn(),
       getMessageAttachmentsForMessage: vi.fn(() => []),
+      getMessages: vi.fn(() => []),
+      getConversationHooks: vi.fn(() => ({ hooks: [] })),
     } as never)
 
     const result = await runAgentForConversation({

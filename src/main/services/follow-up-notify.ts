@@ -9,11 +9,15 @@ export function notifyConversationFollowUpsChanged(
 ): void {
   const id = conversationId.trim()
   if (!id) return
-  for (const window of BrowserWindow.getAllWindows()) {
-    if (window.isDestroyed()) continue
-    webContentSend.ConversationFollowUpsChanged(window.webContents, {
-      conversationId: id,
-      followUps,
-    })
+  try {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (window.isDestroyed()) continue
+      webContentSend.ConversationFollowUpsChanged(window.webContents, {
+        conversationId: id,
+        followUps,
+      })
+    }
+  } catch {
+    // Electron may be unavailable in unit tests; persistence already succeeded.
   }
 }
