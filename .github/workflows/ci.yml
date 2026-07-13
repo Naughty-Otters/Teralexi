@@ -84,9 +84,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Lockfile may omit platform-specific sharp binaries (especially linux/windows).
-      - name: Install sharp platform bindings
-        run: npm install --include=optional sharp
+      # Lockfile may omit platform-specific native binaries (sharp, lightningcss, oxide).
+      - name: Install platform-native optional deps
+        run: npm install --include=optional sharp lightningcss @tailwindcss/oxide
 
       - name: Build desktop app (staging / env/.sit.env, unsigned)
         env:

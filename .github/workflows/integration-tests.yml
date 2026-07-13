@@ -54,9 +54,9 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      # npm ci from a macOS-generated lockfile often omits linux sharp binaries.
-      - name: Install sharp for Linux
-        run: npm install --include=optional sharp
+      # Lockfile may omit Linux native optional binaries (sharp, lightningcss, oxide).
+      - name: Install Linux native optional deps
+        run: npm install --include=optional sharp lightningcss-linux-x64-gnu @tailwindcss/oxide-linux-x64-gnu
 
       - name: Build unpacked sit app
         env:
