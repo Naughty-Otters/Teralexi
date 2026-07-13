@@ -44,12 +44,16 @@ export function writeFollowUpMeta(
   try {
     mkdirSync(dirname(file), { recursive: true })
     writeFileSync(file, JSON.stringify(meta, null, 2), 'utf8')
-    notifyConversationFollowUpsChanged(meta.conversationId, meta.followUps)
-    return file
   } catch (err) {
     log.warn('Failed to write follow-up meta', { file, err })
     return null
   }
+  try {
+    notifyConversationFollowUpsChanged(meta.conversationId, meta.followUps)
+  } catch {
+    // Notify is best-effort; file write already succeeded.
+  }
+  return file
 }
 
 /** Delete `followup/meta.json` if present. Returns true when removed or already absent. */
@@ -60,18 +64,26 @@ export function clearFollowUpMeta(
   const file = followUpMetaPath(sandboxRoot)
   if (!existsSync(file)) {
     if (conversationId?.trim()) {
-      notifyConversationFollowUpsChanged(conversationId.trim(), [])
+      try {
+        notifyConversationFollowUpsChanged(conversationId.trim(), [])
+      } catch {
+        /* ignore */
+      }
     }
     return true
   }
   try {
     unlinkSync(file)
-    if (conversationId?.trim()) {
-      notifyConversationFollowUpsChanged(conversationId.trim(), [])
-    }
-    return true
   } catch (err) {
     log.warn('Failed to delete follow-up meta', { file, err })
     return false
   }
+  if (conversationId?.trim()) {
+    try {
+      notifyConversationFollowUpsChanged(conversationId.trim(), [])
+    } catch {
+      /* ignore */
+    }
+  }
+  return true
 }
