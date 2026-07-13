@@ -54,10 +54,16 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      # npm ci from a macOS-generated lockfile often omits linux sharp binaries.
+      - name: Install sharp for Linux
+        run: npm install --include=optional sharp
+
       - name: Build unpacked sit app
         env:
           NODE_OPTIONS: --max-old-space-size=6144
           TERALEXI_BUILD_ENV: sit
+          TERALEXI_FORCE_UNSIGNED: '1'
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npm run build:dir:sit
 
       - name: Run Electron smoke tests
