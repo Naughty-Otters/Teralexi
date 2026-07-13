@@ -3,12 +3,15 @@ import path from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV,
   TERALEXI_AGENT_CONVERSATION_ID_ENV,
   TERALEXI_AGENT_SANDBOX_ROOT_ENV,
+  ASSISTANT_MESSAGE_ID_GLOBAL_KEY,
   SANDBOX_ROOT_GLOBAL_KEY,
   CONVERSATION_ID_GLOBAL_KEY,
 } from '@main/agent/sandbox'
 import { FOLLOWUP_META_REL_PATH } from '@shared/agent/follow-up'
+import { resetFollowUpCatalogGatesForTests } from '@main/agent/follow-up'
 import { generateFollowUp } from './generate-follow-up'
 
 function setSandboxRoot(root: string | undefined) {
@@ -33,18 +36,32 @@ function setConversationId(id: string | undefined) {
   }
 }
 
+function setAssistantMessageId(id: string | undefined) {
+  const g = globalThis as unknown as Record<string, unknown>
+  if (id) {
+    g[ASSISTANT_MESSAGE_ID_GLOBAL_KEY] = id
+    process.env[TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV] = id
+  } else {
+    delete g[ASSISTANT_MESSAGE_ID_GLOBAL_KEY]
+    delete process.env[TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV]
+  }
+}
+
 describe('generate_follow_up tool', () => {
   let sandboxRoot: string
 
   beforeEach(async () => {
     sandboxRoot = await mkdtemp(path.join(tmpdir(), 'teralexi-followup-'))
+    resetFollowUpCatalogGatesForTests()
     setSandboxRoot(sandboxRoot)
     setConversationId('conv-followup-1')
+    setAssistantMessageId('asst-followup-1')
   })
 
   afterEach(async () => {
     setSandboxRoot(undefined)
     setConversationId(undefined)
+    setAssistantMessageId(undefined)
     await rm(sandboxRoot, { recursive: true, force: true })
   })
 
@@ -85,11 +102,12 @@ describe('generate_follow_up tool', () => {
       version: number
       conversationId: string
       followUps: Array<{ id: string; label: string; action: { type: string } }>
-      source?: { userMessage?: string }
+      source?: { userMessage?: string; assistantMessageId?: string }
     }
     expect(meta.version).toBe(1)
     expect(meta.conversationId).toBe('conv-followup-1')
     expect(meta.source?.userMessage).toBe('Ship the helper')
+    expect(meta.source?.assistantMessageId).toBe('asst-followup-1')
     expect(meta.followUps).toHaveLength(2)
     expect(meta.followUps[0]?.id).toBe('grep-todos')
     expect(meta.followUps[0]?.action.type).toBe('tool_call')

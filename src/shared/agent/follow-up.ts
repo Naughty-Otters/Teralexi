@@ -60,6 +60,11 @@ export type FollowUpMeta = {
   version: typeof FOLLOWUP_META_VERSION
   conversationId: string
   updatedAt: string
+  /**
+   * Monotonic catalog revision for clear/write/notify race handling.
+   * Higher revision always wins in the renderer.
+   */
+  revision?: number
   source?: FollowUpSource
   followUps: FollowUpItem[]
 }
@@ -159,6 +164,11 @@ export function parseFollowUpMeta(raw: unknown): FollowUpMeta | null {
       typeof raw.updatedAt === 'string' && raw.updatedAt.trim()
         ? raw.updatedAt.trim()
         : new Date().toISOString(),
+    ...(typeof raw.revision === 'number' &&
+    Number.isFinite(raw.revision) &&
+    raw.revision >= 0
+      ? { revision: Math.trunc(raw.revision) }
+      : {}),
     ...(source && Object.keys(source).length > 0 ? { source } : {}),
     followUps,
   }
@@ -203,6 +213,7 @@ export function buildFollowUpMeta(args: {
   mode?: GenerateFollowUpMode
   existing?: FollowUpMeta | null
   source?: FollowUpSource
+  revision?: number
 }): FollowUpMeta {
   const mode = args.mode ?? 'replace'
   const incoming = normalizeFollowUpItems(args.items)
@@ -224,6 +235,7 @@ export function buildFollowUpMeta(args: {
     version: FOLLOWUP_META_VERSION,
     conversationId: args.conversationId,
     updatedAt: new Date().toISOString(),
+    ...(typeof args.revision === 'number' ? { revision: args.revision } : {}),
     ...(source ? { source } : {}),
     followUps,
   }

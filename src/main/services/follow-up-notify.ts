@@ -6,6 +6,7 @@ import { webContentSend } from '@main/services/web-content-send'
 export function notifyConversationFollowUpsChanged(
   conversationId: string,
   followUps: FollowUpItem[],
+  revision: number,
 ): void {
   const id = conversationId.trim()
   if (!id) return
@@ -15,6 +16,7 @@ export function notifyConversationFollowUpsChanged(
       webContentSend.ConversationFollowUpsChanged(window.webContents, {
         conversationId: id,
         followUps,
+        revision,
       })
     }
   } catch {

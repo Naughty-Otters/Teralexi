@@ -32,6 +32,18 @@ vi.mock('@main/services/conversation-store-notify', () => ({
   notifyConversationStoreChanged: notifyConversationStoreChangedMock,
 }))
 
+vi.mock('@main/agent/follow-up', () => ({
+  clearFollowUpMeta: vi.fn(() => ({ ok: true, revision: 1 })),
+}))
+
+vi.mock('@main/agent/sandbox', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@main/agent/sandbox')>()
+  return {
+    ...actual,
+    resolveSandboxRootForConversation: vi.fn(() => '/tmp/fake-sandbox'),
+  }
+})
+
 vi.mock('@logging', () => ({
   runWithAgentRunLog: (_ctx: unknown, fn: () => unknown) => fn(),
 }))
@@ -219,6 +231,8 @@ describe('agent engine', () => {
   })
 
   it('does not notify stream finished when pipeline paused for HITL', async () => {
+    const { clearFollowUpMeta } = await import('@main/agent/follow-up')
+    vi.mocked(clearFollowUpMeta).mockClear()
     vi.mocked(streamAgentResponseMock).mockResolvedValueOnce({
       structuredContent: '{"version":2}',
       shouldPersistMemory: false,
@@ -238,6 +252,12 @@ describe('agent engine', () => {
     })
     expect(result.hitlPaused).toBe(true)
     expect(notifyFinishedMock).not.toHaveBeenCalled()
+    // Turn start enableWrites + HITL pause disableWrites
+    expect(clearFollowUpMeta).toHaveBeenCalledWith(
+      '/tmp/fake-sandbox',
+      'c-hitl',
+      { enableWrites: false },
+    )
   })
 
   it('skips memory enqueue when shouldPersistMemory is false', async () => {

@@ -8,6 +8,7 @@ import {
 } from '@shared/agent/follow-up'
 import { readFollowUpMeta, writeFollowUpMeta } from '@main/agent/follow-up'
 import {
+  getAssistantMessageIdFromEnv,
   getConversationIdFromEnv,
   getSandboxRootFromEnv,
   requireActiveSandbox,
@@ -136,9 +137,10 @@ export const generateFollowUp: SkillTool = {
       parsed.data.source_user_message?.trim() ||
       existing?.source?.userMessage?.trim()
     if (userMessage) source.userMessage = userMessage
-    if (existing?.source?.assistantMessageId?.trim()) {
-      source.assistantMessageId = existing.source.assistantMessageId.trim()
-    }
+    const assistantMessageId =
+      getAssistantMessageIdFromEnv()?.trim() ||
+      existing?.source?.assistantMessageId?.trim()
+    if (assistantMessageId) source.assistantMessageId = assistantMessageId
 
     const meta = buildFollowUpMeta({
       conversationId,
@@ -149,18 +151,24 @@ export const generateFollowUp: SkillTool = {
     })
 
     const written = writeFollowUpMeta(sandboxRoot, meta)
-    if (!written) {
-      return { error: `Failed to write ${FOLLOWUP_META_REL_PATH}` }
+    if (!written.ok) {
+      return {
+        error:
+          written.reason === 'writes_disabled'
+            ? 'Follow-up catalog was cleared; wait for the next turn before writing.'
+            : `Failed to write ${FOLLOWUP_META_REL_PATH}`,
+      }
     }
 
     return {
       ok: true,
       path: FOLLOWUP_META_REL_PATH,
-      absolutePath: written,
+      absolutePath: written.path,
       conversationId,
-      count: meta.followUps.length,
+      revision: written.revision,
+      count: written.meta.followUps.length,
       mode,
-      followUps: meta.followUps,
+      followUps: written.meta.followUps,
     }
   },
 }
