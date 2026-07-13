@@ -152,6 +152,17 @@ export class ConversationStore {
     )
   }
 
+  getConversationHooks(conversationId: string) {
+    return this.conversationSettings.getHooks(conversationId)
+  }
+
+  setConversationHooks(
+    conversationId: string,
+    hooks: StoredConversationSettings['hooks'],
+  ): StoredConversationSettings {
+    return this.conversationSettings.setHooks(conversationId, hooks)
+  }
+
   applyCompactionToConversation(args: {
     conversationId: string
     agentId: string

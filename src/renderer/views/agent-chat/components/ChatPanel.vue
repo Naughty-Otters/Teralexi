@@ -134,6 +134,11 @@
                 </li>
               </ul>
             </div>
+            <ChatFollowUpSuggestions
+              v-if="!isBusy && followUpItems.length > 0"
+              :items="followUpItems"
+              @select="onFollowUpSelect"
+            />
             </div>
           </div>
         </div>
@@ -324,6 +329,7 @@ import AgentGuidePanel from './AgentGuidePanel.vue'
 import ChatUserMessage from './ChatUserMessage.vue'
 import ChatAssistantMessageParts from './ChatAssistantMessageParts.vue'
 import ChatComposer from './ChatComposer.vue'
+import ChatFollowUpSuggestions from './ChatFollowUpSuggestions.vue'
 import ChatConversationSkeleton from './ChatConversationSkeleton.vue'
 import ChatConversationWorkspaceAttachments from './ChatConversationWorkspaceAttachments.vue'
 import { formatSlashHelp } from './composer-slash-commands'
@@ -354,6 +360,10 @@ import {
   DEFAULT_CODING_MODE,
   parseCodingMode,
 } from '@shared/agent/coding-mode'
+import {
+  followUpItemToUserMessage,
+  type FollowUpItem,
+} from '@shared/agent/follow-up'
 import type { BackgroundTaskView } from './BackgroundTaskPanel.vue'
 import {
   resolveDelegatableSubAgentTargets,
@@ -398,6 +408,9 @@ const standardMarkdown = useLazyStandardMarkdown()
 
 const codingMode = ref<CodingMode>(DEFAULT_CODING_MODE)
 const planModeView = ref<PlanModeView>(defaultPlanModeView())
+const followUpItems = ref<FollowUpItem[]>([])
+/** Bumps whenever follow-ups are cleared so late IPC loads cannot resurrect chips. */
+let followUpLoadGeneration = 0
 const backgroundTasks = ref<BackgroundTaskView[]>([])
 let backgroundTaskPollTimer: ReturnType<typeof setInterval> | null = null
 
@@ -746,6 +759,7 @@ const transport = new IpcAgentChatTransport({
         { conversationId, priority: 'immediate', force: true },
       )
       void refreshPlanModeState(conversationId)
+      void loadFollowUpSuggestions(conversationId)
     }
   },
   onStreamUiChunk(conversationId, meta) {
@@ -1238,7 +1252,12 @@ async function dequeueAndSendNext(): Promise<void> {
 }
 
 watch(isBusy, (busy, wasBusy) => {
-  if (wasBusy && !busy) void dequeueAndSendNext()
+  // Keep followUpItems while busy so chips appear as soon as the turn ends
+  // (meta is often written mid-stream via generate_follow_up).
+  if (wasBusy && !busy) {
+    void dequeueAndSendNext()
+    void loadFollowUpSuggestions(agentStore.currentConversationId ?? undefined)
+  }
 })
 
 function createChatForConversation(
@@ -1262,6 +1281,9 @@ function createChatForConversation(
 
       if (!isAbort) {
         void refreshPlanModeState(conversationId)
+        if (!pendingHitl) {
+          void loadFollowUpSuggestions(conversationId)
+        }
       }
 
       if (isAbort) {
@@ -1375,10 +1397,12 @@ watch(
     if (conversationId) {
       void loadCodingMode(conversationId)
       void loadPlanModeState(conversationId)
+      void loadFollowUpSuggestions(conversationId)
       if (selectedAgentIsCoding.value) startBackgroundTaskPolling()
     } else {
       codingMode.value = DEFAULT_CODING_MODE
       planModeView.value = defaultPlanModeView()
+      followUpItems.value = []
       backgroundTasks.value = []
       stopBackgroundTaskPolling()
     }
@@ -1394,6 +1418,20 @@ function onPlanModeStateChanged(
   if (!conversationId || conversationId !== resolveActiveConversationId())
     return
   if (payload.view) applyPlanModeView(payload.view)
+}
+
+function onConversationFollowUpsChanged(
+  _event: unknown,
+  payload: {
+    conversationId?: string
+    followUps?: FollowUpItem[]
+  },
+) {
+  const conversationId = payload?.conversationId?.trim()
+  if (!conversationId || conversationId !== agentStore.currentConversationId) {
+    return
+  }
+  followUpItems.value = Array.isArray(payload.followUps) ? payload.followUps : []
 }
 
 let unregisterConversationStoreUiSync: (() => void) | null = null
@@ -1418,10 +1456,14 @@ onMounted(() => {
   if (cid) {
     void loadCodingMode(cid)
     void loadPlanModeState(cid)
+    void loadFollowUpSuggestions(cid)
     void loadConversationAttachments(cid)
     if (selectedAgentIsCoding.value) startBackgroundTaskPolling()
   }
   window.ipcRendererChannel?.PlanModeStateChanged?.on?.(onPlanModeStateChanged)
+  window.ipcRendererChannel?.ConversationFollowUpsChanged?.on?.(
+    onConversationFollowUpsChanged,
+  )
   window.ipcRendererChannel?.AgentSandboxOutput?.on?.((_e, payload) => {
     agentStore.recordSandboxOutput(payload)
   })
@@ -1470,6 +1512,9 @@ onUnmounted(() => {
   stopBackgroundTaskPolling()
   window.ipcRendererChannel?.PlanModeStateChanged?.removeListener?.(
     onPlanModeStateChanged,
+  )
+  window.ipcRendererChannel?.ConversationFollowUpsChanged?.removeListener?.(
+    onConversationFollowUpsChanged,
   )
   window.ipcRendererChannel?.AgentSandboxOutput?.removeAllListeners?.()
 })
@@ -1543,6 +1588,57 @@ async function loadCodingMode(conversationId: string) {
   }
   const result = await ch.invoke({ conversationId })
   codingMode.value = result.ok ? result.mode : DEFAULT_CODING_MODE
+}
+
+async function loadFollowUpSuggestions(conversationId: string | undefined) {
+  const id = conversationId?.trim()
+  if (!id) {
+    followUpItems.value = []
+    return
+  }
+  const ch = window.ipcRendererChannel?.GetConversationFollowUps
+  if (!ch) {
+    followUpItems.value = []
+    return
+  }
+  const loadGeneration = followUpLoadGeneration
+  try {
+    const result = await ch.invoke({ conversationId: id })
+    if (loadGeneration !== followUpLoadGeneration) return
+    if (agentStore.currentConversationId !== id) return
+    followUpItems.value = result.ok ? result.followUps : []
+  } catch {
+    if (
+      loadGeneration === followUpLoadGeneration &&
+      agentStore.currentConversationId === id
+    ) {
+      followUpItems.value = []
+    }
+  }
+}
+
+async function clearFollowUpSuggestions(conversationId: string | undefined) {
+  followUpLoadGeneration += 1
+  followUpItems.value = []
+  const id = conversationId?.trim()
+  if (!id) return
+  const ch = window.ipcRendererChannel?.ClearConversationFollowUps
+  if (!ch) return
+  try {
+    await ch.invoke({ conversationId: id })
+  } catch {
+    /* ignore clear failures — UI already cleared */
+  }
+}
+
+async function onFollowUpSelect(item: FollowUpItem) {
+  const conversationId = agentStore.currentConversationId
+  const text = followUpItemToUserMessage(item)
+  if (!text || !chatInst.value || !conversationId) return
+
+  await clearFollowUpSuggestions(conversationId)
+  draft.value = ''
+  void chatInst.value.sendMessage({ text })
 }
 
 async function loadPlanModeState(conversationId: string) {
@@ -2005,6 +2101,9 @@ async function onSubmit() {
   const text = draft.value.trim()
   const sourcePaths = [...attachmentSourcePaths.value]
   if (!text && sourcePaths.length === 0) return
+
+  // Composer send: drop follow-up chips and delete followup/meta.json before the new turn.
+  await clearFollowUpSuggestions(agentStore.currentConversationId ?? undefined)
 
   const skillSwitchTarget = text ? parseSkillSwitchCommand(text) : null
   if (skillSwitchTarget) {

@@ -122,6 +122,7 @@ export function isSandboxArtifactRelativePath(userPath: string): boolean {
   return (
     head === 'output' ||
     head === 'plans' ||
+    head === 'followup' ||
     head === 'refs' ||
     head === 'skills' ||
     head === 'scripts'

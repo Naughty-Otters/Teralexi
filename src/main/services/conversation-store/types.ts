@@ -1,4 +1,5 @@
 import type { CodingMode } from '@shared/agent/coding-mode'
+import type { ConversationHooksConfig } from '@shared/agent/conversation-hooks'
 import type { AgentPlanModeState } from '@shared/agent/plan-mode'
 import type { ProviderType } from '@shared/agent/llm-provider-registry'
 import type {
@@ -24,6 +25,8 @@ export interface StoredConversationSettings {
   codingMode: CodingMode
   /** Kimi-style agent-driven explore mode state. */
   planModeState: AgentPlanModeState
+  /** Per-conversation pre/post turn shell hooks. */
+  hooks: ConversationHooksConfig
   updatedAt: string
 }
 

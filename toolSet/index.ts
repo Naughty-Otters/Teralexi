@@ -12,6 +12,7 @@ export * from './file-system'
 export * from './shell-command'
 export * from './git'
 export * from './todos'
+export * from './generate-follow-up'
 export * from './lsp'
 export * from './web'
 export * from './deep-research'
@@ -41,6 +42,7 @@ import {
 import { runScript, runScriptFile } from './shell-command'
 import { gitTools } from './git'
 import { todoTools } from './todos'
+import { followUpTools } from './generate-follow-up'
 import { planningTools } from './planning-tools'
 import { subAgentTools } from './sub-agent-tools'
 import { lspTools } from './lsp'
@@ -67,6 +69,7 @@ export const tools: SkillTool[] = [
   runScriptFile,
   ...gitTools,
   ...todoTools,
+  ...followUpTools,
   ...planningTools,
   ...subAgentTools,
   ...lspTools,

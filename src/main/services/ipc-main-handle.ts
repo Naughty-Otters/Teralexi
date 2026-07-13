@@ -140,7 +140,12 @@ import {
   syncSandboxOutputView,
   removeSandboxDirectories,
   releaseSubAgentSandboxesForConversation,
+  resolveSandboxRootForConversation,
 } from '@main/agent/sandbox'
+import {
+  clearFollowUpMeta,
+  readFollowUpMeta,
+} from '@main/agent/follow-up'
 import { serializeNeedsApproval } from '@main/skills/tool-ipc-meta'
 import { extractZodParams } from '@main/utils/zod-introspection'
 import { isConversationRunInFlight } from '@main/engine'
@@ -2500,6 +2505,62 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       mode,
     )
     return { ok: true, mode: saved.codingMode }
+  }
+
+  GetConversationHooks: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string },
+  ) => {
+    ok: boolean
+    hooks: import('@shared/agent/conversation-hooks').ConversationHookEntry[]
+  } = (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) return { ok: false, hooks: [] }
+    const hooks =
+      getConversationStore().getConversationHooks(conversationId).hooks
+    return { ok: true, hooks }
+  }
+
+  SetConversationHooks: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: {
+      conversationId: string
+      hooks: import('@shared/agent/conversation-hooks').ConversationHookEntry[]
+    },
+  ) => {
+    ok: boolean
+    hooks: import('@shared/agent/conversation-hooks').ConversationHookEntry[]
+  } = (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) return { ok: false, hooks: [] }
+    const saved = getConversationStore().setConversationHooks(conversationId, {
+      hooks: Array.isArray(args?.hooks) ? args.hooks : [],
+    })
+    return { ok: true, hooks: saved.hooks.hooks }
+  }
+
+  GetConversationFollowUps: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string },
+  ) => {
+    ok: boolean
+    followUps: import('@shared/agent/follow-up').FollowUpItem[]
+  } = (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) return { ok: false, followUps: [] }
+    const sandboxRoot = resolveSandboxRootForConversation(conversationId)
+    const meta = readFollowUpMeta(sandboxRoot, conversationId)
+    return { ok: true, followUps: meta.followUps }
+  }
+
+  ClearConversationFollowUps: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string },
+  ) => { ok: boolean } = (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) return { ok: false }
+    const sandboxRoot = resolveSandboxRootForConversation(conversationId)
+    return { ok: clearFollowUpMeta(sandboxRoot, conversationId) }
   }
 
   GetPlanModeState: (

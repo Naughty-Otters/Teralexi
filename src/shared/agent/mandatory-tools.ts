@@ -8,6 +8,7 @@ export const MANDATORY_TOOL_NAMES = new Set<string>([
   'invoke_agents',
   'wait_for_sub_agent_runs',
   'promote_artifact',
+  'generate_follow_up',
 ])
 
 export function isMandatoryTool(toolName: string): boolean {

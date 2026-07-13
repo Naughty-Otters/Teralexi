@@ -26,6 +26,7 @@ const TOOL_LOOP_DEFAULT_INSTRUCTIONS = [
   'language',
   'plan-mode',
   'deep-thinking-after-answer',
+  'follow-up-suggestions',
 ] as const
 
 const TOOL_LOOP_CODING_INSTRUCTIONS = [
@@ -48,6 +49,7 @@ const TOOL_LOOP_CODING_INSTRUCTIONS = [
   'session-tool-ledger',
   'language',
   'deep-thinking-after-answer',
+  'follow-up-suggestions',
 ] as const
 
 const TODO_EXECUTION_INSTRUCTIONS = [
@@ -79,6 +81,7 @@ const TOOL_LOOP_DEFAULT_USER_MESSAGES = [
   'multiple-branch-thinking',
   'current-datetime',
   'user-uploads',
+  'follow-up-suggestions',
   'plan-mode',
 ] as const
 
@@ -87,6 +90,7 @@ const TOOL_LOOP_CODING_ROOT_USER_MESSAGES = [
   'multiple-branch-thinking',
   'current-datetime',
   'user-uploads',
+  'follow-up-suggestions',
 ] as const
 const TOOL_LOOP_CODING_CHILD_USER_MESSAGES = [
   'deep-thinking-before-answer',
