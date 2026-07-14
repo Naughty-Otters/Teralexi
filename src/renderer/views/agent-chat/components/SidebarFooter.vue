@@ -2,74 +2,84 @@
   <div class="sidebar-footer">
     <hr class="sidebar-footer-rule" aria-hidden="true" />
     <div class="footer-actions">
-      <button
-        class="footer-btn"
-        :class="{ 'footer-btn--active': rightPanelView === 'settings' }"
-        :title="t.sidebar.settings"
-        :aria-label="t.sidebar.settings"
-        @click="emit('toggle-settings')"
-      >
-        <UIcon name="i-lucide-settings" class="footer-btn-icon" />
-      </button>
-      <button
-        class="footer-btn"
-        :title="t.sidebar.setupWizard"
-        :aria-label="t.sidebar.openSetupWizard"
-        @click="emit('open-setup-wizard')"
-      >
-        <UIcon name="i-lucide-wand-sparkles" class="footer-btn-icon" />
-        <UIcon
-          v-if="!props.isSignedIn"
-          name="i-lucide-lock"
-          class="footer-btn-lock"
-          aria-hidden="true"
-        />
-      </button>
-      <button
+      <AppIconTooltip :text="t.sidebar.settings">
+        <button
+          class="footer-btn"
+          :class="{ 'footer-btn--active': rightPanelView === 'settings' }"
+          :aria-label="t.sidebar.settings"
+          @click="emit('toggle-settings')"
+        >
+          <UIcon name="i-lucide-settings" class="footer-btn-icon" />
+        </button>
+      </AppIconTooltip>
+      <AppIconTooltip :text="t.sidebar.setupWizard">
+        <button
+          class="footer-btn"
+          :aria-label="t.sidebar.openSetupWizard"
+          @click="emit('open-setup-wizard')"
+        >
+          <UIcon name="i-lucide-wand-sparkles" class="footer-btn-icon" />
+          <UIcon
+            v-if="!props.isSignedIn"
+            name="i-lucide-lock"
+            class="footer-btn-lock"
+            aria-hidden="true"
+          />
+        </button>
+      </AppIconTooltip>
+      <AppIconTooltip
         v-if="showChatBoxDisplayModeToggle"
-        class="footer-btn"
-        :class="{ 'footer-btn--active': agentStore.chatBoxDisplayMode !== 'brief' }"
-        :title="`${chatBoxDisplayModeLabel(agentStore.chatBoxDisplayMode)} — ${chatBoxDisplayModeDescription(agentStore.chatBoxDisplayMode)}. Click to change.`"
-        :aria-label="`${t.sidebar.chatDisplay}: ${chatBoxDisplayModeLabel(agentStore.chatBoxDisplayMode)}. Click to cycle mode.`"
-        @click="cycleChatBoxMode"
+        :text="`${chatBoxDisplayModeLabel(agentStore.chatBoxDisplayMode)} — ${chatBoxDisplayModeDescription(agentStore.chatBoxDisplayMode)}. Click to change.`"
       >
-        <UIcon
-          :name="chatBoxDisplayModeIcon(agentStore.chatBoxDisplayMode)"
-          class="footer-btn-icon"
-        />
-      </button>
-      <button
-        class="footer-btn"
-        :class="{ 'footer-btn--active': rightPanelView === 'monitor' }"
-        :title="t.sidebar.tokenMonitor"
-        :aria-label="t.sidebar.openTokenMonitor"
-        @click="emit('open-monitor')"
+        <button
+          class="footer-btn"
+          :class="{ 'footer-btn--active': agentStore.chatBoxDisplayMode !== 'brief' }"
+          :aria-label="`${t.sidebar.chatDisplay}: ${chatBoxDisplayModeLabel(agentStore.chatBoxDisplayMode)}. Click to cycle mode.`"
+          @click="cycleChatBoxMode"
+        >
+          <UIcon
+            :name="chatBoxDisplayModeIcon(agentStore.chatBoxDisplayMode)"
+            class="footer-btn-icon"
+          />
+        </button>
+      </AppIconTooltip>
+      <AppIconTooltip :text="t.sidebar.tokenMonitor">
+        <button
+          class="footer-btn"
+          :class="{ 'footer-btn--active': rightPanelView === 'monitor' }"
+          :aria-label="t.sidebar.openTokenMonitor"
+          @click="emit('open-monitor')"
+        >
+          <UIcon name="i-lucide-activity" class="footer-btn-icon" />
+          <UIcon
+            v-if="!props.isSignedIn"
+            name="i-lucide-lock"
+            class="footer-btn-lock"
+            aria-hidden="true"
+          />
+        </button>
+      </AppIconTooltip>
+      <AppIconTooltip
+        :text="isDark ? t.sidebar.switchToLight : t.sidebar.switchToDark"
       >
-        <UIcon name="i-lucide-activity" class="footer-btn-icon" />
-        <UIcon
-          v-if="!props.isSignedIn"
-          name="i-lucide-lock"
-          class="footer-btn-lock"
-          aria-hidden="true"
-        />
-      </button>
-      <button
-        class="footer-btn"
-        :title="isDark ? t.sidebar.switchToLight : t.sidebar.switchToDark"
-        :aria-label="isDark ? t.sidebar.switchToLight : t.sidebar.switchToDark"
-        @click="toggle"
-      >
-        <UIcon
-          :name="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
-          class="footer-btn-icon"
-        />
-      </button>
+        <button
+          class="footer-btn"
+          :aria-label="isDark ? t.sidebar.switchToLight : t.sidebar.switchToDark"
+          @click="toggle"
+        >
+          <UIcon
+            :name="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
+            class="footer-btn-icon"
+          />
+        </button>
+      </AppIconTooltip>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useAgentStore } from '@store/agent'
+import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
 import { useTheme } from '@renderer/composables/useTheme'
 import { useI18n } from '@renderer/composables/useI18n'
 import {

@@ -1835,6 +1835,19 @@ export class IpcChannelMainClass {
     { conversationId: string },
     { ok: boolean; revision: number }
   > = null!
+  /** Skill-owned composer toolbar buttons for the active skill. */
+  GetSkillComposerToolbarPlugins: IpcMainEventListener<
+    { skillId: string; conversationId: string },
+    {
+      ok: boolean
+      plugins: import('@shared/agent/skill-composer-toolbar').SkillComposerToolbarPluginView[]
+    }
+  > = null!
+  /** Run a skill-owned composer toolbar plugin click handler. */
+  InvokeSkillComposerToolbarPlugin: IpcMainEventListener<
+    { skillId: string; conversationId: string; pluginId: string },
+    import('@shared/agent/skill-composer-toolbar').SkillComposerToolbarInvokeResult
+  > = null!
   /** Get high-level planning phase for a conversation. */
   GetPlanModeState: IpcMainEventListener<
     { conversationId: string },

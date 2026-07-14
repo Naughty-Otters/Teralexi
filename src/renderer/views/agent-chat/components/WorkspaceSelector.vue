@@ -3,26 +3,27 @@
     class="workspace-selector"
     :class="{ 'workspace-selector--toolbar': variant === 'toolbar' }"
   >
-    <button
-      type="button"
-      class="workspace-btn workspace-btn--pick"
-      :class="{
-        'workspace-btn--icon-only': variant === 'toolbar',
-        'workspace-btn--active': variant === 'toolbar' && isWorkspaceActive,
-      }"
-      :disabled="isDisabled"
-      :title="effectivePickTitle"
-      :aria-label="pickAriaLabel"
-      @mousedown.prevent
-      @click="onPickFolder"
-    >
-      <UIcon
-        :name="isWorkspaceActive ? 'i-lucide-folder-open' : 'i-lucide-folder'"
-        class="workspace-icon"
-        aria-hidden="true"
-      />
-      <span v-if="variant !== 'toolbar'" class="workspace-label">{{ buttonLabel }}</span>
-    </button>
+    <AppIconTooltip :text="effectivePickTitle">
+      <button
+        type="button"
+        class="workspace-btn workspace-btn--pick"
+        :class="{
+          'workspace-btn--icon-only': variant === 'toolbar',
+          'workspace-btn--active': variant === 'toolbar' && isWorkspaceActive,
+        }"
+        :disabled="isDisabled"
+        :aria-label="pickAriaLabel"
+        @mousedown.prevent
+        @click="onPickFolder"
+      >
+        <UIcon
+          :name="isWorkspaceActive ? 'i-lucide-folder-open' : 'i-lucide-folder'"
+          class="workspace-icon"
+          aria-hidden="true"
+        />
+        <span v-if="variant !== 'toolbar'" class="workspace-label">{{ buttonLabel }}</span>
+      </button>
+    </AppIconTooltip>
   </div>
 </template>
 
@@ -35,6 +36,7 @@ import {
 } from '@renderer/composables/useWorkspaceComposerShortcuts'
 import { useWorkspaceStore } from '@store/workspace'
 import { useAgentStore } from '@store/agent'
+import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
 
 const props = withDefaults(
   defineProps<{

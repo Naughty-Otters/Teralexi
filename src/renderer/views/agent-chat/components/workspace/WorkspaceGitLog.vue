@@ -2,7 +2,12 @@
   <div class="git-log">
     <div class="git-log-header">
       <span>Recent Commits</span>
-      <button class="git-log-refresh" title="Refresh log" @click="emit('refresh')">
+      <button
+        class="git-log-refresh"
+        title="Refresh log"
+        aria-label="Refresh commit log"
+        @click="emit('refresh')"
+      >
         <UIcon name="i-lucide-refresh-cw" :class="{ 'spin': loading }" style="width:12px;height:12px;" />
       </button>
     </div>

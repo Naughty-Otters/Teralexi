@@ -8,6 +8,7 @@
         v-if="layout === 'page'"
         class="wp-back"
         title="Back to chat"
+        aria-label="Back to chat"
         @click="emit('close')"
       >
         <UIcon name="i-lucide-arrow-left" style="width: 15px; height: 15px" />
@@ -16,6 +17,7 @@
         v-else
         class="wp-back"
         title="Close workspace panel"
+        aria-label="Close workspace panel"
         @click="emit('close')"
       >
         <UIcon name="i-lucide-x" style="width: 15px; height: 15px" />

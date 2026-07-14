@@ -99,6 +99,7 @@
             type="button"
             class="file-editor-btn"
             title="Format document"
+            aria-label="Format document"
             :disabled="editorLoading || editorSaving || isMutationsDisabled"
             @click="formatDocument"
           >
@@ -108,6 +109,7 @@
             type="button"
             class="file-editor-btn"
             title="Reload from disk"
+            aria-label="Reload from disk"
             :disabled="editorLoading || editorSaving"
             @click="reloadEditorFile"
           >
@@ -135,6 +137,7 @@
             type="button"
             class="file-editor-btn"
             title="Open in default app"
+            aria-label="Open in default app"
             :disabled="editorLoading"
             @click="openFileExternally"
           >
@@ -147,6 +150,7 @@
             type="button"
             class="file-editor-btn"
             title="Close tab"
+            aria-label="Close tab"
             @click="closeEditorFile"
           >
             <UIcon name="i-lucide-x" style="width: 12px; height: 12px" />

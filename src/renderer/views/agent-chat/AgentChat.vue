@@ -98,6 +98,7 @@
         <button
           type="button"
           class="sign-in-gate-close"
+          title="Close"
           aria-label="Close"
           @click="signInGateOpen = false"
         >
