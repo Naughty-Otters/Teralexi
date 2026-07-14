@@ -41,6 +41,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Typecheck ratchet (advisory floor)
+        if: runner.os == 'Linux'
+        run: npm run typecheck:ratchet
+
       - name: Run unit tests
         run: ${{ matrix.test_command }}
 

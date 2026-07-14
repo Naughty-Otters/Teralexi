@@ -43,6 +43,7 @@ import type {
 } from './types'
 import type { SkillCompilationSource } from '@main/skills/skill-compiled-schema'
 import type { SkillCompiledArtifact } from '@main/skills/skill-compiled-schema'
+import { randomShortUuid } from '@shared/utils/short-uuid'
 
 /**
  * Facade over the SQLite-backed app store. Delegates each domain to a focused repository;

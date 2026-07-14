@@ -17,7 +17,7 @@ import {
 } from './context'
 import type { AgentStoreContext } from './agent-store-context'
 import type { AgentPersistenceActions } from './agent-persistence'
-import type { Agent, Conversation, Message } from './types'
+import type { Agent, Conversation, ConversationSandboxRun, Message } from './types'
 
 export type CreateNewConversationMode =
   | 'default'
