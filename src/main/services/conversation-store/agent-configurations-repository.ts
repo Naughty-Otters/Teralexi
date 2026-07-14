@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3'
 import {
-  parseStageLlmOverrides,
-  serializeStageLlmOverrides,
+  parseStageLlmDocument,
+  serializeStageLlmDocument,
   type AgentLlmRoutingMode,
 } from '@shared/agent/stage-llm-settings'
 import {
@@ -39,6 +39,7 @@ type AgentConfigurationRow = {
 }
 
 function mapRow(row: AgentConfigurationRow): StoredAgentConfiguration {
+  const stageDoc = parseStageLlmDocument(row.stage_llm_json)
   return {
     agentId: row.agent_id,
     userId: row.user_id,
@@ -65,7 +66,10 @@ function mapRow(row: AgentConfigurationRow): StoredAgentConfiguration {
     subAgentIds: parseJsonStringArrayOrNull(row.sub_agent_ids_json),
     llmRoutingMode:
       row.llm_routing_mode === 'per_stage' ? 'per_stage' : 'unified',
-    stageLlm: parseStageLlmOverrides(row.stage_llm_json),
+    stageLlm: stageDoc.stages,
+    ...(stageDoc.defaultProviderOptions
+      ? { defaultProviderOptions: stageDoc.defaultProviderOptions }
+      : {}),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -194,7 +198,10 @@ export class AgentConfigurationsRepository {
           ? JSON.stringify([...new Set(config.subAgentIds)])
           : 'null',
         config.llmRoutingMode === 'per_stage' ? 'per_stage' : 'unified',
-        serializeStageLlmOverrides(config.stageLlm),
+        serializeStageLlmDocument({
+          defaultProviderOptions: config.defaultProviderOptions,
+          stages: config.stageLlm,
+        }),
         now,
         now,
       )

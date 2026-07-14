@@ -87,6 +87,8 @@ export interface Agent {
   compilationStatus?: 'pending' | 'ready' | 'failed' | 'missing'
   llmRoutingMode?: AgentLlmRoutingMode
   stageLlm?: Partial<Record<AgentLlmStage, AgentLlmChoice>>
+  /** AI SDK `providerOptions` for the unified / default LLM. */
+  defaultProviderOptions?: AgentLlmChoice['providerOptions']
 }
 
 export type McpTransportType = 'http' | 'sse' | 'stdio'

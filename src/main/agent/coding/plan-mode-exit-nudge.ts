@@ -119,6 +119,7 @@ export async function nudgeExitPlanModeIfNeeded(
     toolChoice: 'required',
     provider: toolLoopChoice.provider,
     modelId: toolLoopChoice.model,
+    providerOptions: toolLoopChoice.providerOptions,
   })
 
   try {

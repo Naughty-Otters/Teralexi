@@ -131,6 +131,8 @@ export interface StoredAgentConfiguration {
   subAgentIds: string[] | null
   llmRoutingMode: AgentLlmRoutingMode
   stageLlm: Partial<Record<AgentLlmStage, AgentLlmChoice>>
+  /** AI SDK `providerOptions` for the default / unified LLM choice. */
+  defaultProviderOptions?: AgentLlmChoice['providerOptions']
   createdAt: string
   updatedAt: string
 }

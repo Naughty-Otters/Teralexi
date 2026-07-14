@@ -1,4 +1,9 @@
 import type { ProviderType } from '@shared/agent/llm-provider-registry'
+import type {
+  AgentLlmChoice,
+  AgentLlmProviderOptions,
+  AgentLlmStage,
+} from '@shared/agent/stage-llm-settings'
 
 export interface IpcMainEventListener<Send = void, Receive = void> {
   ipcMainHandle: Send extends void
@@ -147,12 +152,8 @@ export class IpcChannelMainClass {
       allowSubAgents: boolean
       subAgentIds: string[] | null
       llmRoutingMode: 'unified' | 'per_stage'
-      stageLlm: Partial<
-        Record<
-          'explore' | 'toolLoop' | 'verifier',
-          { provider: ProviderType; model: string }
-        >
-      >
+      stageLlm: Partial<Record<AgentLlmStage, AgentLlmChoice>>
+      defaultProviderOptions?: AgentLlmProviderOptions
       createdAt: string
       updatedAt: string
     }>
@@ -188,12 +189,8 @@ export class IpcChannelMainClass {
     allowSubAgents: boolean
     subAgentIds: string[] | null
     llmRoutingMode: 'unified' | 'per_stage'
-    stageLlm: Partial<
-      Record<
-        'explore' | 'toolLoop' | 'verifier',
-        { provider: ProviderType; model: string }
-      >
-    >
+    stageLlm: Partial<Record<AgentLlmStage, AgentLlmChoice>>
+    defaultProviderOptions?: AgentLlmProviderOptions
   }> = null!
   /**
    * Delete a persisted agent configuration

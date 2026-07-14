@@ -514,10 +514,11 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       llmRoutingMode: 'unified' | 'per_stage'
       stageLlm: Partial<
         Record<
-          'explore' | 'toolLoop' | 'verifier',
-          { provider: ProviderType; model: string }
+          'explore' | 'toolLoop' | 'toolLoopRecovery' | 'verifier',
+          { provider: ProviderType; model: string; providerOptions?: Record<string, Record<string, unknown>> }
         >
       >
+      defaultProviderOptions?: Record<string, Record<string, unknown>>
     },
   ) => void = (_event, args) => {
     getConversationStore().upsertAgentConfiguration(args)

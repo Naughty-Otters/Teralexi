@@ -218,6 +218,9 @@ export function loadSkillsFromDisk(
           stageLlm: {
             ...(saved?.stageLlm ?? previous?.stageLlm ?? {}),
           },
+          defaultProviderOptions:
+            saved?.defaultProviderOptions ??
+            previous?.defaultProviderOptions,
           executionSteps: s.executionSteps,
           compiledArtifact: s.compiledArtifact,
           compilationStatus: s.compilationStatus,
@@ -258,6 +261,9 @@ export function loadSkillsFromDisk(
             subAgentIds: config.subAgentIds ?? null,
             llmRoutingMode: config.llmRoutingMode ?? 'unified',
             stageLlm: { ...(config.stageLlm ?? {}) },
+            defaultProviderOptions: config.defaultProviderOptions
+              ? { ...config.defaultProviderOptions }
+              : undefined,
           }
           syncAgentExecutionSteps(custom)
           applySubAgentSettingsToExecutionSteps(custom)

@@ -712,6 +712,9 @@ onActivated(() => {
   min-height: 0;
   padding: 16px 20px 20px;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .monitor-dashboard {
   display: flex;
@@ -719,6 +722,13 @@ onActivated(() => {
   gap: 14px;
   width: 100%;
   max-width: 800px;
+  margin-block: auto;
+  margin-inline: auto;
+}
+.monitor-empty,
+.monitor-body :deep(.sign-in-gate) {
+  margin-block: auto;
+  text-align: center;
 }
 .monitor-legend-slot {
   min-height: 22px;

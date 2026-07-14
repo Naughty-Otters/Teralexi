@@ -539,6 +539,8 @@ export const useAgentStore = defineStore('agent', () => {
     updateAgentProvider: mutations.updateAgentProvider,
     updateAgentLlmRoutingMode: mutations.updateAgentLlmRoutingMode,
     updateAgentStageLlm: mutations.updateAgentStageLlm,
+    updateAgentDefaultProviderOptions:
+      mutations.updateAgentDefaultProviderOptions,
     addAgent: mutations.addAgent,
     removeAgent: mutations.removeAgent,
     toggleAgentEnabled: mutations.toggleAgentEnabled,
