@@ -54,7 +54,7 @@
             :name="
               chatControls.showWorkspacePanel
                 ? 'i-lucide-messages-square'
-                : 'i-lucide-folder-open'
+                : 'i-lucide-layout-list'
             "
           />
         </button>
