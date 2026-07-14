@@ -30,6 +30,12 @@ const {
         loadFile: vi.fn(),
         on: vi.fn(),
         close: vi.fn(),
+        navigationHistory: {
+          canGoBack: () => false,
+          canGoForward: () => false,
+          goBack: vi.fn(),
+          goForward: vi.fn(),
+        },
       },
     }
   })
@@ -52,9 +58,16 @@ vi.mock('electron', () => ({
       once: vi.fn(),
       getContentBounds: () => ({ x: 0, y: 0, width: 800, height: 600 }),
       contentView: { addChildView, removeChildView },
+      webContents: { isDestroyed: () => false },
     })),
   },
   WebContentsView,
+}))
+
+vi.mock('@main/services/web-content-send', () => ({
+  webContentSend: {
+    SandboxOutputViewNavigationChanged: vi.fn(),
+  },
 }))
 
 vi.mock('fs/promises', () => ({

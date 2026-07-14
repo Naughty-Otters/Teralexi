@@ -73,7 +73,40 @@
         </button>
       </div>
       <div class="report-panel-url-row">
+        <div class="report-panel-nav" role="group" aria-label="Preview navigation">
+          <button
+            type="button"
+            class="cp-icon-btn cp-icon-btn--compact"
+            :disabled="!canGoBack"
+            title="Previous page"
+            aria-label="Previous page"
+            @click="goBack"
+          >
+            <UIcon name="i-lucide-arrow-left" class="cp-icon-btn__glyph" />
+          </button>
+          <button
+            type="button"
+            class="cp-icon-btn cp-icon-btn--compact"
+            :disabled="!canGoForward"
+            title="Next page"
+            aria-label="Next page"
+            @click="goForward"
+          >
+            <UIcon name="i-lucide-arrow-right" class="cp-icon-btn__glyph" />
+          </button>
+          <button
+            type="button"
+            class="cp-icon-btn cp-icon-btn--compact"
+            :disabled="!previewUrl"
+            title="Refresh"
+            aria-label="Refresh preview"
+            @click="refreshPreview"
+          >
+            <UIcon name="i-lucide-refresh-cw" class="cp-icon-btn__glyph" />
+          </button>
+        </div>
         <input
+          ref="urlInputEl"
           v-model="urlDraft"
           type="text"
           class="report-panel-url-input"
@@ -157,9 +190,12 @@ const emit = defineEmits<{
 }>()
 
 const sandboxHostEl = ref<HTMLElement | null>(null)
+const urlInputEl = ref<HTMLInputElement | null>(null)
 /** Editable URL field; synced from the active tab unless the user is typing. */
 const urlDraft = ref('')
 const markdownPreviewView = ref<MarkdownPreviewViewMode>('html')
+const canGoBack = ref(false)
+const canGoForward = ref(false)
 
 const activeLinkTab = computed(() => {
   const id = props.activeLinkTabId
@@ -247,7 +283,7 @@ function screenBoundsForEl(el: HTMLElement) {
   }
 }
 
-async function syncSandboxOutputBounds() {
+async function syncSandboxOutputBounds(options?: { forceReload?: boolean }) {
   const ipc = window.ipcRendererChannel?.SyncSandboxOutputView
   if (!ipc?.invoke) return
   const host = sandboxHostEl.value
@@ -256,30 +292,33 @@ async function syncSandboxOutputBounds() {
       screenBounds: { x: 0, y: 0, width: 0, height: 0 },
       fileUrl: null,
     })
+    canGoBack.value = false
+    canGoForward.value = false
     return
   }
   await ipc.invoke({
     screenBounds: screenBoundsForEl(host),
     fileUrl: previewUrl.value,
     markdownView: markdownPreviewView.value,
+    forceReload: options?.forceReload === true,
   })
 }
 
 let boundsSyncTimer: ReturnType<typeof setTimeout> | null = null
 
-function scheduleBoundsSync(immediate = false) {
+function scheduleBoundsSync(immediate = false, forceReload = false) {
   if (immediate) {
     if (boundsSyncTimer) {
       clearTimeout(boundsSyncTimer)
       boundsSyncTimer = null
     }
-    void syncSandboxOutputBounds()
+    void syncSandboxOutputBounds({ forceReload })
     return
   }
   if (boundsSyncTimer) clearTimeout(boundsSyncTimer)
   boundsSyncTimer = setTimeout(() => {
     boundsSyncTimer = null
-    void syncSandboxOutputBounds()
+    void syncSandboxOutputBounds({ forceReload })
   }, 32)
 }
 
@@ -289,6 +328,8 @@ async function clearSandboxOutputView() {
     screenBounds: { x: 0, y: 0, width: 0, height: 0 },
     fileUrl: null,
   })
+  canGoBack.value = false
+  canGoForward.value = false
 }
 
 function copyResultsUrl() {
@@ -297,10 +338,55 @@ function copyResultsUrl() {
   void navigator.clipboard.writeText(url)
 }
 
+function applyNavigationState(state: {
+  canGoBack?: boolean
+  canGoForward?: boolean
+  url?: string
+}) {
+  canGoBack.value = Boolean(state.canGoBack)
+  canGoForward.value = Boolean(state.canGoForward)
+  const nextUrl = state.url?.trim()
+  if (!nextUrl) return
+  // Don't clobber the URL field while the user is editing it.
+  if (document.activeElement === urlInputEl.value) return
+  if (urlDraft.value.trim() !== nextUrl) {
+    urlDraft.value = nextUrl
+  }
+}
+
+async function navigatePreview(action: 'back' | 'forward') {
+  const ipc = window.ipcRendererChannel?.NavigateSandboxOutputView
+  if (!ipc?.invoke) return
+  const state = await ipc.invoke({ action })
+  applyNavigationState(state)
+}
+
+function goBack() {
+  void navigatePreview('back')
+}
+
+function goForward() {
+  void navigatePreview('forward')
+}
+
+function refreshPreview() {
+  void nextTick(() => {
+    attachSandboxResizeObserver()
+    scheduleBoundsSync(true, true)
+  })
+}
+
 async function applyPreviewUrl() {
   await nextTick()
   attachSandboxResizeObserver()
   scheduleBoundsSync(true)
+}
+
+function onSandboxNavigationChanged(
+  _event: unknown,
+  payload: { canGoBack: boolean; canGoForward: boolean; url: string },
+) {
+  applyNavigationState(payload)
 }
 
 let sandboxResizeObserver: ResizeObserver | null = null
@@ -331,6 +417,9 @@ watch(
 
 onMounted(() => {
   window.addEventListener('resize', onWindowResize)
+  window.ipcRendererChannel?.SandboxOutputViewNavigationChanged?.on?.(
+    onSandboxNavigationChanged,
+  )
   void nextTick(() => {
     attachSandboxResizeObserver()
     scheduleBoundsSync(true)
@@ -344,6 +433,9 @@ onBeforeUnmount(() => {
   }
   sandboxResizeObserver?.disconnect()
   window.removeEventListener('resize', onWindowResize)
+  window.ipcRendererChannel?.SandboxOutputViewNavigationChanged?.removeListener?.(
+    onSandboxNavigationChanged,
+  )
   void clearSandboxOutputView()
 })
 </script>
@@ -488,6 +580,13 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.report-panel-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .report-panel-url-input {

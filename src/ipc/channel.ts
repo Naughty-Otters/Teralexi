@@ -1535,8 +1535,22 @@ export class IpcChannelMainClass {
       screenBounds: { x: number; y: number; width: number; height: number }
       fileUrl: string | null
       markdownView?: 'html' | 'raw'
+      /** When true, reload the preview even if the URL/view mode are unchanged. */
+      forceReload?: boolean
     },
     void
+  > = null!
+  /**
+   * History navigation for the sandbox preview WebContentsView (back / forward).
+   */
+  NavigateSandboxOutputView: IpcMainEventListener<
+    { action: 'back' | 'forward' },
+    {
+      ok: boolean
+      canGoBack: boolean
+      canGoForward: boolean
+      url: string
+    }
   > = null!
   /**
    * Delete on-disk sandbox directories (validated under `~/.teralexi/workspace/sandbox/` or legacy tmpdir).
@@ -2106,6 +2120,12 @@ export class IpcChannelRendererClass {
   }> = null!
   /** Main window blocked a file:// navigation — open sandbox preview in Report panel. */
   OpenSandboxPreview: IpcRendererEventListener<{ fileUrl: string }> = null!
+  /** Sandbox preview WebContentsView navigated (in-page or history). */
+  SandboxOutputViewNavigationChanged: IpcRendererEventListener<{
+    canGoBack: boolean
+    canGoForward: boolean
+    url: string
+  }> = null!
   /** Streaming PTY output chunk for workspace terminal xterm view. */
   WorkspaceTerminalData: IpcRendererEventListener<{
     conversationId: string

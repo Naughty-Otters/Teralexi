@@ -52,90 +52,18 @@
         <span class="rich-composer-toolbar-divider" aria-hidden="true" />
       </template>
       <template v-if="editor">
-      <AppIconTooltip text="Bold">
-        <button
-          type="button"
-          class="rich-composer-tool"
-          :class="{ 'rich-composer-tool--active': editor.isActive('bold') }"
-          aria-label="Bold"
-          @mousedown.prevent
-          @click="editor.chain().focus().toggleBold().run()"
-        >
-          <UIcon name="i-lucide-bold" />
-        </button>
-      </AppIconTooltip>
-      <AppIconTooltip text="Italic">
-        <button
-          type="button"
-          class="rich-composer-tool"
-          :class="{ 'rich-composer-tool--active': editor.isActive('italic') }"
-          aria-label="Italic"
-          @mousedown.prevent
-          @click="editor.chain().focus().toggleItalic().run()"
-        >
-          <UIcon name="i-lucide-italic" />
-        </button>
-      </AppIconTooltip>
-      <AppIconTooltip text="Inline code">
-        <button
-          type="button"
-          class="rich-composer-tool"
-          :class="{ 'rich-composer-tool--active': editor.isActive('code') }"
-          aria-label="Inline code"
-          @mousedown.prevent
-          @click="editor.chain().focus().toggleCode().run()"
-        >
-          <UIcon name="i-lucide-code" />
-        </button>
-      </AppIconTooltip>
-      <AppIconTooltip text="Bullet list">
-        <button
-          type="button"
-          class="rich-composer-tool"
-          :class="{ 'rich-composer-tool--active': editor.isActive('bulletList') }"
-          aria-label="Bullet list"
-          @mousedown.prevent
-          @click="editor.chain().focus().toggleBulletList().run()"
-        >
-          <UIcon name="i-lucide-list" />
-        </button>
-      </AppIconTooltip>
-      <AppIconTooltip text="Numbered list">
-        <button
-          type="button"
-          class="rich-composer-tool"
-          :class="{ 'rich-composer-tool--active': editor.isActive('orderedList') }"
-          aria-label="Numbered list"
-          @mousedown.prevent
-          @click="editor.chain().focus().toggleOrderedList().run()"
-        >
-          <UIcon name="i-lucide-list-ordered" />
-        </button>
-      </AppIconTooltip>
-      <AppIconTooltip text="Link">
-        <button
-          type="button"
-          class="rich-composer-tool"
-          :class="{ 'rich-composer-tool--active': editor.isActive('link') }"
-          aria-label="Link"
-          @mousedown.prevent
-          @click="onLinkClick"
-        >
-          <UIcon name="i-lucide-link" />
-        </button>
-      </AppIconTooltip>
-      <AppIconTooltip text="Attach files">
-        <button
-          type="button"
-          class="rich-composer-tool"
-          aria-label="Attach files"
-          :disabled="disabled || !canAddAttachments"
-          @mousedown.prevent
-          @click="emit('pick-attachments')"
-        >
-          <UIcon name="i-lucide-paperclip" />
-        </button>
-      </AppIconTooltip>
+        <AppIconTooltip text="Attach files">
+          <button
+            type="button"
+            class="rich-composer-tool"
+            aria-label="Attach files"
+            :disabled="disabled || !canAddAttachments"
+            @mousedown.prevent
+            @click="emit('pick-attachments')"
+          >
+            <UIcon name="i-lucide-paperclip" />
+          </button>
+        </AppIconTooltip>
       </template>
     </div>
     <div
@@ -725,19 +653,6 @@ watch(
     editor.value?.setEditable(!disabled)
   },
 )
-
-function onLinkClick() {
-  const ed = editor.value
-  if (!ed) return
-  const previous = ed.getAttributes('link').href as string | undefined
-  const url = window.prompt('Link URL', previous ?? 'https://')
-  if (url === null) return
-  if (url === '') {
-    ed.chain().focus().extendMarkRange('link').unsetLink().run()
-    return
-  }
-  ed.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
-}
 </script>
 
 <style scoped>

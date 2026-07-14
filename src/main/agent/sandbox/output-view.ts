@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { BrowserWindow, WebContentsView } from 'electron'
 import { createLogger, traceFunction } from '@main/logger'
+import { webContentSend } from '@main/services/web-content-send'
 import type { MarkdownPreviewViewMode } from '@shared/file-type/markdown-preview-url'
 import { isMarkdownPreviewFileUrl } from '@shared/file-type/markdown-preview-url'
 import {
@@ -19,6 +20,7 @@ const lastLoadedPreview = new Map<
 >()
 const previewLoadChains = new Map<number, Promise<void>>()
 const closedHandlersRegistered = new Set<number>()
+const navigationListenersRegistered = new Set<number>()
 const previewHtmlDir = join(tmpdir(), 'teralexi-sandbox-preview')
 const log = createLogger('sandbox.output-view')
 
@@ -71,6 +73,7 @@ function removeViewForWindow(win: BrowserWindow): void {
   if (!view) return
   lastLoadedPreview.delete(win.id)
   previewLoadChains.delete(win.id)
+  navigationListenersRegistered.delete(win.id)
   try {
     if (!win.isDestroyed()) {
       win.contentView.removeChildView(view)
@@ -227,6 +230,7 @@ async function syncSandboxOutputViewImpl(
     screenBounds: { x: number; y: number; width: number; height: number }
     fileUrl: string | null
     markdownView?: MarkdownPreviewViewMode
+    forceReload?: boolean
   },
 ): Promise<void> {
   const win = BrowserWindow.fromWebContents(event.sender)
@@ -261,21 +265,7 @@ async function syncSandboxOutputViewImpl(
     sandboxResultsViews.set(win.id, view)
     win.contentView.addChildView(view)
     ensureClosedCleanup(win)
-
-    if (!view.webContents.isDestroyed()) {
-      view.webContents.on('did-fail-load', (_event, errorCode, errorDesc, url) => {
-        log.error('Sandbox output view failed to load', {
-          errorCode,
-          errorDesc,
-          url,
-        })
-      })
-      view.webContents.on('did-finish-load', () => {
-        if (!win.isDestroyed()) {
-          win.contentView.addChildView(view)
-        }
-      })
-    }
+    attachPreviewNavigationListeners(win, view)
   }
 
   view.setBounds(rel)
@@ -284,6 +274,7 @@ async function syncSandboxOutputViewImpl(
   const last = lastLoadedPreview.get(win.id)
   const current = view.webContents.isDestroyed() ? '' : view.webContents.getURL()
   const needsReload =
+    Boolean(args.forceReload) ||
     !last ||
     last.fileUrl !== args.fileUrl ||
     last.markdownView !== markdownView ||
@@ -293,12 +284,116 @@ async function syncSandboxOutputViewImpl(
     await schedulePreviewLoad(win.id, async () => {
       await loadSandboxOutputPreview(view, fileUrl, markdownView)
       lastLoadedPreview.set(win.id, { fileUrl, markdownView })
+      emitPreviewNavigationChanged(win, view)
     })
+  } else {
+    emitPreviewNavigationChanged(win, view)
   }
+}
+
+export type SandboxOutputNavigationState = {
+  ok: boolean
+  canGoBack: boolean
+  canGoForward: boolean
+  url: string
+}
+
+function readNavigationState(view: WebContentsView | undefined): SandboxOutputNavigationState {
+  if (!view || view.webContents.isDestroyed()) {
+    return { ok: false, canGoBack: false, canGoForward: false, url: '' }
+  }
+  const wc = view.webContents
+  const history = wc.navigationHistory
+  return {
+    ok: true,
+    canGoBack: Boolean(history?.canGoBack?.()),
+    canGoForward: Boolean(history?.canGoForward?.()),
+    url: wc.getURL() || '',
+  }
+}
+
+function emitPreviewNavigationChanged(
+  win: BrowserWindow,
+  view: WebContentsView,
+): void {
+  if (win.isDestroyed() || view.webContents.isDestroyed()) return
+  const state = readNavigationState(view)
+  if (win.webContents.isDestroyed()) return
+  webContentSend.SandboxOutputViewNavigationChanged(win.webContents, state)
+}
+
+function attachPreviewNavigationListeners(
+  win: BrowserWindow,
+  view: WebContentsView,
+): void {
+  if (navigationListenersRegistered.has(win.id)) return
+  navigationListenersRegistered.add(win.id)
+  if (view.webContents.isDestroyed()) return
+
+  const onNavigated = () => {
+    if (win.isDestroyed() || view.webContents.isDestroyed()) return
+    const url = view.webContents.getURL()
+    const last = lastLoadedPreview.get(win.id)
+    if (url && last) {
+      lastLoadedPreview.set(win.id, { ...last, fileUrl: url })
+    } else if (url) {
+      lastLoadedPreview.set(win.id, { fileUrl: url, markdownView: 'html' })
+    }
+    emitPreviewNavigationChanged(win, view)
+  }
+
+  view.webContents.on('did-navigate', onNavigated)
+  view.webContents.on('did-navigate-in-page', onNavigated)
+  view.webContents.on('did-finish-load', () => {
+    if (!win.isDestroyed()) {
+      win.contentView.addChildView(view)
+    }
+    onNavigated()
+  })
+  view.webContents.on('did-fail-load', (_event, errorCode, errorDesc, url) => {
+    log.error('Sandbox output view failed to load', {
+      errorCode,
+      errorDesc,
+      url,
+    })
+  })
+}
+
+async function navigateSandboxOutputViewImpl(
+  event: Electron.IpcMainInvokeEvent,
+  args: { action: 'back' | 'forward' },
+): Promise<SandboxOutputNavigationState> {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  if (!win || win.isDestroyed()) {
+    return { ok: false, canGoBack: false, canGoForward: false, url: '' }
+  }
+  const view = sandboxResultsViews.get(win.id)
+  if (!view || view.webContents.isDestroyed()) {
+    return { ok: false, canGoBack: false, canGoForward: false, url: '' }
+  }
+
+  const history = view.webContents.navigationHistory
+  if (args.action === 'back' && history?.canGoBack?.()) {
+    history.goBack()
+  } else if (args.action === 'forward' && history?.canGoForward?.()) {
+    history.goForward()
+  }
+
+  // Navigation is async; did-navigate will emit. Return optimistic state next tick.
+  await new Promise((r) => setTimeout(r, 0))
+  const state = readNavigationState(view)
+  emitPreviewNavigationChanged(win, view)
+  return state
 }
 
 export const syncSandboxOutputView = traceFunction(
   log,
   'syncSandboxOutputView',
   syncSandboxOutputViewImpl,
+)
+
+export const navigateSandboxOutputView = traceFunction(
+  log,
+  'navigateSandboxOutputView',
+  navigateSandboxOutputViewImpl,
 )

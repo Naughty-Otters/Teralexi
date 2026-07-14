@@ -103,6 +103,7 @@ export {
 } from './final-result'
 
 export { syncSandboxOutputView } from './output-view'
+export { navigateSandboxOutputView } from './output-view'
 export { removeSandboxDirectories } from './cleanup'
 
 export { buildSandboxInstructionBlock, SANDBOX_LLM } from './instructions'

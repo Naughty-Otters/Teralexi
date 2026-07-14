@@ -138,6 +138,7 @@ import {
 import {
   releaseConversationSandbox,
   syncSandboxOutputView,
+  navigateSandboxOutputView,
   removeSandboxDirectories,
   releaseSubAgentSandboxesForConversation,
   resolveSandboxRootForConversation,
@@ -2053,9 +2054,24 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       screenBounds: { x: number; y: number; width: number; height: number }
       fileUrl: string | null
       markdownView?: 'html' | 'raw'
+      forceReload?: boolean
     },
   ) => void = async (event, args) => {
     await syncSandboxOutputView(event, args)
+  }
+
+  NavigateSandboxOutputView: (
+    event: Electron.IpcMainInvokeEvent,
+    args: { action: 'back' | 'forward' },
+  ) => Promise<{
+    ok: boolean
+    canGoBack: boolean
+    canGoForward: boolean
+    url: string
+  }> = async (event, args) => {
+    return navigateSandboxOutputView(event, {
+      action: args?.action === 'forward' ? 'forward' : 'back',
+    })
   }
 
   RemoveSandboxDirectories: (
