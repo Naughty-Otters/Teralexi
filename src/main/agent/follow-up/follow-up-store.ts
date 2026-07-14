@@ -57,6 +57,11 @@ export function readFollowUpMeta(
   try {
     const parsed = parseFollowUpMeta(JSON.parse(readFileSync(file, 'utf8')))
     if (!parsed) return emptyFollowUpMeta(conversationId)
+    // Sandbox path should already be conversation-scoped; still require meta
+    // ownership so a stale file never leaks chips into another conversation.
+    if (parsed.conversationId !== conversationId.trim()) {
+      return emptyFollowUpMeta(conversationId)
+    }
     syncGateRevision(conversationId, parsed.revision)
     return parsed
   } catch (err) {

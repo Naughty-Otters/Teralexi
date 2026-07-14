@@ -1401,6 +1401,15 @@ async function rebuildChat() {
   void scrollToBottomIfStuck('auto')
 }
 
+function resetFollowUpUiForConversationSwitch(): void {
+  // Drop previous conversation's chips immediately. Revision is per-conversation
+  // on main, but this panel only tracks the active conversation's watermark —
+  // leaving it high would reject a freshly loaded empty/low-revision catalog.
+  followUpLoadGeneration += 1
+  followUpItems.value = []
+  followUpRevision.value = 0
+}
+
 watch(
   () => agentStore.currentConversationId,
   (conversationId, previousId) => {
@@ -1410,6 +1419,7 @@ watch(
     }
     setVisibleConversationForUiFlush(conversationId)
     streamingTextBuffer.clear()
+    resetFollowUpUiForConversationSwitch()
     void rebuildChat()
     if (conversationId) {
       void loadCodingMode(conversationId)
@@ -1419,8 +1429,6 @@ watch(
     } else {
       codingMode.value = DEFAULT_CODING_MODE
       planModeView.value = defaultPlanModeView()
-      followUpItems.value = []
-      followUpRevision.value = 0
       backgroundTasks.value = []
       stopBackgroundTaskPolling()
     }
