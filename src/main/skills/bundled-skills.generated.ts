@@ -2461,6 +2461,7 @@ The sandbox **persists across turns** in the same conversation.
 | Prior \`output/results/<slug>/index.html\` exists, user wants tweaks | Read existing \`site.json\` if present; update data; re-run steps 3–4 |
 | User says "make it darker" / "add a contact section" | Edit \`site.json\` or form fields; re-render — do not restart from step 1 |
 | User wants site in their repo | \`promote_artifact\` the whole site folder into the workspace after validation passes |
+| User wants a public URL | After validation (and optional promote), call **\`publish_website\`** on the site directory; report the returned \`absoluteUrl\` |
 | No workspace selected | Ask user to pick a project folder before steps 1–2 |
 
 ---
@@ -2546,6 +2547,8 @@ Follow [refs/design-system.md](refs/design-system.md):
 4. **Validate before done** — step 4 must pass.
 5. **Report preview path** — always share the sandbox path and remind the user about in-app preview.
 6. **Promote on confirmation** — after validation, offer to copy the site into the workspace; do not promote without a selected folder or user consent.
+7. **Publish when asked or as a follow-up** — when the site is validated and the user wants hosting, call \`publish_website\` with the site directory (sandbox \`output/results/<slug>\` or the promoted workspace folder). Always report the returned **absolute public URL**. Never upload secrets (\`.env\`, keys). Publishing requires a signed-in Teralexi account with \`app.web.publish\`. If the tool returns entitlement or weekly-limit errors, explain them; do not retry quota failures immediately.
+8. **Follow-up chips after a finished site** — when validation passes (preview ready), include a \`generate_follow_up\` item with id \`publish-website\`, label \`Publish this website\`, priority \`0\`, and \`user_input\` message: \`Publish this website to Teralexi hosting and give me the public URL.\` Also offer promote / tweak options as needed. Omit the Publish chip only when publishing is clearly impossible (e.g. user unsigned and declined sign-in).
 
 ---
 
@@ -2553,6 +2556,7 @@ Follow [refs/design-system.md](refs/design-system.md):
 
 - render_website: **Preferred step 3.** Render from template_id + site.json into \`output/results/<slug>/\`.
 - validate_website: **Step 4.** Check HTML structure, required files, and relative links.
+- publish_website: **Publish.** Zip a site directory (root \`index.html\` required) and upload to Teralexi hosting; return \`absoluteUrl\` for the user.
 - read_file: Read user content files or prior site.json.
 - write_file: Write intermediate site.json in step 2.
 - list_files: Inspect output directory after generation.
@@ -2598,7 +2602,7 @@ enabled: true
 refs_dir: refs, templates
 scripts_dir: scripts
 form_dir: form
-allowed_tools: read_file, edit_file, write_file, apply_patch, delete_file, move_file, copy_file, promote_artifact, list_files, grep_files, glob_files, search_files, file_status, run_script, run_script_file, web_search, web_scrape
+allowed_tools: read_file, edit_file, write_file, apply_patch, delete_file, move_file, copy_file, promote_artifact, list_files, grep_files, glob_files, search_files, file_status, run_script, run_script_file, web_search, web_scrape, publish_website
 `,
     attachments: {
       "form/landing-content.form.md": {

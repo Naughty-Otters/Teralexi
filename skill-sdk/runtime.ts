@@ -13,6 +13,9 @@ import {
   getValidAccessToken,
   loadStoredAccount,
 } from '@main/services/google-workspace-oauth'
+import { getWorkspacePathFromEnv } from '@main/agent/sandbox'
+import { publishStaticSiteDirectory } from '@main/services/app-web-publish-client'
+import { zipStaticSiteDirectory } from '@main/services/app-web-site-zip'
 
 export type {
   MarkdownPdfDocumentKind,
@@ -51,4 +54,6 @@ export function exportHtmlFileToPdf(
   return exportHtmlFileToPdfImpl(htmlPath, pdfPath)
 }
 
-export { getValidAccessToken, loadStoredAccount }
+export { getValidAccessToken, loadStoredAccount, getWorkspacePathFromEnv }
+
+export { publishStaticSiteDirectory, zipStaticSiteDirectory }
