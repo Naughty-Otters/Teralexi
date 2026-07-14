@@ -6,6 +6,7 @@ import type {
   AgentLlmRoutingMode,
   AgentLlmStage,
 } from '@shared/agent/stage-llm-settings'
+import type { ExecutionSteps, SkillTool } from '@main/skills/types'
 
 export type { ProviderType }
 

@@ -5,8 +5,13 @@
  * @date 2019-11-29
  */
 
-import { memoryInfo } from 'customTypes/global'
 import Timer from './timer'
+
+type MemoryInfo = {
+  jsHeapSizeLimit: number
+  totalJSHeapSize: number
+  usedJSHeapSize: number
+}
 
 class Performance {
   /**
@@ -40,12 +45,12 @@ class Performance {
 
   /**
    * Get memory info
-   * @returns {memoryInfo}
+   * @returns {MemoryInfo}
    * @date 2019-11-29
    */
 
-  getMemoryInfo(): memoryInfo {
-    let memoryinfo = <memoryInfo>{}
+  getMemoryInfo(): MemoryInfo {
+    let memoryinfo = <MemoryInfo>{}
     if (window.performance && window.performance.memory) {
       memoryinfo = window.performance.memory
     }

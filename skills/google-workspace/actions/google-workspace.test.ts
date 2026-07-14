@@ -256,7 +256,9 @@ describe('google workspace tools', () => {
   })
 
   it('google_workspace_api POST requires approval', () => {
-    const fn = googleWorkspaceApi.needsApproval as (input: { method useEffect?: string; method: string }) => boolean
+    const fn = googleWorkspaceApi.needsApproval as (input: {
+      method?: string
+    }) => boolean
     expect(fn({ method: 'GET' })).toBe(false)
     expect(fn({ method: 'POST' })).toBe(true)
   })
