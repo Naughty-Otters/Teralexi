@@ -198,8 +198,6 @@
         :editor="monacoEditor"
         :read-only="isMutationsDisabled"
       />
-
-      <WorkspaceXtermConsole v-if="consoleOpen" class="file-editor-terminal" />
     </template>
 
     <WorkspaceQuickOpen
@@ -237,7 +235,6 @@ import { monacoLanguageFromPath } from '@shared/file-type/monaco-language'
 import MonacoEditor from '@renderer/components/code/MonacoEditor.vue'
 import WorkspaceQuickOpen from './WorkspaceQuickOpen.vue'
 import WorkspaceSymbolQuickOpen from './WorkspaceSymbolQuickOpen.vue'
-import WorkspaceXtermConsole from './WorkspaceXtermConsole.vue'
 import type { SharedWorkspaceSymbol } from '@shared/editor/workspace-symbol-types'
 import type { EditorLspStatus } from '@renderer/components/code/monaco-lsp/editor-lsp-controller'
 import { useSandboxOutputView } from '@renderer/composables/useSandboxOutputView'
@@ -265,7 +262,6 @@ const {
   editorBinary,
   editorFileUrl,
   isMutationsDisabled,
-  consoleOpen,
   conversationId,
 } = storeToRefs(gitStore)
 
