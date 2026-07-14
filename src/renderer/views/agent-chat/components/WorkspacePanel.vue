@@ -55,29 +55,37 @@
 
       <div
         v-else-if="activeTab === 'files'"
-        ref="filesLayoutEl"
         class="wp-files-layout"
-        :class="{ 'wp-files-layout--resizing': fileBrowserResizing }"
       >
-        <aside
-          class="wp-files-browser"
-          :style="{ width: `${fileBrowserWidthPx}px` }"
+        <div
+          ref="filesLayoutEl"
+          class="wp-files-main"
+          :class="{ 'wp-files-main--resizing': fileBrowserResizing }"
         >
-          <WorkspaceFileTree
-            @refresh="onRefreshFiles"
-            @toggle-console="gitStore.toggleConsole()"
+          <aside
+            class="wp-files-browser"
+            :style="{ width: `${fileBrowserWidthPx}px` }"
+          >
+            <WorkspaceFileTree
+              @refresh="onRefreshFiles"
+              @toggle-console="gitStore.toggleConsole()"
+            />
+          </aside>
+          <PanelResizeHandle
+            placement="after-start"
+            :active="fileBrowserResizing"
+            aria-label="Resize file browser"
+            @pointerdown="onFileBrowserResizePointerDown"
+            @keyboard-resize="onFileBrowserKeyboardResize"
           />
-        </aside>
-        <PanelResizeHandle
-          placement="after-start"
-          :active="fileBrowserResizing"
-          aria-label="Resize file browser"
-          @pointerdown="onFileBrowserResizePointerDown"
-          @keyboard-resize="onFileBrowserKeyboardResize"
+          <section class="wp-files-editor">
+            <WorkspaceFileEditor />
+          </section>
+        </div>
+        <WorkspaceXtermConsole
+          v-if="consoleOpen"
+          class="wp-workspace-terminal"
         />
-        <section class="wp-files-editor">
-          <WorkspaceFileEditor />
-        </section>
       </div>
 
       <template v-else-if="activeTab === 'git'">
@@ -157,6 +165,9 @@ const WorkspaceFileTree = defineAsyncComponent(
 const WorkspaceFileEditor = defineAsyncComponent(
   () => import('./workspace/WorkspaceFileEditor.vue'),
 )
+const WorkspaceXtermConsole = defineAsyncComponent(
+  () => import('./workspace/WorkspaceXtermConsole.vue'),
+)
 
 withDefaults(defineProps<{ layout?: 'page' | 'split' }>(), { layout: 'page' })
 const emit = defineEmits<{ close: [] }>()
@@ -168,7 +179,7 @@ const navStore = useWorkspaceNavigationStore()
 const { activeWorkspacePath, activeLabel, conversationId } =
   storeToRefs(workspaceStore)
 const { tab: navTab, highlightPath } = storeToRefs(navStore)
-const { diff, diffLoading, diffError, diffStaged, diffFiles } =
+const { diff, diffLoading, diffError, diffStaged, diffFiles, consoleOpen } =
   storeToRefs(gitStore)
 
 const workspaceLabel = computed(() => activeLabel.value)
@@ -433,17 +444,25 @@ onMounted(() => {
   flex: 1;
   min-height: 0;
   display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wp-files-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
   flex-direction: row;
   align-items: stretch;
   overflow: hidden;
 }
 
-.wp-files-layout--resizing {
+.wp-files-main--resizing {
   cursor: col-resize;
   user-select: none;
 }
 
-.wp-files-layout--resizing .wp-files-editor {
+.wp-files-main--resizing .wp-files-editor {
   pointer-events: none;
 }
 
@@ -466,6 +485,13 @@ onMounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.wp-workspace-terminal {
+  flex-shrink: 0;
+  width: 100%;
+  min-height: 200px;
+  max-height: min(40%, 360px);
 }
 
 .wp-git-layout {
