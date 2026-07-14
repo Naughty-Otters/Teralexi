@@ -2,7 +2,10 @@
   <div class="alrs">
     <div class="alrs-header">
       <span class="alrs-title">{{ p.agents.reasoningSettings }}</span>
-      <p class="alrs-hint">
+      <p
+        v-if="variant !== 'composer'"
+        class="alrs-hint"
+      >
         {{ p.agents.reasoningSettingsHint }}
       </p>
     </div>
@@ -31,7 +34,7 @@
             {{ p.agents.reasoningDefault }}
           </option>
           <option
-            v-for="level in strengthOptions"
+            v-for="level in strengthSelectOptions"
             :key="level"
             :value="level"
           >
@@ -81,11 +84,18 @@ import {
 } from './useAbstractLlmReasoningSettings'
 import './sp-shared.css'
 
-const props = defineProps<{
-  provider: ProviderType
-  providerOptions?: AgentLlmProviderOptions
-  disabled?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    provider: ProviderType
+    providerOptions?: AgentLlmProviderOptions
+    disabled?: boolean
+    /** Agent settings keep thinking budget; composer omits budget. */
+    variant?: 'full' | 'composer'
+  }>(),
+  {
+    variant: 'full',
+  },
+)
 
 const emit = defineEmits<{
   (e: 'update:providerOptions', value: AgentLlmProviderOptions | undefined): void
@@ -113,6 +123,10 @@ const budgetText = computed(() =>
     : '',
 )
 
+const strengthSelectOptions = computed(() =>
+  strengthOptions.value.filter((level) => level !== 'none'),
+)
+
 type ReasoningFormField = {
   id: 'strength' | 'thinkingTokenBudget' | 'showThinking'
   kind: 'select' | 'number' | 'checkbox'
@@ -129,7 +143,8 @@ const fields = computed((): ReasoningFormField[] => {
       inputId: `${idPrefix}-strength`,
     },
   ]
-  if (support.value.thinkingTokenBudget) {
+
+  if (props.variant === 'full' && support.value.thinkingTokenBudget) {
     next.push({
       id: 'thinkingTokenBudget',
       kind: 'number',
@@ -137,6 +152,7 @@ const fields = computed((): ReasoningFormField[] => {
       inputId: `${idPrefix}-budget`,
     })
   }
+
   if (support.value.showThinking) {
     next.push({
       id: 'showThinking',
@@ -145,6 +161,7 @@ const fields = computed((): ReasoningFormField[] => {
       inputId: `${idPrefix}-show-thinking`,
     })
   }
+
   return next
 })
 
@@ -249,6 +266,11 @@ function onShowThinkingChange(event: Event) {
 
 .aft-input:focus {
   border-color: var(--color-primary-500);
+}
+
+.aft-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .aft-select {

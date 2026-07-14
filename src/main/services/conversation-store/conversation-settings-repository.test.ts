@@ -110,4 +110,92 @@ describe('ConversationSettingsRepository', () => {
     const repo = new ConversationSettingsRepository(db)
     expect(repo.getCodingMode('conv-4')).toBe('explore')
   })
+
+  it('persists conversation LLM override', () => {
+    const db = createMigrationTestDatabase()
+    runMigrations(db)
+    seedConversation(db, 'conv-llm')
+    const repo = new ConversationSettingsRepository(db)
+
+    const saved = repo.setLlmOverride('conv-llm', {
+      provider: 'gemini',
+      model: 'gemini-2.5-pro',
+      providerOptions: {
+        google: { thinkingConfig: { thinkingLevel: 'high' } },
+      },
+    })
+    expect(saved.llmOverride).toEqual({
+      provider: 'gemini',
+      model: 'gemini-2.5-pro',
+      providerOptions: {
+        google: { thinkingConfig: { thinkingLevel: 'high' } },
+      },
+    })
+    expect(repo.getLlmOverride('conv-llm')?.model).toBe('gemini-2.5-pro')
+
+    // Stored as JSON column on conversation_settings.
+    const row = db
+      .prepare(
+        `SELECT llm_override_json FROM conversation_settings WHERE conversation_id = ?`,
+      )
+      .get('conv-llm') as { llm_override_json: string }
+    expect(JSON.parse(row.llm_override_json)).toEqual({
+      provider: 'gemini',
+      model: 'gemini-2.5-pro',
+      providerOptions: {
+        google: { thinkingConfig: { thinkingLevel: 'high' } },
+      },
+    })
+
+    // Toggle off → null, agent defaults take over at resolve time.
+    repo.setLlmOverride('conv-llm', null)
+    expect(repo.getLlmOverride('conv-llm')).toBeNull()
+    const cleared = db
+      .prepare(
+        `SELECT llm_override_json FROM conversation_settings WHERE conversation_id = ?`,
+      )
+      .get('conv-llm') as { llm_override_json: string }
+    expect(cleared.llm_override_json).toBe('null')
+  })
+
+  it('keeps LLM overrides isolated per conversation thread', () => {
+    const db = createMigrationTestDatabase()
+    runMigrations(db)
+    seedConversation(db, 'conv-a')
+    seedConversation(db, 'conv-b')
+    const repo = new ConversationSettingsRepository(db)
+
+    repo.setWorkspacePath('conv-a', '/tmp/a')
+    repo.setLlmOverride('conv-a', {
+      provider: 'openai',
+      model: 'gpt-4.1',
+      providerOptions: { openai: { reasoningEffort: 'high' } },
+    })
+    repo.setLlmOverride('conv-b', {
+      provider: 'gemini',
+      model: 'gemini-2.5-flash',
+      providerOptions: {
+        google: { thinkingConfig: { includeThoughts: true } },
+      },
+    })
+
+    expect(repo.getLlmOverride('conv-a')).toEqual({
+      provider: 'openai',
+      model: 'gpt-4.1',
+      providerOptions: { openai: { reasoningEffort: 'high' } },
+    })
+    expect(repo.getLlmOverride('conv-b')).toEqual({
+      provider: 'gemini',
+      model: 'gemini-2.5-flash',
+      providerOptions: {
+        google: { thinkingConfig: { includeThoughts: true } },
+      },
+    })
+
+    // Clearing one thread must not affect the other, and preserves sibling settings.
+    repo.setLlmOverride('conv-a', null)
+    expect(repo.getLlmOverride('conv-a')).toBeNull()
+    expect(repo.get('conv-a')?.workspacePath).toBe('/tmp/a')
+    expect(repo.getLlmOverride('conv-b')?.model).toBe('gemini-2.5-flash')
+  })
 })

@@ -1814,6 +1814,25 @@ export class IpcChannelMainClass {
     },
     { ok: boolean; mode: import('@shared/agent/coding-mode').CodingMode }
   > = null!
+  /** Get sticky composer LLM override for a conversation. */
+  GetConversationLlmOverride: IpcMainEventListener<
+    { conversationId: string },
+    {
+      ok: boolean
+      override: import('@shared/agent/conversation-llm-override').ConversationLlmOverride | null
+    }
+  > = null!
+  /** Set or clear sticky composer LLM override for a conversation. */
+  SetConversationLlmOverride: IpcMainEventListener<
+    {
+      conversationId: string
+      override: import('@shared/agent/conversation-llm-override').ConversationLlmOverride | null
+    },
+    {
+      ok: boolean
+      override: import('@shared/agent/conversation-llm-override').ConversationLlmOverride | null
+    }
+  > = null!
   /** Get per-conversation pre/post turn hooks. */
   GetConversationHooks: IpcMainEventListener<
     { conversationId: string },

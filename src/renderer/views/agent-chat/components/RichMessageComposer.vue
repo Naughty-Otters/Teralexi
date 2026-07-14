@@ -3,7 +3,7 @@
     class="rich-composer"
     :class="{
       'rich-composer--picker-open':
-        mentionOpen || slashOpen || agentPickerOpen,
+        mentionOpen || slashOpen || agentPickerOpen || llmOverrideMenuOpen,
       'rich-composer--agent-picker-open': agentPickerOpen,
       'rich-composer--editor-menu-open': mentionOpen || slashOpen,
     }"
@@ -18,6 +18,15 @@
           :agent-options="agentOptions"
           @select-agent="emit('select-agent', $event)"
           @menu-open-change="agentPickerOpen = $event"
+        />
+        <ComposerLlmOverrideControl
+          v-if="showLlmOverride"
+          :model-value="llmOverride"
+          :agent-provider="agentProvider"
+          :agent-model="agentModel"
+          :disabled="disabled || workspaceDisabled"
+          @update:model-value="emit('update:llmOverride', $event)"
+          @menu-open-change="llmOverrideMenuOpen = $event"
         />
         <WorkspaceSelector variant="toolbar" :disabled="workspaceDisabled" />
         <span class="rich-composer-toolbar-divider" aria-hidden="true" />
@@ -126,11 +135,14 @@ import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor, type Editor } from '@tiptap/vue-3'
 import { ref, watch, onBeforeUnmount, onMounted, nextTick, computed, defineAsyncComponent } from 'vue'
 import AgentPickerButton from './AgentPickerButton.vue'
+import ComposerLlmOverrideControl from './ComposerLlmOverrideControl.vue'
 import {
   buildAgentPickerEntries,
   listSelectableAgentPickerOptions,
   type SkillGroupAgentRef,
 } from '@shared/agent/skill-groups'
+import type { ConversationLlmOverride } from '@shared/agent/conversation-llm-override'
+import type { ProviderType } from '@shared/agent/llm-provider-registry'
 import {
   registerComposerAgentPicker,
   unregisterComposerAgentPicker,
@@ -170,6 +182,9 @@ const props = withDefaults(
     disabled?: boolean
     stagedAttachments?: StagedChatAttachment[]
     canAddAttachments?: boolean
+    llmOverride?: ConversationLlmOverride | null
+    agentProvider?: ProviderType
+    agentModel?: string
   }>(),
   {
     placeholder: 'Message…',
@@ -184,11 +199,15 @@ const props = withDefaults(
     disabled: false,
     stagedAttachments: () => [],
     canAddAttachments: true,
+    llmOverride: null,
+    agentProvider: 'ollama',
+    agentModel: '',
   },
 )
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
+  'update:llmOverride': [value: ConversationLlmOverride | null]
   'select-agent': [agentId: string]
   submit: []
   'pick-attachments': []
@@ -198,6 +217,9 @@ const emit = defineEmits<{
 
 const toast = useToast()
 
+const showLlmOverride = computed(
+  () => Boolean(props.conversationId?.trim()) && !props.hideContextSelectors,
+)
 const {
   plugins: skillToolbarPlugins,
   invokingId: skillToolbarInvokingId,
@@ -242,6 +264,7 @@ const slashHighlightIndex = ref(0)
 const slashMenuRef = ref<SlashMenuExpose | null>(null)
 const agentPickerRef = ref<InstanceType<typeof AgentPickerButton> | null>(null)
 const agentPickerOpen = ref(false)
+const llmOverrideMenuOpen = ref(false)
 const agentPickerHighlightIndex = ref(0)
 
 const selectableAgentCount = computed(() => {

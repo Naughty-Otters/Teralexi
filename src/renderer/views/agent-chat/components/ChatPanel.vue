@@ -173,8 +173,12 @@
           :sub-agent-slash-enabled="subAgentSlashEnabled"
           :staged-attachments="stagedAttachments"
           :can-add-attachments="canAddAttachments"
+          :llm-override="llmOverride"
+          :agent-provider="composerAgentProvider"
+          :agent-model="composerAgentModel"
           @select-agent="onSelectAgent"
           @update:coding-mode="onCodingModeChange"
+          @update:llm-override="onLlmOverrideChange"
           @cancel-background-task="onCancelBackgroundTask"
           @pick-attachments="pickAttachments"
           @remove-attachment="removeStaged"
@@ -357,6 +361,11 @@ import {
 } from '@shared/agent/workspace-slash-command'
 import type { CodingMode } from '@shared/agent/coding-mode'
 import {
+  toPlainConversationLlmOverride,
+  type ConversationLlmOverride,
+} from '@shared/agent/conversation-llm-override'
+import type { ProviderType } from '@shared/agent/llm-provider-registry'
+import {
   codingModeLabel,
   DEFAULT_CODING_MODE,
   parseCodingMode,
@@ -408,6 +417,7 @@ const INSTALL_SKILL_CMD_RE = /^\/skill:install\s+(\S+)/i
 const standardMarkdown = useLazyStandardMarkdown()
 
 const codingMode = ref<CodingMode>(DEFAULT_CODING_MODE)
+const llmOverride = ref<ConversationLlmOverride | null>(null)
 const planModeView = ref<PlanModeView>(defaultPlanModeView())
 const followUpItems = ref<FollowUpItem[]>([])
 /** Monotonic revision from main; ignore notify/load payloads with a lower revision. */
@@ -859,6 +869,12 @@ const activeAgentName = computed(() => {
   return formatAgentGroupDisplayName(agent)
 })
 const activeAgentModel = computed(() => agentStore.selectedAgent?.model ?? '')
+const composerAgentProvider = computed(
+  (): ProviderType => agentStore.selectedAgent?.provider ?? 'ollama',
+)
+const composerAgentModel = computed(
+  () => agentStore.selectedAgent?.model ?? '',
+)
 const activeAgentColor = computed(
   () => agentStore.selectedAgent?.color ?? 'neutral',
 )
@@ -1430,11 +1446,13 @@ watch(
     void rebuildChat()
     if (conversationId) {
       void loadCodingMode(conversationId)
+      void loadLlmOverride(conversationId)
       void loadPlanModeState(conversationId)
       void loadFollowUpSuggestions(conversationId)
       if (selectedAgentIsCoding.value) startBackgroundTaskPolling()
     } else {
       codingMode.value = DEFAULT_CODING_MODE
+      llmOverride.value = null
       planModeView.value = defaultPlanModeView()
       backgroundTasks.value = []
       stopBackgroundTaskPolling()
@@ -1627,6 +1645,44 @@ async function loadCodingMode(conversationId: string) {
   }
   const result = await ch.invoke({ conversationId })
   codingMode.value = result.ok ? result.mode : DEFAULT_CODING_MODE
+}
+
+async function loadLlmOverride(conversationId: string) {
+  const ch = window.ipcRendererChannel?.GetConversationLlmOverride
+  if (!ch) {
+    llmOverride.value = null
+    return
+  }
+  const result = await ch.invoke({ conversationId })
+  llmOverride.value = result.ok ? result.override : null
+}
+
+async function persistLlmOverride(
+  conversationId: string,
+  override: ConversationLlmOverride | null,
+) {
+  const plain = toPlainConversationLlmOverride(override)
+  const ch = window.ipcRendererChannel?.SetConversationLlmOverride
+  if (!ch) {
+    llmOverride.value = plain
+    return
+  }
+  const result = await ch.invoke({ conversationId, override: plain })
+  if (result.ok) llmOverride.value = result.override
+}
+
+async function onLlmOverrideChange(override: ConversationLlmOverride | null) {
+  const conversationId = agentStore.currentConversationId?.trim()
+  const plain = toPlainConversationLlmOverride(override)
+  if (!conversationId) {
+    llmOverride.value = plain
+    return
+  }
+  await persistLlmOverride(conversationId, plain)
+}
+
+async function clearLlmOverrideForConversation(conversationId: string) {
+  await persistLlmOverride(conversationId, null)
 }
 
 async function loadFollowUpSuggestions(conversationId: string | undefined) {
@@ -2328,7 +2384,9 @@ async function onSubmit() {
 
 function onSelectAgent(agentId: string) {
   if (!agentId || agentId === agentStore.selectedAgentId) return
+  const conversationId = agentStore.currentConversationId?.trim()
   void agentStore.selectAgent(agentId)
+  if (conversationId) void clearLlmOverrideForConversation(conversationId)
 }
 
 function onStop() {

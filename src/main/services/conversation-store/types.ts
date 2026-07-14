@@ -1,5 +1,6 @@
 import type { CodingMode } from '@shared/agent/coding-mode'
 import type { ConversationHooksConfig } from '@shared/agent/conversation-hooks'
+import type { ConversationLlmOverride } from '@shared/agent/conversation-llm-override'
 import type { AgentPlanModeState } from '@shared/agent/plan-mode'
 import type { ProviderType } from '@shared/agent/llm-provider-registry'
 import type {
@@ -29,6 +30,8 @@ export interface StoredConversationSettings {
   planModeState: AgentPlanModeState
   /** Per-conversation pre/post turn shell hooks. */
   hooks: ConversationHooksConfig
+  /** Composer LLM override; null = use agent default. */
+  llmOverride: ConversationLlmOverride | null
   updatedAt: string
 }
 

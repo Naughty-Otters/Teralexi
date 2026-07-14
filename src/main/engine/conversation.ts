@@ -38,6 +38,7 @@ import { resolveResponseLanguageForAgent } from '@main/i18n/resolve-response-lan
 import { StageModelRegistry } from '@main/agent/providers/stage-model-registry'
 import { AgentRun } from '@main/agent/run/agent-run'
 import { mergeSubFlowOutputText } from '@main/agent/run/sub-flow-output-text'
+import { resolveRunLlmFromAgentAndOverride } from '@shared/agent/conversation-llm-override'
 import { resolveDelegatableSubAgentTargets } from '@shared/agent/sub-agent-targets'
 
 const inFlightControllers = new Map<string, AbortController>()
@@ -452,10 +453,13 @@ async function executeAgentForConversation(
   let hitlPaused = false
 
   try {
+    const llmOverride =
+      getConversationStore().getConversationLlmOverride(conversationId)
+    const runLlm = resolveRunLlmFromAgentAndOverride(agent, llmOverride)
     const opts: AgentResponseOpts = {
-      provider: agent.provider,
-      model: agent.model,
-      stageLlm: agent.stageLlmSettings,
+      provider: runLlm.provider,
+      model: runLlm.model,
+      stageLlm: runLlm.stageLlm,
       systemPrompt: agent.systemPrompt,
       responseLanguage: resolveResponseLanguageForAgent(agent.responseLanguage),
       abortSignal: abortController.signal,
