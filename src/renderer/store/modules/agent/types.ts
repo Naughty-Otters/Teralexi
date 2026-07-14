@@ -285,6 +285,8 @@ export interface Conversation {
   createdAt: Date
   updatedAt: Date
   type: 'ui' | 'channel' | 'scheduler'
+  /** Absolute workspace folder when set for this conversation. */
+  workspacePath?: string | null
 }
 
 /** One agent run’s sandbox preview metadata (keyed per conversation by `sandboxRoot`). */

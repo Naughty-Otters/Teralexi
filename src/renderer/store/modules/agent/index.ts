@@ -561,6 +561,7 @@ export const useAgentStore = defineStore('agent', () => {
     renameConversation: conversation.renameConversation,
     deleteConversation: conversation.deleteConversation,
     clearConversationHistory: conversation.clearConversationHistory,
+    patchConversationWorkspacePath: conversation.patchConversationWorkspacePath,
     conversationSandboxRuns,
     sandboxRunsForCurrentConversation,
     selectedSandboxRunIdForCurrentConversation,

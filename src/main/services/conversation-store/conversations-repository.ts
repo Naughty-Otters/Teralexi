@@ -7,7 +7,12 @@ export class ConversationsRepository {
   list(agentId: string): StoredConversation[] {
     const rows = this.db
       .prepare(
-        'SELECT id, agent_id, title, created_at, updated_at FROM conversations WHERE agent_id = ? ORDER BY updated_at DESC',
+        `SELECT c.id, c.agent_id, c.title, c.created_at, c.updated_at,
+                s.workspace_path
+         FROM conversations c
+         LEFT JOIN conversation_settings s ON s.conversation_id = c.id
+         WHERE c.agent_id = ?
+         ORDER BY c.updated_at DESC`,
       )
       .all(agentId) as Array<{
       id: string
@@ -15,6 +20,7 @@ export class ConversationsRepository {
       title: string
       created_at: string
       updated_at: string
+      workspace_path: string | null
     }>
 
     return rows.map((r) => ({
@@ -23,6 +29,7 @@ export class ConversationsRepository {
       title: r.title,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
+      workspacePath: r.workspace_path?.trim() || null,
     }))
   }
 
