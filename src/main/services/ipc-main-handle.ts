@@ -2532,6 +2532,39 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     return { ok: true, mode: saved.codingMode }
   }
 
+  GetConversationLlmOverride: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string },
+  ) => {
+    ok: boolean
+    override: import('@shared/agent/conversation-llm-override').ConversationLlmOverride | null
+  } = (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) return { ok: false, override: null }
+    const override =
+      getConversationStore().getConversationLlmOverride(conversationId)
+    return { ok: true, override }
+  }
+
+  SetConversationLlmOverride: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: {
+      conversationId: string
+      override: import('@shared/agent/conversation-llm-override').ConversationLlmOverride | null
+    },
+  ) => {
+    ok: boolean
+    override: import('@shared/agent/conversation-llm-override').ConversationLlmOverride | null
+  } = (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) return { ok: false, override: null }
+    const saved = getConversationStore().setConversationLlmOverride(
+      conversationId,
+      args?.override ?? null,
+    )
+    return { ok: true, override: saved.llmOverride }
+  }
+
   GetConversationHooks: (
     _event: Electron.IpcMainInvokeEvent,
     args: { conversationId: string },

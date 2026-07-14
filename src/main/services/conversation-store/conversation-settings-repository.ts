@@ -11,6 +11,12 @@ import {
   type ConversationHooksConfig,
 } from '@shared/agent/conversation-hooks'
 import {
+  parseConversationLlmOverride,
+  parseConversationLlmOverrideJson,
+  serializeConversationLlmOverride,
+  type ConversationLlmOverride,
+} from '@shared/agent/conversation-llm-override'
+import {
   DEFAULT_AGENT_PLAN_MODE_STATE,
   parseAgentPlanModeState,
   serializeAgentPlanModeState,
@@ -66,6 +72,7 @@ function rowToSettings(row: {
   coding_mode_json: string | null
   plan_mode_json: string | null
   hooks_json: string | null
+  llm_override_json: string | null
   updated_at: string
 }): StoredConversationSettings {
   return {
@@ -77,11 +84,12 @@ function rowToSettings(row: {
     codingMode: parseCodingModeJson(row.coding_mode_json),
     planModeState: parsePlanModeStateJson(row.plan_mode_json),
     hooks: parseHooksJson(row.hooks_json),
+    llmOverride: parseConversationLlmOverrideJson(row.llm_override_json),
     updatedAt: row.updated_at,
   }
 }
 
-const SELECT_COLS = `conversation_id, workspace_path, session_approved_tools_json, coding_mode_json, plan_mode_json, hooks_json, updated_at`
+const SELECT_COLS = `conversation_id, workspace_path, session_approved_tools_json, coding_mode_json, plan_mode_json, hooks_json, llm_override_json, updated_at`
 
 type SettingsRow = {
   conversation_id: string
@@ -90,6 +98,7 @@ type SettingsRow = {
   coding_mode_json: string | null
   plan_mode_json: string | null
   hooks_json: string | null
+  llm_override_json: string | null
   updated_at: string
 }
 
@@ -100,6 +109,7 @@ type UpsertArgs = {
   codingMode: CodingMode
   planModeState: AgentPlanModeState
   hooks: ConversationHooksConfig
+  llmOverride: ConversationLlmOverride | null
 }
 
 export class ConversationSettingsRepository {
@@ -121,16 +131,18 @@ export class ConversationSettingsRepository {
   private upsertRow(args: UpsertArgs): StoredConversationSettings {
     const now = new Date().toISOString()
     const hooks = parseConversationHooksConfig(args.hooks)
+    const llmOverride = parseConversationLlmOverride(args.llmOverride)
     this.db
       .prepare(
-        `INSERT INTO conversation_settings (conversation_id, workspace_path, session_approved_tools_json, coding_mode_json, plan_mode_json, hooks_json, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO conversation_settings (conversation_id, workspace_path, session_approved_tools_json, coding_mode_json, plan_mode_json, hooks_json, llm_override_json, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(conversation_id) DO UPDATE SET
            workspace_path = excluded.workspace_path,
            session_approved_tools_json = excluded.session_approved_tools_json,
            coding_mode_json = excluded.coding_mode_json,
            plan_mode_json = excluded.plan_mode_json,
            hooks_json = excluded.hooks_json,
+           llm_override_json = excluded.llm_override_json,
            updated_at = excluded.updated_at`,
       )
       .run(
@@ -140,6 +152,7 @@ export class ConversationSettingsRepository {
         JSON.stringify(args.codingMode),
         serializeAgentPlanModeState(args.planModeState),
         serializeConversationHooksConfig(hooks),
+        serializeConversationLlmOverride(llmOverride),
         now,
       )
     return {
@@ -149,6 +162,7 @@ export class ConversationSettingsRepository {
       codingMode: args.codingMode,
       planModeState: args.planModeState,
       hooks,
+      llmOverride,
       updatedAt: now,
     }
   }
@@ -162,6 +176,7 @@ export class ConversationSettingsRepository {
       codingMode: existing?.codingMode ?? DEFAULT_CODING_MODE,
       planModeState: existing?.planModeState ?? { ...DEFAULT_AGENT_PLAN_MODE_STATE },
       hooks: existing?.hooks ?? { hooks: [] },
+      llmOverride: existing?.llmOverride ?? null,
     }
   }
 
@@ -220,6 +235,21 @@ export class ConversationSettingsRepository {
     })
   }
 
+  getLlmOverride(conversationId: string): ConversationLlmOverride | null {
+    return this.get(conversationId)?.llmOverride ?? null
+  }
+
+  setLlmOverride(
+    conversationId: string,
+    llmOverride: ConversationLlmOverride | null,
+  ): StoredConversationSettings {
+    const base = this.mergeExisting(conversationId)
+    return this.upsertRow({
+      ...base,
+      llmOverride: parseConversationLlmOverride(llmOverride),
+    })
+  }
+
   getSessionApprovedTools(conversationId: string): string[] {
     return this.get(conversationId)?.sessionApprovedTools ?? []
   }
@@ -248,6 +278,7 @@ export class ConversationSettingsRepository {
       codingMode: target?.codingMode ?? source.codingMode,
       planModeState: target?.planModeState ?? source.planModeState,
       hooks: target?.hooks ?? source.hooks,
+      llmOverride: target?.llmOverride ?? source.llmOverride,
     })
   }
 

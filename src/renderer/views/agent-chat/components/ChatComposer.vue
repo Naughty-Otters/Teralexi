@@ -51,8 +51,12 @@
         :sub-agent-slash-enabled="subAgentSlashEnabled"
         :staged-attachments="stagedAttachments"
         :can-add-attachments="canAddAttachments"
+        :llm-override="llmOverride"
+        :agent-provider="agentProvider"
+        :agent-model="agentModel"
         placeholder="Message…"
         @update:model-value="emit('update:modelValue', $event)"
+        @update:llm-override="emit('update:llmOverride', $event)"
         @select-agent="emit('select-agent', $event)"
         @pick-attachments="emit('pick-attachments')"
         @remove-attachment="emit('remove-attachment', $event)"
@@ -91,6 +95,8 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue'
 import type { CodingMode } from '@shared/agent/coding-mode'
+import type { ConversationLlmOverride } from '@shared/agent/conversation-llm-override'
+import type { ProviderType } from '@shared/agent/llm-provider-registry'
 import {
   planModeComposerHint,
   type PlanModeDisplayStatus,
@@ -154,11 +160,15 @@ const props = defineProps<{
   stagedAttachments?: StagedChatAttachment[]
   canAddAttachments?: boolean
   skillSetup?: ChatComposerSkillSetupState | null
+  llmOverride?: ConversationLlmOverride | null
+  agentProvider?: ProviderType
+  agentModel?: string
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [v: string]
   'update:codingMode': [mode: CodingMode]
+  'update:llmOverride': [value: ConversationLlmOverride | null]
   'select-agent': [agentId: string]
   'cancel-background-task': [taskId: string]
   'pick-attachments': []
@@ -174,6 +184,9 @@ const showCodingModeBar = computed(() => props.showCodingModeBar === true)
 const subAgentSlashEnabled = computed(() => props.subAgentSlashEnabled === true)
 const stagedAttachments = computed(() => props.stagedAttachments ?? [])
 const canAddAttachments = computed(() => props.canAddAttachments !== false)
+const llmOverride = computed(() => props.llmOverride ?? null)
+const agentProvider = computed((): ProviderType => props.agentProvider ?? 'ollama')
+const agentModel = computed(() => props.agentModel ?? '')
 
 const planStatusHint = computed(() =>
   planModeComposerHint(props.planDisplayStatus ?? 'tool_execute'),

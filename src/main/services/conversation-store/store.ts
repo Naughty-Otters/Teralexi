@@ -164,6 +164,17 @@ export class ConversationStore {
     return this.conversationSettings.setHooks(conversationId, hooks)
   }
 
+  getConversationLlmOverride(conversationId: string) {
+    return this.conversationSettings.getLlmOverride(conversationId)
+  }
+
+  setConversationLlmOverride(
+    conversationId: string,
+    llmOverride: StoredConversationSettings['llmOverride'],
+  ): StoredConversationSettings {
+    return this.conversationSettings.setLlmOverride(conversationId, llmOverride)
+  }
+
   applyCompactionToConversation(args: {
     conversationId: string
     agentId: string

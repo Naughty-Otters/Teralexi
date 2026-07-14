@@ -1,4 +1,29 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const {
+  streamAgentResponseMock,
+  notifyFinishedMock,
+  conversationStoreChangedMock,
+  notifyConversationStoreChangedMock,
+  ensureUserAttachmentsUploadedBeforeAgentRunMock,
+  loadConversationHistoryMock,
+  getConversationLlmOverrideMock,
+} =
+  vi.hoisted(() => ({
+    streamAgentResponseMock: vi.fn(async () => ({
+      structuredContent: 'done',
+      shouldPersistMemory: true,
+      hitlPaused: false,
+    })),
+    notifyFinishedMock: vi.fn(),
+    conversationStoreChangedMock: vi.fn(),
+    notifyConversationStoreChangedMock: vi.fn(),
+    ensureUserAttachmentsUploadedBeforeAgentRunMock: vi.fn(async () => ({
+      attachments: [],
+    })),
+    loadConversationHistoryMock: vi.fn(() => []),
+    getConversationLlmOverrideMock: vi.fn(() => null),
+  }))
 
 vi.mock('@main/logger', () => ({
   createLogger: () => ({
@@ -19,6 +44,7 @@ vi.mock('@main/services/conversation-store', () => ({
     getMessageAttachmentsForMessage: vi.fn(() => []),
     getMessages: vi.fn(() => []),
     getConversationHooks: vi.fn(() => ({ hooks: [] })),
+    getConversationLlmOverride: getConversationLlmOverrideMock,
   })),
 }))
 
@@ -48,29 +74,6 @@ vi.mock('@logging', () => ({
   runWithAgentRunLog: (_ctx: unknown, fn: () => unknown) => fn(),
 }))
 
-const {
-  streamAgentResponseMock,
-  notifyFinishedMock,
-  conversationStoreChangedMock,
-  notifyConversationStoreChangedMock,
-  ensureUserAttachmentsUploadedBeforeAgentRunMock,
-  loadConversationHistoryMock,
-} =
-  vi.hoisted(() => ({
-    streamAgentResponseMock: vi.fn(async () => ({
-      structuredContent: 'done',
-      shouldPersistMemory: true,
-      hitlPaused: false,
-    })),
-    notifyFinishedMock: vi.fn(),
-    conversationStoreChangedMock: vi.fn(),
-    notifyConversationStoreChangedMock: vi.fn(),
-    ensureUserAttachmentsUploadedBeforeAgentRunMock: vi.fn(async () => ({
-      attachments: [],
-    })),
-    loadConversationHistoryMock: vi.fn(() => []),
-  }))
-
 vi.mock('@main/services/chat-attachments', () => ({
   ensureUserAttachmentsUploadedBeforeAgentRun:
     ensureUserAttachmentsUploadedBeforeAgentRunMock,
@@ -94,6 +97,16 @@ const mockEngineAgent = {
   availableSet: [],
   availableSetTouched: false,
   toolNeedsApprovalOverrides: {},
+  stageLlmSettings: {
+    mode: 'unified' as const,
+    default: {
+      provider: 'ollama' as const,
+      model: 'm',
+      providerOptions: {
+        ollama: { think: false },
+      },
+    },
+  },
 }
 
 vi.mock('@main/agent/config/context', async (importOriginal) => {
@@ -151,6 +164,11 @@ import { enqueueAgentMemoryExchange } from '@main/agent/memory'
 import { runAgentForConversation, stopAgentForConversation } from './conversation'
 
 describe('agent engine', () => {
+  beforeEach(() => {
+    getConversationLlmOverrideMock.mockReset()
+    getConversationLlmOverrideMock.mockReturnValue(null)
+  })
+
   it('stopAgentForConversation is safe when no controller', () => {
     expect(() => stopAgentForConversation('missing')).not.toThrow()
   })
@@ -353,6 +371,7 @@ describe('agent engine', () => {
       getMessageAttachmentsForMessage: vi.fn(() => []),
       getMessages: vi.fn(() => []),
       getConversationHooks: vi.fn(() => ({ hooks: [] })),
+      getConversationLlmOverride: getConversationLlmOverrideMock,
     } as never)
 
     const result = await runAgentForConversation({
@@ -369,5 +388,91 @@ describe('agent engine', () => {
 
     expect(result.hasError).toBe(false)
     expect(result.finalContent).toBe('done')
+  })
+
+  it('applies persisted conversation LLM override over agent default providerOptions', async () => {
+    getConversationLlmOverrideMock.mockReturnValue({
+      provider: 'gemini',
+      model: 'gemini-2.5-pro',
+      providerOptions: {
+        google: { thinkingConfig: { thinkingLevel: 'high' } },
+      },
+    })
+    streamAgentResponseMock.mockClear()
+
+    const result = await runAgentForConversation({
+      conversationId: 'c-llm-over',
+      agentId: 'skill:demo',
+      assistantMessageId: 'a-llm-over',
+      userId: 'default',
+      pendingUserMessage: {
+        id: 'u-llm-over',
+        content: 'Hi',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    })
+
+    expect(result.hasError).toBe(false)
+    expect(getConversationLlmOverrideMock).toHaveBeenCalledWith('c-llm-over')
+    const opts = streamAgentResponseMock.mock.calls.at(-1)?.[0] as {
+      provider: string
+      model: string
+      stageLlm: {
+        default: {
+          provider: string
+          model: string
+          providerOptions?: Record<string, unknown>
+        }
+      }
+    }
+    expect(opts.provider).toBe('gemini')
+    expect(opts.model).toBe('gemini-2.5-pro')
+    expect(opts.stageLlm.default).toEqual({
+      provider: 'gemini',
+      model: 'gemini-2.5-pro',
+      providerOptions: {
+        google: { thinkingConfig: { thinkingLevel: 'high' } },
+      },
+    })
+    expect(opts.stageLlm.default.providerOptions).not.toHaveProperty('ollama')
+  })
+
+  it('uses agent LLM settings when conversation override is cleared', async () => {
+    getConversationLlmOverrideMock.mockReturnValue(null)
+    streamAgentResponseMock.mockClear()
+
+    const result = await runAgentForConversation({
+      conversationId: 'c-llm-clear',
+      agentId: 'skill:demo',
+      assistantMessageId: 'a-llm-clear',
+      userId: 'default',
+      pendingUserMessage: {
+        id: 'u-llm-clear',
+        content: 'Hi',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    })
+
+    expect(result.hasError).toBe(false)
+    const opts = streamAgentResponseMock.mock.calls.at(-1)?.[0] as {
+      provider: string
+      model: string
+      stageLlm: {
+        default: {
+          provider: string
+          model: string
+          providerOptions?: Record<string, unknown>
+        }
+      }
+    }
+    expect(opts.provider).toBe('ollama')
+    expect(opts.model).toBe('m')
+    expect(opts.stageLlm.default).toEqual({
+      provider: 'ollama',
+      model: 'm',
+      providerOptions: {
+        ollama: { think: false },
+      },
+    })
   })
 })

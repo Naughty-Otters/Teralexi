@@ -122,6 +122,7 @@ vi.mock('@main/services/conversation-store', () => ({
     upsertConversationSandboxRun: vi.fn(),
     insertTokenUsage: vi.fn(),
     applyCompactionToConversation: vi.fn(),
+    getConversationLlmOverride: vi.fn(() => null),
   })),
 }))
 
