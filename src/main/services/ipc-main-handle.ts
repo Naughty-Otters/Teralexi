@@ -147,6 +147,14 @@ import {
   readFollowUpMeta,
 } from '@main/agent/follow-up'
 import { serializeNeedsApproval } from '@main/skills/tool-ipc-meta'
+import {
+  invokeComposerToolbarPlugin,
+  listComposerToolbarPluginViews,
+} from '@main/skills/composer-toolbar-registry'
+import type {
+  SkillComposerToolbarInvokeResult,
+  SkillComposerToolbarPluginView,
+} from '@shared/agent/skill-composer-toolbar'
 import { extractZodParams } from '@main/utils/zod-introspection'
 import { isConversationRunInFlight } from '@main/engine'
 import {
@@ -2576,11 +2584,8 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     args: { skillId: string; conversationId: string },
   ) => Promise<{
     ok: boolean
-    plugins: import('@shared/agent/skill-composer-toolbar').SkillComposerToolbarPluginView[]
+    plugins: SkillComposerToolbarPluginView[]
   }> = async (_event, args) => {
-    const { listComposerToolbarPluginViews } = await import(
-      '@main/skills/composer-toolbar-registry'
-    )
     return listComposerToolbarPluginViews({
       skillId: args?.skillId ?? '',
       conversationId: args?.conversationId ?? '',
@@ -2590,12 +2595,7 @@ export class IpcMainHandleClass implements IIpcMainHandle {
   InvokeSkillComposerToolbarPlugin: (
     _event: Electron.IpcMainInvokeEvent,
     args: { skillId: string; conversationId: string; pluginId: string },
-  ) => Promise<
-    import('@shared/agent/skill-composer-toolbar').SkillComposerToolbarInvokeResult
-  > = async (_event, args) => {
-    const { invokeComposerToolbarPlugin } = await import(
-      '@main/skills/composer-toolbar-registry'
-    )
+  ) => Promise<SkillComposerToolbarInvokeResult> = async (_event, args) => {
     return invokeComposerToolbarPlugin({
       skillId: args?.skillId ?? '',
       conversationId: args?.conversationId ?? '',
