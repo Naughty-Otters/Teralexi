@@ -373,6 +373,7 @@ export class IpcChannelMainClass {
       title: string
       createdAt: string
       updatedAt: string
+      workspacePath?: string | null
     }>
   > = null!
   /**

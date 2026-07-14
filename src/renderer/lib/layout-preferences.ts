@@ -12,6 +12,11 @@ export const LAYOUT_PREF_KEYS = {
   workspaceEditorSessionByConversation:
     'teralexi.agent.workspaceEditorSessionByConversation',
   lastConversationId: 'teralexi.agent.lastConversationId',
+  /** Sidebar conversation list: `none` | `agent` | `workspace` */
+  conversationListGroupBy: 'teralexi.agent.conversationListGroupBy',
+  /** Collapsed group keys for the sidebar list (`agent::id` / `workspace::path`). */
+  conversationListCollapsedGroups:
+    'teralexi.agent.conversationListCollapsedGroups',
 } as const
 
 export type WorkspaceEditorSession = {

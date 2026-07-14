@@ -14,6 +14,8 @@ export interface StoredConversation {
   title: string
   createdAt: string
   updatedAt: string
+  /** Joined from conversation_settings when listing; absent on create/get. */
+  workspacePath?: string | null
 }
 
 export interface StoredConversationSettings {
