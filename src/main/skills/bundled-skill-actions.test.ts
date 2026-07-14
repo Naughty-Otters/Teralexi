@@ -8,6 +8,7 @@ describe('bundled-skill-actions', () => {
   it('returns all action tools for a bundled skill', () => {
     const tools = getBundledSkillActionTools('website')
     expect(tools.map((tool) => tool.name).sort()).toEqual([
+      'publish_website',
       'render_website',
       'validate_website',
     ])
