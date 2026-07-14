@@ -36,6 +36,7 @@ describe('bundled-skills', () => {
     expect(tools.map((tool) => tool.name)).toEqual(['export_research_pdf'])
     const websiteTools = getBundledSkillActionTools('website')
     expect(websiteTools.map((tool) => tool.name).sort()).toEqual([
+      'publish_website',
       'render_website',
       'validate_website',
     ])

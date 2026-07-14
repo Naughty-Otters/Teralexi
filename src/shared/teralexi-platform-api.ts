@@ -5,6 +5,8 @@ export const TERALEXI_PLATFORM_PATHS = {
   graphql: 'graphql',
   googleAuthLogin: 'auth/login',
   supportUpload: 'support/upload',
+  /** Authenticated static site publish (multipart zip). */
+  appWebUpload: 'api/v1/app/web/upload',
   /** Public electron-updater generic feed (stable channel). */
   desktopReleases: 'desktop/releases/stable',
 } as const
