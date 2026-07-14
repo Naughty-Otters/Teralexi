@@ -113,4 +113,28 @@ describe('follow-up-store', () => {
     if (!allowed.ok) return
     expect(allowed.revision).toBeGreaterThan(2)
   })
+
+  it('ignores meta.json owned by a different conversationId', async () => {
+    await mkdir(path.join(sandboxRoot, 'followup'), { recursive: true })
+    await writeFile(
+      path.join(sandboxRoot, FOLLOWUP_META_REL_PATH),
+      JSON.stringify({
+        version: 1,
+        conversationId: 'owner-a',
+        revision: 9,
+        updatedAt: new Date().toISOString(),
+        followUps: [
+          {
+            id: 'leak',
+            label: 'Should not leak',
+            action: { type: 'user_input', message: 'nope' },
+          },
+        ],
+      }),
+      'utf8',
+    )
+    const meta = readFollowUpMeta(sandboxRoot, 'viewer-b')
+    expect(meta.conversationId).toBe('viewer-b')
+    expect(meta.followUps).toEqual([])
+  })
 })
