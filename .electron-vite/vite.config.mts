@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { defineConfig } from 'vite'
+import { defineConfig, searchForWorkspaceRoot } from 'vite'
 import vuePlugin from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import ui from '@nuxt/ui/vite'
@@ -8,11 +8,13 @@ import { getConfig } from './utils'
 import { rendererIconBundlePlugin } from './renderer-icon-bundle'
 import { rendererManualChunks } from './renderer-manual-chunks'
 import { rendererElectronCompatPlugin } from './renderer-electron-compat'
+import { rendererNuxtUiImportsPlugin } from './renderer-nuxt-ui-imports'
 
 function resolve(dir: string) {
   return join(__dirname, '..', dir)
 }
 const root = resolve('src/renderer')
+const repoRoot = resolve('.')
 
 const config = getConfig() ?? {}
 
@@ -36,6 +38,7 @@ export default defineConfig({
       '@teralexi-ai/mcp': resolve('src/teralexi-ai/mcp.ts'),
       '@teralexi-ai': resolve('src/teralexi-ai/renderer.ts'),
     },
+    dedupe: ['vue', 'vue-router'],
   },
 
   base: './',
@@ -56,6 +59,18 @@ export default defineConfig({
     },
   },
   server: {
+    fs: {
+      // Vite root is src/renderer; Nuxt UI / deps live in the repo node_modules.
+      // Explicit allowlist avoids intermittent /@fs 403s for those packages.
+      allow: [searchForWorkspaceRoot(process.cwd()), repoRoot, root],
+    },
+    warmup: {
+      clientFiles: [
+        join(root, 'main.ts'),
+        join(root, 'App.vue'),
+        join(root, 'router/index.ts'),
+      ],
+    },
     watch: {
       // Avoid HMR on DB/logs/shiki churn; reduces @vitejs/plugin-vue early HMR races.
       ignored: [
@@ -70,16 +85,26 @@ export default defineConfig({
   },
   plugins: [
     rendererElectronCompatPlugin(),
+    // Must run before @nuxt/ui so `#imports` is virtual (not an @fs absolute stub).
+    rendererNuxtUiImportsPlugin(),
     rendererIconBundlePlugin(root, resolve('.')),
     ui({
       colorMode: false,
       icon: { mode: 'svg' },
+      router: true,
     }),
     vueJsx(),
     vuePlugin(),
     viteIkarosTools(),
   ],
   optimizeDeps: {
-    include: ['shiki', 'monaco-editor'],
+    include: [
+      'shiki',
+      'monaco-editor',
+      'vue-router',
+      'vue',
+      '@unhead/vue',
+      'hookable',
+    ],
   },
 })

@@ -15,6 +15,7 @@
         <button
           class="icon-btn"
           title="Refresh usage"
+          aria-label="Refresh usage"
           :disabled="loading"
           @click="load"
         >
@@ -23,7 +24,12 @@
             :class="{ 'monitor-spin': loading }"
           />
         </button>
-        <button class="icon-btn" title="Close monitor" @click="emit('close')">
+        <button
+          class="icon-btn"
+          title="Close monitor"
+          aria-label="Close monitor"
+          @click="emit('close')"
+        >
           ✕
         </button>
       </div>

@@ -13,6 +13,7 @@
           type="button"
           class="xterm-console-btn"
           title="Clear terminal"
+          aria-label="Clear terminal"
           @click="onClear"
         >
           <UIcon name="i-lucide-eraser" style="width: 12px; height: 12px" />
@@ -21,6 +22,7 @@
           type="button"
           class="xterm-console-btn"
           title="Keyboard break (Ctrl+C)"
+          aria-label="Keyboard break (Ctrl+C)"
           @click="sendBreak"
         >
           <UIcon name="i-lucide-hand" style="width: 12px; height: 12px" />
@@ -29,6 +31,7 @@
           type="button"
           class="xterm-console-btn"
           title="Close terminal console"
+          aria-label="Close terminal console"
           @click="onClose"
         >
           <UIcon

@@ -11,42 +11,54 @@
     }"
   >
     <div class="window-title__left">
-      <button
+      <AppIconTooltip
         v-if="chatControls.visible"
-        type="button"
-        class="cp-icon-btn window-title__btn"
-        :class="{ 'cp-icon-btn--on': !chatControls.sidebarCollapsed }"
-        title="Toggle conversation list"
-        @click="chatControls.onToggleSidebar?.()"
+        :text="
+          chatControls.sidebarCollapsed
+            ? 'Show conversation list'
+            : 'Hide conversation list'
+        "
       >
-        <UIcon
-          class="cp-icon-btn__glyph"
-          :name="
+        <button
+          type="button"
+          class="cp-icon-btn window-title__btn"
+          :class="{ 'cp-icon-btn--on': !chatControls.sidebarCollapsed }"
+          :aria-label="
             chatControls.sidebarCollapsed
-              ? 'i-lucide-panel-left-open'
-              : 'i-lucide-panel-left-close'
+              ? 'Show conversation list'
+              : 'Hide conversation list'
           "
-        />
-      </button>
+          @click="chatControls.onToggleSidebar?.()"
+        >
+          <UIcon
+            class="cp-icon-btn__glyph"
+            :name="
+              chatControls.sidebarCollapsed
+                ? 'i-lucide-panel-left-open'
+                : 'i-lucide-panel-left-close'
+            "
+          />
+        </button>
+      </AppIconTooltip>
 
-      <button
-        v-if="chatControls.visible"
-        type="button"
-        class="cp-icon-btn window-title__btn"
-        :class="{ 'cp-icon-btn--on': chatControls.showWorkspacePanel }"
-        :title="workspaceToggleTitle"
-        :aria-label="workspaceToggleTitle"
-        @click="chatControls.onToggleWorkspacePanel?.()"
-      >
-        <UIcon
-          class="cp-icon-btn__glyph"
-          :name="
-            chatControls.showWorkspacePanel
-              ? 'i-lucide-messages-square'
-              : 'i-lucide-layout-list'
-          "
-        />
-      </button>
+      <AppIconTooltip v-if="chatControls.visible" :text="workspaceToggleTitle">
+        <button
+          type="button"
+          class="cp-icon-btn window-title__btn"
+          :class="{ 'cp-icon-btn--on': chatControls.showWorkspacePanel }"
+          :aria-label="workspaceToggleTitle"
+          @click="chatControls.onToggleWorkspacePanel?.()"
+        >
+          <UIcon
+            class="cp-icon-btn__glyph"
+            :name="
+              chatControls.showWorkspacePanel
+                ? 'i-lucide-messages-square'
+                : 'i-lucide-folder-open'
+            "
+          />
+        </button>
+      </AppIconTooltip>
 
       <button
         v-if="updateHighlight.visible"
@@ -114,42 +126,55 @@
       v-if="chatControls.visible && chatControls.showChatActions"
       class="window-title__actions"
     >
-      <button
-        type="button"
-        class="cp-icon-btn window-title__btn window-title__btn--duplicate-session"
-        title="New session with same agent and workspace"
-        aria-label="New session with same agent and workspace"
-        @click="chatControls.onNewSession?.()"
+      <AppIconTooltip text="New session with same agent and workspace">
+        <button
+          type="button"
+          class="cp-icon-btn window-title__btn window-title__btn--duplicate-session"
+          aria-label="New session with same agent and workspace"
+          @click="chatControls.onNewSession?.()"
+        >
+          <UIcon class="cp-icon-btn__glyph" name="i-lucide-copy-plus" />
+        </button>
+      </AppIconTooltip>
+      <AppIconTooltip
+        :text="chatControls.isBusy ? 'Stop generation' : 'Nothing to stop'"
       >
-        <UIcon class="cp-icon-btn__glyph" name="i-lucide-copy-plus" />
-      </button>
-      <button
-        type="button"
-        class="cp-icon-btn window-title__btn"
-        title="Stop"
-        :disabled="!chatControls.isBusy"
-        @click="chatControls.onStop?.()"
-      >
-        <UIcon class="cp-icon-btn__glyph" name="i-lucide-square" />
-      </button>
-      <button
-        type="button"
-        class="cp-icon-btn window-title__btn"
-        :class="{ 'cp-icon-btn--on': chatControls.showReportPanel }"
-        :title="
+        <button
+          type="button"
+          class="cp-icon-btn window-title__btn"
+          aria-label="Stop generation"
+          :disabled="!chatControls.isBusy"
+          @click="chatControls.onStop?.()"
+        >
+          <UIcon class="cp-icon-btn__glyph" name="i-lucide-square" />
+        </button>
+      </AppIconTooltip>
+      <AppIconTooltip
+        :text="
           chatControls.showReportPanel ? 'Hide results panel' : 'Show results panel'
         "
-        @click="chatControls.onToggleReportPanel?.()"
       >
-        <UIcon
-          class="cp-icon-btn__glyph"
-          :name="
+        <button
+          type="button"
+          class="cp-icon-btn window-title__btn"
+          :class="{ 'cp-icon-btn--on': chatControls.showReportPanel }"
+          :aria-label="
             chatControls.showReportPanel
-              ? 'i-lucide-panel-right-close'
-              : 'i-lucide-panel-right-open'
+              ? 'Hide results panel'
+              : 'Show results panel'
           "
-        />
-      </button>
+          @click="chatControls.onToggleReportPanel?.()"
+        >
+          <UIcon
+            class="cp-icon-btn__glyph"
+            :name="
+              chatControls.showReportPanel
+                ? 'i-lucide-panel-right-close'
+                : 'i-lucide-panel-right-open'
+            "
+          />
+        </button>
+      </AppIconTooltip>
     </div>
   </div>
 </template>
@@ -162,6 +187,7 @@ import { useAppUpdate } from '@renderer/composables/useAppUpdate'
 import { openAppUpdateAbout } from '@renderer/composables/useAppUpdateNavigation'
 import { useI18n } from '@renderer/composables/useI18n'
 import { useWorkspaceStore } from '@renderer/store/modules/workspace'
+import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
 const { ipcRendererChannel, systemInfo } = window
 
 const { t } = useI18n()

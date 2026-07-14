@@ -45,6 +45,7 @@
         :agent-options="agentOptions"
         :chat-agents="chatAgents"
         :conversation-id="conversationId"
+        :skill-id="skillId"
         :workspace-disabled="workspaceDisabled"
         :coding-agent="codingAgent"
         :sub-agent-slash-enabled="subAgentSlashEnabled"
@@ -58,15 +59,16 @@
         @add-attachment-paths="emit('add-attachment-paths', $event)"
         @submit="onComposerSubmit"
       />
-      <button
-        type="submit"
-        class="composer-send cp-icon-btn cp-icon-btn--compact"
-        :disabled="sendDisabled || loading"
-        aria-label="Send message"
-        title="Send message"
-      >
-        <UIcon class="cp-icon-btn__glyph" name="i-lucide-arrow-up" />
-      </button>
+      <AppIconTooltip text="Send message">
+        <button
+          type="submit"
+          class="composer-send cp-icon-btn cp-icon-btn--compact"
+          :disabled="sendDisabled || loading"
+          aria-label="Send message"
+        >
+          <UIcon class="cp-icon-btn__glyph" name="i-lucide-arrow-up" />
+        </button>
+      </AppIconTooltip>
     </div>
     <p v-if="workspaceHint" class="composer-workspace-hint">{{ workspaceHint }}</p>
     <p
@@ -101,6 +103,7 @@ import BackgroundTaskPanel, {
   type BackgroundTaskView,
 } from './BackgroundTaskPanel.vue'
 import SkillSystemPropertiesForm from './SkillSystemPropertiesForm.vue'
+import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
 import type { SkillSystemPropertyFieldView } from '@renderer/composables/useSkillSystemProperties'
 import type { SkillGroupAgentRef } from '@shared/agent/skill-groups'
 
@@ -136,6 +139,8 @@ const props = defineProps<{
   agentOptions: Array<{ id: string; name: string }>
   chatAgents?: SkillGroupAgentRef[]
   conversationId?: string | null
+  /** Active skill id for skill-owned composer toolbar plugins. */
+  skillId?: string | null
   workspaceDisabled?: boolean
   workspaceHint?: string | null
   googleWorkspaceHint?: string | null

@@ -22,77 +22,120 @@
         <WorkspaceSelector variant="toolbar" :disabled="workspaceDisabled" />
         <span class="rich-composer-toolbar-divider" aria-hidden="true" />
       </template>
+      <template v-if="skillToolbarPlugins.length > 0">
+        <AppIconTooltip
+          v-for="plugin in skillToolbarPlugins"
+          :key="plugin.id"
+          :text="
+            plugin.enabled
+              ? plugin.label
+              : plugin.disabledReason
+                ? `${plugin.label}: ${plugin.disabledReason}`
+                : plugin.label
+          "
+        >
+          <button
+            type="button"
+            class="rich-composer-tool"
+            :aria-label="plugin.label"
+            :disabled="
+              workspaceDisabled ||
+              !plugin.enabled ||
+              skillToolbarInvokingId === plugin.id
+            "
+            @mousedown.prevent
+            @click="onSkillToolbarPluginClick(plugin.id)"
+          >
+            <UIcon :name="`i-lucide-${plugin.icon}`" />
+          </button>
+        </AppIconTooltip>
+        <span class="rich-composer-toolbar-divider" aria-hidden="true" />
+      </template>
       <template v-if="editor">
-      <button
-        type="button"
-        class="rich-composer-tool"
-        :class="{ 'rich-composer-tool--active': editor.isActive('bold') }"
-        title="Bold"
-        @mousedown.prevent
-        @click="editor.chain().focus().toggleBold().run()"
-      >
-        <UIcon name="i-lucide-bold" />
-      </button>
-      <button
-        type="button"
-        class="rich-composer-tool"
-        :class="{ 'rich-composer-tool--active': editor.isActive('italic') }"
-        title="Italic"
-        @mousedown.prevent
-        @click="editor.chain().focus().toggleItalic().run()"
-      >
-        <UIcon name="i-lucide-italic" />
-      </button>
-      <button
-        type="button"
-        class="rich-composer-tool"
-        :class="{ 'rich-composer-tool--active': editor.isActive('code') }"
-        title="Inline code"
-        @mousedown.prevent
-        @click="editor.chain().focus().toggleCode().run()"
-      >
-        <UIcon name="i-lucide-code" />
-      </button>
-      <button
-        type="button"
-        class="rich-composer-tool"
-        :class="{ 'rich-composer-tool--active': editor.isActive('bulletList') }"
-        title="Bullet list"
-        @mousedown.prevent
-        @click="editor.chain().focus().toggleBulletList().run()"
-      >
-        <UIcon name="i-lucide-list" />
-      </button>
-      <button
-        type="button"
-        class="rich-composer-tool"
-        :class="{ 'rich-composer-tool--active': editor.isActive('orderedList') }"
-        title="Numbered list"
-        @mousedown.prevent
-        @click="editor.chain().focus().toggleOrderedList().run()"
-      >
-        <UIcon name="i-lucide-list-ordered" />
-      </button>
-      <button
-        type="button"
-        class="rich-composer-tool"
-        :class="{ 'rich-composer-tool--active': editor.isActive('link') }"
-        title="Link"
-        @mousedown.prevent
-        @click="onLinkClick"
-      >
-        <UIcon name="i-lucide-link" />
-      </button>
-      <button
-        type="button"
-        class="rich-composer-tool"
-        title="Attach files"
-        :disabled="disabled || !canAddAttachments"
-        @mousedown.prevent
-        @click="emit('pick-attachments')"
-      >
-        <UIcon name="i-lucide-paperclip" />
-      </button>
+      <AppIconTooltip text="Bold">
+        <button
+          type="button"
+          class="rich-composer-tool"
+          :class="{ 'rich-composer-tool--active': editor.isActive('bold') }"
+          aria-label="Bold"
+          @mousedown.prevent
+          @click="editor.chain().focus().toggleBold().run()"
+        >
+          <UIcon name="i-lucide-bold" />
+        </button>
+      </AppIconTooltip>
+      <AppIconTooltip text="Italic">
+        <button
+          type="button"
+          class="rich-composer-tool"
+          :class="{ 'rich-composer-tool--active': editor.isActive('italic') }"
+          aria-label="Italic"
+          @mousedown.prevent
+          @click="editor.chain().focus().toggleItalic().run()"
+        >
+          <UIcon name="i-lucide-italic" />
+        </button>
+      </AppIconTooltip>
+      <AppIconTooltip text="Inline code">
+        <button
+          type="button"
+          class="rich-composer-tool"
+          :class="{ 'rich-composer-tool--active': editor.isActive('code') }"
+          aria-label="Inline code"
+          @mousedown.prevent
+          @click="editor.chain().focus().toggleCode().run()"
+        >
+          <UIcon name="i-lucide-code" />
+        </button>
+      </AppIconTooltip>
+      <AppIconTooltip text="Bullet list">
+        <button
+          type="button"
+          class="rich-composer-tool"
+          :class="{ 'rich-composer-tool--active': editor.isActive('bulletList') }"
+          aria-label="Bullet list"
+          @mousedown.prevent
+          @click="editor.chain().focus().toggleBulletList().run()"
+        >
+          <UIcon name="i-lucide-list" />
+        </button>
+      </AppIconTooltip>
+      <AppIconTooltip text="Numbered list">
+        <button
+          type="button"
+          class="rich-composer-tool"
+          :class="{ 'rich-composer-tool--active': editor.isActive('orderedList') }"
+          aria-label="Numbered list"
+          @mousedown.prevent
+          @click="editor.chain().focus().toggleOrderedList().run()"
+        >
+          <UIcon name="i-lucide-list-ordered" />
+        </button>
+      </AppIconTooltip>
+      <AppIconTooltip text="Link">
+        <button
+          type="button"
+          class="rich-composer-tool"
+          :class="{ 'rich-composer-tool--active': editor.isActive('link') }"
+          aria-label="Link"
+          @mousedown.prevent
+          @click="onLinkClick"
+        >
+          <UIcon name="i-lucide-link" />
+        </button>
+      </AppIconTooltip>
+      <AppIconTooltip text="Attach files">
+        <button
+          type="button"
+          class="rich-composer-tool"
+          aria-label="Attach files"
+          :disabled="disabled || !canAddAttachments"
+          @mousedown.prevent
+          @click="emit('pick-attachments')"
+        >
+          <UIcon name="i-lucide-paperclip" />
+        </button>
+      </AppIconTooltip>
       </template>
     </div>
     <div
@@ -107,14 +150,16 @@
       >
         <UIcon name="i-lucide-file" class="rich-composer-attachment-icon" />
         <span class="rich-composer-attachment-name">{{ item.name }}</span>
-        <button
-          type="button"
-          class="rich-composer-attachment-remove"
-          aria-label="Remove attachment"
-          @click="emit('remove-attachment', item.id)"
-        >
-          <UIcon name="i-lucide-x" />
-        </button>
+        <AppIconTooltip text="Remove attachment">
+          <button
+            type="button"
+            class="rich-composer-attachment-remove"
+            aria-label="Remove attachment"
+            @click="emit('remove-attachment', item.id)"
+          >
+            <UIcon name="i-lucide-x" />
+          </button>
+        </AppIconTooltip>
       </div>
     </div>
     <div
@@ -164,6 +209,8 @@ import {
 } from '@renderer/composables/useComposerAgentPicker'
 import ComposerFileMentionMenu from './ComposerFileMentionMenu.vue'
 import WorkspaceSelector from './WorkspaceSelector.vue'
+import { useSkillComposerToolbar } from '@renderer/composables/useSkillComposerToolbar'
+import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
 import { useWorkspaceStore } from '@store/workspace'
 import type { ComposerSlashCommand } from './composer-slash-command-types'
 import type { QueueDeliveryMode } from '../conversation-chat-session'
@@ -185,6 +232,7 @@ const props = withDefaults(
     agentOptions: Array<{ id: string; name: string }>
     chatAgents?: SkillGroupAgentRef[]
     conversationId?: string | null
+    skillId?: string | null
     workspaceDisabled?: boolean
     /** When false, only universal slash commands (/compact, /help) are offered. */
     codingAgent?: boolean
@@ -201,6 +249,7 @@ const props = withDefaults(
     agentOptions: () => [],
     chatAgents: () => [],
     conversationId: null,
+    skillId: null,
     workspaceDisabled: false,
     subAgentSlashEnabled: false,
     hideContextSelectors: false,
@@ -218,6 +267,35 @@ const emit = defineEmits<{
   'remove-attachment': [id: string]
   'add-attachment-paths': [paths: string[]]
 }>()
+
+const toast = useToast()
+
+const {
+  plugins: skillToolbarPlugins,
+  invokingId: skillToolbarInvokingId,
+  invoke: invokeSkillToolbarPlugin,
+} = useSkillComposerToolbar({
+  skillId: computed(() => props.skillId),
+  conversationId: computed(() => props.conversationId),
+  interactionDisabled: computed(() => props.workspaceDisabled === true),
+})
+
+async function onSkillToolbarPluginClick(pluginId: string) {
+  const result = await invokeSkillToolbarPlugin(pluginId)
+  if (result.ok) {
+    toast.add({
+      title: 'Done',
+      description: result.message ?? 'Action completed',
+      color: 'success',
+    })
+  } else {
+    toast.add({
+      title: 'Action failed',
+      description: result.error ?? 'Unknown error',
+      color: 'error',
+    })
+  }
+}
 
 let syncingFromParent = false
 
@@ -705,9 +783,26 @@ function onLinkClick() {
   color: var(--ui-text);
 }
 
+.rich-composer-tool:disabled {
+  color: color-mix(in srgb, var(--ui-text-muted) 45%, transparent);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rich-composer-tool:disabled :deep(svg),
+.rich-composer-tool:disabled :deep(.iconify) {
+  opacity: 0.7;
+}
+
 .rich-composer-tool--active {
   background: color-mix(in srgb, var(--color-primary-500) 14%, transparent);
   color: var(--color-primary-500, var(--ui-text));
+}
+
+.rich-composer-tool--active:disabled {
+  background: transparent;
+  color: color-mix(in srgb, var(--ui-text-muted) 45%, transparent);
+  opacity: 0.45;
 }
 
 .rich-composer--agent-picker-open .rich-composer-toolbar {

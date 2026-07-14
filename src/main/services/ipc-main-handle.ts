@@ -2571,6 +2571,38 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     return { ok: cleared.ok, revision: cleared.revision }
   }
 
+  GetSkillComposerToolbarPlugins: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { skillId: string; conversationId: string },
+  ) => Promise<{
+    ok: boolean
+    plugins: import('@shared/agent/skill-composer-toolbar').SkillComposerToolbarPluginView[]
+  }> = async (_event, args) => {
+    const { listComposerToolbarPluginViews } = await import(
+      '@main/skills/composer-toolbar-registry'
+    )
+    return listComposerToolbarPluginViews({
+      skillId: args?.skillId ?? '',
+      conversationId: args?.conversationId ?? '',
+    })
+  }
+
+  InvokeSkillComposerToolbarPlugin: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { skillId: string; conversationId: string; pluginId: string },
+  ) => Promise<
+    import('@shared/agent/skill-composer-toolbar').SkillComposerToolbarInvokeResult
+  > = async (_event, args) => {
+    const { invokeComposerToolbarPlugin } = await import(
+      '@main/skills/composer-toolbar-registry'
+    )
+    return invokeComposerToolbarPlugin({
+      skillId: args?.skillId ?? '',
+      conversationId: args?.conversationId ?? '',
+      pluginId: args?.pluginId ?? '',
+    })
+  }
+
   GetPlanModeState: (
     _event: Electron.IpcMainInvokeEvent,
     args: { conversationId: string },

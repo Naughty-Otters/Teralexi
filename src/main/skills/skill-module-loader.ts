@@ -130,6 +130,26 @@ function isSkillTool(value: unknown): value is SkillTool {
   )
 }
 
+function isComposerToolbarPlugin(value: unknown): value is import('./composer-toolbar-plugin').SkillComposerToolbarPlugin {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  return (
+    typeof v.id === 'string' &&
+    v.id.trim() !== '' &&
+    typeof v.label === 'string' &&
+    typeof v.icon === 'string' &&
+    typeof v.execute === 'function'
+  )
+}
+
+function collectComposerToolbarPluginsFromModule(
+  loaded: Record<string, unknown>,
+): import('./composer-toolbar-plugin').SkillComposerToolbarPlugin[] {
+  const raw = loaded.composerToolbarPlugins
+  if (!Array.isArray(raw)) return []
+  return raw.filter(isComposerToolbarPlugin)
+}
+
 function collectToolsFromModule(
   loaded: Record<string, unknown>,
   source?: string,
@@ -232,6 +252,29 @@ async function loadSkillActionsFromDirectory(
   }
 
   return allTools
+}
+
+/** Load `composerToolbarPlugins` from a skill `actions/` directory (index preferred). */
+export async function loadComposerToolbarPluginsFromActionsDir(
+  actionsDir: string,
+): Promise<import('./composer-toolbar-plugin').SkillComposerToolbarPlugin[]> {
+  if (!existsSync(actionsDir)) return []
+
+  const indexCandidates = [
+    join(actionsDir, 'index.ts'),
+    join(actionsDir, 'index.js'),
+    join(actionsDir, 'index.mjs'),
+    join(actionsDir, 'index.cjs'),
+  ]
+
+  for (const candidate of indexCandidates) {
+    const loaded = await requireModule(candidate)
+    if (!loaded) continue
+    const plugins = collectComposerToolbarPluginsFromModule(loaded)
+    if (plugins.length > 0) return plugins
+  }
+
+  return []
 }
 
 export async function loadSkillActions(

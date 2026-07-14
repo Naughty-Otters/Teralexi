@@ -160,6 +160,7 @@
           :agent-options="composerAgentOptions"
           :chat-agents="composerChatAgents"
           :conversation-id="agentStore.currentConversationId"
+          :skill-id="composerSkillId"
           :workspace-disabled="isBusy"
           :workspace-hint="workspaceComposerHint"
           :google-workspace-hint="googleWorkspaceComposerHint"
@@ -250,7 +251,7 @@ import {
   resolvePlanModeDisplayStatus,
   type PlanModeView,
 } from '@shared/agent/plan-mode-phase'
-import { agentRequiresWorkspace } from '@shared/agent/workspace-required-skills'
+import { agentRequiresWorkspace, resolveAgentSkillId } from '@shared/agent/workspace-required-skills'
 import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
 import { collectConversationWorkspaceAttachments } from '@shared/agent/conversation-workspace-attachments'
 import { useGoogleWorkspaceAccount } from '@renderer/composables/useGoogleWorkspaceAccount'
@@ -888,6 +889,12 @@ const selectedAgentRequiresWorkspace = computed(() =>
 
 const selectedAgentIsCoding = computed(() =>
   agentIsCodingAgent(agentStore.selectedAgent),
+)
+
+const composerSkillId = computed(() =>
+  agentStore.selectedAgent
+    ? resolveAgentSkillId(agentStore.selectedAgent)
+    : null,
 )
 
 const selectedAgentIsGoogleWorkspace = computed(() =>
