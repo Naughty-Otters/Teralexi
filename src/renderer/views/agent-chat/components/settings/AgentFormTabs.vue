@@ -107,6 +107,19 @@
             "
           />
         </div>
+        <div class="aft-field">
+          <AgentLlmReasoningSettings
+            :provider="modelValue.provider"
+            :provider-options="modelValue.defaultProviderOptions"
+            :disabled="disabled"
+            @update:provider-options="
+              emit('update:modelValue', {
+                ...modelValue,
+                defaultProviderOptions: $event,
+              })
+            "
+          />
+        </div>
       </template>
       <div
         v-else
@@ -536,11 +549,13 @@ import {
   AGENT_LLM_STAGES,
   hasToolLoopRecoveryOverride,
   type AgentLlmChoice,
+  type AgentLlmProviderOptions,
   type AgentLlmRoutingMode,
   type AgentLlmStage,
 } from '@shared/agent/stage-llm-settings'
 import AvailableSetCards from './AvailableSetCards.vue'
 import AgentLlmStagePicker from './AgentLlmStagePicker.vue'
+import AgentLlmReasoningSettings from './AgentLlmReasoningSettings.vue'
 import LlmProviderSelect from './LlmProviderSelect.vue'
 import LlmModelSelect from './LlmModelSelect.vue'
 import SkillAttachmentsPanel from './SkillAttachmentsPanel.vue'
@@ -595,6 +610,7 @@ export interface AgentFormData {
   subAgentIds: string[]
   llmRoutingMode: AgentLlmRoutingMode
   stageLlm: Partial<Record<AgentLlmStage, AgentLlmChoice>>
+  defaultProviderOptions?: AgentLlmProviderOptions
 }
 
 const props = defineProps<{
@@ -649,6 +665,7 @@ function onProviderChange(provider: ProviderType) {
     ...props.modelValue,
     provider,
     model: '',
+    defaultProviderOptions: undefined,
   })
 }
 

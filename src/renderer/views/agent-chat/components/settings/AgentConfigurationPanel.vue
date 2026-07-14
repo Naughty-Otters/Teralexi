@@ -233,6 +233,9 @@ const agentFormData = computed<AgentFormData>(() => {
     subAgentIds: [...(a.subAgentIds ?? [])],
     llmRoutingMode: a.llmRoutingMode ?? 'unified',
     stageLlm: { ...(a.stageLlm ?? {}) },
+    defaultProviderOptions: a.defaultProviderOptions
+      ? { ...a.defaultProviderOptions }
+      : undefined,
   }
 })
 
@@ -319,6 +322,15 @@ function onAgentFormUpdate(next: AgentFormData) {
     agentStore.updateAgentLlmRoutingMode(id, next.llmRoutingMode)
   if (JSON.stringify(next.stageLlm) !== JSON.stringify(prev.stageLlm))
     agentStore.updateAgentStageLlm(id, next.stageLlm)
+  if (
+    JSON.stringify(next.defaultProviderOptions ?? null) !==
+    JSON.stringify(prev.defaultProviderOptions ?? null)
+  ) {
+    agentStore.updateAgentDefaultProviderOptions(
+      id,
+      next.defaultProviderOptions,
+    )
+  }
 }
 
 function removeSelected() {
@@ -350,6 +362,7 @@ const newAgent = ref<AgentFormData>({
   provider: 'ollama',
   llmRoutingMode: 'unified',
   stageLlm: {},
+  defaultProviderOptions: undefined,
 })
 
 function submitAddAgent() {
@@ -375,6 +388,7 @@ function submitAddAgent() {
     provider: 'ollama',
     llmRoutingMode: 'unified',
     stageLlm: {},
+    defaultProviderOptions: undefined,
   }
 }
 </script>

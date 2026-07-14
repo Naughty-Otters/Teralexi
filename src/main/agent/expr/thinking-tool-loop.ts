@@ -123,6 +123,7 @@ export async function runThinkingResearchPass(
     toolChoice: 'auto',
     provider: exploreChoice.provider,
     modelId: exploreChoice.model,
+    providerOptions: exploreChoice.providerOptions,
   })
 
   const messages: ModelMessage[] = [{ role: 'user', content: userContent }]

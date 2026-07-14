@@ -14,6 +14,11 @@ import {
   ZHIPU_MODELS,
 } from './config'
 import type { Agent, AgentExecutionSteps, ProviderType } from './types'
+import type {
+  AgentLlmChoice,
+  AgentLlmProviderOptions,
+  AgentLlmStage,
+} from '@shared/agent/stage-llm-settings'
 
 type AgentColor = Agent['color']
 
@@ -78,12 +83,8 @@ export type PersistedAgentConfiguration = {
   allowSubAgents?: boolean
   subAgentIds?: string[] | null
   llmRoutingMode?: 'unified' | 'per_stage'
-  stageLlm?: Partial<
-    Record<
-      'explore' | 'toolLoop' | 'verifier',
-      { provider: ProviderType; model: string }
-    >
-  >
+  stageLlm?: Partial<Record<AgentLlmStage, AgentLlmChoice>>
+  defaultProviderOptions?: AgentLlmProviderOptions
   createdAt: string
   updatedAt: string
 }
