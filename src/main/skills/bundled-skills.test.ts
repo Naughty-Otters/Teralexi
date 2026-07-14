@@ -8,7 +8,7 @@ import { getBundledSkillActionTools } from './bundled-skill-actions'
 
 describe('bundled-skills', () => {
   it('includes all shipped bundled skill ids', () => {
-    expect(getBundledSkillIds().sort()).toEqual([
+    expect([...getBundledSkillIds()].sort()).toEqual([
       'coding',
       'coding-pr',
       'coding-review',

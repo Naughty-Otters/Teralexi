@@ -79,11 +79,11 @@ describe('render_website', () => {
   })
 
   it('renders a single-page landing site', async () => {
-    const result = await renderWebsite.execute({
+    const result = (await renderWebsite.execute({
       template_id: 'landing-minimal',
       output_slug: 'Test Site',
       data_path: 'output/toolLoop/step-2b/results/site.json',
-    })
+    })) as { error?: string; success?: boolean }
 
     expect(result.error).toBeUndefined()
     expect(result.success).toBe(true)
@@ -98,11 +98,11 @@ describe('render_website', () => {
   })
 
   it('renders a multi-page docs site', async () => {
-    const result = await renderWebsite.execute({
+    const result = (await renderWebsite.execute({
       template_id: 'docs-site',
       output_slug: 'docs',
       data_path: 'output/toolLoop/step-2b/results/site.json',
-    })
+    })) as { error?: string; success?: boolean }
 
     expect(result.error).toBeUndefined()
     expect(result.success).toBe(true)
@@ -111,10 +111,10 @@ describe('render_website', () => {
   })
 
   it('rejects unknown template_id', async () => {
-    const result = await renderWebsite.execute({
+    const result = (await renderWebsite.execute({
       template_id: 'missing',
       output_slug: 'x',
-    })
+    })) as { error?: string }
     expect(result.error).toContain('Unknown template_id')
   })
 })
@@ -132,9 +132,9 @@ describe('validate_website', () => {
   })
 
   it('passes a valid site directory', async () => {
-    const result = await validateWebsite.execute({
+    const result = (await validateWebsite.execute({
       site_dir: 'output/results/valid-site',
-    })
+    })) as { valid?: boolean; success?: boolean }
     expect(result.valid).toBe(true)
     expect(result.success).toBe(true)
   })
