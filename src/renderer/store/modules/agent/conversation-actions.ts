@@ -26,6 +26,8 @@ export type CreateNewConversationMode =
 
 export type CreateNewConversationOptions = {
   mode?: CreateNewConversationMode
+  /** Absolute workspace folder to attach after create (applied after `fresh` clears pending). */
+  workspacePath?: string | null
 }
 
 export function createConversationActions(
@@ -611,6 +613,11 @@ export function createConversationActions(
       if (agentId) selectedAgentId.value = agentId
     } else {
       agentId = selectedAgentId.value
+    }
+
+    const requestedWorkspace = options?.workspacePath?.trim() || null
+    if (requestedWorkspace) {
+      workspacePathToApply = requestedWorkspace
     }
 
     if (!agentId) return null

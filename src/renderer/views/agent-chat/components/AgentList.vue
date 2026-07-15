@@ -22,55 +22,173 @@
   </button>
   <div v-if="!collapsed" class="sidebar-section-header">
     <div class="sidebar-section-label">Conversations</div>
-    <div ref="groupByMenuRoot" class="conversation-groupby">
-      <button
-        type="button"
-        class="conversation-groupby-btn"
-        :class="{ 'conversation-groupby-btn--active': groupByMenuOpen }"
-        :title="groupByButtonTitle"
-        aria-label="Organize conversation list"
-        aria-haspopup="menu"
-        :aria-expanded="groupByMenuOpen"
-        @click.stop="toggleGroupByMenu"
-      >
-        <UIcon name="i-lucide-layers" class="conversation-groupby-btn__icon" />
-      </button>
-      <div
-        v-if="groupByMenuOpen"
-        class="conversation-groupby-menu"
-        role="menu"
-        aria-label="Organize conversations"
-      >
+    <div class="sidebar-section-actions">
+      <div class="conversation-groupby">
         <button
-          v-for="option in groupByOptions"
-          :key="option.value"
+          ref="workspaceTriggerRef"
           type="button"
-          class="conversation-groupby-menu__option"
-          :class="{
-            'conversation-groupby-menu__option--active':
-              groupByMode === option.value,
-          }"
-          role="menuitemradio"
-          :aria-checked="groupByMode === option.value"
-          @click="selectGroupBy(option.value)"
+          class="conversation-groupby-btn"
+          :class="{ 'conversation-groupby-btn--active': workspaceMenuOpen }"
+          title="New conversation in workspace"
+          aria-label="New conversation in workspace"
+          aria-haspopup="menu"
+          :aria-expanded="workspaceMenuOpen"
+          @click.stop="toggleWorkspaceMenu"
         >
           <UIcon
-            :name="
-              groupByMode === option.value
-                ? 'i-lucide-check'
-                : 'i-lucide-circle'
-            "
-            class="conversation-groupby-menu__check"
-            :class="{
-              'conversation-groupby-menu__check--empty':
-                groupByMode !== option.value,
-            }"
+            name="i-lucide-folder-plus"
+            class="conversation-groupby-btn__icon"
           />
-          {{ option.label }}
+        </button>
+      </div>
+      <div class="conversation-groupby">
+        <button
+          ref="groupByTriggerRef"
+          type="button"
+          class="conversation-groupby-btn"
+          :class="{ 'conversation-groupby-btn--active': groupByMenuOpen }"
+          :title="groupByButtonTitle"
+          aria-label="Organize conversation list"
+          aria-haspopup="menu"
+          :aria-expanded="groupByMenuOpen"
+          @click.stop="toggleGroupByMenu"
+        >
+          <UIcon name="i-lucide-layers" class="conversation-groupby-btn__icon" />
         </button>
       </div>
     </div>
   </div>
+  <Teleport to="body">
+    <div
+      v-if="workspaceMenuOpen"
+      ref="workspaceMenuEl"
+      class="conversation-groupby-menu conversation-groupby-menu--workspaces"
+      :style="workspaceMenuStyle"
+      role="menu"
+      aria-label="New conversation in workspace"
+      @pointerdown.stop
+    >
+      <div class="conversation-groupby-menu__section-label">
+        Existing workspaces
+      </div>
+      <button
+        v-for="workspace in existingWorkspaces"
+        :key="workspace.path"
+        type="button"
+        class="conversation-groupby-menu__option"
+        role="menuitem"
+        :title="workspace.path"
+        @click="startSessionWithWorkspace(workspace.path)"
+      >
+        <UIcon
+          name="i-lucide-folder"
+          class="conversation-groupby-menu__check"
+        />
+        <span class="conversation-groupby-menu__option-text">
+          <span class="conversation-groupby-menu__option-title">
+            {{ workspace.label }}
+          </span>
+          <span class="conversation-groupby-menu__option-sub">
+            {{ workspace.path }}
+          </span>
+        </span>
+      </button>
+      <p
+        v-if="existingWorkspaces.length === 0"
+        class="conversation-groupby-menu__empty"
+      >
+        No workspaces yet
+      </p>
+      <div
+        class="conversation-groupby-menu__divider"
+        role="separator"
+        aria-hidden="true"
+      />
+      <button
+        type="button"
+        class="conversation-groupby-menu__option"
+        role="menuitem"
+        @click="browseWorkspaceAndStartSession"
+      >
+        <UIcon
+          name="i-lucide-folder-search"
+          class="conversation-groupby-menu__check"
+        />
+        Browse…
+      </button>
+    </div>
+    <div
+      v-if="groupByMenuOpen"
+      ref="groupByMenuEl"
+      class="conversation-groupby-menu"
+      :style="groupByMenuStyle"
+      role="menu"
+      aria-label="Organize conversations"
+      @pointerdown.stop
+    >
+      <div class="conversation-groupby-menu__section-label">Group by</div>
+      <button
+        v-for="option in groupByOptions"
+        :key="option.value"
+        type="button"
+        class="conversation-groupby-menu__option"
+        :class="{
+          'conversation-groupby-menu__option--active':
+            groupByMode === option.value,
+        }"
+        role="menuitemradio"
+        :aria-checked="groupByMode === option.value"
+        @click="selectGroupBy(option.value)"
+      >
+        <UIcon
+          :name="
+            groupByMode === option.value
+              ? 'i-lucide-check'
+              : 'i-lucide-circle'
+          "
+          class="conversation-groupby-menu__check"
+          :class="{
+            'conversation-groupby-menu__check--empty':
+              groupByMode !== option.value,
+          }"
+        />
+        {{ option.label }}
+      </button>
+      <div
+        class="conversation-groupby-menu__divider"
+        role="separator"
+        aria-hidden="true"
+      />
+      <div class="conversation-groupby-menu__section-label">Show on item</div>
+      <button
+        v-for="option in labelFieldOptions"
+        :key="option.value"
+        type="button"
+        class="conversation-groupby-menu__option"
+        :class="{
+          'conversation-groupby-menu__option--active':
+            itemLabels[option.value],
+        }"
+        role="menuitemcheckbox"
+        :aria-checked="itemLabels[option.value]"
+        @click="toggleItemLabel(option.value)"
+      >
+        <UIcon
+          :name="
+            itemLabels[option.value]
+              ? 'i-lucide-square-check'
+              : 'i-lucide-square'
+          "
+          class="conversation-groupby-menu__check"
+          :class="{
+            'conversation-groupby-menu__check--off':
+              !itemLabels[option.value],
+          }"
+        />
+        {{ option.label }}
+      </button>
+    </div>
+  </Teleport>
   <ul
     v-if="isConversationListLoading"
     class="agent-list agent-list--loading"
@@ -157,7 +275,6 @@
           'agent-item--active': isActiveConversation(conv.id),
           'agent-item--collapsed': collapsed,
           'agent-item--nested': showGroupHeaders,
-          'agent-item--menu-open': openMenuId === conv.id,
         }"
         :data-conversation-id="conv.id"
         :aria-current="isActiveConversation(conv.id) ? 'true' : undefined"
@@ -172,45 +289,32 @@
         />
         <div v-if="!collapsed" class="agent-item-info">
           <p class="agent-item-name">{{ conv.title }}</p>
-          <p class="agent-item-desc">{{ conversationMetaLine(conv) }}</p>
+          <p
+            v-if="conversationMetaById[conv.id]"
+            class="agent-item-desc"
+          >
+            {{ conversationMetaById[conv.id] }}
+          </p>
         </div>
         <span v-if="msgCount(conv.id) > 0 && !collapsed" class="msg-badge">
           {{ msgCount(conv.id) }}
         </span>
         <div
           v-if="!collapsed && canDelete(conv.id)"
-          :ref="(el) => setMenuRoot(el, conv.id)"
           class="agent-item-actions"
+          role="toolbar"
+          aria-label="Conversation actions"
           @click.stop
         >
           <button
             type="button"
-            class="agent-item-menu-btn"
-            :class="{ 'agent-item-menu-btn--active': openMenuId === conv.id }"
-            title="Conversation actions"
-            aria-label="Conversation actions"
-            aria-haspopup="menu"
-            :aria-expanded="openMenuId === conv.id"
-            @click="toggleMenu(conv.id)"
+            class="agent-item-action-btn agent-item-action-btn--danger"
+            title="Delete conversation"
+            aria-label="Delete conversation"
+            @click="confirmDelete(conv)"
           >
-            <UIcon name="i-lucide-ellipsis" class="agent-item-menu-btn__icon" />
+            <UIcon name="i-lucide-trash-2" class="agent-item-action-btn__icon" />
           </button>
-          <div
-            v-if="openMenuId === conv.id"
-            class="agent-item-menu"
-            role="menu"
-            aria-label="Conversation actions"
-          >
-            <button
-              type="button"
-              class="agent-item-menu__option agent-item-menu__option--danger"
-              role="menuitem"
-              @click="confirmDelete(conv)"
-            >
-              <UIcon name="i-lucide-trash-2" class="agent-item-menu__option-icon" />
-              Delete conversation
-            </button>
-          </div>
         </div>
       </li>
     </template>
@@ -225,6 +329,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAgentStore, type Conversation } from '@store/agent'
 import { useI18n } from '@renderer/composables/useI18n'
 import { canDeleteConversationFromUi } from '@shared/conversation/session-id'
+import { workspaceBasename } from '@shared/agent/workspace'
 import {
   LAYOUT_PREF_KEYS,
   readStoredBooleanMap,
@@ -238,6 +343,14 @@ import {
   parseConversationListGroupBy,
   type ConversationListGroupBy,
 } from '../lib/conversation-list-groups'
+import {
+  buildConversationMetaLine,
+  CONVERSATION_LIST_LABEL_OPTIONS,
+  parseConversationListItemLabels,
+  serializeConversationListItemLabels,
+  type ConversationListItemLabels,
+  type ConversationListLabelField,
+} from '../lib/conversation-list-item-labels'
 import { clearConversationSession } from '../conversation-chat-session'
 
 const emit = defineEmits<{ 'navigate-chat': [] }>()
@@ -246,11 +359,15 @@ const props = defineProps<{ collapsed?: boolean }>()
 const agentStore = useAgentStore()
 const { t } = useI18n()
 const toast = useToast()
-const openMenuId = ref<string | null>(null)
-const menuRoots = new Map<string, HTMLElement>()
 const conversationItemRefs = new Map<string, HTMLElement>()
 const groupByMenuOpen = ref(false)
-const groupByMenuRoot = ref<HTMLElement | null>(null)
+const groupByTriggerRef = ref<HTMLButtonElement | null>(null)
+const groupByMenuEl = ref<HTMLElement | null>(null)
+const groupByMenuStyle = ref<Record<string, string>>({})
+const workspaceMenuOpen = ref(false)
+const workspaceTriggerRef = ref<HTMLButtonElement | null>(null)
+const workspaceMenuEl = ref<HTMLElement | null>(null)
+const workspaceMenuStyle = ref<Record<string, string>>({})
 const groupByMode = ref<ConversationListGroupBy>(
   parseConversationListGroupBy(
     readStoredString(LAYOUT_PREF_KEYS.conversationListGroupBy),
@@ -260,19 +377,43 @@ const groupByMode = ref<ConversationListGroupBy>(
 const collapsedGroups = ref<Record<string, boolean>>(
   readStoredBooleanMap(LAYOUT_PREF_KEYS.conversationListCollapsedGroups),
 )
+const itemLabels = ref<ConversationListItemLabels>(
+  parseConversationListItemLabels(
+    readStoredString(LAYOUT_PREF_KEYS.conversationListItemLabels),
+  ),
+)
 
 const groupByOptions: Array<{ value: ConversationListGroupBy; label: string }> =
   [
     { value: 'none', label: 'No grouping' },
     { value: 'agent', label: 'Group by agent' },
     { value: 'workspace', label: 'Group by workspace' },
+    { value: 'source', label: 'Group by data source' },
   ]
+
+const labelFieldOptions = CONVERSATION_LIST_LABEL_OPTIONS
 
 const conversationItems = computed((): Conversation[] => {
   return Object.values(agentStore.conversationList)
     .flat()
     .slice()
     .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+})
+
+/** Unique workspace folders from existing conversations, newest first. */
+const existingWorkspaces = computed((): Array<{ path: string; label: string }> => {
+  const seen = new Set<string>()
+  const out: Array<{ path: string; label: string }> = []
+  for (const conv of conversationItems.value) {
+    const path = conv.workspacePath?.trim()
+    if (!path || seen.has(path)) continue
+    seen.add(path)
+    out.push({
+      path,
+      label: workspaceBasename(path) || path,
+    })
+  }
+  return out
 })
 
 const conversationGroups = computed(() =>
@@ -315,6 +456,24 @@ watch(
   { deep: true },
 )
 
+watch(
+  itemLabels,
+  (value) => {
+    writeStoredString(
+      LAYOUT_PREF_KEYS.conversationListItemLabels,
+      serializeConversationListItemLabels(value),
+    )
+  },
+  { deep: true },
+)
+
+function toggleItemLabel(field: ConversationListLabelField) {
+  itemLabels.value = {
+    ...itemLabels.value,
+    [field]: !itemLabels.value[field],
+  }
+}
+
 function collapsedGroupStorageKey(groupKey: string): string {
   return `${groupByMode.value}::${groupKey}`
 }
@@ -347,14 +506,6 @@ function ensureActiveConversationGroupExpanded() {
   delete next[storageKey]
   collapsedGroups.value = next
 }
-function setMenuRoot(el: unknown, conversationId: string) {
-  if (el instanceof HTMLElement) {
-    menuRoots.set(conversationId, el)
-  } else {
-    menuRoots.delete(conversationId)
-  }
-}
-
 function setConversationItemRef(el: unknown, conversationId: string) {
   if (el instanceof HTMLElement) {
     conversationItemRefs.set(conversationId, el)
@@ -379,18 +530,57 @@ function canDelete(conversationId: string): boolean {
   return canDeleteConversationFromUi(conversationId)
 }
 
-function toggleMenu(conversationId: string) {
+function positionFloatingMenu(
+  trigger: HTMLElement | null,
+  width: number,
+): Record<string, string> {
+  if (!trigger) return {}
+  const rect = trigger.getBoundingClientRect()
+  const gap = 4
+  let left = rect.left
+  if (left + width > window.innerWidth - 8) {
+    left = Math.max(8, window.innerWidth - width - 8)
+  }
+  return {
+    position: 'fixed',
+    top: `${rect.bottom + gap}px`,
+    left: `${left}px`,
+    width: `${width}px`,
+    zIndex: '10050',
+  }
+}
+
+function positionGroupByMenu() {
+  groupByMenuStyle.value = positionFloatingMenu(groupByTriggerRef.value, 220)
+}
+
+function positionWorkspaceMenu() {
+  workspaceMenuStyle.value = positionFloatingMenu(
+    workspaceTriggerRef.value,
+    260,
+  )
+}
+
+async function toggleGroupByMenu() {
+  workspaceMenuOpen.value = false
+  if (groupByMenuOpen.value) {
+    groupByMenuOpen.value = false
+    return
+  }
+  groupByMenuOpen.value = true
+  await nextTick()
+  positionGroupByMenu()
+}
+
+async function toggleWorkspaceMenu() {
   groupByMenuOpen.value = false
-  openMenuId.value = openMenuId.value === conversationId ? null : conversationId
-}
-
-function closeMenu() {
-  openMenuId.value = null
-}
-
-function toggleGroupByMenu() {
-  openMenuId.value = null
-  groupByMenuOpen.value = !groupByMenuOpen.value
+  if (workspaceMenuOpen.value) {
+    workspaceMenuOpen.value = false
+    return
+  }
+  workspaceMenuOpen.value = true
+  await nextTick()
+  positionWorkspaceMenu()
 }
 
 function selectGroupBy(mode: ConversationListGroupBy) {
@@ -400,23 +590,24 @@ function selectGroupBy(mode: ConversationListGroupBy) {
 
 function onDocumentPointerDown(event: PointerEvent) {
   const target = event.target as Node
-  if (openMenuId.value) {
-    const root = menuRoots.get(openMenuId.value)
-    if (root && !root.contains(target)) {
-      closeMenu()
-    }
+  if (groupByMenuOpen.value) {
+    const inTrigger = groupByTriggerRef.value?.contains(target)
+    const inMenu = groupByMenuEl.value?.contains(target)
+    if (!inTrigger && !inMenu) groupByMenuOpen.value = false
   }
-  if (
-    groupByMenuOpen.value &&
-    groupByMenuRoot.value &&
-    !groupByMenuRoot.value.contains(target)
-  ) {
-    groupByMenuOpen.value = false
+  if (workspaceMenuOpen.value) {
+    const inTrigger = workspaceTriggerRef.value?.contains(target)
+    const inMenu = workspaceMenuEl.value?.contains(target)
+    if (!inTrigger && !inMenu) workspaceMenuOpen.value = false
   }
 }
 
+function onWindowReposition() {
+  if (groupByMenuOpen.value) positionGroupByMenu()
+  if (workspaceMenuOpen.value) positionWorkspaceMenu()
+}
+
 async function confirmDelete(conv: Conversation) {
-  closeMenu()
   const isChannel = conv.type === 'channel'
   const ok = window.confirm(
     isChannel
@@ -435,7 +626,9 @@ async function confirmDelete(conv: Conversation) {
 }
 
 onMounted(() => {
-  document.addEventListener('pointerdown', onDocumentPointerDown)
+  document.addEventListener('pointerdown', onDocumentPointerDown, true)
+  window.addEventListener('resize', onWindowReposition)
+  window.addEventListener('scroll', onWindowReposition, true)
   void scrollActiveConversationIntoView()
 })
 
@@ -465,7 +658,9 @@ watch(
 )
 
 onBeforeUnmount(() => {
-  document.removeEventListener('pointerdown', onDocumentPointerDown)
+  document.removeEventListener('pointerdown', onDocumentPointerDown, true)
+  window.removeEventListener('resize', onWindowReposition)
+  window.removeEventListener('scroll', onWindowReposition, true)
 })
 
 async function openConversation(conversationId: string, agentId: string) {
@@ -480,10 +675,26 @@ async function startNewSession() {
   emit('navigate-chat')
 }
 
-function sessionLabel(conv: Conversation): string {
-  if (conv.type === 'channel') return 'Channel'
-  if (conv.type === 'scheduler') return 'Scheduler'
-  return 'Chat'
+async function startSessionWithWorkspace(workspacePath: string) {
+  workspaceMenuOpen.value = false
+  const path = workspacePath.trim()
+  if (!path) return
+  const conv = await agentStore.createNewConversation(undefined, {
+    mode: 'fresh',
+    workspacePath: path,
+  })
+  if (!conv) return
+  await agentStore.selectConversation(conv.id)
+  emit('navigate-chat')
+}
+
+async function browseWorkspaceAndStartSession() {
+  workspaceMenuOpen.value = false
+  const selectCh = window.ipcRendererChannel?.SelectWorkspaceFolder
+  if (!selectCh?.invoke) return
+  const { path } = await selectCh.invoke()
+  if (!path?.trim()) return
+  await startSessionWithWorkspace(path)
 }
 
 function agentName(agentId: string): string {
@@ -498,26 +709,28 @@ function msgCount(conversationId: string): number {
   return agentStore.conversations?.[conversationId]?.length ?? 0
 }
 
-function formatTime(date: Date): string {
-  return new Date(date).toLocaleDateString([], {
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-function conversationMetaLine(conv: Conversation): string {
-  const parts = [sessionLabel(conv)]
-  if (groupByMode.value !== 'agent') {
-    parts.push(agentName(conv.agentId))
+const conversationMetaById = computed((): Record<string, string> => {
+  const labels = itemLabels.value
+  const mode = groupByMode.value
+  const out: Record<string, string> = {}
+  for (const conv of conversationItems.value) {
+    out[conv.id] = buildConversationMetaLine(
+      {
+        type: conv.type,
+        agentName: agentName(conv.agentId),
+        updatedAt: conv.updatedAt,
+      },
+      labels,
+      { groupByMode: mode },
+    )
   }
-  parts.push(formatTime(conv.updatedAt))
-  return parts.join(' · ')
-}
+  return out
+})
 </script>
 
 <style scoped>
 .sidebar-actions {
-  padding: 12px 12px 6px;
+  padding: 8px 12px 4px;
 }
 .new-session-btn {
   display: flex;
@@ -525,7 +738,7 @@ function conversationMetaLine(conv: Conversation): string {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 5px 10px;
   border: 1px dashed var(--ui-border);
   border-radius: 8px;
   background: transparent;
@@ -540,9 +753,9 @@ function conversationMetaLine(conv: Conversation): string {
   border-color: var(--color-primary-500);
 }
 .new-session-btn--collapsed {
-  width: 36px;
-  height: 36px;
-  margin: 10px auto 8px;
+  width: 32px;
+  height: 32px;
+  margin: 6px auto 4px;
   padding: 0;
   border-style: solid;
 }
@@ -557,8 +770,14 @@ function conversationMetaLine(conv: Conversation): string {
   gap: 8px;
   padding-right: 10px;
 }
+.sidebar-section-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
 .sidebar-section-label {
-  padding: 12px 14px 6px;
+  padding: 8px 14px 4px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -592,11 +811,11 @@ function conversationMetaLine(conv: Conversation): string {
   height: 14px;
 }
 .conversation-groupby-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 40;
-  min-width: 180px;
+  box-sizing: border-box;
+  min-width: 196px;
+  max-width: min(320px, calc(100vw - 16px));
+  max-height: min(360px, calc(100vh - 24px));
+  overflow: auto;
   padding: 4px;
   border: 1px solid var(--ui-border);
   border-radius: 10px;
@@ -604,6 +823,22 @@ function conversationMetaLine(conv: Conversation): string {
   box-shadow:
     0 4px 6px color-mix(in srgb, var(--ui-text) 8%, transparent),
     0 12px 28px color-mix(in srgb, var(--ui-text) 14%, transparent);
+}
+.conversation-groupby-menu--workspaces {
+  min-width: 240px;
+}
+.conversation-groupby-menu__section-label {
+  padding: 6px 10px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ui-text-muted);
+}
+.conversation-groupby-menu__divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: color-mix(in srgb, var(--ui-border) 90%, var(--ui-text) 8%);
 }
 .conversation-groupby-menu__option {
   display: flex;
@@ -633,6 +868,36 @@ function conversationMetaLine(conv: Conversation): string {
 .conversation-groupby-menu__check--empty {
   opacity: 0;
 }
+.conversation-groupby-menu__check--off {
+  color: var(--ui-text-muted);
+  opacity: 0.7;
+}
+.conversation-groupby-menu__option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.conversation-groupby-menu__option-title {
+  font-size: 13px;
+  color: var(--ui-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conversation-groupby-menu__option-sub {
+  font-size: 10px;
+  color: var(--ui-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conversation-groupby-menu__empty {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--ui-text-muted);
+}
 .conversation-group {
   list-style: none;
   margin: 2px 0 0;
@@ -643,7 +908,7 @@ function conversationMetaLine(conv: Conversation): string {
   align-items: center;
   gap: 6px;
   width: 100%;
-  padding: 8px 8px 4px 8px;
+  padding: 5px 8px 2px 8px;
   border: none;
   border-radius: 6px;
   background: transparent;
@@ -721,8 +986,8 @@ function conversationMetaLine(conv: Conversation): string {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 10px 9px 12px;
-  margin-bottom: 2px;
+  padding: 5px 10px 5px 12px;
+  margin-bottom: 1px;
 }
 .agent-list-skeleton__avatar,
 .agent-list-skeleton__line {
@@ -798,14 +1063,14 @@ function conversationMetaLine(conv: Conversation): string {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 10px 9px 12px;
+  padding: 5px 10px 5px 12px;
   border-radius: 8px;
   cursor: pointer;
   transition:
     background 0.12s,
     border-color 0.12s,
     box-shadow 0.12s;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   border: 1px solid transparent;
 }
 .agent-item:hover {
@@ -828,7 +1093,7 @@ function conversationMetaLine(conv: Conversation): string {
 }
 .agent-item--collapsed {
   justify-content: center;
-  padding: 8px 0;
+  padding: 5px 0;
   border-color: transparent;
   box-shadow: none;
 }
@@ -875,7 +1140,9 @@ function conversationMetaLine(conv: Conversation): string {
 }
 
 .agent-item-actions {
-  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   flex-shrink: 0;
   opacity: 0;
   pointer-events: none;
@@ -883,12 +1150,12 @@ function conversationMetaLine(conv: Conversation): string {
 }
 
 .agent-item:hover .agent-item-actions,
-.agent-item--menu-open .agent-item-actions {
+.agent-item:focus-within .agent-item-actions {
   opacity: 1;
   pointer-events: auto;
 }
 
-.agent-item-menu-btn {
+.agent-item-action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -901,60 +1168,19 @@ function conversationMetaLine(conv: Conversation): string {
   cursor: pointer;
 }
 
-.agent-item-menu-btn:hover,
-.agent-item-menu-btn--active {
+.agent-item-action-btn:hover {
   background: color-mix(in srgb, var(--ui-text) 10%, transparent);
   color: var(--ui-text);
 }
 
-.agent-item-menu-btn__icon {
-  width: 16px;
-  height: 16px;
-}
-
-.agent-item-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 30;
-  min-width: 180px;
-  padding: 4px;
-  border: 1px solid var(--ui-border);
-  border-radius: 10px;
-  background: var(--ui-bg-elevated, var(--ui-bg));
-  box-shadow:
-    0 4px 6px color-mix(in srgb, var(--ui-text) 8%, transparent),
-    0 12px 28px color-mix(in srgb, var(--ui-text) 14%, transparent);
-}
-
-.agent-item-menu__option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 10px;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--ui-text);
-  font: inherit;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.agent-item-menu__option-icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-.agent-item-menu__option--danger {
+.agent-item-action-btn--danger:hover {
+  background: color-mix(in srgb, var(--color-error-500, #ef4444) 12%, transparent);
   color: var(--color-error-600, #dc2626);
 }
 
-.agent-item-menu__option--danger:hover {
-  background: color-mix(in srgb, var(--color-error-500, #ef4444) 12%, transparent);
+.agent-item-action-btn__icon {
+  width: 14px;
+  height: 14px;
 }
 
 .empty-item {
