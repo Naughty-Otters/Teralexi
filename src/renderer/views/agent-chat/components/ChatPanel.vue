@@ -169,6 +169,7 @@
           :coding-agent="selectedAgentIsCoding"
           :coding-mode="codingMode"
           :plan-display-status="planDisplayStatus"
+          :agent-busy="isBusy"
           :background-tasks="backgroundTasks"
           :sub-agent-slash-enabled="subAgentSlashEnabled"
           :staged-attachments="stagedAttachments"

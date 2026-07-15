@@ -12,13 +12,25 @@
         :disabled="workspaceDisabled"
         @update:active-mode="emit('update:codingMode', $event)"
       />
-      <p
-        v-if="planStatusHint"
+      <div
+        v-if="showPlanStatusHint"
         class="composer-plan-mode-hint"
         role="status"
       >
-        {{ planStatusHint }}
-      </p>
+        <span class="composer-plan-mode-hint__text">{{ planStatusHint }}</span>
+        <button
+          type="button"
+          class="composer-plan-mode-hint__dismiss"
+          title="Dismiss"
+          aria-label="Dismiss plan status"
+          @click="dismissPlanStatusHint"
+        >
+          <UIcon
+            name="i-lucide-x"
+            class="composer-plan-mode-hint__dismiss-icon"
+          />
+        </button>
+      </div>
       <WorkspacePathBanner :disabled="workspaceDisabled" />
       <SkillSystemPropertiesForm
         v-if="skillSetup?.needsSetup"
@@ -93,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import type { CodingMode } from '@shared/agent/coding-mode'
 import type { ConversationLlmOverride } from '@shared/agent/conversation-llm-override'
 import type { ProviderType } from '@shared/agent/llm-provider-registry'
@@ -155,6 +167,8 @@ const props = defineProps<{
   codingAgent?: boolean
   codingMode?: CodingMode
   planDisplayStatus?: PlanModeDisplayStatus
+  /** True while the active chat turn is submitted/streaming. */
+  agentBusy?: boolean
   backgroundTasks?: BackgroundTaskView[]
   subAgentSlashEnabled?: boolean
   stagedAttachments?: StagedChatAttachment[]
@@ -187,10 +201,58 @@ const canAddAttachments = computed(() => props.canAddAttachments !== false)
 const llmOverride = computed(() => props.llmOverride ?? null)
 const agentProvider = computed((): ProviderType => props.agentProvider ?? 'ollama')
 const agentModel = computed(() => props.agentModel ?? '')
+const agentBusy = computed(() => props.agentBusy === true)
+const planDisplayStatus = computed(
+  () => props.planDisplayStatus ?? 'tool_execute',
+)
 
 const planStatusHint = computed(() =>
-  planModeComposerHint(props.planDisplayStatus ?? 'tool_execute'),
+  planModeComposerHint(planDisplayStatus.value),
 )
+
+/** Manual dismiss for any plan-status banner. */
+const planHintManuallyDismissed = ref(false)
+/**
+ * After a plan-execution turn ends, keep the execute banner hidden until the
+ * next turn starts (status can remain `plan_tool_execute` between turns).
+ */
+const planExecuteHintTurnHidden = ref(
+  planDisplayStatus.value === 'plan_tool_execute' && !agentBusy.value,
+)
+
+const showPlanStatusHint = computed(() => {
+  if (!planStatusHint.value || planHintManuallyDismissed.value) return false
+  if (
+    planDisplayStatus.value === 'plan_tool_execute' &&
+    planExecuteHintTurnHidden.value
+  ) {
+    return false
+  }
+  return true
+})
+
+watch(planDisplayStatus, (status, previous) => {
+  if (status === previous) return
+  planHintManuallyDismissed.value = false
+  planExecuteHintTurnHidden.value =
+    status === 'plan_tool_execute' && !agentBusy.value
+})
+
+watch(agentBusy, (busy, wasBusy) => {
+  if (planDisplayStatus.value !== 'plan_tool_execute') return
+  if (wasBusy === true && !busy) {
+    planExecuteHintTurnHidden.value = true
+    return
+  }
+  if (wasBusy === false && busy) {
+    planExecuteHintTurnHidden.value = false
+    planHintManuallyDismissed.value = false
+  }
+})
+
+function dismissPlanStatusHint() {
+  planHintManuallyDismissed.value = true
+}
 
 function onComposerSubmit() {
   if (props.loading || props.sendDisabled) return
@@ -232,14 +294,46 @@ function onComposerSubmit() {
   line-height: 1.4;
 }
 .composer-plan-mode-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 8px;
-  padding: 6px 10px;
+  padding: 6px 8px 6px 10px;
   border-radius: 6px;
   font-size: 12px;
   line-height: 1.45;
   background: color-mix(in srgb, var(--ui-primary) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--ui-primary) 20%, transparent);
   color: var(--ui-text);
+}
+.composer-plan-mode-hint__text {
+  flex: 1;
+  min-width: 0;
+}
+.composer-plan-mode-hint__dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ui-text-muted);
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.composer-plan-mode-hint__dismiss:hover {
+  background: color-mix(in srgb, var(--ui-text) 10%, transparent);
+  color: var(--ui-text);
+}
+.composer-plan-mode-hint__dismiss-icon {
+  width: 14px;
+  height: 14px;
 }
 .composer-send {
   position: absolute;
