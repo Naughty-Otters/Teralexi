@@ -112,4 +112,43 @@ describe('teralexi-server-auth', () => {
     ).resolves.toBe(serverJwt)
     expect(fetch).toHaveBeenCalledTimes(1)
   })
+
+  it('refreshes soft-expired cache instead of signing out', async () => {
+    const soonExpiring = makeTestJwt(Math.floor(Date.now() / 1000) + 30)
+    const renewed = makeTestJwt(Math.floor(Date.now() / 1000) + 7200)
+    getTeralexiAccountGoogleIdToken.mockReturnValue(null)
+
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: soonExpiring, expires_in: 30 }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: renewed, expires_in: 7200 }),
+      } as Response)
+
+    // Seed cache via exchange.
+    getTeralexiAccountGoogleIdToken.mockReturnValueOnce('google-id-token')
+    await exchangeGoogleIdTokenForServerAccessToken({
+      apiBaseUrl: 'http://127.0.0.1:8000',
+      idToken: 'google-id-token',
+    })
+    getTeralexiAccountGoogleIdToken.mockReturnValue(null)
+
+    await expect(
+      getTeralexiServerAccessToken('http://127.0.0.1:8000'),
+    ).resolves.toBe(renewed)
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      'http://127.0.0.1:8000/api/v1/auth/token',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: `Bearer ${soonExpiring}`,
+        }),
+      }),
+    )
+  })
 })
