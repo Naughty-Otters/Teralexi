@@ -162,7 +162,6 @@ import {
   onMounted,
   ref,
   watch,
-  withDefaults,
 } from 'vue'
 import type { ConversationSandboxRun } from '@store/agent/types'
 import type { PreviewLinkTab } from '../report-preview-tabs'
