@@ -1,6 +1,6 @@
 {
   "name": "teralexi",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "productName": "Teralexi",
   "main": "./dist/electron/main/bootstrap.js",
   "author": "Naughty-Otters",
