@@ -28,6 +28,8 @@ export type AppWebPublishSuccess = {
   absoluteUrl: string
   fileCount: number
   bytes: number
+  /** HTTP status from POST /api/v1/app/web/upload. */
+  uploadStatus: number
 }
 
 export type AppWebPublishFailure = {
@@ -142,10 +144,12 @@ export async function publishStaticSiteZip(args: {
 
   const uploadUrl = resolveAppWebUploadUrl(origin)
   const filename = args.filename?.trim() || 'site.zip'
+  // Copy into a bare Uint8Array — some runtimes mishandle Node Buffer in Blob.
+  const zipBytes = Uint8Array.from(args.zipBuffer)
   const form = new FormData()
   form.append(
     'file',
-    new Blob([args.zipBuffer], { type: 'application/zip' }),
+    new Blob([zipBytes], { type: 'application/zip' }),
     filename.endsWith('.zip') ? filename : `${filename}.zip`,
   )
 
@@ -262,6 +266,7 @@ export async function publishStaticSiteZip(args: {
     absoluteUrl: toAbsoluteAppWebUrl(url, origin),
     fileCount: typeof body.file_count === 'number' ? body.file_count : 0,
     bytes: typeof body.bytes === 'number' ? body.bytes : bytes,
+    uploadStatus: response.status,
   }
 }
 

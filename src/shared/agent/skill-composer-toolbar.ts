@@ -21,8 +21,44 @@ export type SkillComposerToolbarPluginView = {
   disabledReason?: string
 }
 
+/** Pre-publish / pre-action confirmation payload (no side effects). */
+export type SkillComposerToolbarPreviewResult = {
+  ok: boolean
+  error?: string
+  /** Dialog title (e.g. "Publish website"). */
+  title?: string
+  /** Absolute site directory that will be packaged. */
+  siteDir?: string
+  /** Number of files that will be included in the zip. */
+  fileCount?: number
+  /** Uncompressed byte total of packable files (estimate). */
+  estimatedBytes?: number
+  /** First N relative file paths for the confirm dialog. */
+  sampleFiles?: string[]
+  /** Count of packable files not included in {@link sampleFiles}. */
+  truncatedRemaining?: number
+  /** API origin that will receive the upload. */
+  targetHost?: string
+  /** Upload API path (e.g. `api/v1/app/web/upload`). */
+  uploadPath?: string
+}
+
 export type SkillComposerToolbarInvokeResult = {
   ok: boolean
   message?: string
   error?: string
+  /** Present after a successful website publish. */
+  absoluteUrl?: string
+  /** Relative URL from the publish API (when available). */
+  relativeUrl?: string
+  /** Site directory that was packaged. */
+  siteDir?: string
+  /** Files reported by the publish API (or zip). */
+  fileCount?: number
+  /** Zip / upload bytes. */
+  bytes?: number
+  /** HTTP status from the upload response. */
+  uploadStatus?: number
+  /** HTTP status from the post-publish verify GET (0 = network failure). */
+  verifyStatus?: number
 }

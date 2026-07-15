@@ -151,10 +151,12 @@ import { serializeNeedsApproval } from '@main/skills/tool-ipc-meta'
 import {
   invokeComposerToolbarPlugin,
   listComposerToolbarPluginViews,
+  previewComposerToolbarPlugin,
 } from '@main/skills/composer-toolbar-registry'
 import type {
   SkillComposerToolbarInvokeResult,
   SkillComposerToolbarPluginView,
+  SkillComposerToolbarPreviewResult,
 } from '@shared/agent/skill-composer-toolbar'
 import { extractZodParams } from '@main/utils/zod-introspection'
 import { isConversationRunInFlight } from '@main/engine'
@@ -2647,6 +2649,17 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     args: { skillId: string; conversationId: string; pluginId: string },
   ) => Promise<SkillComposerToolbarInvokeResult> = async (_event, args) => {
     return invokeComposerToolbarPlugin({
+      skillId: args?.skillId ?? '',
+      conversationId: args?.conversationId ?? '',
+      pluginId: args?.pluginId ?? '',
+    })
+  }
+
+  PreviewSkillComposerToolbarPlugin: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { skillId: string; conversationId: string; pluginId: string },
+  ) => Promise<SkillComposerToolbarPreviewResult> = async (_event, args) => {
+    return previewComposerToolbarPlugin({
       skillId: args?.skillId ?? '',
       conversationId: args?.conversationId ?? '',
       pluginId: args?.pluginId ?? '',

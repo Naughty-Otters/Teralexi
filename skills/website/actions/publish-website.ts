@@ -11,6 +11,7 @@ import {
   requireActiveSandbox,
   resolvePathAllowingOutside,
 } from '@teralexi/skill-sdk'
+import { latestPublishableSiteDir } from './publish-site-resolve'
 
 function resolveSiteDirectory(sitePath: string):
   | { ok: true; abs: string }
@@ -65,13 +66,32 @@ function resolveSiteDirectory(sitePath: string):
   }
 }
 
+function discoverDefaultSiteDirectory():
+  | { ok: true; abs: string }
+  | { ok: false; error: string } {
+  const sandbox = requireActiveSandbox()
+  const discovered = latestPublishableSiteDir({
+    workspacePath: getWorkspacePathFromEnv(),
+    sandboxRoot: sandbox.ok ? sandbox.root : null,
+  })
+  if (!discovered) {
+    return {
+      ok: false,
+      error:
+        'No publishable site found. Pass path to a directory with root index.html, or finish render_website first (output/results/<slug>).',
+    }
+  }
+  return { ok: true, abs: discovered }
+}
+
 export const publishWebsite: SkillTool = {
   name: 'publish_website',
   description:
     'Publish a finished static site directory to Teralexi hosting. ' +
     'Zips the directory (index.html must be at the directory root), uploads via ' +
     'POST /api/v1/app/web/upload, and returns the public absolute URL. ' +
-    'Requires signed-in Teralexi account with app.web.publish entitlement.',
+    'Requires signed-in Teralexi account with app.web.publish entitlement. ' +
+    'If path is omitted, uses the newest workspace site or sandbox output/results/<slug>.',
   async execute(input) {
     const sitePath = String(
       (input as { path?: unknown; site_dir?: unknown }).path ??
@@ -80,12 +100,15 @@ export const publishWebsite: SkillTool = {
     ).trim()
     const verify = Boolean((input as { verify?: unknown }).verify)
 
-    const resolved = resolveSiteDirectory(sitePath)
+    const resolved = sitePath
+      ? resolveSiteDirectory(sitePath)
+      : discoverDefaultSiteDirectory()
     if (!resolved.ok) return { error: resolved.error }
 
     const result = await publishStaticSiteDirectory({
       siteDir: resolved.abs,
-      verify,
+      // Auto-discovered path: smoke-check the public URL after upload.
+      verify: verify || !sitePath,
     })
 
     if (!result.ok) {
@@ -106,6 +129,7 @@ export const publishWebsite: SkillTool = {
       file_count: result.fileCount,
       bytes: result.bytes,
       zip_file_count: result.zipFileCount,
+      site_dir: resolved.abs,
       ...(result.verifyStatus !== undefined
         ? { verify_status: result.verifyStatus }
         : {}),

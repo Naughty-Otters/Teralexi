@@ -211,6 +211,9 @@
         @update:active-link-tab-id="onUpdateActivePreviewLinkTabId"
         @update:preview-source="onUpdatePreviewPanelSource"
         @close-link-tab="onClosePreviewLinkTab"
+        @add-link-tab="onAddPreviewLinkTab"
+        @update-link-tab-url="onUpdatePreviewLinkTabUrl"
+        @open-preview-url="openSandboxPreview"
       />
     </div>
   </div>
@@ -326,7 +329,9 @@ import { handleChatPanelLinkClick } from '../sandboxPreview'
 import { bindSandboxPreviewRequest } from '../sandboxPreviewBridge'
 import {
   closePreviewLinkTab,
+  createEmptyPreviewLinkTab,
   openPreviewLinkTab,
+  updatePreviewLinkTabUrl,
   type PreviewLinkTab,
 } from '../report-preview-tabs'
 import type { ReportPanelPreviewSource } from './ReportPanel.vue'
@@ -627,6 +632,27 @@ function onClosePreviewLinkTab(tabId: string) {
       [cid]: 'sandbox-run',
     }
   }
+}
+
+function onAddPreviewLinkTab() {
+  const cid = agentStore.currentConversationId?.trim()
+  if (!cid) return
+  const prevTabs = previewLinkTabsByConversation.value[cid] ?? []
+  const { tabs, activeTabId } = createEmptyPreviewLinkTab(prevTabs)
+  setConversationPreviewTabs(cid, tabs, activeTabId)
+  previewPanelSourceByConversation.value = {
+    ...previewPanelSourceByConversation.value,
+    [cid]: 'link',
+  }
+}
+
+function onUpdatePreviewLinkTabUrl(payload: { tabId: string; url: string }) {
+  const cid = agentStore.currentConversationId?.trim()
+  if (!cid) return
+  const prevTabs = previewLinkTabsByConversation.value[cid] ?? []
+  const tabs = updatePreviewLinkTabUrl(prevTabs, payload.tabId, payload.url)
+  const activeId = activePreviewLinkTabIdByConversation.value[cid] ?? null
+  setConversationPreviewTabs(cid, tabs, activeId)
 }
 
 function onChatPanelClick(event: MouseEvent) {
