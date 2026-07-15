@@ -44,6 +44,24 @@ describe('assistant-external-reply', () => {
     expect(extractUserFacingTextFromFinalResult(finalResult)).toBe('All done')
   })
 
+  it('extractUserFacingTextFromFinalResult collapses long execution-error dumps', () => {
+    const finalResult = [
+      'Skills & tool execution',
+      'Agentic Run',
+      'result (empty)',
+      'result (empty)',
+      '---',
+      'Agentic Run',
+      'Summary:',
+      "Execution error: An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id'. (insufficient tool messages following tool_calls message)",
+    ].join('\n\n')
+
+    const out = extractUserFacingTextFromFinalResult(finalResult)
+    expect(out).toContain('Something went wrong while running tools.')
+    expect(out).toContain('tool_calls')
+    expect(out).not.toContain('result (empty)')
+  })
+
   it('userFacingTextFromPipelineConversation prefers summary and strips titles', () => {
     expect(
       userFacingTextFromPipelineConversation([

@@ -236,6 +236,47 @@ describe('injector pipeline', () => {
     expect(second).toHaveLength(5)
   })
 
+  it('skips injector user messages while tool approvals are still unanswered', async () => {
+    const ctx = makeToolLoopCtx({
+      opts: { skillId: 'coding', conversationId: 'conv-plan-hitl', userId: 'user-1' },
+      agentRun: { meta: { depth: 0 } },
+    }) as never
+
+    const pendingApproval: Parameters<typeof injectUserMessages>[1] = [
+      { role: 'user', content: 'plan this' },
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: 'tc-enter',
+            toolName: 'enter_plan_mode',
+            input: {},
+          },
+          {
+            type: 'tool-approval-request',
+            approvalId: 'ap-enter',
+            toolCallId: 'tc-enter',
+          },
+        ],
+      },
+      {
+        role: 'tool',
+        content: [
+          {
+            type: 'tool-approval-response',
+            approvalId: 'ap-enter',
+            approved: true,
+          },
+        ],
+      },
+    ]
+
+    const blocked = await injectUserMessages(ctx, pendingApproval, 0)
+    expect(blocked).toHaveLength(3)
+    expect(blocked.map((m) => m.role)).toEqual(['user', 'assistant', 'tool'])
+  })
+
   it('injects datetime again for a later user turn in the same conversation', async () => {
     const ctx = makeToolLoopCtx({
       opts: {
