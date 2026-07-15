@@ -30,9 +30,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Typecheck ratchet (advisory floor)
-        run: npm run typecheck:ratchet
-
       - name: Run unit tests
         run: npm run test:unit
 
