@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildConversationDetailTooltip,
+  buildConversationDetailTooltipModel,
   buildConversationMetaLine,
   DEFAULT_CONVERSATION_LIST_ITEM_LABELS,
+  formatAgentTypeLabel,
   parseConversationListItemLabels,
   serializeConversationListItemLabels,
   sessionTypeLabel,
@@ -50,5 +53,67 @@ describe('conversation-list-item-labels', () => {
     expect(
       buildConversationMetaLine(conv, DEFAULT_CONVERSATION_LIST_ITEM_LABELS),
     ).toBe('')
+  })
+
+  it('builds a structured detail tooltip model', () => {
+    const model = buildConversationDetailTooltipModel({
+      title: 'Rewrite landing page',
+      type: 'ui',
+      agentName: 'Website',
+      agentType: 'Skill · website',
+      updatedAt: new Date('2026-07-14T12:00:00.000Z'),
+      workspacePath: '/tmp/my-site',
+      messageCount: 3,
+    })
+    expect(model.title).toBe('Rewrite landing page')
+    expect(model.rows).toEqual(
+      expect.arrayContaining([
+        { label: 'Session', value: 'Chat' },
+        { label: 'Agent', value: 'Website' },
+        { label: 'Type', value: 'Skill · website' },
+        { label: 'Workspace', value: '/tmp/my-site' },
+        { label: 'Messages', value: '3' },
+      ]),
+    )
+    expect(buildConversationDetailTooltip({
+      title: 'Rewrite landing page',
+      type: 'ui',
+      agentName: 'Website',
+      agentType: 'Skill · website',
+      updatedAt: new Date('2026-07-14T12:00:00.000Z'),
+      workspacePath: '/tmp/my-site',
+      messageCount: 3,
+    })).toContain('Workspace: /tmp/my-site')
+  })
+
+  it('omits workspace row when path is missing', () => {
+    const model = buildConversationDetailTooltipModel({
+      title: 'No workspace',
+      type: 'channel',
+      agentName: 'Bot',
+      agentType: 'Custom',
+      updatedAt: new Date('2026-07-14T12:00:00.000Z'),
+    })
+    expect(model.rows.some((row) => row.label === 'Type')).toBe(true)
+    expect(model.rows.some((row) => row.label === 'Workspace')).toBe(false)
+  })
+
+  it('formats skill vs custom agent type labels', () => {
+    expect(formatAgentTypeLabel({ isSkill: false })).toBe('Custom')
+    expect(
+      formatAgentTypeLabel({
+        isSkill: true,
+        skillId: 'website',
+        skillGroupLabel: 'Website',
+      }),
+    ).toBe('Skill · Website')
+    expect(
+      formatAgentTypeLabel({
+        isSkill: true,
+        skillId: 'website',
+        skillGroupLabel: 'Website',
+        skillVariantLabel: 'Portfolio',
+      }),
+    ).toBe('Skill · Website · Portfolio')
   })
 })
