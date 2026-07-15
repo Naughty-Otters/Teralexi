@@ -270,52 +270,91 @@
         v-show="!showGroupHeaders || isGroupExpanded(group.key)"
         :key="conv.id"
         :ref="(el) => setConversationItemRef(el, conv.id)"
-        class="agent-item"
-        :class="{
-          'agent-item--active': isActiveConversation(conv.id),
-          'agent-item--collapsed': collapsed,
-          'agent-item--nested': showGroupHeaders,
-        }"
+        class="agent-item-host"
         :data-conversation-id="conv.id"
-        :aria-current="isActiveConversation(conv.id) ? 'true' : undefined"
-        @click="openConversation(conv.id, conv.agentId)"
       >
-        <UAvatar
-          :alt="agentName(conv.agentId)"
-          size="sm"
-          :color="agentColor(conv.agentId)"
-          :class="{ 'agent-item-avatar--active': isActiveConversation(conv.id) }"
-          :ui="{ fallback: 'font-bold text-xs' }"
-        />
-        <div v-if="!collapsed" class="agent-item-info">
-          <p class="agent-item-name">{{ conv.title }}</p>
-          <p
-            v-if="conversationMetaById[conv.id]"
-            class="agent-item-desc"
-          >
-            {{ conversationMetaById[conv.id] }}
-          </p>
-        </div>
-        <span v-if="msgCount(conv.id) > 0 && !collapsed" class="msg-badge">
-          {{ msgCount(conv.id) }}
-        </span>
-        <div
-          v-if="!collapsed && canDelete(conv.id)"
-          class="agent-item-actions"
-          role="toolbar"
-          aria-label="Conversation actions"
-          @click.stop
+        <AppIconTooltip
+          block
+          :delay-duration="350"
+          :content="conversationTooltipContent"
         >
-          <button
-            type="button"
-            class="agent-item-action-btn agent-item-action-btn--danger"
-            title="Delete conversation"
-            aria-label="Delete conversation"
-            @click="confirmDelete(conv)"
+          <template #content>
+            <div
+              v-if="conversationTooltipModelById[conv.id]"
+              class="app-icon-tooltip__detail"
+            >
+              <p class="app-icon-tooltip__detail-title">
+                {{ conversationTooltipModelById[conv.id]!.title }}
+              </p>
+              <dl class="app-icon-tooltip__detail-rows">
+                <div
+                  v-for="row in conversationTooltipModelById[conv.id]!.rows"
+                  :key="row.label"
+                  class="app-icon-tooltip__detail-row"
+                >
+                  <dt class="app-icon-tooltip__detail-label">{{ row.label }}</dt>
+                  <dd class="app-icon-tooltip__detail-value">{{ row.value }}</dd>
+                </div>
+              </dl>
+            </div>
+          </template>
+          <div
+            class="agent-item"
+            :class="{
+              'agent-item--active': isActiveConversation(conv.id),
+              'agent-item--collapsed': collapsed,
+              'agent-item--nested': showGroupHeaders,
+            }"
+            role="button"
+            tabindex="0"
+            :aria-current="isActiveConversation(conv.id) ? 'true' : undefined"
+            @click="openConversation(conv.id, conv.agentId)"
+            @keydown.enter.prevent="openConversation(conv.id, conv.agentId)"
+            @keydown.space.prevent="openConversation(conv.id, conv.agentId)"
           >
-            <UIcon name="i-lucide-trash-2" class="agent-item-action-btn__icon" />
-          </button>
-        </div>
+            <UAvatar
+              :alt="agentName(conv.agentId)"
+              size="sm"
+              :color="agentColor(conv.agentId)"
+              :class="{
+                'agent-item-avatar--active': isActiveConversation(conv.id),
+              }"
+              :ui="{ fallback: 'font-bold text-xs' }"
+            />
+            <div v-if="!collapsed" class="agent-item-info">
+              <p class="agent-item-name">{{ conv.title }}</p>
+              <p
+                v-if="conversationMetaById[conv.id]"
+                class="agent-item-desc"
+              >
+                {{ conversationMetaById[conv.id] }}
+              </p>
+            </div>
+            <span v-if="msgCount(conv.id) > 0 && !collapsed" class="msg-badge">
+              {{ msgCount(conv.id) }}
+            </span>
+            <div
+              v-if="!collapsed && canDelete(conv.id)"
+              class="agent-item-actions"
+              role="toolbar"
+              aria-label="Conversation actions"
+              @click.stop
+            >
+              <button
+                type="button"
+                class="agent-item-action-btn agent-item-action-btn--danger"
+                title="Delete conversation"
+                aria-label="Delete conversation"
+                @click="confirmDelete(conv)"
+              >
+                <UIcon
+                  name="i-lucide-trash-2"
+                  class="agent-item-action-btn__icon"
+                />
+              </button>
+            </div>
+          </div>
+        </AppIconTooltip>
       </li>
     </template>
     <li v-if="conversationItems.length === 0 && !collapsed" class="empty-item">
@@ -344,14 +383,18 @@ import {
   type ConversationListGroupBy,
 } from '../lib/conversation-list-groups'
 import {
+  buildConversationDetailTooltipModel,
   buildConversationMetaLine,
   CONVERSATION_LIST_LABEL_OPTIONS,
+  formatAgentTypeLabel,
   parseConversationListItemLabels,
   serializeConversationListItemLabels,
+  type ConversationDetailTooltipModel,
   type ConversationListItemLabels,
   type ConversationListLabelField,
 } from '../lib/conversation-list-item-labels'
 import { clearConversationSession } from '../conversation-chat-session'
+import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
 
 const emit = defineEmits<{ 'navigate-chat': [] }>()
 const props = defineProps<{ collapsed?: boolean }>()
@@ -701,6 +744,11 @@ function agentName(agentId: string): string {
   return agentStore.agents.find((a) => a.id === agentId)?.name ?? 'Agent'
 }
 
+function agentTypeLabel(agentId: string): string {
+  const agent = agentStore.agents.find((a) => a.id === agentId)
+  return formatAgentTypeLabel(agent)
+}
+
 function agentColor(agentId: string) {
   return agentStore.agents.find((a) => a.id === agentId)?.color ?? 'neutral'
 }
@@ -726,6 +774,32 @@ const conversationMetaById = computed((): Record<string, string> => {
   }
   return out
 })
+
+/** Tooltip on the right of each row; left edge flush with the row’s right edge. */
+const conversationTooltipContent = {
+  side: 'right' as const,
+  align: 'start' as const,
+  sideOffset: 0,
+  collisionPadding: 8,
+}
+
+const conversationTooltipModelById = computed(
+  (): Record<string, ConversationDetailTooltipModel> => {
+    const out: Record<string, ConversationDetailTooltipModel> = {}
+    for (const conv of conversationItems.value) {
+      out[conv.id] = buildConversationDetailTooltipModel({
+        title: conv.title,
+        type: conv.type,
+        agentName: agentName(conv.agentId),
+        agentType: agentTypeLabel(conv.agentId),
+        updatedAt: conv.updatedAt,
+        workspacePath: conv.workspacePath,
+        messageCount: msgCount(conv.id),
+      })
+    }
+    return out
+  },
+)
 </script>
 
 <style scoped>
@@ -1058,6 +1132,10 @@ const conversationMetaById = computed((): Record<string, string> => {
 .agent-list--collapsed {
   padding: 8px 0;
 }
+.agent-item-host {
+  list-style: none;
+  margin: 0 0 1px;
+}
 .agent-item {
   position: relative;
   display: flex;
@@ -1070,8 +1148,10 @@ const conversationMetaById = computed((): Record<string, string> => {
     background 0.12s,
     border-color 0.12s,
     box-shadow 0.12s;
-  margin-bottom: 1px;
   border: 1px solid transparent;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
 }
 .agent-item:hover {
   background: var(--ui-bg-accented);

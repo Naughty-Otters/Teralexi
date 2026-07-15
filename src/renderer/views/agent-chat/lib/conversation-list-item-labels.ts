@@ -96,3 +96,80 @@ export function buildConversationMetaLine(
   if (labels.date) parts.push(formatConversationListDate(conv.updatedAt))
   return parts.join(' · ')
 }
+
+export type ConversationDetailTooltipInput = {
+  title: string
+  type: ConversationMetaLineInput['type']
+  agentName: string
+  /** e.g. "Skill · website" or "Custom" */
+  agentType?: string | null
+  updatedAt: Date
+  workspacePath?: string | null
+  messageCount?: number
+}
+
+export type ConversationDetailTooltipRow = {
+  label: string
+  value: string
+}
+
+export type ConversationDetailTooltipModel = {
+  title: string
+  rows: ConversationDetailTooltipRow[]
+}
+
+/** Human-readable agent classification for conversation tooltips. */
+export function formatAgentTypeLabel(agent: {
+  isSkill?: boolean
+  skillId?: string | null
+  skillGroupLabel?: string | null
+  skillVariantLabel?: string | null
+} | null | undefined): string {
+  if (!agent?.isSkill) return 'Custom'
+  const skill =
+    agent.skillGroupLabel?.trim() ||
+    agent.skillId?.trim() ||
+    'Skill'
+  const variant = agent.skillVariantLabel?.trim()
+  if (variant && variant.toLowerCase() !== skill.toLowerCase()) {
+    return `Skill · ${skill} · ${variant}`
+  }
+  return `Skill · ${skill}`
+}
+
+/**
+ * Structured tooltip model for a conversation row.
+ * Independent of which subtitle labels are enabled in the list.
+ */
+export function buildConversationDetailTooltipModel(
+  conv: ConversationDetailTooltipInput,
+): ConversationDetailTooltipModel {
+  const title = conv.title.trim() || 'Conversation'
+  const rows: ConversationDetailTooltipRow[] = [
+    { label: 'Session', value: sessionTypeLabel(conv.type) },
+    { label: 'Agent', value: conv.agentName.trim() || 'Agent' },
+  ]
+  const agentType = conv.agentType?.trim()
+  if (agentType) rows.push({ label: 'Type', value: agentType })
+  rows.push({
+    label: 'Updated',
+    value: formatConversationListDate(conv.updatedAt),
+  })
+  const workspace = conv.workspacePath?.trim()
+  if (workspace) rows.push({ label: 'Workspace', value: workspace })
+  if (typeof conv.messageCount === 'number' && conv.messageCount > 0) {
+    rows.push({ label: 'Messages', value: String(conv.messageCount) })
+  }
+  return { title, rows }
+}
+
+/** Plain-text fallback of {@link buildConversationDetailTooltipModel}. */
+export function buildConversationDetailTooltip(
+  conv: ConversationDetailTooltipInput,
+): string {
+  const model = buildConversationDetailTooltipModel(conv)
+  return [
+    model.title,
+    ...model.rows.map((row) => `${row.label}: ${row.value}`),
+  ].join('\n')
+}

@@ -1,33 +1,56 @@
 <template>
   <UTooltip
-    :text="text"
+    :text="hasContentSlot ? undefined : text"
     :delay-duration="delayDuration"
-    :disabled="disabled || !text"
+    :disabled="disabled || (!hasContentSlot && !text)"
+    :content="resolvedContent"
     :ui="tooltipUi"
   >
     <!-- Disabled buttons don't emit pointer events; wrap so tooltips still show. -->
     <span class="app-icon-tooltip" :class="{ 'app-icon-tooltip--block': block }">
       <slot />
     </span>
+    <template v-if="hasContentSlot" #content>
+      <slot name="content" />
+    </template>
   </UTooltip>
 </template>
 
 <script setup lang="ts">
-withDefaults(
+import { computed, useSlots } from 'vue'
+
+const props = withDefaults(
   defineProps<{
-    text: string
+    text?: string
     /** ms before tooltip appears */
     delayDuration?: number
     disabled?: boolean
     /** Stretch wrapper to fill flex parents when needed */
     block?: boolean
+    /**
+     * Positioning relative to the trigger.
+     * Defaults match Nuxt UI (`side: 'bottom'`, `sideOffset: 8`).
+     */
+    content?: {
+      side?: 'top' | 'right' | 'bottom' | 'left'
+      align?: 'start' | 'center' | 'end'
+      sideOffset?: number
+      alignOffset?: number
+      collisionPadding?: number
+    }
   }>(),
   {
+    text: '',
     delayDuration: 250,
     disabled: false,
     block: false,
+    content: undefined,
   },
 )
+
+const slots = useSlots()
+const hasContentSlot = computed(() => Boolean(slots.content))
+const resolvedContent = computed(() => props.content)
 
 /** Solid surface classes — see unscoped styles below (portaled outside component). */
 const tooltipUi = {
@@ -60,8 +83,8 @@ const tooltipUi = {
   /* Override Nuxt UI tooltip `h-6` / single-line defaults for readable copy. */
   display: block !important;
   height: auto !important;
-  max-width: min(280px, calc(100vw - 24px)) !important;
-  padding: 8px 10px !important;
+  max-width: min(320px, calc(100vw - 24px)) !important;
+  padding: 10px 12px !important;
   background-color: #0f172a !important;
   color: #f8fafc !important;
   opacity: 1 !important;
@@ -80,6 +103,47 @@ const tooltipUi = {
   text-overflow: clip !important;
   word-break: break-word;
   margin: 0 !important;
+}
+.app-icon-tooltip__detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 180px;
+  max-width: min(300px, calc(100vw - 40px));
+}
+.app-icon-tooltip__detail-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: inherit;
+  word-break: break-word;
+}
+.app-icon-tooltip__detail-rows {
+  margin: 0;
+  display: grid;
+  gap: 5px;
+}
+.app-icon-tooltip__detail-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  margin: 0;
+}
+.app-icon-tooltip__detail-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+  opacity: 0.72;
+}
+.app-icon-tooltip__detail-value {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  word-break: break-word;
 }
 html.dark .app-icon-tooltip__surface {
   background-color: #f1f5f9 !important;
