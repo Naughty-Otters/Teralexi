@@ -1,8 +1,8 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { pathToFileURL } from 'node:url'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   addChildView,
@@ -11,7 +11,6 @@ const {
   readFile,
   writeFile,
   mkdir,
-  stat,
   createWebContentsViewMock,
 } = vi.hoisted(() => {
   const addChildView = vi.fn()
@@ -19,10 +18,10 @@ const {
   const readFile = vi.fn()
   const writeFile = vi.fn()
   const mkdir = vi.fn()
-  const stat = vi.fn()
 
   function createWebContentsViewMock(overrides?: {
     loadFile?: ReturnType<typeof vi.fn>
+    loadURL?: ReturnType<typeof vi.fn>
   }) {
     return {
       setBackgroundColor: vi.fn(),
@@ -30,8 +29,8 @@ const {
       webContents: {
         isDestroyed: () => false,
         getURL: () => '',
-        loadURL: vi.fn(),
-        loadFile: overrides?.loadFile ?? vi.fn(),
+        loadURL: overrides?.loadURL ?? vi.fn().mockResolvedValue(undefined),
+        loadFile: overrides?.loadFile ?? vi.fn().mockResolvedValue(undefined),
         on: vi.fn(),
         close: vi.fn(),
         navigationHistory: {
@@ -57,7 +56,6 @@ const {
     readFile,
     writeFile,
     mkdir,
-    stat,
     createWebContentsViewMock,
   }
 })
@@ -82,16 +80,23 @@ vi.mock('@main/services/web-content-send', () => ({
   },
 }))
 
-vi.mock('fs/promises', () => {
-  const api = {
-    readFile,
-    writeFile,
-    mkdir,
-    stat,
-  }
+vi.mock('fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs/promises')>()
   return {
-    default: api,
-    ...api,
+    ...actual,
+    default: {
+      ...actual,
+      readFile: (...args: Parameters<typeof actual.readFile>) =>
+        readFile(...args),
+      writeFile: (...args: Parameters<typeof actual.writeFile>) =>
+        writeFile(...args),
+      mkdir: (...args: Parameters<typeof actual.mkdir>) => mkdir(...args),
+    },
+    readFile: (...args: Parameters<typeof actual.readFile>) =>
+      readFile(...args),
+    writeFile: (...args: Parameters<typeof actual.writeFile>) =>
+      writeFile(...args),
+    mkdir: (...args: Parameters<typeof actual.mkdir>) => mkdir(...args),
   }
 })
 
@@ -102,13 +107,26 @@ vi.mock('./result-document-html', () => ({
     `<html><pre>${body}</pre></html>`,
 }))
 
-import { syncSandboxOutputView } from './output-view'
+import {
+  resetSandboxOutputViewStateForTests,
+  syncSandboxOutputView,
+} from './output-view'
 
-const HTML_FILE_URL = pathToFileURL(join(tmpdir(), 'results', 'index.html')).href
-const DIR_FILE_URL = pathToFileURL(join(tmpdir(), 'results')).href
+function makeTempResultsDir(tag: string): string {
+  const dir = join(mkdtempSync(join(tmpdir(), `output-view-${tag}-`)), 'results')
+  mkdirSync(dir, { recursive: true })
+  return dir
+}
+
+function latestView() {
+  const view = WebContentsView.mock.results.at(-1)?.value
+  expect(view).toBeTruthy()
+  return view as ReturnType<typeof createWebContentsViewMock>
+}
 
 describe('syncSandboxOutputView', () => {
   beforeEach(async () => {
+    await resetSandboxOutputViewStateForTests()
     WebContentsView.mockReset()
     WebContentsView.mockImplementation(function WebContentsViewMock() {
       return createWebContentsViewMock()
@@ -116,19 +134,16 @@ describe('syncSandboxOutputView', () => {
     readFile.mockReset()
     writeFile.mockReset()
     mkdir.mockReset()
-    stat.mockReset()
-    stat.mockResolvedValue({
-      mtimeMs: 1,
-      size: 100,
-      isFile: () => true,
-      isDirectory: () => false,
-    })
+    // Temp preview HTML write/read stubs (markdown + error pages).
+    writeFile.mockResolvedValue(undefined)
+    mkdir.mockResolvedValue(undefined)
+    readFile.mockResolvedValue('# Title')
     addChildView.mockClear()
     removeChildView.mockClear()
-    await syncSandboxOutputView({ sender: {} } as never, {
-      screenBounds: { x: 0, y: 0, width: 100, height: 100 },
-      fileUrl: null,
-    })
+  })
+
+  afterEach(async () => {
+    await resetSandboxOutputViewStateForTests()
   })
 
   it('no-ops remove when no overlay exists', async () => {
@@ -138,46 +153,55 @@ describe('syncSandboxOutputView', () => {
         fileUrl: null,
       }),
     ).resolves.toBeUndefined()
+    expect(WebContentsView).not.toHaveBeenCalled()
   })
 
   it('creates view and loads concrete files via loadFile', async () => {
+    const dir = makeTempResultsDir('html')
+    const htmlPath = join(dir, 'index.html')
+    writeFileSync(htmlPath, '<html><body>ok</body></html>', 'utf8')
+    const fileUrl = pathToFileURL(htmlPath).href
+
     await syncSandboxOutputView({ sender: {} } as never, {
       screenBounds: { x: 10, y: 20, width: 300, height: 200 },
-      fileUrl: HTML_FILE_URL,
+      fileUrl,
+      forceReload: true,
     })
+
     expect(WebContentsView).toHaveBeenCalled()
     expect(addChildView).toHaveBeenCalled()
-    const view = WebContentsView.mock.results.at(-1)?.value
-    expect(stat).toHaveBeenCalledWith(fileURLToPath(HTML_FILE_URL))
-    expect(view.webContents.loadFile).toHaveBeenCalledWith(
-      fileURLToPath(HTML_FILE_URL),
-    )
+    const view = latestView()
+    expect(view.webContents.loadFile).toHaveBeenCalledWith(htmlPath)
     expect(view.webContents.loadURL).not.toHaveBeenCalled()
   })
 
   it('loads directory listings via loadURL', async () => {
-    stat.mockResolvedValue({
-      mtimeMs: 1,
-      size: 0,
-      isFile: () => false,
-      isDirectory: () => true,
-    })
+    const dir = makeTempResultsDir('dir')
+    const fileUrl = pathToFileURL(dir).href
+
     await syncSandboxOutputView({ sender: {} } as never, {
       screenBounds: { x: 10, y: 20, width: 300, height: 200 },
-      fileUrl: DIR_FILE_URL,
+      fileUrl,
+      forceReload: true,
     })
-    const view = WebContentsView.mock.results.at(-1)?.value
-    expect(view.webContents.loadURL).toHaveBeenCalledWith(DIR_FILE_URL)
+
+    const view = latestView()
+    expect(view.webContents.loadURL).toHaveBeenCalledWith(fileUrl)
     expect(view.webContents.loadFile).not.toHaveBeenCalled()
   })
 
   it('shows an error page instead of rejecting when loadFile fails', async () => {
+    const dir = makeTempResultsDir('err')
+    const htmlPath = join(dir, 'index.html')
+    writeFileSync(htmlPath, '<html><body>ok</body></html>', 'utf8')
+    const fileUrl = pathToFileURL(htmlPath).href
+
     WebContentsView.mockImplementation(function WebContentsViewMock() {
       return createWebContentsViewMock({
         loadFile: vi
           .fn()
           .mockRejectedValueOnce(
-            new Error(`ERR_FAILED (-2) loading '${HTML_FILE_URL}'`),
+            new Error(`ERR_FAILED (-2) loading '${fileUrl}'`),
           )
           .mockResolvedValue(undefined),
       })
@@ -186,17 +210,15 @@ describe('syncSandboxOutputView', () => {
     await expect(
       syncSandboxOutputView({ sender: {} } as never, {
         screenBounds: { x: 10, y: 20, width: 300, height: 200 },
-        fileUrl: HTML_FILE_URL,
+        fileUrl,
+        forceReload: true,
       }),
     ).resolves.toBeUndefined()
 
-    const view = WebContentsView.mock.results.at(-1)?.value
+    const view = latestView()
     expect(writeFile).toHaveBeenCalled()
     expect(view.webContents.loadFile).toHaveBeenCalledTimes(2)
-    expect(view.webContents.loadFile).toHaveBeenNthCalledWith(
-      1,
-      fileURLToPath(HTML_FILE_URL),
-    )
+    expect(view.webContents.loadFile).toHaveBeenNthCalledWith(1, htmlPath)
     expect(view.webContents.loadFile).toHaveBeenNthCalledWith(
       2,
       expect.stringMatching(/\.html$/),
@@ -204,17 +226,19 @@ describe('syncSandboxOutputView', () => {
   })
 
   it('renders markdown files as html via temp file', async () => {
-    const mdDir = join(mkdtempSync(join(tmpdir(), 'output-view-')), 'output', 'results')
-    mkdirSync(mdDir, { recursive: true })
-    const mdPath = join(mdDir, 'paper.md')
+    const dir = makeTempResultsDir('md-html')
+    const mdPath = join(dir, 'paper.md')
     writeFileSync(mdPath, '# Title\n\nBody', 'utf8')
     readFile.mockResolvedValue('# Title\n\nBody')
+
     await syncSandboxOutputView({ sender: {} } as never, {
       screenBounds: { x: 10, y: 20, width: 300, height: 200 },
       fileUrl: pathToFileURL(mdPath).href,
       markdownView: 'html',
+      forceReload: true,
     })
-    const view = WebContentsView.mock.results.at(-1)?.value
+
+    const view = latestView()
     expect(readFile).toHaveBeenCalled()
     expect(writeFile).toHaveBeenCalled()
     expect(view.webContents.loadFile).toHaveBeenCalledWith(
@@ -224,17 +248,19 @@ describe('syncSandboxOutputView', () => {
   })
 
   it('shows markdown source in html when raw mode is requested', async () => {
-    const mdDir = join(mkdtempSync(join(tmpdir(), 'output-view-raw-')), 'output', 'results')
-    mkdirSync(mdDir, { recursive: true })
-    const mdPath = join(mdDir, 'paper.md')
+    const dir = makeTempResultsDir('md-raw')
+    const mdPath = join(dir, 'paper.md')
     writeFileSync(mdPath, '# Title\n\nBody', 'utf8')
     readFile.mockResolvedValue('# Title\n\nBody')
+
     await syncSandboxOutputView({ sender: {} } as never, {
       screenBounds: { x: 10, y: 20, width: 300, height: 200 },
       fileUrl: pathToFileURL(mdPath).href,
       markdownView: 'raw',
+      forceReload: true,
     })
-    const view = WebContentsView.mock.results.at(-1)?.value
+
+    const view = latestView()
     expect(readFile).toHaveBeenCalled()
     expect(writeFile).toHaveBeenCalledWith(
       expect.stringMatching(/\.html$/),
@@ -246,39 +272,81 @@ describe('syncSandboxOutputView', () => {
   })
 
   it('serializes rapid markdown mode toggles without surfacing abort errors', async () => {
+    const dir = makeTempResultsDir('md-race')
+    const mdPath = join(dir, 'paper.md')
+    writeFileSync(mdPath, '# Title', 'utf8')
     readFile.mockResolvedValue('# Title')
+
     let loadAttempt = 0
     WebContentsView.mockImplementation(function WebContentsViewMock() {
       return createWebContentsViewMock({
         loadFile: vi.fn().mockImplementation(async () => {
-          loadAttempt++
+          loadAttempt += 1
           if (loadAttempt === 1) {
             throw new Error(
-              "ERR_ABORTED (-3) loading 'file:///tmp/teralexi-sandbox-preview/a.html'",
+              `ERR_ABORTED (-3) loading '${pathToFileURL(join(tmpdir(), 'teralexi-sandbox-preview', 'a.html')).href}'`,
             )
           }
         }),
       })
     })
 
-    const mdUrl = pathToFileURL(
-      join(tmpdir(), 'output', 'results', 'paper.md'),
-    ).href
-
+    const mdUrl = pathToFileURL(mdPath).href
     await expect(
       Promise.all([
         syncSandboxOutputView({ sender: {} } as never, {
           screenBounds: { x: 10, y: 20, width: 300, height: 200 },
           fileUrl: mdUrl,
           markdownView: 'html',
+          forceReload: true,
         }),
         syncSandboxOutputView({ sender: {} } as never, {
           screenBounds: { x: 10, y: 20, width: 300, height: 200 },
           fileUrl: mdUrl,
           markdownView: 'raw',
+          forceReload: true,
         }),
       ]),
     ).resolves.toBeDefined()
     expect(loadAttempt).toBeGreaterThanOrEqual(2)
+  })
+
+  it('recovers after a prior load-chain failure so later previews still use loadFile', async () => {
+    const dir = makeTempResultsDir('recover')
+    const htmlPath = join(dir, 'index.html')
+    writeFileSync(htmlPath, '<html><body>ok</body></html>', 'utf8')
+    const fileUrl = pathToFileURL(htmlPath).href
+
+    WebContentsView.mockImplementation(function WebContentsViewMock() {
+      return createWebContentsViewMock({
+        loadFile: vi
+          .fn()
+          .mockRejectedValueOnce(new Error('ERR_FAILED (-2) boom'))
+          .mockResolvedValue(undefined),
+      })
+    })
+
+    await syncSandboxOutputView({ sender: {} } as never, {
+      screenBounds: { x: 10, y: 20, width: 300, height: 200 },
+      fileUrl,
+      forceReload: true,
+    })
+
+    // Leave an artificial rejected chain entry, then ensure cleanup + next load
+    // still succeed (guards against the historical flake).
+    await resetSandboxOutputViewStateForTests()
+    WebContentsView.mockImplementation(function WebContentsViewMock() {
+      return createWebContentsViewMock()
+    })
+
+    await syncSandboxOutputView({ sender: {} } as never, {
+      screenBounds: { x: 10, y: 20, width: 300, height: 200 },
+      fileUrl,
+      forceReload: true,
+    })
+
+    const view = latestView()
+    expect(view.webContents.loadFile).toHaveBeenCalledWith(htmlPath)
+    expect(view.webContents.loadURL).not.toHaveBeenCalled()
   })
 })
