@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  APP_DATA_SOURCE_GROUP_KEY,
   groupConversations,
   NO_WORKSPACE_GROUP_KEY,
   parseConversationListGroupBy,
@@ -13,6 +14,7 @@ function item(
     agentId: 'agent-a',
     updatedAt: new Date('2026-01-01T00:00:00Z'),
     workspacePath: null,
+    type: 'ui',
     ...partial,
   }
 }
@@ -26,6 +28,7 @@ describe('parseConversationListGroupBy', () => {
   it('accepts known modes', () => {
     expect(parseConversationListGroupBy('agent')).toBe('agent')
     expect(parseConversationListGroupBy('workspace')).toBe('workspace')
+    expect(parseConversationListGroupBy('source')).toBe('source')
     expect(parseConversationListGroupBy('none')).toBe('none')
   })
 })
@@ -99,5 +102,47 @@ describe('groupConversations', () => {
       { key: NO_WORKSPACE_GROUP_KEY, label: 'No workspace' },
     ])
     expect(groups[1]?.items.map((c) => c.id)).toEqual(['a', 'c'])
+  })
+
+  it('groups by data source: App plus each channel', () => {
+    const items = [
+      item({
+        id: 'ui-1',
+        type: 'ui',
+        updatedAt: new Date('2026-01-01'),
+      }),
+      item({
+        id: 'channel:telegram:user-a',
+        type: 'channel',
+        updatedAt: new Date('2026-04-01'),
+      }),
+      item({
+        id: 'channel:whatsapp:user-b',
+        type: 'channel',
+        updatedAt: new Date('2026-03-01'),
+      }),
+      item({
+        id: 'channel:whatsapp:user-c',
+        type: 'channel',
+        updatedAt: new Date('2026-02-01'),
+      }),
+      item({
+        id: 'scheduler:job-1',
+        type: 'scheduler',
+        updatedAt: new Date('2026-05-01'),
+      }),
+    ]
+    const groups = groupConversations(items, 'source', resolveAgent)
+    expect(groups.map((g) => ({ key: g.key, label: g.label }))).toEqual([
+      { key: APP_DATA_SOURCE_GROUP_KEY, label: 'App' },
+      { key: 'scheduler', label: 'Scheduler' },
+      { key: 'channel:telegram', label: 'Telegram' },
+      { key: 'channel:whatsapp', label: 'WhatsApp' },
+    ])
+    expect(groups[0]?.items.map((c) => c.id)).toEqual(['ui-1'])
+    expect(groups.find((g) => g.key === 'channel:whatsapp')?.items.map((c) => c.id)).toEqual([
+      'channel:whatsapp:user-b',
+      'channel:whatsapp:user-c',
+    ])
   })
 })

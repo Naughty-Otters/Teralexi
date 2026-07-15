@@ -12,11 +12,13 @@ export const LAYOUT_PREF_KEYS = {
   workspaceEditorSessionByConversation:
     'teralexi.agent.workspaceEditorSessionByConversation',
   lastConversationId: 'teralexi.agent.lastConversationId',
-  /** Sidebar conversation list: `none` | `agent` | `workspace` */
+  /** Sidebar conversation list: `none` | `agent` | `workspace` | `source` */
   conversationListGroupBy: 'teralexi.agent.conversationListGroupBy',
   /** Collapsed group keys for the sidebar list (`agent::id` / `workspace::path`). */
   conversationListCollapsedGroups:
     'teralexi.agent.conversationListCollapsedGroups',
+  /** Which meta fields show under each conversation title (type / agent / date). */
+  conversationListItemLabels: 'teralexi.agent.conversationListItemLabels',
 } as const
 
 export type WorkspaceEditorSession = {

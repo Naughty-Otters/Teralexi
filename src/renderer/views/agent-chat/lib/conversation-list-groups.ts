@@ -1,20 +1,32 @@
 import { workspaceBasename } from '@shared/agent/workspace'
+import {
+  classifyConversationSessionId,
+  parseChannelIdFromConversationId,
+} from '@shared/conversation/session-id'
 
-export type ConversationListGroupBy = 'none' | 'agent' | 'workspace'
+export type ConversationListGroupBy =
+  | 'none'
+  | 'agent'
+  | 'workspace'
+  | 'source'
 
 export const CONVERSATION_LIST_GROUP_BY_VALUES = [
   'none',
   'agent',
   'workspace',
+  'source',
 ] as const satisfies readonly ConversationListGroupBy[]
 
 export const NO_WORKSPACE_GROUP_KEY = '__none__'
+export const APP_DATA_SOURCE_GROUP_KEY = 'app'
+export const SCHEDULER_DATA_SOURCE_GROUP_KEY = 'scheduler'
 
 export type ConversationListGroupItem = {
   id: string
   agentId: string
   updatedAt: Date
   workspacePath?: string | null
+  type?: 'ui' | 'channel' | 'scheduler'
 }
 
 export type ConversationListGroup<T extends ConversationListGroupItem> = {
@@ -27,7 +39,12 @@ export function parseConversationListGroupBy(
   raw: string | null | undefined,
 ): ConversationListGroupBy {
   const value = raw?.trim()
-  if (value === 'agent' || value === 'workspace' || value === 'none') {
+  if (
+    value === 'agent' ||
+    value === 'workspace' ||
+    value === 'source' ||
+    value === 'none'
+  ) {
     return value
   }
   return 'none'
@@ -39,6 +56,38 @@ function sortByUpdatedAtDesc<T extends ConversationListGroupItem>(
   return items
     .slice()
     .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+}
+
+function titleCaseChannelId(channelId: string): string {
+  const known: Record<string, string> = {
+    whatsapp: 'WhatsApp',
+    telegram: 'Telegram',
+    wechat: 'WeChat',
+    slack: 'Slack',
+  }
+  const normalized = channelId.trim().toLowerCase()
+  if (known[normalized]) return known[normalized]
+  if (!normalized) return 'Channel'
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+}
+
+/** Resolve sidebar group key/label for group-by data source. */
+export function resolveConversationDataSourceGroup(item: {
+  id: string
+  type?: 'ui' | 'channel' | 'scheduler'
+}): { key: string; label: string } {
+  const kind = item.type ?? classifyConversationSessionId(item.id)
+  if (kind === 'scheduler') {
+    return { key: SCHEDULER_DATA_SOURCE_GROUP_KEY, label: 'Scheduler' }
+  }
+  if (kind === 'channel') {
+    const channelId = parseChannelIdFromConversationId(item.id) ?? 'channel'
+    return {
+      key: `channel:${channelId}`,
+      label: titleCaseChannelId(channelId),
+    }
+  }
+  return { key: APP_DATA_SOURCE_GROUP_KEY, label: 'App' }
 }
 
 /**
@@ -68,7 +117,7 @@ export function groupConversations<T extends ConversationListGroupItem>(
     if (mode === 'agent') {
       key = item.agentId
       label = resolveAgentLabel(item.agentId) || 'Unknown agent'
-    } else {
+    } else if (mode === 'workspace') {
       const path = item.workspacePath?.trim() || ''
       if (!path) {
         key = NO_WORKSPACE_GROUP_KEY
@@ -77,6 +126,10 @@ export function groupConversations<T extends ConversationListGroupItem>(
         key = path
         label = workspaceBasename(path) || path
       }
+    } else {
+      const source = resolveConversationDataSourceGroup(item)
+      key = source.key
+      label = source.label
     }
 
     const bucket = buckets.get(key)
@@ -96,6 +149,15 @@ export function groupConversations<T extends ConversationListGroupItem>(
   )
 
   groups.sort((a, b) => {
+    // Keep App first, then channels / scheduler by recency.
+    if (mode === 'source') {
+      if (a.key === APP_DATA_SOURCE_GROUP_KEY && b.key !== APP_DATA_SOURCE_GROUP_KEY) {
+        return -1
+      }
+      if (b.key === APP_DATA_SOURCE_GROUP_KEY && a.key !== APP_DATA_SOURCE_GROUP_KEY) {
+        return 1
+      }
+    }
     const aTime = a.items[0]?.updatedAt.getTime() ?? 0
     const bTime = b.items[0]?.updatedAt.getTime() ?? 0
     return bTime - aTime
