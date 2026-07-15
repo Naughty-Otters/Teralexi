@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   closePreviewLinkTab,
   createEmptyPreviewLinkTab,
+  ensurePreviewUrlScheme,
   labelForPreviewUrl,
   normalizePreviewTabUrl,
   openPreviewLinkTab,
@@ -19,6 +20,42 @@ describe('labelForPreviewUrl', () => {
     expect(labelForPreviewUrl('https://docs.example.com/api/reference')).toBe(
       'reference · docs.example.com',
     )
+  })
+
+  it('uses Preview for empty URLs', () => {
+    expect(labelForPreviewUrl('')).toBe('Preview')
+  })
+})
+
+describe('ensurePreviewUrlScheme', () => {
+  it('prefixes bare hostnames with https://', () => {
+    expect(ensurePreviewUrlScheme('www.google.com')).toBe(
+      'https://www.google.com',
+    )
+    expect(ensurePreviewUrlScheme('example.com/path')).toBe(
+      'https://example.com/path',
+    )
+  })
+
+  it('leaves explicit schemes and local paths unchanged', () => {
+    expect(ensurePreviewUrlScheme('http://example.com')).toBe(
+      'http://example.com',
+    )
+    expect(ensurePreviewUrlScheme('https://example.com')).toBe(
+      'https://example.com',
+    )
+    expect(ensurePreviewUrlScheme('file:///tmp/a.html')).toBe(
+      'file:///tmp/a.html',
+    )
+    expect(ensurePreviewUrlScheme('/tmp/a.html')).toBe('/tmp/a.html')
+    expect(ensurePreviewUrlScheme('C:\\Users\\a\\b.html')).toBe(
+      'C:\\Users\\a\\b.html',
+    )
+  })
+
+  it('returns empty for blank input', () => {
+    expect(ensurePreviewUrlScheme('')).toBe('')
+    expect(ensurePreviewUrlScheme('   ')).toBe('')
   })
 })
 
@@ -50,6 +87,12 @@ describe('openPreviewLinkTab', () => {
     expect(second.tabs).toHaveLength(1)
     expect(second.activeTabId).toBe(first.tabs[0]?.id)
   })
+
+  it('defaults bare hostnames to https when opening', () => {
+    const opened = openPreviewLinkTab([], 'www.example.com/docs')
+    expect(opened.tabs[0]?.url).toBe('https://www.example.com/docs')
+    expect(opened.tabs[0]?.label).toContain('example.com')
+  })
 })
 
 describe('createEmptyPreviewLinkTab', () => {
@@ -63,6 +106,14 @@ describe('createEmptyPreviewLinkTab', () => {
     expect(second.tabs).toHaveLength(2)
     expect(second.tabs[1]?.id).not.toBe(first.tabs[0]?.id)
     expect(second.activeTabId).toBe(second.tabs[1]?.id)
+  })
+
+  it('does not dedupe blank tabs against each other', () => {
+    const first = createEmptyPreviewLinkTab([])
+    const second = createEmptyPreviewLinkTab(first.tabs)
+    const third = createEmptyPreviewLinkTab(second.tabs)
+    expect(third.tabs.map((t) => t.url)).toEqual(['', '', ''])
+    expect(new Set(third.tabs.map((t) => t.id)).size).toBe(3)
   })
 })
 
@@ -117,6 +168,16 @@ describe('updatePreviewLinkTabUrl', () => {
     )
     expect(next[0]?.url).toBe('https://www.google.com/')
   })
+
+  it('resets label to New tab when clearing the url', () => {
+    const opened = openPreviewLinkTab([], 'https://example.com')
+    const cleared = updatePreviewLinkTabUrl(
+      opened.tabs,
+      opened.activeTabId,
+      '',
+    )
+    expect(cleared[0]).toMatchObject({ url: '', label: 'New tab' })
+  })
 })
 
 describe('closePreviewLinkTab', () => {
@@ -132,5 +193,15 @@ describe('closePreviewLinkTab', () => {
     )
     expect(closed.tabs).toHaveLength(1)
     expect(closed.activeTabId).toBe(opened.tabs[0]?.id)
+  })
+
+  it('returns null active id when the last empty tab is closed', () => {
+    const empty = createEmptyPreviewLinkTab([])
+    const closed = closePreviewLinkTab(
+      empty.tabs,
+      empty.activeTabId,
+      empty.activeTabId,
+    )
+    expect(closed).toEqual({ tabs: [], activeTabId: null })
   })
 })
