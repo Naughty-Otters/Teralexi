@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const {
   latestPublishableSiteDirMock,
   publishStaticSiteDirectoryMock,
+  appendWebsitePublishedSessionTipMock,
   getTeralexiBaseApiUrlMock,
   getTeralexiServerAccessTokenMock,
   getEntitlementCacheMock,
@@ -13,6 +14,7 @@ const {
 } = vi.hoisted(() => ({
   latestPublishableSiteDirMock: vi.fn(),
   publishStaticSiteDirectoryMock: vi.fn(),
+  appendWebsitePublishedSessionTipMock: vi.fn(() => ({ ok: true, messageId: 'tip-1' })),
   getTeralexiBaseApiUrlMock: vi.fn(() => 'http://localhost:8000'),
   getTeralexiServerAccessTokenMock: vi.fn(async () => 'tok'),
   getEntitlementCacheMock: vi.fn(() => ({
@@ -27,6 +29,10 @@ vi.mock('./publish-site-resolve', () => ({
 
 vi.mock('@main/services/app-web-publish-client', () => ({
   publishStaticSiteDirectory: publishStaticSiteDirectoryMock,
+}))
+
+vi.mock('@main/services/app-web-publish-session-tip', () => ({
+  appendWebsitePublishedSessionTip: appendWebsitePublishedSessionTipMock,
 }))
 
 vi.mock('@main/services/teralexi-platform-config', () => ({
@@ -68,6 +74,11 @@ describe('publishWebsiteComposerPlugin', () => {
     writeFileSync(join(siteDir, 'css', 'a.css'), 'body{}', 'utf8')
     latestPublishableSiteDirMock.mockReturnValue(siteDir)
     publishStaticSiteDirectoryMock.mockReset()
+    appendWebsitePublishedSessionTipMock.mockReset()
+    appendWebsitePublishedSessionTipMock.mockReturnValue({
+      ok: true,
+      messageId: 'tip-1',
+    })
     getTeralexiServerAccessTokenMock.mockResolvedValue('tok')
     hasCachedEntitlementFeatureMock.mockReturnValue(true)
     getTeralexiBaseApiUrlMock.mockReturnValue('http://localhost:8000')
@@ -194,6 +205,10 @@ describe('publishWebsiteComposerPlugin', () => {
       siteDir,
       verify: true,
     })
+    expect(appendWebsitePublishedSessionTipMock).toHaveBeenCalledWith({
+      conversationId: ctx.conversationId,
+      absoluteUrl: 'http://localhost:8000/app/web/1/',
+    })
   })
 
   it('execute fails when no site is found', async () => {
@@ -203,6 +218,7 @@ describe('publishWebsiteComposerPlugin', () => {
     if (result.ok) return
     expect(result.error).toMatch(/No publishable site/i)
     expect(publishStaticSiteDirectoryMock).not.toHaveBeenCalled()
+    expect(appendWebsitePublishedSessionTipMock).not.toHaveBeenCalled()
   })
 
   it('execute surfaces publish API failures with uploadStatus', async () => {
@@ -218,5 +234,6 @@ describe('publishWebsiteComposerPlugin', () => {
     expect(result.error).toMatch(/Weekly publish limit/i)
     expect(result.uploadStatus).toBe(303)
     expect(result.siteDir).toBe(siteDir)
+    expect(appendWebsitePublishedSessionTipMock).not.toHaveBeenCalled()
   })
 })
