@@ -102,7 +102,7 @@ Both workflows are triggered manually from the **Actions** tab. See **[BUILD-AND
 
 **CI** (manual `workflow_dispatch`):
 
-1. **Unit tests** (Ubuntu) — `npm run test:unit:coverage`; uploads the `coverage/` artifact.
+1. **Unit tests** (Windows) — `npm run test:unit`.
 2. **Staging build** (macOS + Windows) — `build:mac:sit` / `build:win64:sit`; uploads `teralexi-<platform>-sit-<run>-<sha>` artifacts (14-day retention).
 3. **Update README** — refreshes the CI status table at the top of this file.
 
@@ -140,7 +140,7 @@ Environment files (`env/.dev.env`, `env/.sit.env`, `env/.prod.env`), local build
 
 ## Notes
 - CI uses Node.js 22.x to match local development requirements.
-- Download coverage HTML from the workflow artifact after a CI run if you need a local report without running tests.
+- Run `npm run test:unit:coverage` locally when you need the coverage HTML report.
 
 ## License
 
