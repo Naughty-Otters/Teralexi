@@ -27,6 +27,7 @@ vi.mock('./teralexi-server-auth', () => ({
 
 import {
   getAppWebMaxUploadBytes,
+  publishStaticSiteDirectory,
   publishStaticSiteZip,
   toAbsoluteAppWebUrl,
 } from './app-web-publish-client'
@@ -136,6 +137,7 @@ describe('app-web-publish-client', () => {
     if (!result.ok) return
     expect(result.absoluteUrl).toBe('http://localhost:8000/app/web/42/')
     expect(result.fileCount).toBe(2)
+    expect(result.uploadStatus).toBe(200)
     expect(fetchMock).toHaveBeenCalledWith(
       'http://localhost:8000/api/v1/app/web/upload',
       expect.objectContaining({
@@ -212,5 +214,48 @@ describe('app-web-publish-client', () => {
       code: 'not_signed_in',
     })
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('publishStaticSiteDirectory returns uploadStatus and verifyStatus', async () => {
+    const siteDir = mkdtempSync(join(tmpdir(), 'app-web-publish-dir-'))
+    try {
+      writeFileSync(join(siteDir, 'index.html'), '<html></html>', 'utf8')
+      fetchMock
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 201,
+          json: async () => ({
+            user_id: 7,
+            url: '/app/web/7/',
+            file_count: 1,
+            bytes: 12,
+          }),
+          text: async () => '',
+          headers: new Headers(),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          text: async () => '<html></html>',
+        })
+
+      const result = await publishStaticSiteDirectory({
+        siteDir,
+        verify: true,
+      })
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.uploadStatus).toBe(201)
+      expect(result.verifyStatus).toBe(200)
+      expect(result.absoluteUrl).toBe('http://localhost:8000/app/web/7/')
+      expect(result.zipFileCount).toBe(1)
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        2,
+        'http://localhost:8000/app/web/7/',
+        { method: 'GET' },
+      )
+    } finally {
+      rmSync(siteDir, { recursive: true, force: true })
+    }
   })
 })

@@ -1,6 +1,7 @@
 import type {
   SkillComposerToolbarInvokeResult,
   SkillComposerToolbarPluginView,
+  SkillComposerToolbarPreviewResult,
 } from '@shared/agent/skill-composer-toolbar'
 
 /**
@@ -33,6 +34,13 @@ export type SkillComposerToolbarPlugin = {
   getDisabledReason?: (
     ctx: SkillComposerToolbarPluginContext,
   ) => string | undefined | Promise<string | undefined>
+  /**
+   * Optional confirm-dialog payload (no side effects). When omitted, the UI
+   * falls back to invoking {@link execute} directly.
+   */
+  preview?: (
+    ctx: SkillComposerToolbarPluginContext,
+  ) => Promise<SkillComposerToolbarPreviewResult>
   /** Click handler — run the skill-owned action. */
   execute: (
     ctx: SkillComposerToolbarPluginContext,
@@ -42,4 +50,5 @@ export type SkillComposerToolbarPlugin = {
 export type {
   SkillComposerToolbarInvokeResult,
   SkillComposerToolbarPluginView,
+  SkillComposerToolbarPreviewResult,
 }

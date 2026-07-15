@@ -31,6 +31,7 @@
         <WorkspaceSelector variant="toolbar" :disabled="workspaceDisabled" />
         <span class="rich-composer-toolbar-divider" aria-hidden="true" />
       </template>
+      <!-- i-lucide-globe is referenced dynamically by website skill toolbar plugins. -->
       <template v-if="skillToolbarPlugins.length > 0">
         <AppIconTooltip
           v-for="plugin in skillToolbarPlugins"
@@ -46,14 +47,15 @@
           <button
             type="button"
             class="rich-composer-tool"
+            :class="{
+              'rich-composer-tool--inactive':
+                !plugin.enabled && skillToolbarInvokingId !== plugin.id,
+            }"
             :aria-label="plugin.label"
-            :disabled="
-              workspaceDisabled ||
-              !plugin.enabled ||
-              skillToolbarInvokingId === plugin.id
-            "
+            :aria-disabled="!plugin.enabled"
+            :disabled="skillToolbarInvokingId === plugin.id"
             @mousedown.prevent
-            @click="onSkillToolbarPluginClick(plugin.id)"
+            @click="onSkillToolbarPluginClick(plugin)"
           >
             <UIcon :name="`i-lucide-${plugin.icon}`" />
           </button>
@@ -124,6 +126,15 @@
       />
       <EditorContent :editor="editor" class="rich-composer-editor" />
     </div>
+    <WebsitePublishDialog
+      :open="publishDialogOpen"
+      :phase="publishDialogPhase"
+      :preview="publishPreview"
+      :result="publishResult"
+      @confirm="onPublishDialogConfirm"
+      @cancel="closePublishDialog"
+      @close="closePublishDialog"
+    />
   </div>
 </template>
 
@@ -150,7 +161,15 @@ import {
 import ComposerFileMentionMenu from './ComposerFileMentionMenu.vue'
 import WorkspaceSelector from './WorkspaceSelector.vue'
 import { useSkillComposerToolbar } from '@renderer/composables/useSkillComposerToolbar'
+import { openExternalUrl } from '@renderer/lib/open-external-url'
 import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
+import WebsitePublishDialog, {
+  type WebsitePublishDialogPhase,
+} from './WebsitePublishDialog.vue'
+import type {
+  SkillComposerToolbarInvokeResult,
+  SkillComposerToolbarPreviewResult,
+} from '@shared/agent/skill-composer-toolbar'
 import { useWorkspaceStore } from '@store/workspace'
 import type { ComposerSlashCommand } from './composer-slash-command-types'
 import type { QueueDeliveryMode } from '../conversation-chat-session'
@@ -223,24 +242,107 @@ const showLlmOverride = computed(
 const {
   plugins: skillToolbarPlugins,
   invokingId: skillToolbarInvokingId,
+  preview: previewSkillToolbarPlugin,
   invoke: invokeSkillToolbarPlugin,
 } = useSkillComposerToolbar({
   skillId: computed(() => props.skillId),
   conversationId: computed(() => props.conversationId),
-  interactionDisabled: computed(() => props.workspaceDisabled === true),
 })
 
-async function onSkillToolbarPluginClick(pluginId: string) {
-  const result = await invokeSkillToolbarPlugin(pluginId)
-  if (result.ok) {
+const publishDialogOpen = ref(false)
+const publishDialogPhase = ref<WebsitePublishDialogPhase>('confirm')
+const publishPreview = ref<SkillComposerToolbarPreviewResult | null>(null)
+const publishResult = ref<SkillComposerToolbarInvokeResult | null>(null)
+const publishPluginId = ref<string | null>(null)
+
+function closePublishDialog() {
+  if (publishDialogPhase.value === 'publishing') return
+  publishDialogOpen.value = false
+  publishPluginId.value = null
+  publishPreview.value = null
+  publishResult.value = null
+  publishDialogPhase.value = 'confirm'
+}
+
+async function onPublishDialogConfirm() {
+  const pluginId = publishPluginId.value
+  if (!pluginId || publishDialogPhase.value !== 'confirm') return
+  publishDialogPhase.value = 'publishing'
+  try {
+    const result = await invokeSkillToolbarPlugin(pluginId)
+    publishResult.value = result
+    publishDialogPhase.value = 'result'
+  } catch (err) {
+    publishResult.value = {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }
+    publishDialogPhase.value = 'result'
+  }
+}
+
+async function onSkillToolbarPluginClick(plugin: {
+  id: string
+  label: string
+  enabled: boolean
+  disabledReason?: string
+}) {
+  if (skillToolbarInvokingId.value === plugin.id) return
+
+  // Website publish uses confirm → result dialogs.
+  if (plugin.id === 'publish-website') {
+    publishPluginId.value = plugin.id
+    publishResult.value = null
+    publishDialogPhase.value = 'confirm'
+    const preview = await previewSkillToolbarPlugin(plugin.id)
+    publishPreview.value = preview
+    if (!preview.ok) {
+      // Surface gate / preview errors in the same dialog shell.
+      publishResult.value = {
+        ok: false,
+        error:
+          preview.error ||
+          plugin.disabledReason ||
+          'This action is not available right now',
+      }
+      publishDialogPhase.value = 'result'
+    }
+    publishDialogOpen.value = true
+    return
+  }
+
+  if (!plugin.enabled) {
     toast.add({
-      title: 'Done',
-      description: result.message ?? 'Action completed',
+      title: plugin.label,
+      description:
+        plugin.disabledReason?.trim() ||
+        'This action is not available right now',
+      color: 'warning',
+    })
+    return
+  }
+
+  const result = await invokeSkillToolbarPlugin(plugin.id)
+  if (result.ok) {
+    const url = result.absoluteUrl?.trim()
+    toast.add({
+      title: url ? 'Website published' : 'Done',
+      description: url || result.message || 'Action completed',
       color: 'success',
+      actions: url
+        ? [
+            {
+              label: 'Open',
+              onClick: () => {
+                openExternalUrl(url)
+              },
+            },
+          ]
+        : undefined,
     })
   } else {
     toast.add({
-      title: 'Action failed',
+      title: plugin.label,
       description: result.error ?? 'Unknown error',
       color: 'error',
     })
@@ -716,19 +818,22 @@ watch(
   cursor: pointer;
 }
 
-.rich-composer-tool:hover:not(:disabled) {
+.rich-composer-tool:hover:not(:disabled):not(.rich-composer-tool--inactive) {
   background: color-mix(in srgb, var(--ui-text) 8%, transparent);
   color: var(--ui-text);
 }
 
-.rich-composer-tool:disabled {
+.rich-composer-tool:disabled,
+.rich-composer-tool--inactive {
   color: color-mix(in srgb, var(--ui-text-muted) 45%, transparent);
   opacity: 0.45;
   cursor: not-allowed;
 }
 
 .rich-composer-tool:disabled :deep(svg),
-.rich-composer-tool:disabled :deep(.iconify) {
+.rich-composer-tool:disabled :deep(.iconify),
+.rich-composer-tool--inactive :deep(svg),
+.rich-composer-tool--inactive :deep(.iconify) {
   opacity: 0.7;
 }
 

@@ -95,7 +95,12 @@ describe('syncSandboxOutputView', () => {
     writeFile.mockClear()
     mkdir.mockClear()
     stat.mockClear()
-    stat.mockResolvedValue({ mtimeMs: 1, size: 100 })
+    stat.mockResolvedValue({
+      mtimeMs: 1,
+      size: 100,
+      isFile: () => true,
+      isDirectory: () => false,
+    })
     addChildView.mockClear()
     removeChildView.mockClear()
     await syncSandboxOutputView({ sender: {} } as never, {
@@ -113,13 +118,75 @@ describe('syncSandboxOutputView', () => {
     ).resolves.toBeUndefined()
   })
 
-  it('creates view and loads file url', async () => {
+  it('creates view and loads concrete files via loadFile', async () => {
+    await syncSandboxOutputView({ sender: {} } as never, {
+      screenBounds: { x: 10, y: 20, width: 300, height: 200 },
+      fileUrl: 'file:///tmp/results/index.html',
+    })
+    expect(WebContentsView).toHaveBeenCalled()
+    expect(addChildView).toHaveBeenCalled()
+    const view = WebContentsView.mock.results.at(-1)?.value
+    expect(view.webContents.loadFile).toHaveBeenCalledWith(
+      '/tmp/results/index.html',
+    )
+    expect(view.webContents.loadURL).not.toHaveBeenCalled()
+  })
+
+  it('loads directory listings via loadURL', async () => {
+    stat.mockResolvedValue({
+      mtimeMs: 1,
+      size: 0,
+      isFile: () => false,
+      isDirectory: () => true,
+    })
     await syncSandboxOutputView({ sender: {} } as never, {
       screenBounds: { x: 10, y: 20, width: 300, height: 200 },
       fileUrl: 'file:///tmp/results',
     })
-    expect(WebContentsView).toHaveBeenCalled()
-    expect(addChildView).toHaveBeenCalled()
+    const view = WebContentsView.mock.results.at(-1)?.value
+    expect(view.webContents.loadURL).toHaveBeenCalledWith('file:///tmp/results')
+    expect(view.webContents.loadFile).not.toHaveBeenCalled()
+  })
+
+  it('shows an error page instead of rejecting when loadFile fails', async () => {
+    WebContentsView.mockImplementation(function WebContentsViewMock() {
+      return {
+        setBackgroundColor: vi.fn(),
+        setBounds: vi.fn(),
+        webContents: {
+          isDestroyed: () => false,
+          getURL: () => '',
+          loadURL: vi.fn(),
+          loadFile: vi
+            .fn()
+            .mockRejectedValueOnce(
+              new Error(
+                "ERR_FAILED (-2) loading 'file:///tmp/results/index.html'",
+              ),
+            )
+            .mockResolvedValue(undefined),
+          on: vi.fn(),
+          close: vi.fn(),
+          navigationHistory: {
+            canGoBack: () => false,
+            canGoForward: () => false,
+            goBack: vi.fn(),
+            goForward: vi.fn(),
+          },
+        },
+      }
+    })
+
+    await expect(
+      syncSandboxOutputView({ sender: {} } as never, {
+        screenBounds: { x: 10, y: 20, width: 300, height: 200 },
+        fileUrl: 'file:///tmp/results/index.html',
+      }),
+    ).resolves.toBeUndefined()
+
+    const view = WebContentsView.mock.results.at(-1)?.value
+    expect(writeFile).toHaveBeenCalled()
+    expect(view.webContents.loadFile).toHaveBeenCalledTimes(2)
   })
 
   it('renders markdown files as html via temp file', async () => {

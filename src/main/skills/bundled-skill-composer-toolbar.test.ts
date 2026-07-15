@@ -7,6 +7,8 @@ describe('bundled skill composer toolbar plugins', () => {
     expect(plugins.map((p) => p.id)).toEqual(['publish-website'])
     expect(plugins[0]?.icon).toBe('globe')
     expect(plugins[0]?.label).toBe('Publish website')
+    expect(typeof plugins[0]?.preview).toBe('function')
+    expect(typeof plugins[0]?.execute).toBe('function')
   })
 
   it('returns empty for skills without toolbar plugins', () => {

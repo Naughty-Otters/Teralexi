@@ -68,6 +68,60 @@ async function loadWebContentsFile(
   }
 }
 
+/**
+ * Prefer `loadFile` for concrete files — Electron's `loadURL('file://…')` often
+ * rejects with ERR_FAILED (-2) for workspace paths outside the app bundle.
+ * Directories (results listings) still need `loadURL`.
+ */
+async function loadLocalFileUrl(
+  view: WebContentsView,
+  fileUrl: string,
+): Promise<void> {
+  let filePath: string
+  try {
+    filePath = fileURLToPath(fileUrl)
+  } catch {
+    await loadWebContentsUrl(view, fileUrl)
+    return
+  }
+
+  let isFile = false
+  try {
+    isFile = (await fs.stat(filePath)).isFile()
+  } catch {
+    // Missing path — fall through to loadURL for a Chromium error page.
+  }
+
+  if (isFile) {
+    await loadWebContentsFile(view, filePath)
+    return
+  }
+
+  await loadWebContentsUrl(view, fileUrl)
+}
+
+async function showPreviewErrorInView(
+  view: WebContentsView,
+  fileUrl: string,
+  err: unknown,
+): Promise<void> {
+  const message = err instanceof Error ? err.message : String(err)
+  log.error('Failed to load sandbox output preview', { fileUrl, err })
+  try {
+    await loadHtmlDocumentInView(
+      view,
+      renderPreviewErrorHtml(message),
+      createHash('sha256')
+        .update(`${fileUrl}\0${message}`)
+        .digest('hex')
+        .slice(0, 32),
+    )
+  } catch (innerErr) {
+    log.error('Failed to show preview error page', { fileUrl, err: innerErr })
+    throw innerErr
+  }
+}
+
 function removeViewForWindow(win: BrowserWindow): void {
   const view = sandboxResultsViews.get(win.id)
   if (!view) return
@@ -197,31 +251,16 @@ async function loadSandboxOutputPreview(
 ): Promise<void> {
   if (view.webContents.isDestroyed()) return
 
-  if (isMarkdownPreviewFileUrl(fileUrl)) {
-    try {
+  try {
+    if (isMarkdownPreviewFileUrl(fileUrl)) {
       await loadMarkdownPreview(view, fileUrl, markdownView)
       return
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      log.error('Failed to load markdown preview', { fileUrl, markdownView, err })
-      try {
-        await loadHtmlDocumentInView(
-          view,
-          renderPreviewErrorHtml(message),
-          createHash('sha256').update(`${fileUrl}\0${message}`).digest('hex').slice(0, 32),
-        )
-      } catch (innerErr) {
-        log.error('Failed to show markdown preview error page', {
-          fileUrl,
-          err: innerErr,
-        })
-        throw innerErr
-      }
-      return
     }
+    await loadLocalFileUrl(view, fileUrl)
+  } catch (err) {
+    if (isNavigationAbortedError(err)) return
+    await showPreviewErrorInView(view, fileUrl, err)
   }
-
-  await loadWebContentsUrl(view, fileUrl)
 }
 
 async function syncSandboxOutputViewImpl(

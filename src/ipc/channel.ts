@@ -1879,6 +1879,11 @@ export class IpcChannelMainClass {
     { skillId: string; conversationId: string; pluginId: string },
     import('@shared/agent/skill-composer-toolbar').SkillComposerToolbarInvokeResult
   > = null!
+  /** Preview a toolbar action (confirm dialog) without executing side effects. */
+  PreviewSkillComposerToolbarPlugin: IpcMainEventListener<
+    { skillId: string; conversationId: string; pluginId: string },
+    import('@shared/agent/skill-composer-toolbar').SkillComposerToolbarPreviewResult
+  > = null!
   /** Get high-level planning phase for a conversation. */
   GetPlanModeState: IpcMainEventListener<
     { conversationId: string },
