@@ -24,6 +24,29 @@ const navigationListenersRegistered = new Set<number>()
 const previewHtmlDir = join(tmpdir(), 'teralexi-sandbox-preview')
 const log = createLogger('sandbox.output-view')
 
+/**
+ * Test-only: drop all window preview overlays and in-flight load chains.
+ * Safe to call from unit tests between cases so module singletons cannot leak.
+ */
+export async function resetSandboxOutputViewStateForTests(): Promise<void> {
+  const pending = [...previewLoadChains.values()]
+  for (const view of sandboxResultsViews.values()) {
+    try {
+      if (!view.webContents.isDestroyed()) {
+        view.webContents.close()
+      }
+    } catch {
+      // ignore
+    }
+  }
+  sandboxResultsViews.clear()
+  lastLoadedPreview.clear()
+  previewLoadChains.clear()
+  closedHandlersRegistered.clear()
+  navigationListenersRegistered.clear()
+  await Promise.allSettled(pending)
+}
+
 function isNavigationAbortedError(err: unknown): boolean {
   const message = err instanceof Error ? err.message : String(err)
   return message.includes('ERR_ABORTED') || message.includes('(-3)')
@@ -37,7 +60,10 @@ function schedulePreviewLoad(
   const prev = previewLoadChains.get(winId) ?? Promise.resolve()
   const next = prev
     .catch((err: unknown) => {
-      if (!isNavigationAbortedError(err)) throw err
+      // Keep the chain alive after non-abort failures so a later sync can recover.
+      if (!isNavigationAbortedError(err)) {
+        log.warn('Sandbox preview load chain recovered after error', { err })
+      }
     })
     .then(load)
   previewLoadChains.set(winId, next)
@@ -123,11 +149,12 @@ async function showPreviewErrorInView(
 }
 
 function removeViewForWindow(win: BrowserWindow): void {
-  const view = sandboxResultsViews.get(win.id)
+  const id = win.id
+  const view = sandboxResultsViews.get(id)
+  lastLoadedPreview.delete(id)
+  previewLoadChains.delete(id)
+  navigationListenersRegistered.delete(id)
   if (!view) return
-  lastLoadedPreview.delete(win.id)
-  previewLoadChains.delete(win.id)
-  navigationListenersRegistered.delete(win.id)
   try {
     if (!win.isDestroyed()) {
       win.contentView.removeChildView(view)
@@ -142,7 +169,7 @@ function removeViewForWindow(win: BrowserWindow): void {
   } catch {
     // ignore
   }
-  sandboxResultsViews.delete(win.id)
+  sandboxResultsViews.delete(id)
 }
 
 function ensureClosedCleanup(win: BrowserWindow): void {
@@ -151,6 +178,9 @@ function ensureClosedCleanup(win: BrowserWindow): void {
   closedHandlersRegistered.add(id)
   win.once('closed', () => {
     closedHandlersRegistered.delete(id)
+    lastLoadedPreview.delete(id)
+    previewLoadChains.delete(id)
+    navigationListenersRegistered.delete(id)
     const view = sandboxResultsViews.get(id)
     if (!view) return
     sandboxResultsViews.delete(id)
