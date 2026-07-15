@@ -308,6 +308,7 @@ import {
   normalizeChatMessagesForDisplay,
 } from './chat/chatMessageNormalize'
 import { chatMessagesHavePendingHitl } from './chat/chatHitlHelpers'
+import { parsePersistedCollectFormResponse } from './chat/chatUserMessageHelpers'
 import {
   isExitPlanModeToolPart,
   toolPartDisplayName,
@@ -701,6 +702,16 @@ function shouldPreserveReactiveMessagesWhenChatEmpty(): boolean {
   return Boolean(getConversationChat(cid)?.messages?.length)
 }
 
+function clearHitlQueueBlockIfMessagesResolved(
+  messages: readonly UIMessage[],
+): void {
+  const conversationId = resolveActiveConversationId()
+  if (!conversationId) return
+  if (!conversationHitlBlocksQueue(conversationId)) return
+  if (chatMessagesHavePendingHitl(messages)) return
+  setConversationHitlBlocksQueue(conversationId, false)
+}
+
 function syncReactiveMessagesFromChat(
   raw: UIMessage[] | undefined,
   opts?: { full?: boolean },
@@ -718,6 +729,8 @@ function syncReactiveMessagesFromChat(
       ? normalizeChatMessagesForDisplay(raw)
       : incrementalSyncChatMessages(raw, reactiveMessages.value)
   chatUiPerfMarkEnd('normalize')
+
+  clearHitlQueueBlockIfMessagesResolved(reactiveMessages.value)
 
   const tail = reactiveMessages.value[reactiveMessages.value.length - 1]
   if (UI_CHAT_CONVERSATION_MODE_ONLY) {
@@ -825,17 +838,35 @@ function dedupeStoreRowsByIdLastWins(rows: StoreMessage[]): StoreMessage[] {
 
 function storeMessagesToUi(rows: StoreMessage[]): UIMessage[] {
   const uniqueRows = dedupeStoreRowsByIdLastWins(rows)
-  return uniqueRows.map((m) => ({
-    id: m.id,
-    role: m.role,
-    parts: [
-      {
-        type: 'text' as const,
-        text: m.content,
-        state: m.isStreaming ? ('streaming' as const) : ('done' as const),
-      },
-    ],
-  }))
+  return uniqueRows.map((m) => {
+    if (m.role === 'user') {
+      const form = parsePersistedCollectFormResponse(m.content)
+      if (form) {
+        return {
+          id: m.id,
+          role: m.role,
+          parts: [
+            {
+              type: 'data-collect-form-response' as const,
+              id: form.requestId || undefined,
+              data: { values: form.values },
+            },
+          ],
+        } as UIMessage
+      }
+    }
+    return {
+      id: m.id,
+      role: m.role,
+      parts: [
+        {
+          type: 'text' as const,
+          text: m.content,
+          state: m.isStreaming ? ('streaming' as const) : ('done' as const),
+        },
+      ],
+    }
+  })
 }
 
 function conversationMeta(conversationId: string): Conversation | undefined {
@@ -1582,6 +1613,14 @@ async function onCollectFormSubmit(payload: {
 }) {
   const chat = chatInst.value
   if (!chat) return
+  const conversationId = resolveActiveConversationId()
+  // Match onToolApproval: form-request chunks set hitlBlocksQueue, and leaving
+  // it stuck keeps the composer on "Waiting for your approval…" after submit
+  // even while plan execution resumes.
+  if (conversationId) {
+    setConversationHitlBlocksQueue(conversationId, false)
+    void refreshPlanModeState(conversationId)
+  }
   await chat.sendMessage({
     role: 'user',
     parts: [

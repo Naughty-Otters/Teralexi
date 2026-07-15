@@ -100,3 +100,78 @@ describe('tool approval resume model messages', () => {
     expect(parts.filter((p) => p.type === 'tool-call')).toHaveLength(2)
   })
 })
+
+describe('form-submit resume model messages', () => {
+  it('trailing step prompt drops incomplete approvals so OpenAI pairing stays valid', async () => {
+    const clientUi: ClientUiMessage[] = [
+      userMsg([{ type: 'text', text: 'build the site' }]),
+      assistantMsg([
+        { type: 'text', text: 'Need a few details' },
+        {
+          type: 'dynamic-tool',
+          toolName: 'write_file',
+          toolCallId: 'tc-done',
+          state: 'output-available',
+          input: { path: 'index.html' },
+          output: 'ok',
+        },
+        {
+          type: 'dynamic-tool',
+          toolName: 'publish_website',
+          toolCallId: 'tc-pending',
+          state: 'approval-responded',
+          input: {},
+          approval: { id: 'ap-pub', approved: true },
+        },
+        {
+          type: 'dynamic-tool',
+          toolName: 'enter_plan_mode',
+          toolCallId: 'tc-plan',
+          state: 'approval-requested',
+          input: {},
+        },
+        {
+          type: 'data-collect-form-request',
+          id: 'form-1',
+          data: { todoId: 1, todoName: 'Site details' },
+        },
+      ]),
+      userMsg([
+        {
+          type: 'data-collect-form-response',
+          id: 'form-1',
+          data: { values: { title: 'Otters' } },
+        },
+      ]),
+    ]
+
+    // Mirrors buildLoopMessagesForFormSubmitResume:
+    // full UI replay + trailing executor step prompt.
+    const messages = await buildAgentModelMessages({
+      toolSet: {},
+      fallbackUserContent: 'Execute with the submitted form values.',
+      clientUiMessages: clientUi,
+      trailingUserContent: 'Execute with the submitted form values.',
+    })
+
+    expect(messages.at(-1)?.role).toBe('user')
+    expect(String(messages.at(-1)?.content)).toContain('submitted form')
+
+    const serialized = JSON.stringify(messages)
+    expect(serialized).not.toContain('tc-pending')
+    expect(serialized).not.toContain('tc-plan')
+    expect(serialized).toContain('tc-done')
+
+    const unanswered = messages.some((msg) => {
+      if (msg.role !== 'assistant' || !Array.isArray(msg.content)) return false
+      return msg.content.some(
+        (part) =>
+          part &&
+          typeof part === 'object' &&
+          (part as { type?: string }).type === 'tool-call' &&
+          (part as { toolCallId?: string }).toolCallId === 'tc-pending',
+      )
+    })
+    expect(unanswered).toBe(false)
+  })
+})

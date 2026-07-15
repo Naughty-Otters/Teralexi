@@ -7,7 +7,8 @@
  * Applies four passes in order:
  *  1. Surrogate character stripping — lone UTF-16 surrogates → U+FFFD
  *  2. Tool-call input repair — malformed JSON strings in ToolCallPart.input → best-effort object
- *  3. Role alternation repair — drop stray tool messages, merge consecutive user/assistant messages
+ *  3. Role alternation repair — drop stray tool messages, drop OpenAI-unsafe unanswered
+ *     tool-calls (esp. after a later user turn), merge consecutive user/assistant messages
  *  4. Empty content normalization — remove messages whose content carries no usable text
  */
 
@@ -35,6 +36,22 @@ export function sanitizeMessages(messages: ModelMessage[]): SanitizeResult {
   out = stripInjectorMessageMeta(out)
 
   return { messages: out, mutations }
+}
+
+/**
+ * True when some assistant `tool-call` still lacks a real `tool-result`.
+ * Approval-only rounds count as incomplete — do not append injector user
+ * messages yet, or OpenAI sees `tool_calls` then `user` (results land after).
+ */
+export function hasUnansweredToolCalls(messages: readonly ModelMessage[]): boolean {
+  const withResults = toolCallIdsWithResults(messages as ModelMessage[])
+  for (const msg of messages) {
+    if (msg.role !== 'assistant') continue
+    for (const id of assistantToolCallIds(msg as ModelMessage & { role: 'assistant' })) {
+      if (!withResults.has(id)) return true
+    }
+  }
+  return false
 }
 
 // ---------------------------------------------------------------------------
@@ -259,6 +276,171 @@ function isRetainedToolMessagePart(
   return declaredToolCallIds.has(id)
 }
 
+/**
+ * Collect toolCallIds that have a real `tool-result` (OpenAI-safe resolution).
+ */
+function toolCallIdsWithResults(messages: ModelMessage[]): Set<string> {
+  const ids = new Set<string>()
+  for (const msg of messages) {
+    if (msg.role !== 'tool' || !Array.isArray(msg.content)) continue
+    for (const p of msg.content) {
+      const part = p as Record<string, unknown>
+      if (
+        part.type === 'tool-result' &&
+        typeof part.toolCallId === 'string' &&
+        part.toolCallId.trim()
+      ) {
+        ids.add(part.toolCallId.trim())
+      }
+    }
+  }
+  return ids
+}
+
+/**
+ * Map approvalId → toolCallId from assistant `tool-approval-request` parts.
+ */
+function approvalIdToToolCallId(messages: ModelMessage[]): Map<string, string> {
+  const map = new Map<string, string>()
+  for (const msg of messages) {
+    if (msg.role !== 'assistant' || !Array.isArray(msg.content)) continue
+    for (const p of msg.content) {
+      const part = p as Record<string, unknown>
+      if (
+        part.type === 'tool-approval-request' &&
+        typeof part.approvalId === 'string' &&
+        part.approvalId.trim() &&
+        typeof part.toolCallId === 'string' &&
+        part.toolCallId.trim()
+      ) {
+        map.set(part.approvalId.trim(), part.toolCallId.trim())
+      }
+    }
+  }
+  return map
+}
+
+/**
+ * Index of the first user/system message after message index `from` (exclusive start).
+ * Used to decide whether unanswered tool calls are still "pending resume" or stale.
+ */
+function indexOfLaterNonToolTurn(
+  messages: ModelMessage[],
+  from: number,
+): number {
+  for (let i = from + 1; i < messages.length; i++) {
+    const role = messages[i]?.role
+    if (role === 'user' || role === 'system') return i
+  }
+  return -1
+}
+
+/**
+ * OpenAI requires every assistant `tool_calls` id to have a following tool result.
+ *
+ * Only strip when a later user/system turn follows the incomplete round — that is the
+ * form-submit / "try again" failure mode. Leave trailing HITL approval-resume shapes
+ * (tool-call + approval-response, no later user) and mid-repair unit fixtures alone.
+ */
+function stripOpenAiUnsafeUnansweredToolCalls(
+  messages: ModelMessage[],
+  mutations: string[],
+): ModelMessage[] {
+  const withResults = toolCallIdsWithResults(messages)
+
+  const out: ModelMessage[] = []
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i]!
+    if (msg.role !== 'assistant' || !Array.isArray(msg.content)) {
+      out.push(msg)
+      continue
+    }
+
+    // Completing a tool round mid-thread without a later user is fine for HITL resume.
+    if (indexOfLaterNonToolTurn(messages, i) < 0) {
+      out.push(msg)
+      continue
+    }
+
+    let stripped = 0
+    const kept = msg.content.filter((p) => {
+      const part = p as Record<string, unknown>
+      const type = typeof part.type === 'string' ? part.type : ''
+      if (type !== 'tool-call' && type !== 'tool-approval-request') return true
+      const id =
+        typeof part.toolCallId === 'string' ? part.toolCallId.trim() : ''
+      if (!id) {
+        stripped++
+        return false
+      }
+      if (withResults.has(id)) return true
+      stripped++
+      return false
+    })
+
+    if (stripped > 0) {
+      mutations.push(
+        `stripped ${stripped} unanswered tool-call part(s) (OpenAI tool_call pairing)`,
+      )
+    }
+    if (kept.length === 0) {
+      mutations.push('dropped assistant message left empty after unanswered tool-call strip')
+      continue
+    }
+    out.push(
+      kept.length === msg.content.length
+        ? msg
+        : ({ ...msg, content: kept } as ModelMessage),
+    )
+  }
+
+  // Drop orphan tool parts that belonged to stripped tool-calls. Approval responses
+  // must map to a still-declared approval-request (isRetainedToolMessagePart alone
+  // keeps any approvalId, which would leave OpenAI-invalid / validator-orphan rows).
+  const declared = new Set<string>()
+  for (const msg of out) {
+    if (msg.role === 'assistant') {
+      for (const id of assistantToolCallIds(msg as ModelMessage & { role: 'assistant' })) {
+        declared.add(id)
+      }
+    }
+  }
+  const remainingApprovalToTool = approvalIdToToolCallId(out)
+  const cleaned: ModelMessage[] = []
+  for (const msg of out) {
+    if (msg.role !== 'tool' || !Array.isArray(msg.content)) {
+      cleaned.push(msg)
+      continue
+    }
+    const kept = msg.content.filter((p) => {
+      const part = p as Record<string, unknown>
+      const type = typeof part.type === 'string' ? part.type : ''
+      if (type === 'tool-approval-response') {
+        const approvalId =
+          typeof part.approvalId === 'string' ? part.approvalId.trim() : ''
+        const toolCallId = approvalId
+          ? remainingApprovalToTool.get(approvalId)
+          : undefined
+        return Boolean(toolCallId && declared.has(toolCallId))
+      }
+      return isRetainedToolMessagePart(part, declared)
+    })
+    if (kept.length === 0) {
+      mutations.push('dropped tool message orphaned by unanswered tool-call strip')
+      continue
+    }
+    if (kept.length !== msg.content.length) {
+      mutations.push(
+        `removed ${msg.content.length - kept.length} orphaned tool part(s) after tool-call strip`,
+      )
+      cleaned.push({ ...msg, content: kept } as ModelMessage)
+      continue
+    }
+    cleaned.push(msg)
+  }
+  return cleaned
+}
+
 function assistantContentToParts(content: unknown): Array<Record<string, unknown>> {
   if (typeof content === 'string') {
     const trimmed = content.trim()
@@ -342,9 +524,13 @@ function repairRoleAlternation(messages: ModelMessage[], mutations: string[]): M
     destrayed.push(msg)
   }
 
+  // Drop unanswered assistant tool-calls that OpenAI would reject (form-submit /
+  // "try again" after approval-requested or approval-only rounds).
+  const pruned = stripOpenAiUnsafeUnansweredToolCalls(destrayed, mutations)
+
   // Merge consecutive user / assistant messages
   const merged: ModelMessage[] = []
-  for (const msg of destrayed) {
+  for (const msg of pruned) {
     const prev = merged.length > 0 ? merged[merged.length - 1] : undefined
     if (msg.role === 'assistant' && prev?.role === 'assistant') {
       merged[merged.length - 1] = mergeConsecutiveAssistantMessages(

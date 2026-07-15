@@ -1235,6 +1235,9 @@ async function buildLoopMessagesForFormSubmitResume(
   }
 
   try {
+    // trailingUserContent marks form-submit style replay: incomplete
+    // approval-* tool UI parts are dropped before convert, and the sanitizer
+    // strips any remaining unanswered tool_calls ahead of the step prompt.
     const messages = await buildAgentModelMessages({
       toolSet,
       fallbackUserContent: stepUserPrompt,

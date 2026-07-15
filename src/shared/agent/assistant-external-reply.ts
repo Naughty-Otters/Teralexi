@@ -137,6 +137,20 @@ export type AssistantExternalReplyOuter = {
   pipelineConversation?: PipelineConversationTurnLike[]
 }
 
+/** Prefer a clean one-line failure over the raw Skills/Agentic dump. */
+function extractExecutionErrorSummary(text: string): string | null {
+  const match = text.match(
+    /Execution error:\s*([^\n]+(?:\n(?!\s*\*\*)[^\n]+)*)/i,
+  )
+  if (!match?.[1]) return null
+  const detail = match[1].replace(/\s+/g, ' ').trim()
+  if (!detail) return null
+  // Cap so the bubble stays readable when the provider message is long.
+  const clipped =
+    detail.length > 400 ? `${detail.slice(0, 397).trimEnd()}…` : detail
+  return `Something went wrong while running tools.\n\n${clipped}`
+}
+
 /** Keep user-facing sections from aggregated finalResult; drop thinking/tools/planning. */
 export function extractUserFacingTextFromFinalResult(finalResult: string): string {
   const trimmed = finalResult.trim()
@@ -155,7 +169,19 @@ export function extractUserFacingTextFromFinalResult(finalResult: string): strin
     kept.push(cleaned)
   }
 
-  return kept.join('\n\n\n').trim()
+  const joined = kept.join('\n\n\n').trim()
+  if (joined) {
+    const failure = extractExecutionErrorSummary(joined)
+    // Agentic-run / skills dumps that only carry an execution failure → short summary.
+    const looksLikeAgenticDump =
+      /Agentic Run|Skills\s*&\s*tool execution|result\s*\(empty\)/i.test(joined)
+    if (failure && looksLikeAgenticDump) {
+      return failure
+    }
+    return joined
+  }
+
+  return extractExecutionErrorSummary(trimmed) ?? ''
 }
 
 export function userFacingTextFromPipelineConversation(

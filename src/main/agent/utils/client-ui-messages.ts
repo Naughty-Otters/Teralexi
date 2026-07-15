@@ -306,12 +306,56 @@ export function flattenMultipartTextLikeModelMessages(
   })
 }
 
+export type ClientUiToModelConvertOpts = {
+  /**
+   * Form-submit / trailing step prompt: drop incomplete tool UI parts so the
+   * converted thread never has OpenAI-invalid `tool_calls` before the trailing user.
+   * HITL tool-approval resume must leave this false so `approval-responded` can execute.
+   */
+  dropIncompleteApprovals?: boolean
+}
+
+/**
+ * AI SDK `ignoreIncompleteToolCalls` only drops `input-streaming` / `input-available`.
+ * `approval-requested` still converts to assistant `tool-call` with no following tool
+ * message — OpenAI then rejects the payload. Drop those UI parts before convert.
+ *
+ * When {@link ClientUiToModelConvertOpts.dropIncompleteApprovals} is set (form-submit),
+ * also drop `approval-responded` (no output yet). Keep `approval-responded` for HITL
+ * tool-approval resume so the SDK can execute the approved tool.
+ */
+function stripIncompleteToolUiParts(
+  messages: readonly ClientUiMessage[],
+  opts: ClientUiToModelConvertOpts = {},
+): ClientUiMessage[] {
+  const dropIncompleteApprovals = opts.dropIncompleteApprovals === true
+  return messages.map((message) => {
+    if (message.role !== 'assistant' || !message.parts?.length) return message
+    const parts = message.parts.filter((part) => {
+      if (!isRecord(part)) return true
+      if (typeof part.type !== 'string') return true
+      // Tool UI parts: type "dynamic-tool" or "tool-<name>"
+      const isToolPart =
+        part.type === 'dynamic-tool' || part.type.startsWith('tool-')
+      if (!isToolPart) return true
+      const state = typeof part.state === 'string' ? part.state : ''
+      if (state === 'approval-requested') return false
+      if (dropIncompleteApprovals && state === 'approval-responded') return false
+      return true
+    })
+    if (parts.length === message.parts.length) return message
+    return { ...message, parts }
+  })
+}
+
 export async function clientUiMessagesToModelMessages(
   messages: readonly ClientUiMessage[],
   toolSet: Record<string, unknown>,
+  convertOpts: ClientUiToModelConvertOpts = {},
 ): Promise<ModelMessage[]> {
+  const filtered = stripIncompleteToolUiParts(messages, convertOpts)
   return flattenMultipartTextLikeModelMessages(
-    await convertToModelMessages(messages as Parameters<typeof convertToModelMessages>[0], {
+    await convertToModelMessages(filtered as Parameters<typeof convertToModelMessages>[0], {
       tools: toolSet,
       ignoreIncompleteToolCalls: true,
       convertDataPart: (part) =>
@@ -339,6 +383,8 @@ export async function buildAgentModelMessages(
     : undefined
   const stepUser = fallbackUserContent.trim()
   const trailing = trailingUserContent?.trim()
+  // Form-submit resume always passes trailingUserContent (step executor prompt).
+  const formSubmitStyle = Boolean(trailing)
 
   if (parsed?.length) {
     validateClientUiMessagesForLlm(parsed, { label: 'buildAgentModelMessages' })
@@ -351,7 +397,9 @@ export async function buildAgentModelMessages(
     )
   }
 
-  const thread = await clientUiMessagesToModelMessages(parsed, toolSet)
+  const thread = await clientUiMessagesToModelMessages(parsed, toolSet, {
+    dropIncompleteApprovals: formSubmitStyle,
+  })
 
   let raw: ModelMessage[]
   if (stepScopedUserOnly && stepUser) {

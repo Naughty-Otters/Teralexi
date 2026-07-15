@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sanitizeMessages } from './message-sanitizer'
+import { hasUnansweredToolCalls, sanitizeMessages } from './message-sanitizer'
 import type { ModelMessage } from '@teralexi-ai'
 
 // ---------------------------------------------------------------------------
@@ -209,6 +209,95 @@ describe('sanitizeMessages — stray tool message removal', () => {
     expect(messages).toHaveLength(3)
     expect(messages[2].role).toBe('tool')
     expect(mutations).toHaveLength(0)
+  })
+})
+
+describe('hasUnansweredToolCalls', () => {
+  it('is true for approval-only rounds and false after tool-result', () => {
+    const pending: ModelMessage[] = [
+      user('run'),
+      {
+        role: 'assistant',
+        content: [
+          { type: 'tool-call', toolCallId: 'tc1', toolName: 'enter_plan_mode', input: {} },
+          { type: 'tool-approval-request', approvalId: 'ap1', toolCallId: 'tc1' },
+        ],
+      },
+      {
+        role: 'tool',
+        content: [{ type: 'tool-approval-response', approvalId: 'ap1', approved: true }],
+      },
+    ]
+    expect(hasUnansweredToolCalls(pending)).toBe(true)
+
+    const done: ModelMessage[] = [
+      ...pending,
+      toolResult('tc1', 'enter_plan_mode', { ok: true }),
+    ]
+    expect(hasUnansweredToolCalls(done)).toBe(false)
+  })
+})
+
+describe('sanitizeMessages — unanswered tool-call strip (OpenAI pairing)', () => {
+  it('strips approval-only tool-calls when a later user turn follows (try again / form-submit)', () => {
+    const msgs: ModelMessage[] = [
+      user('build site'),
+      {
+        role: 'assistant',
+        content: [
+          { type: 'text', text: 'Need approval' },
+          {
+            type: 'tool-call',
+            toolCallId: 'tc-web',
+            toolName: 'publish_website',
+            input: {},
+          },
+          {
+            type: 'tool-approval-request',
+            approvalId: 'ap-web',
+            toolCallId: 'tc-web',
+          },
+        ],
+      },
+      {
+        role: 'tool',
+        content: [
+          { type: 'tool-approval-response', approvalId: 'ap-web', approved: true },
+        ],
+      },
+      user('try again'),
+    ]
+    const { messages, mutations } = sanitizeMessages(msgs)
+    expect(mutations.some((m) => /unanswered tool-call/.test(m))).toBe(true)
+    expect(messages.map((m) => m.role)).toEqual(['user', 'assistant', 'user'])
+    const assistantMsg = messages[1] as { content: Array<{ type: string; text?: string }> }
+    expect(assistantMsg.content).toEqual([{ type: 'text', text: 'Need approval' }])
+    expect(JSON.stringify(messages).includes('"type":"tool-call"')).toBe(false)
+  })
+
+  it('strips tool-calls with neither result nor approval when a later user turn follows', () => {
+    const msgs: ModelMessage[] = [
+      user('do it'),
+      assistantWithToolCall('tc-orphan', 'my_tool', {}),
+      user('try again'),
+    ]
+    const { messages, mutations } = sanitizeMessages(msgs)
+    expect(mutations.some((m) => /unanswered tool-call/.test(m))).toBe(true)
+    expect(messages).toHaveLength(1)
+    expect(messages[0].role).toBe('user')
+    expect((messages[0] as { content: string }).content).toBe('do it\n\ntry again')
+  })
+
+  it('keeps answered tool-calls even when a later user turn follows', () => {
+    const msgs: ModelMessage[] = [
+      user('do it'),
+      assistantWithToolCall('tc1', 'my_tool', {}),
+      toolResult('tc1', 'my_tool', 'done'),
+      user('next'),
+    ]
+    const { messages, mutations } = sanitizeMessages(msgs)
+    expect(mutations.some((m) => /unanswered tool-call/.test(m))).toBe(false)
+    expect(messages).toHaveLength(4)
   })
 })
 

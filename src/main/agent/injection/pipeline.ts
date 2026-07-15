@@ -1,6 +1,7 @@
 import type { ModelMessage, PrepareStepFunction } from 'ai'
 import type { AgentStepContext } from '../context'
 import { filterToolsByAvailableSet } from '../steps/step-helpers'
+import { hasUnansweredToolCalls } from '../utils/message-sanitizer'
 import { resolveLatestUserMessageIdentity } from './message-timestamp'
 import {
   resolveInjectionProfile,
@@ -103,6 +104,14 @@ export async function injectUserMessages(
   messages: ModelMessage[],
   loopStep: number,
 ): Promise<ModelMessage[]> {
+  // Pending tool approvals / in-flight tool_calls must stay the trailing context so
+  // the AI SDK can execute them. Appending plan-mode / follow-up user nudges here
+  // puts `user` before tool-results and OpenAI rejects the next LLM call
+  // (common with enter_plan_mode HITL + explore-mode injectors).
+  if (hasUnansweredToolCalls(messages)) {
+    return messages
+  }
+
   const profile = resolveInjectionProfile(ctx, 'toolLoop')
   let nextMessages = messages
 
@@ -166,6 +175,7 @@ export function createPrepareStepFromInjectors(
   if (injectors.length === 0) return undefined
 
   return async ({ stepNumber, messages }) => {
+    const blockUserInjection = hasUnansweredToolCalls(messages)
     const runCtx = buildRunContext(
       ctx,
       profile,
@@ -184,6 +194,12 @@ export function createPrepareStepFromInjectors(
         { stepNumber, messages: currentMessages, allToolNames },
       )
       if (!slice) continue
+      // Keep activeTools / other prepareStep settings, but never append user
+      // nudges (plan-mode "continue explore mode") onto incomplete tool rounds.
+      if (blockUserInjection && slice.messages) {
+        slices.push({ activeTools: slice.activeTools })
+        continue
+      }
       slices.push(slice)
       if (slice.messages) currentMessages = slice.messages
     }
