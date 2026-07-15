@@ -131,7 +131,7 @@
       :phase="publishDialogPhase"
       :preview="publishPreview"
       :result="publishResult"
-      @confirm="onPublishDialogConfirm"
+      @confirm="confirmPublish"
       @cancel="closePublishDialog"
       @close="closePublishDialog"
     />
@@ -161,15 +161,11 @@ import {
 import ComposerFileMentionMenu from './ComposerFileMentionMenu.vue'
 import WorkspaceSelector from './WorkspaceSelector.vue'
 import { useSkillComposerToolbar } from '@renderer/composables/useSkillComposerToolbar'
-import { openExternalUrl } from '@renderer/lib/open-external-url'
 import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
-import WebsitePublishDialog, {
-  type WebsitePublishDialogPhase,
-} from './WebsitePublishDialog.vue'
-import type {
-  SkillComposerToolbarInvokeResult,
-  SkillComposerToolbarPreviewResult,
-} from '@shared/agent/skill-composer-toolbar'
+import {
+  WebsitePublishDialog,
+  useWebsitePublishFlow,
+} from '@renderer/extension/website-publish'
 import { useWorkspaceStore } from '@store/workspace'
 import type { ComposerSlashCommand } from './composer-slash-command-types'
 import type { QueueDeliveryMode } from '../conversation-chat-session'
@@ -249,37 +245,18 @@ const {
   conversationId: computed(() => props.conversationId),
 })
 
-const publishDialogOpen = ref(false)
-const publishDialogPhase = ref<WebsitePublishDialogPhase>('confirm')
-const publishPreview = ref<SkillComposerToolbarPreviewResult | null>(null)
-const publishResult = ref<SkillComposerToolbarInvokeResult | null>(null)
-const publishPluginId = ref<string | null>(null)
-
-function closePublishDialog() {
-  if (publishDialogPhase.value === 'publishing') return
-  publishDialogOpen.value = false
-  publishPluginId.value = null
-  publishPreview.value = null
-  publishResult.value = null
-  publishDialogPhase.value = 'confirm'
-}
-
-async function onPublishDialogConfirm() {
-  const pluginId = publishPluginId.value
-  if (!pluginId || publishDialogPhase.value !== 'confirm') return
-  publishDialogPhase.value = 'publishing'
-  try {
-    const result = await invokeSkillToolbarPlugin(pluginId)
-    publishResult.value = result
-    publishDialogPhase.value = 'result'
-  } catch (err) {
-    publishResult.value = {
-      ok: false,
-      error: err instanceof Error ? err.message : String(err),
-    }
-    publishDialogPhase.value = 'result'
-  }
-}
+const {
+  open: publishDialogOpen,
+  phase: publishDialogPhase,
+  preview: publishPreview,
+  result: publishResult,
+  handleToolbarClick: handleWebsitePublishClick,
+  confirmPublish,
+  close: closePublishDialog,
+} = useWebsitePublishFlow({
+  preview: previewSkillToolbarPlugin,
+  invoke: invokeSkillToolbarPlugin,
+})
 
 async function onSkillToolbarPluginClick(plugin: {
   id: string
@@ -289,27 +266,7 @@ async function onSkillToolbarPluginClick(plugin: {
 }) {
   if (skillToolbarInvokingId.value === plugin.id) return
 
-  // Website publish uses confirm → result dialogs.
-  if (plugin.id === 'publish-website') {
-    publishPluginId.value = plugin.id
-    publishResult.value = null
-    publishDialogPhase.value = 'confirm'
-    const preview = await previewSkillToolbarPlugin(plugin.id)
-    publishPreview.value = preview
-    if (!preview.ok) {
-      // Surface gate / preview errors in the same dialog shell.
-      publishResult.value = {
-        ok: false,
-        error:
-          preview.error ||
-          plugin.disabledReason ||
-          'This action is not available right now',
-      }
-      publishDialogPhase.value = 'result'
-    }
-    publishDialogOpen.value = true
-    return
-  }
+  if (await handleWebsitePublishClick(plugin)) return
 
   if (!plugin.enabled) {
     toast.add({
@@ -324,21 +281,10 @@ async function onSkillToolbarPluginClick(plugin: {
 
   const result = await invokeSkillToolbarPlugin(plugin.id)
   if (result.ok) {
-    const url = result.absoluteUrl?.trim()
     toast.add({
-      title: url ? 'Website published' : 'Done',
-      description: url || result.message || 'Action completed',
+      title: 'Done',
+      description: result.message || 'Action completed',
       color: 'success',
-      actions: url
-        ? [
-            {
-              label: 'Open',
-              onClick: () => {
-                openExternalUrl(url)
-              },
-            },
-          ]
-        : undefined,
     })
   } else {
     toast.add({

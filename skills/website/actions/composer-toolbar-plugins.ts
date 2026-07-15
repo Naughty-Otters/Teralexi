@@ -11,6 +11,7 @@ import type {
 } from '@main/skills/composer-toolbar-plugin'
 import { resolveSandboxRootForConversation } from '@main/agent/sandbox/registry'
 import { publishStaticSiteDirectory } from '@main/services/app-web-publish-client'
+import { appendWebsitePublishedSessionTip } from '@main/services/app-web-publish-session-tip'
 import { listStaticSiteFiles } from '@main/services/app-web-site-zip'
 import { getTeralexiServerAccessToken } from '@main/services/teralexi-server-auth'
 import { getTeralexiBaseApiUrl } from '@main/services/teralexi-platform-config'
@@ -133,6 +134,10 @@ export const publishWebsiteComposerPlugin: SkillComposerToolbarPlugin = {
         uploadStatus: result.status,
       }
     }
+    appendWebsitePublishedSessionTip({
+      conversationId: ctx.conversationId,
+      absoluteUrl: result.absoluteUrl,
+    })
     return {
       ok: true,
       absoluteUrl: result.absoluteUrl,
