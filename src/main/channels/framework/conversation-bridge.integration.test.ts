@@ -1,9 +1,13 @@
 /**
  * Channel → engine contract tests.
  *
- * Fully hermetic: never importOriginal heavy agent modules. On Windows CI,
- * importOriginal('@main/agent/utils'|config/context) pulls skills/MCP/native
- * addons and hangs past Vitest's timeout on the first test.
+ * Fully hermetic: never importOriginal heavy agent modules (`@main/agent/utils`,
+ * `config/context`, `sandbox`, `follow-up`). On Windows CI those pull native
+ * addons / large graphs and hang past Vitest's default test timeout.
+ *
+ * Multi-turn store history order is covered in:
+ * - `src/main/engine/conversation.test.ts`
+ * - `src/main/agent/utils/agent-run-context.test.ts`
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { AgentResponseOpts } from '@main/agent/types'
@@ -30,6 +34,7 @@ const {
   capturedStreamOpts,
   mockEngineAgent,
   loadEngineAgentsMock,
+  loadConversationHistoryMock,
 } = vi.hoisted(() => {
   const conversationMessages: StoredMessage[] = []
   const conversations = new Map<
@@ -52,6 +57,15 @@ const {
     toolNeedsApprovalOverrides: {} as Record<string, boolean>,
   }
   const loadEngineAgentsMock = vi.fn(async () => [mockEngineAgent])
+  const loadConversationHistoryMock = vi.fn(
+    (conversationId: string, assistantMessageId: string) =>
+      conversationMessages
+        .filter(
+          (m) =>
+            m.conversationId === conversationId && m.id !== assistantMessageId,
+        )
+        .map((m) => ({ role: m.role, content: m.content })),
+  )
 
   return {
     streamAgentResponseMock: vi.fn(async (opts: AgentResponseOpts) => {
@@ -72,6 +86,7 @@ const {
     capturedStreamOpts,
     mockEngineAgent,
     loadEngineAgentsMock,
+    loadConversationHistoryMock,
   }
 })
 
@@ -204,12 +219,28 @@ vi.mock('@main/agent/workspace/conversation-workspace', () => ({
   getWorkspacePath: vi.fn(() => null),
 }))
 
+/** Never importOriginal sandbox — registry pulls native FS / layout and hangs on Win CI. */
+vi.mock('@main/agent/sandbox', () => ({
+  resolveSandboxRootForConversation: vi.fn(() => '/tmp/fake-sandbox'),
+  getOrCreateSandboxForConversation: vi.fn(),
+  releaseConversationSandbox: vi.fn(),
+  peekSandboxRootForConversation: vi.fn(() => null),
+}))
+
+vi.mock('@main/agent/follow-up', () => ({
+  clearFollowUpMeta: vi.fn(() => ({ ok: true, revision: 1 })),
+}))
+
 vi.mock('@main/agent/coding/plan-mode-session-reminders', () => ({
   clearPlanExecutionCompleted: vi.fn(),
 }))
 
 vi.mock('@main/agent/coding/plan-mode-state', () => ({
   isPlanModeActive: vi.fn(() => false),
+}))
+
+vi.mock('@main/agent/expr/thread-tagger', () => ({
+  extractThreadTag: vi.fn(() => 'general'),
 }))
 
 vi.mock('@main/agent/expr/thread-context-builder', () => ({
@@ -270,16 +301,7 @@ vi.mock('@main/agent/utils', () => ({
     zhipuBaseURL: '',
     openAiCompatible: {},
   })),
-  loadConversationHistory: (
-    conversationId: string,
-    assistantMessageId: string,
-  ) =>
-    conversationMessages
-      .filter(
-        (m) =>
-          m.conversationId === conversationId && m.id !== assistantMessageId,
-      )
-      .map((m) => ({ role: m.role, content: m.content })),
+  loadConversationHistory: loadConversationHistoryMock,
   loadMcpToolsForAgent: vi.fn(async () => []),
   resolveEnabledSkillToolNames: vi.fn(() => undefined),
 }))
@@ -381,6 +403,16 @@ function resetStreamMock() {
   })
   loadEngineAgentsMock.mockReset()
   loadEngineAgentsMock.mockResolvedValue([mockEngineAgent])
+  loadConversationHistoryMock.mockReset()
+  loadConversationHistoryMock.mockImplementation(
+    (conversationId: string, assistantMessageId: string) =>
+      conversationMessages
+        .filter(
+          (m) =>
+            m.conversationId === conversationId && m.id !== assistantMessageId,
+        )
+        .map((m) => ({ role: m.role, content: m.content })),
+  )
 }
 
 describe('channel → engine integration', () => {
@@ -389,63 +421,6 @@ describe('channel → engine integration', () => {
     conversations.clear()
     capturedStreamOpts.current = null
     resetStreamMock()
-  })
-
-  it('runAgentForConversation passes multi-turn store history in opts.messages', async () => {
-    const now = '2026-03-20T12:00:00.000Z'
-    conversations.set(CHANNEL_CONVERSATION_ID, {
-      id: CHANNEL_CONVERSATION_ID,
-      agentId: CHANNEL_AGENT_ID,
-      title: 'telegram: thread',
-      createdAt: now,
-      updatedAt: now,
-    })
-
-    conversationMessages.push(
-      {
-        id: 'u-1',
-        conversationId: CHANNEL_CONVERSATION_ID,
-        agentId: CHANNEL_AGENT_ID,
-        role: 'user',
-        content: 'First question',
-        createdAt: now,
-      },
-      {
-        id: 'a-1',
-        conversationId: CHANNEL_CONVERSATION_ID,
-        agentId: CHANNEL_AGENT_ID,
-        role: 'assistant',
-        content: 'First answer',
-        createdAt: now,
-      },
-      {
-        id: 'u-2',
-        conversationId: CHANNEL_CONVERSATION_ID,
-        agentId: CHANNEL_AGENT_ID,
-        role: 'user',
-        content: 'Follow-up question',
-        createdAt: now,
-      },
-    )
-
-    const assistantMessageId = 'a-channel-2'
-    const result = await runAgentForConversation({
-      conversationId: CHANNEL_CONVERSATION_ID,
-      agentId: CHANNEL_AGENT_ID,
-      assistantMessageId,
-      userId: 'default',
-    })
-
-    expect(result.hasError).toBe(false)
-    expect(loadEngineAgentsMock).toHaveBeenCalled()
-    expect(streamAgentResponseMock).toHaveBeenCalledTimes(1)
-    const opts = capturedStreamOpts.current
-    expect(opts).not.toBeNull()
-    expect(opts!.messages.map((m) => m.content)).toEqual([
-      'First question',
-      'First answer',
-      'Follow-up question',
-    ])
   })
 
   it('runAgentForConversation loads store history without uiMessages (channel-style)', async () => {
@@ -462,6 +437,11 @@ describe('channel → engine integration', () => {
 
     expect(result.hasError).toBe(false)
     expect(result.finalContent).toBe('Hello from the agent pipeline.')
+    expect(loadConversationHistoryMock).toHaveBeenCalledWith(
+      conversationId,
+      assistantMessageId,
+      { currentTag: 'general' },
+    )
     expect(streamAgentResponseMock).toHaveBeenCalledTimes(1)
 
     const opts = capturedStreamOpts.current!
