@@ -1,4 +1,6 @@
 import { isAbortError } from '@shared/utils/abort-error'
+import { randomShortUuid } from '@shared/utils/short-uuid'
+import { useWorkspaceStore } from '@store/workspace'
 import { DEFAULT_USER_ID } from './config'
 import {
   mergeStreamingTextIntoStructuredContent,
@@ -8,6 +10,7 @@ import {
 import type { AgentStoreContext } from './agent-store-context'
 import type { AgentPersistenceActions } from './agent-persistence'
 import type { ConversationActions } from './conversation-actions'
+import type { Message } from './types'
 
 export type AssistantRunDeps = {
   loadSkillsFromDisk: () => Promise<boolean>

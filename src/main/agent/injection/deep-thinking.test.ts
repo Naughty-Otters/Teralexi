@@ -105,7 +105,7 @@ describe('deep thinking injectors', () => {
     ).toBe(true)
   })
 
-  it('injects user messages in before → branch → datetime order', async () => {
+  it('injects user messages in before → branch → datetime → follow-up order', async () => {
     const ctx = makeToolLoopCtx() as never
     const messages = await injectUserMessages(
       ctx,
@@ -113,7 +113,7 @@ describe('deep thinking injectors', () => {
       0,
     )
 
-    expect(messages).toHaveLength(4)
+    expect(messages).toHaveLength(5)
     expect(readInjectorMessageMeta(messages[1])?.injectorId).toBe(
       'deep-thinking-before-answer',
     )
@@ -121,6 +121,9 @@ describe('deep thinking injectors', () => {
       'multiple-branch-thinking',
     )
     expect(readInjectorMessageMeta(messages[3])?.injectorId).toBe('current-datetime')
+    expect(readInjectorMessageMeta(messages[4])?.injectorId).toBe(
+      'follow-up-suggestions',
+    )
     expect(String(messages[2].content)).toContain(MULTIPLE_BRANCH_THINKING_MARKER)
   })
 
@@ -159,10 +162,13 @@ describe('deep thinking injectors', () => {
       allToolNames: ['read_file'],
     })
 
-    expect(result?.messages).toHaveLength(3)
+    expect(result?.messages).toHaveLength(4)
     expect(String(result?.messages?.[2]?.content)).toContain(DEEP_THINKING_AFTER_MARKER)
     expect(readInjectorMessageMeta(result!.messages![2]!)).toMatchObject({
       injectorId: 'deep-thinking-after-answer',
+    })
+    expect(readInjectorMessageMeta(result!.messages![3]!)).toMatchObject({
+      injectorId: 'follow-up-suggestions-nudge',
     })
   })
 })

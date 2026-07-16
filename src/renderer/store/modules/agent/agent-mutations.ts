@@ -160,7 +160,7 @@ export function createAgentMutationsActions(
   function updateAgentProvider(agentId: string, provider: ProviderType) {
     agents.value = agents.value.map((a) => {
       if (a.id !== agentId) return a
-      return { ...a, provider, model: '' }
+      return { ...a, provider, model: '', defaultProviderOptions: undefined }
     })
     void persistAgentConfiguration(agentId)
   }
@@ -182,6 +182,18 @@ export function createAgentMutationsActions(
     const agent = agents.value.find((a) => a.id === agentId)
     if (!agent) return
     agent.stageLlm = { ...(stageLlm ?? {}) }
+    void persistAgentConfiguration(agentId)
+  }
+
+  function updateAgentDefaultProviderOptions(
+    agentId: string,
+    defaultProviderOptions: Agent['defaultProviderOptions'],
+  ) {
+    const agent = agents.value.find((a) => a.id === agentId)
+    if (!agent) return
+    agent.defaultProviderOptions = defaultProviderOptions
+      ? { ...defaultProviderOptions }
+      : undefined
     void persistAgentConfiguration(agentId)
   }
 
@@ -214,6 +226,9 @@ export function createAgentMutationsActions(
       subAgentIds: data.subAgentIds ?? null,
       llmRoutingMode: data.llmRoutingMode ?? 'unified',
       stageLlm: { ...(data.stageLlm ?? {}) },
+      defaultProviderOptions: data.defaultProviderOptions
+        ? { ...data.defaultProviderOptions }
+        : undefined,
       executionSteps: data.executionSteps,
     }
 
@@ -264,6 +279,7 @@ export function createAgentMutationsActions(
     updateAgentProvider,
     updateAgentLlmRoutingMode,
     updateAgentStageLlm,
+    updateAgentDefaultProviderOptions,
     addAgent,
     removeAgent,
     toggleAgentEnabled,

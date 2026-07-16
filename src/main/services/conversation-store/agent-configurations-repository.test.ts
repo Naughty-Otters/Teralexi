@@ -75,6 +75,39 @@ describe('AgentConfigurationsRepository stage LLM settings', () => {
     })
     expect(loaded[0]?.stageLlm.verifier).toBeUndefined()
   })
+
+  it('persists and loads defaultProviderOptions and stage providerOptions', () => {
+    const db = createMigrationTestDatabase()
+    runMigrations(db)
+    const repo = new AgentConfigurationsRepository(db)
+
+    repo.upsert(
+      baseConfig({
+        provider: 'gemini',
+        model: 'gemini-2.5-pro',
+        defaultProviderOptions: {
+          google: { thinkingConfig: { thinkingBudget: 4096 } },
+        },
+        stageLlm: {
+          toolLoop: {
+            provider: 'openai',
+            model: 'gpt-4.1',
+            providerOptions: { openai: { reasoningEffort: 'medium' } },
+          },
+        },
+      }),
+    )
+
+    const loaded = repo.list('user-1')[0]
+    expect(loaded?.defaultProviderOptions).toEqual({
+      google: { thinkingConfig: { thinkingBudget: 4096 } },
+    })
+    expect(loaded?.stageLlm.toolLoop).toEqual({
+      provider: 'openai',
+      model: 'gpt-4.1',
+      providerOptions: { openai: { reasoningEffort: 'medium' } },
+    })
+  })
 })
 
 describe('AgentConfigurationsRepository sub-agent settings', () => {

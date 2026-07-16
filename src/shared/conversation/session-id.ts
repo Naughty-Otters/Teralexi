@@ -36,6 +36,26 @@ export function classifyConversationSessionId(
   return 'ui'
 }
 
+/**
+ * Channel product id from a conversation session id (`channel:whatsapp:…` → `whatsapp`).
+ * Returns null for non-channel sessions.
+ */
+export function parseChannelIdFromConversationId(
+  conversationId: string,
+): string | null {
+  const id = conversationId.trim()
+  if (!id) return null
+  if (id.startsWith('channel:')) {
+    const channelId = id.slice('channel:'.length).split(':')[0]?.trim()
+    return channelId || null
+  }
+  // Legacy WhatsApp threads keyed by JID only.
+  if (id.includes('@s.whatsapp.net') || id.includes('@g.us')) {
+    return 'whatsapp'
+  }
+  return null
+}
+
 export function isBoundSessionId(conversationId: string): boolean {
   return classifyConversationSessionId(conversationId) !== 'ui'
 }

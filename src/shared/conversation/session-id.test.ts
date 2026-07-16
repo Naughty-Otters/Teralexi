@@ -5,6 +5,7 @@ import {
   canDeleteConversationFromUi,
   classifyConversationSessionId,
   isBoundSessionId,
+  parseChannelIdFromConversationId,
   resolveChannelSessionId,
   resolveSchedulerSessionId,
 } from './session-id'
@@ -60,5 +61,19 @@ describe('session-id', () => {
       }),
     ).toBe('custom-thread')
     expect(resolveSchedulerSessionId({ id: 'job-1' })).toBe('scheduler:job-1')
+  })
+
+  it('parseChannelIdFromConversationId extracts channel product ids', () => {
+    expect(parseChannelIdFromConversationId('channel:whatsapp:user-1')).toBe(
+      'whatsapp',
+    )
+    expect(parseChannelIdFromConversationId('channel:telegram:42')).toBe(
+      'telegram',
+    )
+    expect(parseChannelIdFromConversationId('1555@s.whatsapp.net')).toBe(
+      'whatsapp',
+    )
+    expect(parseChannelIdFromConversationId('uuid-ui')).toBeNull()
+    expect(parseChannelIdFromConversationId('scheduler:job-1')).toBeNull()
   })
 })

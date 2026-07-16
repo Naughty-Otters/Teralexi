@@ -90,6 +90,7 @@ The sandbox **persists across turns** in the same conversation.
 | Prior `output/results/<slug>/index.html` exists, user wants tweaks | Read existing `site.json` if present; update data; re-run steps 3–4 |
 | User says "make it darker" / "add a contact section" | Edit `site.json` or form fields; re-render — do not restart from step 1 |
 | User wants site in their repo | `promote_artifact` the whole site folder into the workspace after validation passes |
+| User wants a public URL | After validation (and optional promote), call **`publish_website`** on the site directory; report the returned `absoluteUrl` |
 | No workspace selected | Ask user to pick a project folder before steps 1–2 |
 
 ---
@@ -175,6 +176,7 @@ Follow [refs/design-system.md](refs/design-system.md):
 4. **Validate before done** — step 4 must pass.
 5. **Report preview path** — always share the sandbox path and remind the user about in-app preview.
 6. **Promote on confirmation** — after validation, offer to copy the site into the workspace; do not promote without a selected folder or user consent.
+7. **Publish when asked** — when the site is validated and the user explicitly asks for hosting / a public URL, call `publish_website` with the site directory (sandbox `output/results/<slug>` or the promoted workspace folder). Always report the returned **absolute public URL**. Never upload secrets (`.env`, keys). Publishing requires a signed-in Teralexi account with `app.web.publish`. If the tool returns entitlement or weekly-limit errors, explain them; do not retry quota failures immediately. Do **not** put Publish on the follow-up chip list — only call the tool when the user requests it in chat. The composer also offers a **Publish website** toolbar button for the same action when a finished site is available.
 
 ---
 
@@ -182,6 +184,7 @@ Follow [refs/design-system.md](refs/design-system.md):
 
 - render_website: **Preferred step 3.** Render from template_id + site.json into `output/results/<slug>/`.
 - validate_website: **Step 4.** Check HTML structure, required files, and relative links.
+- publish_website: **Publish.** Zip a site directory (root `index.html` required) and upload to Teralexi hosting; return `absoluteUrl` for the user.
 - read_file: Read user content files or prior site.json.
 - write_file: Write intermediate site.json in step 2.
 - list_files: Inspect output directory after generation.

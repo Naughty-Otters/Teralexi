@@ -137,6 +137,8 @@ export class Sandbox implements SandboxPlanningAccess {
     await mkdir(join(this.layout.outputDir, 'scripts'), { recursive: true })
     await mkdir(join(this.layout.outputDir, 'toolLoop'), { recursive: true })
     await mkdir(join(this.layout.root, 'input', 'uploads'), { recursive: true })
+    await mkdir(join(this.layout.root, 'followup'), { recursive: true })
+    await mkdir(join(this.layout.root, 'plans'), { recursive: true })
     this.initialized = true
   }
 

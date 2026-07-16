@@ -30,6 +30,7 @@ export {
   sandboxPathError,
   getWorkspacePathFromEnv,
   getConversationIdFromEnv,
+  getAssistantMessageIdFromEnv,
   resolvePathInContext,
   resolveScopedPathInContext,
   isPathInFilesystemContext,

@@ -1,7 +1,7 @@
 import { ZodError } from 'zod'
 
 type CompileLogger = {
-  error: (obj: Record<string, unknown>, msg?: string) => void
+  error: (message: string, context?: Record<string, unknown>) => void
 }
 
 export function formatCompileError(err: unknown): {
@@ -44,12 +44,12 @@ export function logCompileError(
 ): void {
   const formatted = formatCompileError(err)
   log.error(
+    `skill compile failed: ${phase}`,
     {
       skillId,
       phase,
       ...formatted,
       ...extra,
     },
-    `skill compile failed: ${phase}`,
   )
 }

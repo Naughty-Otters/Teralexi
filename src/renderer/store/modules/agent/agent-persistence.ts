@@ -61,6 +61,9 @@ export function createAgentPersistenceActions(ctx: AgentStoreContext) {
               : null,
           llmRoutingMode: agent.llmRoutingMode ?? 'unified',
           stageLlm: { ...(agent.stageLlm ?? {}) },
+          defaultProviderOptions: agent.defaultProviderOptions
+            ? { ...agent.defaultProviderOptions }
+            : undefined,
         })
       })
 

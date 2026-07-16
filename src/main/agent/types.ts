@@ -56,11 +56,14 @@ export interface ProviderCredentials {
 
 export type AgentMessage = { role: 'user' | 'assistant'; content: string }
 
+import type { SandboxReadyPayload } from './sandbox'
+
+export type AgentSandboxReadyPayload = SandboxReadyPayload
+
 export type {
   SandboxLayout,
   SandboxAccess,
   SandboxPlanningAccess,
-  SandboxReadyPayload as AgentSandboxReadyPayload,
 } from './sandbox'
 
 export type AgentResponseOpts = {

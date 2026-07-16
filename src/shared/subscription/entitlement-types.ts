@@ -3,6 +3,19 @@ export const ENTITLEMENT_AUDIENCE = 'teralexi-desktop'
 export const ENTITLEMENT_FEATURES = {
   METRICS_WRITE: 'metrics.write',
   SUPPORT_UPLOAD: 'support.upload',
+  APP_WEB_PUBLISH: 'app.web.publish',
+} as const
+
+/** Entitlement limit keys for app-web static publish (see OpenFDEServer app-web-publish docs). */
+export const APP_WEB_PUBLISH_LIMIT_KEYS = {
+  MAX_UPLOAD_BYTES: 'app_web_max_upload_bytes',
+  MAX_UPLOADS_PER_WEEK: 'app_web_max_uploads_per_week',
+} as const
+
+/** Base-plan defaults when entitlement limits are missing or non-positive. */
+export const APP_WEB_PUBLISH_DEFAULT_LIMITS = {
+  maxUploadBytes: 4_194_304,
+  maxUploadsPerWeek: 7,
 } as const
 
 export type EntitlementFeature =

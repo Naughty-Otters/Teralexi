@@ -17,7 +17,7 @@ import {
 } from './context'
 import type { AgentStoreContext } from './agent-store-context'
 import type { AgentPersistenceActions } from './agent-persistence'
-import type { Agent, Conversation, Message } from './types'
+import type { Agent, Conversation, ConversationSandboxRun, Message } from './types'
 
 export type CreateNewConversationMode =
   | 'default'
@@ -26,6 +26,8 @@ export type CreateNewConversationMode =
 
 export type CreateNewConversationOptions = {
   mode?: CreateNewConversationMode
+  /** Absolute workspace folder to attach after create (applied after `fresh` clears pending). */
+  workspacePath?: string | null
 }
 
 export function createConversationActions(
@@ -189,6 +191,7 @@ export function createConversationActions(
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
       type: classifyConversationSessionId(row.id),
+      workspacePath: null,
     }
     const list = conversationList.value[meta.agentId] ?? []
     if (!list.some((c) => c.id === conversationId)) {
@@ -304,6 +307,7 @@ export function createConversationActions(
         title: string
         createdAt: string
         updatedAt: string
+        workspacePath?: string | null
       }) => ({
         id: c.id,
         agentId: c.agentId,
@@ -311,8 +315,31 @@ export function createConversationActions(
         createdAt: new Date(c.createdAt),
         updatedAt: new Date(c.updatedAt),
         type: classifyConversationSessionId(c.id),
+        workspacePath: c.workspacePath?.trim() || null,
       }),
     )
+  }
+
+  function patchConversationWorkspacePath(
+    conversationId: string,
+    workspacePath: string | null,
+  ): void {
+    const id = conversationId.trim()
+    if (!id) return
+    const path = workspacePath?.trim() || null
+    for (const [agentId, convs] of Object.entries(conversationList.value)) {
+      const idx = convs.findIndex((c) => c.id === id)
+      if (idx < 0) continue
+      const next = convs.slice()
+      const current = next[idx]
+      if (!current) continue
+      next[idx] = { ...current, workspacePath: path }
+      conversationList.value = {
+        ...conversationList.value,
+        [agentId]: next,
+      }
+      return
+    }
   }
 
   type IpcStoredMessage = {
@@ -588,6 +615,11 @@ export function createConversationActions(
       agentId = selectedAgentId.value
     }
 
+    const requestedWorkspace = options?.workspacePath?.trim() || null
+    if (requestedWorkspace) {
+      workspacePathToApply = requestedWorkspace
+    }
+
     if (!agentId) return null
     const now = new Date()
     const conv: Conversation = {
@@ -597,6 +629,7 @@ export function createConversationActions(
       createdAt: now,
       updatedAt: now,
       type: 'ui',
+      workspacePath: null,
     }
     const channel = window.ipcRendererChannel?.CreateConversation
     if (channel?.invoke) {
@@ -615,6 +648,14 @@ export function createConversationActions(
     await workspaceStore.commitPendingWorkspace(conv.id)
     if (workspacePathToApply) {
       await applyWorkspacePathToConversation(conv.id, workspacePathToApply)
+    }
+    const appliedPath =
+      workspaceStore.activeWorkspacePath?.trim() ||
+      workspacePathToApply?.trim() ||
+      null
+    if (appliedPath) {
+      patchConversationWorkspacePath(conv.id, appliedPath)
+      conv.workspacePath = appliedPath
     }
     if (sourceConversationId) {
       replicateConversationUiState(sourceConversationId, conv.id)
@@ -779,6 +820,7 @@ export function createConversationActions(
     resolveAgentAndEnsureConversationLoaded,
     deleteConversation,
     clearConversationHistory,
+    patchConversationWorkspacePath,
   }
 }
 

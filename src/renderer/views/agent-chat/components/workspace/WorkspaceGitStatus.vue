@@ -7,7 +7,7 @@
       <span v-if="upstream" class="git-upstream">→ {{ upstream }}</span>
       <span v-if="ahead > 0" class="git-ahead">↑{{ ahead }}</span>
       <span v-if="behind > 0" class="git-behind">↓{{ behind }}</span>
-      <button class="git-refresh-btn" title="Refresh git status and file list" :disabled="statusLoading" @click="emit('refresh')">
+      <button class="git-refresh-btn" title="Refresh git status and file list" aria-label="Refresh git status and file list" :disabled="statusLoading" @click="emit('refresh')">
         <UIcon name="i-lucide-refresh-cw" :class="['git-refresh-icon', { 'git-refresh-icon--spin': statusLoading }]" />
       </button>
     </div>

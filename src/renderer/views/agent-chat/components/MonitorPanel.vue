@@ -15,6 +15,7 @@
         <button
           class="icon-btn"
           title="Refresh usage"
+          aria-label="Refresh usage"
           :disabled="loading"
           @click="load"
         >
@@ -23,7 +24,12 @@
             :class="{ 'monitor-spin': loading }"
           />
         </button>
-        <button class="icon-btn" title="Close monitor" @click="emit('close')">
+        <button
+          class="icon-btn"
+          title="Close monitor"
+          aria-label="Close monitor"
+          @click="emit('close')"
+        >
           ✕
         </button>
       </div>
@@ -706,6 +712,9 @@ onActivated(() => {
   min-height: 0;
   padding: 16px 20px 20px;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .monitor-dashboard {
   display: flex;
@@ -713,6 +722,13 @@ onActivated(() => {
   gap: 14px;
   width: 100%;
   max-width: 800px;
+  margin-block: auto;
+  margin-inline: auto;
+}
+.monitor-empty,
+.monitor-body :deep(.sign-in-gate) {
+  margin-block: auto;
+  text-align: center;
 }
 .monitor-legend-slot {
   min-height: 22px;

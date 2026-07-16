@@ -3,7 +3,7 @@
     class="rich-composer"
     :class="{
       'rich-composer--picker-open':
-        mentionOpen || slashOpen || agentPickerOpen,
+        mentionOpen || slashOpen || agentPickerOpen || llmOverrideMenuOpen,
       'rich-composer--agent-picker-open': agentPickerOpen,
       'rich-composer--editor-menu-open': mentionOpen || slashOpen,
     }"
@@ -19,80 +19,62 @@
           @select-agent="emit('select-agent', $event)"
           @menu-open-change="agentPickerOpen = $event"
         />
+        <ComposerLlmOverrideControl
+          v-if="showLlmOverride"
+          :model-value="llmOverride"
+          :agent-provider="agentProvider"
+          :agent-model="agentModel"
+          :disabled="disabled || workspaceDisabled"
+          @update:model-value="emit('update:llmOverride', $event)"
+          @menu-open-change="llmOverrideMenuOpen = $event"
+        />
         <WorkspaceSelector variant="toolbar" :disabled="workspaceDisabled" />
         <span class="rich-composer-toolbar-divider" aria-hidden="true" />
       </template>
+      <!-- i-lucide-globe is referenced dynamically by website skill toolbar plugins. -->
+      <template v-if="skillToolbarPlugins.length > 0">
+        <AppIconTooltip
+          v-for="plugin in skillToolbarPlugins"
+          :key="plugin.id"
+          :text="
+            plugin.enabled
+              ? plugin.label
+              : plugin.disabledReason
+                ? `${plugin.label}: ${plugin.disabledReason}`
+                : plugin.label
+          "
+        >
+          <button
+            type="button"
+            class="rich-composer-tool"
+            :class="{
+              'rich-composer-tool--inactive':
+                !plugin.enabled && skillToolbarInvokingId !== plugin.id,
+            }"
+            :aria-label="plugin.label"
+            :aria-disabled="!plugin.enabled"
+            :disabled="skillToolbarInvokingId === plugin.id"
+            @mousedown.prevent
+            @click="onSkillToolbarPluginClick(plugin)"
+          >
+            <UIcon :name="`i-lucide-${plugin.icon}`" />
+          </button>
+        </AppIconTooltip>
+        <span class="rich-composer-toolbar-divider" aria-hidden="true" />
+      </template>
       <template v-if="editor">
-      <button
-        type="button"
-        class="rich-composer-tool"
-        :class="{ 'rich-composer-tool--active': editor.isActive('bold') }"
-        title="Bold"
-        @mousedown.prevent
-        @click="editor.chain().focus().toggleBold().run()"
-      >
-        <UIcon name="i-lucide-bold" />
-      </button>
-      <button
-        type="button"
-        class="rich-composer-tool"
-        :class="{ 'rich-composer-tool--active': editor.isActive('italic') }"
-        title="Italic"
-        @mousedown.prevent
-        @click="editor.chain().focus().toggleItalic().run()"
-      >
-        <UIcon name="i-lucide-italic" />
-      </button>
-      <button
-        type="button"
-        class="rich-composer-tool"
-        :class="{ 'rich-composer-tool--active': editor.isActive('code') }"
-        title="Inline code"
-        @mousedown.prevent
-        @click="editor.chain().focus().toggleCode().run()"
-      >
-        <UIcon name="i-lucide-code" />
-      </button>
-      <button
-        type="button"
-        class="rich-composer-tool"
-        :class="{ 'rich-composer-tool--active': editor.isActive('bulletList') }"
-        title="Bullet list"
-        @mousedown.prevent
-        @click="editor.chain().focus().toggleBulletList().run()"
-      >
-        <UIcon name="i-lucide-list" />
-      </button>
-      <button
-        type="button"
-        class="rich-composer-tool"
-        :class="{ 'rich-composer-tool--active': editor.isActive('orderedList') }"
-        title="Numbered list"
-        @mousedown.prevent
-        @click="editor.chain().focus().toggleOrderedList().run()"
-      >
-        <UIcon name="i-lucide-list-ordered" />
-      </button>
-      <button
-        type="button"
-        class="rich-composer-tool"
-        :class="{ 'rich-composer-tool--active': editor.isActive('link') }"
-        title="Link"
-        @mousedown.prevent
-        @click="onLinkClick"
-      >
-        <UIcon name="i-lucide-link" />
-      </button>
-      <button
-        type="button"
-        class="rich-composer-tool"
-        title="Attach files"
-        :disabled="disabled || !canAddAttachments"
-        @mousedown.prevent
-        @click="emit('pick-attachments')"
-      >
-        <UIcon name="i-lucide-paperclip" />
-      </button>
+        <AppIconTooltip text="Attach files">
+          <button
+            type="button"
+            class="rich-composer-tool"
+            aria-label="Attach files"
+            :disabled="disabled || !canAddAttachments"
+            @mousedown.prevent
+            @click="emit('pick-attachments')"
+          >
+            <UIcon name="i-lucide-paperclip" />
+          </button>
+        </AppIconTooltip>
       </template>
     </div>
     <div
@@ -107,14 +89,16 @@
       >
         <UIcon name="i-lucide-file" class="rich-composer-attachment-icon" />
         <span class="rich-composer-attachment-name">{{ item.name }}</span>
-        <button
-          type="button"
-          class="rich-composer-attachment-remove"
-          aria-label="Remove attachment"
-          @click="emit('remove-attachment', item.id)"
-        >
-          <UIcon name="i-lucide-x" />
-        </button>
+        <AppIconTooltip text="Remove attachment">
+          <button
+            type="button"
+            class="rich-composer-attachment-remove"
+            aria-label="Remove attachment"
+            @click="emit('remove-attachment', item.id)"
+          >
+            <UIcon name="i-lucide-x" />
+          </button>
+        </AppIconTooltip>
       </div>
     </div>
     <div
@@ -142,6 +126,15 @@
       />
       <EditorContent :editor="editor" class="rich-composer-editor" />
     </div>
+    <WebsitePublishDialog
+      :open="publishDialogOpen"
+      :phase="publishDialogPhase"
+      :preview="publishPreview"
+      :result="publishResult"
+      @confirm="confirmPublish"
+      @cancel="closePublishDialog"
+      @close="closePublishDialog"
+    />
   </div>
 </template>
 
@@ -153,17 +146,26 @@ import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor, type Editor } from '@tiptap/vue-3'
 import { ref, watch, onBeforeUnmount, onMounted, nextTick, computed, defineAsyncComponent } from 'vue'
 import AgentPickerButton from './AgentPickerButton.vue'
+import ComposerLlmOverrideControl from './ComposerLlmOverrideControl.vue'
 import {
   buildAgentPickerEntries,
   listSelectableAgentPickerOptions,
   type SkillGroupAgentRef,
 } from '@shared/agent/skill-groups'
+import type { ConversationLlmOverride } from '@shared/agent/conversation-llm-override'
+import type { ProviderType } from '@shared/agent/llm-provider-registry'
 import {
   registerComposerAgentPicker,
   unregisterComposerAgentPicker,
 } from '@renderer/composables/useComposerAgentPicker'
 import ComposerFileMentionMenu from './ComposerFileMentionMenu.vue'
 import WorkspaceSelector from './WorkspaceSelector.vue'
+import { useSkillComposerToolbar } from '@renderer/composables/useSkillComposerToolbar'
+import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
+import {
+  WebsitePublishDialog,
+  useWebsitePublishFlow,
+} from '@renderer/extension/website-publish'
 import { useWorkspaceStore } from '@store/workspace'
 import type { ComposerSlashCommand } from './composer-slash-command-types'
 import type { QueueDeliveryMode } from '../conversation-chat-session'
@@ -185,6 +187,7 @@ const props = withDefaults(
     agentOptions: Array<{ id: string; name: string }>
     chatAgents?: SkillGroupAgentRef[]
     conversationId?: string | null
+    skillId?: string | null
     workspaceDisabled?: boolean
     /** When false, only universal slash commands (/compact, /help) are offered. */
     codingAgent?: boolean
@@ -194,6 +197,9 @@ const props = withDefaults(
     disabled?: boolean
     stagedAttachments?: StagedChatAttachment[]
     canAddAttachments?: boolean
+    llmOverride?: ConversationLlmOverride | null
+    agentProvider?: ProviderType
+    agentModel?: string
   }>(),
   {
     placeholder: 'Message…',
@@ -201,23 +207,93 @@ const props = withDefaults(
     agentOptions: () => [],
     chatAgents: () => [],
     conversationId: null,
+    skillId: null,
     workspaceDisabled: false,
     subAgentSlashEnabled: false,
     hideContextSelectors: false,
     disabled: false,
     stagedAttachments: () => [],
     canAddAttachments: true,
+    llmOverride: null,
+    agentProvider: 'ollama',
+    agentModel: '',
   },
 )
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
+  'update:llmOverride': [value: ConversationLlmOverride | null]
   'select-agent': [agentId: string]
   submit: []
   'pick-attachments': []
   'remove-attachment': [id: string]
   'add-attachment-paths': [paths: string[]]
 }>()
+
+const toast = useToast()
+
+const showLlmOverride = computed(
+  () => Boolean(props.conversationId?.trim()) && !props.hideContextSelectors,
+)
+const {
+  plugins: skillToolbarPlugins,
+  invokingId: skillToolbarInvokingId,
+  preview: previewSkillToolbarPlugin,
+  invoke: invokeSkillToolbarPlugin,
+} = useSkillComposerToolbar({
+  skillId: computed(() => props.skillId),
+  conversationId: computed(() => props.conversationId),
+})
+
+const {
+  open: publishDialogOpen,
+  phase: publishDialogPhase,
+  preview: publishPreview,
+  result: publishResult,
+  handleToolbarClick: handleWebsitePublishClick,
+  confirmPublish,
+  close: closePublishDialog,
+} = useWebsitePublishFlow({
+  preview: previewSkillToolbarPlugin,
+  invoke: invokeSkillToolbarPlugin,
+})
+
+async function onSkillToolbarPluginClick(plugin: {
+  id: string
+  label: string
+  enabled: boolean
+  disabledReason?: string
+}) {
+  if (skillToolbarInvokingId.value === plugin.id) return
+
+  if (await handleWebsitePublishClick(plugin)) return
+
+  if (!plugin.enabled) {
+    toast.add({
+      title: plugin.label,
+      description:
+        plugin.disabledReason?.trim() ||
+        'This action is not available right now',
+      color: 'warning',
+    })
+    return
+  }
+
+  const result = await invokeSkillToolbarPlugin(plugin.id)
+  if (result.ok) {
+    toast.add({
+      title: 'Done',
+      description: result.message || 'Action completed',
+      color: 'success',
+    })
+  } else {
+    toast.add({
+      title: plugin.label,
+      description: result.error ?? 'Unknown error',
+      color: 'error',
+    })
+  }
+}
 
 let syncingFromParent = false
 
@@ -236,6 +312,7 @@ const slashHighlightIndex = ref(0)
 const slashMenuRef = ref<SlashMenuExpose | null>(null)
 const agentPickerRef = ref<InstanceType<typeof AgentPickerButton> | null>(null)
 const agentPickerOpen = ref(false)
+const llmOverrideMenuOpen = ref(false)
 const agentPickerHighlightIndex = ref(0)
 
 const selectableAgentCount = computed(() => {
@@ -647,19 +724,6 @@ watch(
     editor.value?.setEditable(!disabled)
   },
 )
-
-function onLinkClick() {
-  const ed = editor.value
-  if (!ed) return
-  const previous = ed.getAttributes('link').href as string | undefined
-  const url = window.prompt('Link URL', previous ?? 'https://')
-  if (url === null) return
-  if (url === '') {
-    ed.chain().focus().extendMarkRange('link').unsetLink().run()
-    return
-  }
-  ed.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
-}
 </script>
 
 <style scoped>
@@ -700,14 +764,34 @@ function onLinkClick() {
   cursor: pointer;
 }
 
-.rich-composer-tool:hover:not(:disabled) {
+.rich-composer-tool:hover:not(:disabled):not(.rich-composer-tool--inactive) {
   background: color-mix(in srgb, var(--ui-text) 8%, transparent);
   color: var(--ui-text);
+}
+
+.rich-composer-tool:disabled,
+.rich-composer-tool--inactive {
+  color: color-mix(in srgb, var(--ui-text-muted) 45%, transparent);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rich-composer-tool:disabled :deep(svg),
+.rich-composer-tool:disabled :deep(.iconify),
+.rich-composer-tool--inactive :deep(svg),
+.rich-composer-tool--inactive :deep(.iconify) {
+  opacity: 0.7;
 }
 
 .rich-composer-tool--active {
   background: color-mix(in srgb, var(--color-primary-500) 14%, transparent);
   color: var(--color-primary-500, var(--ui-text));
+}
+
+.rich-composer-tool--active:disabled {
+  background: transparent;
+  color: color-mix(in srgb, var(--ui-text-muted) 45%, transparent);
+  opacity: 0.45;
 }
 
 .rich-composer--agent-picker-open .rich-composer-toolbar {

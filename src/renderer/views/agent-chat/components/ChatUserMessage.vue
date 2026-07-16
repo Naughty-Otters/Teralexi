@@ -1,8 +1,24 @@
 <template>
   <div>
-    <div v-if="formChip" class="user-form-submit-chip">
-      <UIcon name="i-lucide-clipboard-check" class="user-form-submit-icon" />
-      <span>{{ formChip }}</span>
+    <div v-if="submittedForm" class="user-form-submitted" role="status">
+      <div class="user-form-submitted-header">
+        <UIcon
+          name="i-lucide-clipboard-check"
+          class="user-form-submit-icon"
+          aria-hidden="true"
+        />
+        <span>{{ formChip ?? 'Form submitted' }}</span>
+      </div>
+      <dl v-if="submittedForm.fields.length > 0" class="user-form-submitted-fields">
+        <div
+          v-for="field in submittedForm.fields"
+          :key="field.key"
+          class="user-form-submitted-row"
+        >
+          <dt>{{ field.label }}</dt>
+          <dd>{{ field.value || '—' }}</dd>
+        </div>
+      </dl>
     </div>
     <ul v-if="attachments.length > 0" class="user-attachment-list">
       <li v-for="item in attachments" :key="item.id">
@@ -35,6 +51,7 @@ import { renderMarkdownHtml, rendererMarkdown } from '@renderer/lib/markdown'
 import {
   userCollectFormResponseChipLabel,
   userMessagePlainText,
+  userSubmittedFormView,
 } from './chat/chatUserMessageHelpers'
 import {
   formatChatAttachmentSize,
@@ -51,6 +68,7 @@ const messageAttachmentsById = inject<Ref<Record<string, ChatAttachmentMeta[]>>>
 )
 const conversationId = inject<Ref<string | null | undefined>>('chatConversationId')
 
+const submittedForm = computed(() => userSubmittedFormView(props.message))
 const formChip = computed(() => userCollectFormResponseChipLabel(props.message))
 const plainText = computed(() => userMessagePlainText(props.message))
 const renderedHtml = computed(() => {
@@ -75,21 +93,53 @@ async function onReveal(item: ChatAttachmentMeta) {
 </script>
 
 <style scoped>
-.user-form-submit-chip {
+.user-form-submitted {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--ui-border);
+  background: color-mix(in srgb, var(--ui-primary) 8%, transparent);
+  max-width: min(100%, 420px);
+}
+.user-form-submitted-header {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--ui-border);
-  background: color-mix(in srgb, var(--ui-primary) 8%, transparent);
   font-size: 13px;
   font-weight: 600;
 }
 .user-form-submit-icon {
   flex-shrink: 0;
   opacity: 0.85;
+}
+.user-form-submitted-fields {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.user-form-submitted-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 34%) 1fr;
+  gap: 8px 12px;
+  align-items: start;
+}
+.user-form-submitted-row dt {
+  margin: 0;
+  color: var(--ui-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.user-form-submitted-row dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 .user-attachment-list {
   list-style: none;

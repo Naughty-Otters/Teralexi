@@ -378,6 +378,10 @@ export class AgentFlowContext {
     return this.stageModels.getChoice(stage)
   }
 
+  resolveDefaultLlmChoice(): AgentLlmChoice {
+    return this.stageModels.getChoice('default')
+  }
+
   resolveToolLoopExecutionChoice(isRecoveryAttempt: boolean): AgentLlmChoice {
     return resolveToolLoopExecutionChoiceFromSettings(
       this.stageLlmSettings(),

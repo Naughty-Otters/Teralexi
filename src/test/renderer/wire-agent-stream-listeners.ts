@@ -1,3 +1,4 @@
+import type { FakeIpcChannel } from '@test/ipc/fake-ipc-channel'
 import {
   flushStoreStreamSync,
   initStoreStreamSync,

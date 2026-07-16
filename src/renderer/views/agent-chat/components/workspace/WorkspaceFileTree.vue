@@ -9,6 +9,9 @@
           :title="
             consoleOpen ? 'Hide terminal console' : 'Show terminal console'
           "
+          :aria-label="
+            consoleOpen ? 'Hide terminal console' : 'Show terminal console'
+          "
           @click="emit('toggle-console')"
         >
           <UIcon name="i-lucide-terminal" style="width: 12px; height: 12px" />
@@ -16,6 +19,7 @@
         <button
           class="file-tree-refresh"
           title="Refresh files, git status, and editor"
+          aria-label="Refresh files, git status, and editor"
           @click="emit('refresh')"
         >
           <UIcon
@@ -33,12 +37,19 @@
         type="button"
         class="file-tree-up"
         title="Parent folder"
+        aria-label="Parent folder"
         @click="goUp"
       >
         <UIcon name="i-lucide-chevron-left" class="file-tree-up-icon" />
       </button>
       <nav class="file-tree-breadcrumb">
-        <button type="button" class="file-tree-crumb" @click="goTo('.')">
+        <button
+          type="button"
+          class="file-tree-crumb"
+          title="Workspace root"
+          aria-label="Workspace root"
+          @click="goTo('.')"
+        >
           ~
         </button>
         <template v-for="(segment, index) in pathSegments" :key="index">

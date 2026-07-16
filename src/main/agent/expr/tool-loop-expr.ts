@@ -534,6 +534,7 @@ async function runStandaloneAgent(parentCtx: AgentStepContext): Promise<void> {
       prepareStep: planModePrepareStep,
       provider: attemptChoice.provider,
       modelId: attemptChoice.model,
+      providerOptions: attemptChoice.providerOptions,
     })
 
     const attemptUserContent = appendStandaloneRetryToUserContent(
@@ -911,6 +912,7 @@ export async function executeTodoToolLoop(
       abortSignal: haltCtrl.signal,
       provider: toolLoopChoice.provider,
       modelId: toolLoopChoice.model,
+      providerOptions: toolLoopChoice.providerOptions,
     })
 
     let rawMessages = await buildLoopMessagesForRoute(route, {
@@ -1233,6 +1235,9 @@ async function buildLoopMessagesForFormSubmitResume(
   }
 
   try {
+    // trailingUserContent marks form-submit style replay: incomplete
+    // approval-* tool UI parts are dropped before convert, and the sanitizer
+    // strips any remaining unanswered tool_calls ahead of the step prompt.
     const messages = await buildAgentModelMessages({
       toolSet,
       fallbackUserContent: stepUserPrompt,

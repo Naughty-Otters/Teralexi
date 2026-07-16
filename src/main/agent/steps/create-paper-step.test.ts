@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { CreatePaperOrchestrator } from './create-paper-step'
-import type { AgentStepContext } from './context'
+import type { AgentStepContext } from '../context'
 
 const collectPaperInputsMock = vi.fn()
 const generateResearchPaperMarkdownMock = vi.fn()

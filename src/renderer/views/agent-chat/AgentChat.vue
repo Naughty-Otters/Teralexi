@@ -8,7 +8,10 @@
       <!-- ── Left Sidebar ── -->
       <aside
         class="sidebar"
-        :class="{ 'sidebar-collapsed': sidebarCollapsed }"
+        :class="{
+          'sidebar-collapsed': sidebarCollapsed,
+          'sidebar--profile-menu-open': sidebarProfileMenuOpen,
+        }"
         :style="sidebarStyle"
       >
         <div class="sidebar-brand">
@@ -22,11 +25,13 @@
         <SidebarFooter
           :right-panel-view="rightPanelView"
           :is-signed-in="isSignedIn"
+          :collapsed="sidebarCollapsed"
           @toggle-settings="
             rightPanelView = rightPanelView === 'settings' ? 'chat' : 'settings'
           "
           @open-monitor="onOpenMonitor"
           @open-setup-wizard="onOpenSetupWizard"
+          @profile-menu-open-change="sidebarProfileMenuOpen = $event"
         />
       </aside>
 
@@ -98,6 +103,7 @@
         <button
           type="button"
           class="sign-in-gate-close"
+          title="Close"
           aria-label="Close"
           @click="signInGateOpen = false"
         >
@@ -204,6 +210,7 @@ const sidebarCollapsed = useLayoutPreference(
   LAYOUT_PREF_KEYS.sidebarCollapsed,
   true,
 )
+const sidebarProfileMenuOpen = ref(false)
 const layoutEl = ref<HTMLElement | null>(null)
 const providerSetupOpen = ref(false)
 const chatPanelMounted = ref(true)
@@ -629,6 +636,10 @@ onUnmounted(() => {
   overflow: hidden;
   position: relative;
   z-index: 2;
+}
+.sidebar--profile-menu-open {
+  overflow: visible;
+  z-index: 4000;
 }
 .agent-layout--resizing {
   cursor: col-resize;

@@ -4,10 +4,7 @@ import type {
   EntitlementCache,
 } from '@shared/subscription/entitlement-types'
 import { getTeralexiBaseApiUrl } from './teralexi-platform-config'
-import {
-  getPersistedServerAccessTokenForSessionCheck,
-  getTeralexiServerAccessToken,
-} from './teralexi-server-auth'
+import { getTeralexiServerAccessToken } from './teralexi-server-auth'
 import { verifyEntitlementToken } from './entitlement-verifier'
 import {
   buildEntitlementCache,
@@ -57,11 +54,19 @@ export type TeralexiServerSessionCheck =
   | { ok: false; message: string; status?: number }
   | { ok: null; transientError: unknown }
 
-/** Validate the current server session via /api/v1/auth/me. */
+/**
+ * Validate the current server session via /api/v1/auth/me.
+ * Soft-expired JWTs are refreshed first so hourly `exp` does not force sign-out.
+ */
 export async function checkTeralexiServerSession(
   apiBaseUrl: string,
 ): Promise<TeralexiServerSessionCheck> {
-  const accessToken = getPersistedServerAccessTokenForSessionCheck(apiBaseUrl)
+  let accessToken: string | null = null
+  try {
+    accessToken = await getTeralexiServerAccessToken(apiBaseUrl)
+  } catch (err) {
+    return { ok: null, transientError: err }
+  }
   if (!accessToken) {
     return {
       ok: false,

@@ -5,10 +5,12 @@ import {
   TERALEXI_AGENT_SANDBOX_ROOT_ENV,
   TERALEXI_AGENT_WORKSPACE_PATH_ENV,
   TERALEXI_AGENT_CONVERSATION_ID_ENV,
+  TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV,
   SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY,
   SANDBOX_ROOT_GLOBAL_KEY,
   WORKSPACE_PATH_GLOBAL_KEY,
   CONVERSATION_ID_GLOBAL_KEY,
+  ASSISTANT_MESSAGE_ID_GLOBAL_KEY,
   getAgentRunWorkspacePath,
 } from './run-context'
 import {
@@ -122,6 +124,7 @@ export function isSandboxArtifactRelativePath(userPath: string): boolean {
   return (
     head === 'output' ||
     head === 'plans' ||
+    head === 'followup' ||
     head === 'refs' ||
     head === 'skills' ||
     head === 'scripts'
@@ -346,6 +349,18 @@ export function getConversationIdFromEnv(): string | undefined {
     return fromGlobal.trim()
   }
   return process.env[TERALEXI_AGENT_CONVERSATION_ID_ENV]?.trim() || undefined
+}
+
+/** Active assistant message id for the current turn (global → env). */
+export function getAssistantMessageIdFromEnv(): string | undefined {
+  const g = globalThis as unknown as Record<string, unknown>
+  const fromGlobal = g[ASSISTANT_MESSAGE_ID_GLOBAL_KEY]
+  if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
+    return fromGlobal.trim()
+  }
+  return (
+    process.env[TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV]?.trim() || undefined
+  )
 }
 
 /**

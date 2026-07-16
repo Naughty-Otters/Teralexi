@@ -99,6 +99,7 @@ vi.mock('@main/engine', () => ({
 
 vi.mock('./sandbox-output-view', () => ({
   syncSandboxOutputView: vi.fn(),
+  navigateSandboxOutputView: vi.fn(),
 }))
 
 vi.mock('./remove-sandbox-directories', () => ({

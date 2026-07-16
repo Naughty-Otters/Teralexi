@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const { getPersistedServerAccessTokenForSessionCheck } = vi.hoisted(() => ({
-  getPersistedServerAccessTokenForSessionCheck: vi.fn(),
+const { getTeralexiServerAccessToken } = vi.hoisted(() => ({
+  getTeralexiServerAccessToken: vi.fn(),
 }))
 
 vi.mock('./teralexi-server-auth', () => ({
-  getPersistedServerAccessTokenForSessionCheck,
-  getTeralexiServerAccessToken: vi.fn(),
+  getPersistedServerAccessTokenForSessionCheck: vi.fn(),
+  getTeralexiServerAccessToken,
 }))
 
 import { checkTeralexiServerSession } from './entitlement-client'
@@ -17,8 +17,8 @@ describe('checkTeralexiServerSession', () => {
     vi.clearAllMocks()
   })
 
-  it('returns ok when /auth/me succeeds with persisted token', async () => {
-    getPersistedServerAccessTokenForSessionCheck.mockReturnValue('server-jwt')
+  it('returns ok when /auth/me succeeds after resolving access token', async () => {
+    getTeralexiServerAccessToken.mockResolvedValue('server-jwt')
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({
@@ -30,11 +30,11 @@ describe('checkTeralexiServerSession', () => {
     await expect(checkTeralexiServerSession('http://localhost:8000')).resolves.toEqual({
       ok: true,
     })
-    expect(getPersistedServerAccessTokenForSessionCheck).toHaveBeenCalled()
+    expect(getTeralexiServerAccessToken).toHaveBeenCalledWith('http://localhost:8000')
   })
 
   it('returns revoked when /auth/me returns 401', async () => {
-    getPersistedServerAccessTokenForSessionCheck.mockReturnValue('server-jwt')
+    getTeralexiServerAccessToken.mockResolvedValue('server-jwt')
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({
@@ -51,13 +51,22 @@ describe('checkTeralexiServerSession', () => {
     })
   })
 
-  it('returns unavailable when no persisted server token', async () => {
-    getPersistedServerAccessTokenForSessionCheck.mockReturnValue(null)
+  it('returns unavailable when access token cannot be resolved', async () => {
+    getTeralexiServerAccessToken.mockResolvedValue(null)
 
     await expect(checkTeralexiServerSession('http://localhost:8000')).resolves.toEqual({
       ok: false,
       message: 'Teralexi server session is not available',
       status: 401,
+    })
+  })
+
+  it('treats access-token resolution errors as transient', async () => {
+    getTeralexiServerAccessToken.mockRejectedValue(new Error('network down'))
+
+    await expect(checkTeralexiServerSession('http://localhost:8000')).resolves.toEqual({
+      ok: null,
+      transientError: expect.any(Error),
     })
   })
 })

@@ -6,6 +6,7 @@ import {
   workspaceActiveLabel,
   workspacePathFromStack,
 } from '@shared/agent/workspace'
+import { useAgentStore } from '@store/agent'
 
 export const useWorkspaceStore = defineStore('workspace', () => {
   const conversationId = ref<string | null>(null)
@@ -31,6 +32,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const hasPendingWorkspace = computed(
     () => Boolean(pendingWorkspacePath.value?.trim()) && !conversationId.value,
   )
+
+  function syncConversationListWorkspacePath(
+    targetConversationId: string,
+    path: string | null,
+  ): void {
+    useAgentStore().patchConversationWorkspacePath(targetConversationId, path)
+  }
 
   function applyWorkspaceResult(result: {
     stack?: WorkspaceEntry[]
@@ -86,6 +94,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       pendingWorkspacePath.value = path
       return
     }
+    syncConversationListWorkspacePath(conversation, path)
     await loadForConversation(conversation)
   }
 
@@ -106,7 +115,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     const setCh = window.ipcRendererChannel?.SetConversationWorkspace
     if (!setCh?.invoke) return
     const result = await setCh.invoke({ conversationId: id, path })
-    applyWorkspaceResult(result)
+    if (applyWorkspaceResult(result)) {
+      syncConversationListWorkspacePath(id, path)
+    }
   }
 
   async function clearWorkspace(): Promise<void> {
@@ -121,7 +132,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     const ch = window.ipcRendererChannel?.ClearConversationWorkspace
     if (!ch?.invoke) return
     const result = await ch.invoke({ conversationId: id })
-    applyWorkspaceResult(result)
+    if (applyWorkspaceResult(result)) {
+      syncConversationListWorkspacePath(id, null)
+    }
   }
 
   async function setWorkspaceByPath(path: string): Promise<boolean> {
@@ -140,6 +153,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (!setCh?.invoke) return false
     const result = await setCh.invoke({ conversationId: id, path: trimmed })
     if (!applyWorkspaceResult(result)) return false
+    syncConversationListWorkspacePath(id, trimmed)
     await loadForConversation(id)
     return true
   }

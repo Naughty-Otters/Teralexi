@@ -11,7 +11,12 @@
         <p class="chat-header-meta">{{ t.settings.subtitle }}</p>
       </div>
     </div>
-    <button class="icon-btn" :title="t.settings.close" @click="emit('close')">
+    <button
+      class="icon-btn"
+      :title="t.settings.close"
+      :aria-label="t.settings.close"
+      @click="emit('close')"
+    >
       ✕
     </button>
   </div>

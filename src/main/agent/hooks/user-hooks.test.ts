@@ -90,4 +90,66 @@ describe('user-hooks', () => {
     const result = await runUserHooks({ event: 'afterToolCall', toolName: 'read_file' })
     expect(result.blocked).toBe(false)
   })
+
+  it('runs conversation extraHooks after global hooks for preHook', async () => {
+    vi.mocked(existsSync).mockReturnValue(true)
+    vi.mocked(readFileSync).mockReturnValueOnce(
+      JSON.stringify({
+        hooks: [{ event: 'preHook', command: 'global-cmd' }],
+      }),
+    )
+
+    const calls: string[] = []
+    vi.mocked(execFile).mockImplementation((...args: unknown[]) => {
+      calls.push(String(args[0]))
+      const cb = args[args.length - 1] as (
+        err: Error | null,
+        stdout: string,
+        stderr: string,
+      ) => void
+      cb(null, '', '')
+      return {} as never
+    })
+
+    const result = await runUserHooks(
+      { event: 'preHook', conversationId: 'c1', userMessage: 'hi' },
+      [{ id: 'local', event: 'preHook', command: 'local-cmd' }],
+    )
+    expect(result.blocked).toBe(false)
+    expect(calls).toEqual(['global-cmd', 'local-cmd'])
+  })
+
+  it('blocks preHook when conversation hook fails', async () => {
+    vi.mocked(existsSync).mockReturnValue(false)
+    vi.mocked(execFile).mockImplementationOnce((...args: unknown[]) => {
+      const cb = args[args.length - 1] as (
+        err: Error | null,
+        stdout: string,
+        stderr: string,
+      ) => void
+      cb(new Error('not allowed'), '', '')
+      return {} as never
+    })
+
+    const result = await runUserHooks(
+      { event: 'preHook', conversationId: 'c1' },
+      [{ id: 'local', event: 'preHook', command: 'node', args: ['deny.js'] }],
+    )
+    expect(result.blocked).toBe(true)
+    expect(result.message).toContain('not allowed')
+  })
+
+  it('skips disabled conversation hooks', async () => {
+    vi.mocked(existsSync).mockReturnValue(false)
+    vi.mocked(execFile).mockImplementation(() => {
+      throw new Error('should not run')
+    })
+
+    const result = await runUserHooks(
+      { event: 'postHook', conversationId: 'c1' },
+      [{ id: 'off', event: 'postHook', command: 'node', enabled: false }],
+    )
+    expect(result.blocked).toBe(false)
+    expect(execFile).not.toHaveBeenCalled()
+  })
 })

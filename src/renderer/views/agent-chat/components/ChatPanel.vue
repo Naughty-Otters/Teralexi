@@ -134,6 +134,11 @@
                 </li>
               </ul>
             </div>
+            <ChatFollowUpSuggestions
+              v-if="!isBusy && !hasPendingHitl && followUpItems.length > 0"
+              :items="followUpItems"
+              @select="onFollowUpSelect"
+            />
             </div>
           </div>
         </div>
@@ -155,6 +160,7 @@
           :agent-options="composerAgentOptions"
           :chat-agents="composerChatAgents"
           :conversation-id="agentStore.currentConversationId"
+          :skill-id="composerSkillId"
           :workspace-disabled="isBusy"
           :workspace-hint="workspaceComposerHint"
           :google-workspace-hint="googleWorkspaceComposerHint"
@@ -163,12 +169,17 @@
           :coding-agent="selectedAgentIsCoding"
           :coding-mode="codingMode"
           :plan-display-status="planDisplayStatus"
+          :agent-busy="isBusy"
           :background-tasks="backgroundTasks"
           :sub-agent-slash-enabled="subAgentSlashEnabled"
           :staged-attachments="stagedAttachments"
           :can-add-attachments="canAddAttachments"
+          :llm-override="llmOverride"
+          :agent-provider="composerAgentProvider"
+          :agent-model="composerAgentModel"
           @select-agent="onSelectAgent"
           @update:coding-mode="onCodingModeChange"
+          @update:llm-override="onLlmOverrideChange"
           @cancel-background-task="onCancelBackgroundTask"
           @pick-attachments="pickAttachments"
           @remove-attachment="removeStaged"
@@ -201,6 +212,9 @@
         @update:active-link-tab-id="onUpdateActivePreviewLinkTabId"
         @update:preview-source="onUpdatePreviewPanelSource"
         @close-link-tab="onClosePreviewLinkTab"
+        @add-link-tab="onAddPreviewLinkTab"
+        @update-link-tab-url="onUpdatePreviewLinkTabUrl"
+        @open-preview-url="openSandboxPreview"
       />
     </div>
   </div>
@@ -245,7 +259,7 @@ import {
   resolvePlanModeDisplayStatus,
   type PlanModeView,
 } from '@shared/agent/plan-mode-phase'
-import { agentRequiresWorkspace } from '@shared/agent/workspace-required-skills'
+import { agentRequiresWorkspace, resolveAgentSkillId } from '@shared/agent/workspace-required-skills'
 import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
 import { collectConversationWorkspaceAttachments } from '@shared/agent/conversation-workspace-attachments'
 import { useGoogleWorkspaceAccount } from '@renderer/composables/useGoogleWorkspaceAccount'
@@ -298,6 +312,7 @@ import {
   normalizeChatMessagesForDisplay,
 } from './chat/chatMessageNormalize'
 import { chatMessagesHavePendingHitl } from './chat/chatHitlHelpers'
+import { parsePersistedCollectFormResponse } from './chat/chatUserMessageHelpers'
 import {
   isExitPlanModeToolPart,
   toolPartDisplayName,
@@ -315,7 +330,9 @@ import { handleChatPanelLinkClick } from '../sandboxPreview'
 import { bindSandboxPreviewRequest } from '../sandboxPreviewBridge'
 import {
   closePreviewLinkTab,
+  createEmptyPreviewLinkTab,
   openPreviewLinkTab,
+  updatePreviewLinkTabUrl,
   type PreviewLinkTab,
 } from '../report-preview-tabs'
 import type { ReportPanelPreviewSource } from './ReportPanel.vue'
@@ -324,6 +341,7 @@ import AgentGuidePanel from './AgentGuidePanel.vue'
 import ChatUserMessage from './ChatUserMessage.vue'
 import ChatAssistantMessageParts from './ChatAssistantMessageParts.vue'
 import ChatComposer from './ChatComposer.vue'
+import ChatFollowUpSuggestions from './ChatFollowUpSuggestions.vue'
 import ChatConversationSkeleton from './ChatConversationSkeleton.vue'
 import ChatConversationWorkspaceAttachments from './ChatConversationWorkspaceAttachments.vue'
 import { formatSlashHelp } from './composer-slash-commands'
@@ -350,10 +368,19 @@ import {
 } from '@shared/agent/workspace-slash-command'
 import type { CodingMode } from '@shared/agent/coding-mode'
 import {
+  toPlainConversationLlmOverride,
+  type ConversationLlmOverride,
+} from '@shared/agent/conversation-llm-override'
+import type { ProviderType } from '@shared/agent/llm-provider-registry'
+import {
   codingModeLabel,
   DEFAULT_CODING_MODE,
   parseCodingMode,
 } from '@shared/agent/coding-mode'
+import {
+  followUpItemToUserMessage,
+  type FollowUpItem,
+} from '@shared/agent/follow-up'
 import type { BackgroundTaskView } from './BackgroundTaskPanel.vue'
 import {
   resolveDelegatableSubAgentTargets,
@@ -397,7 +424,13 @@ const INSTALL_SKILL_CMD_RE = /^\/skill:install\s+(\S+)/i
 const standardMarkdown = useLazyStandardMarkdown()
 
 const codingMode = ref<CodingMode>(DEFAULT_CODING_MODE)
+const llmOverride = ref<ConversationLlmOverride | null>(null)
 const planModeView = ref<PlanModeView>(defaultPlanModeView())
+const followUpItems = ref<FollowUpItem[]>([])
+/** Monotonic revision from main; ignore notify/load payloads with a lower revision. */
+const followUpRevision = ref(0)
+/** Bumps whenever follow-ups are cleared so late IPC loads cannot resurrect chips. */
+let followUpLoadGeneration = 0
 const backgroundTasks = ref<BackgroundTaskView[]>([])
 let backgroundTaskPollTimer: ReturnType<typeof setInterval> | null = null
 
@@ -602,6 +635,27 @@ function onClosePreviewLinkTab(tabId: string) {
   }
 }
 
+function onAddPreviewLinkTab() {
+  const cid = agentStore.currentConversationId?.trim()
+  if (!cid) return
+  const prevTabs = previewLinkTabsByConversation.value[cid] ?? []
+  const { tabs, activeTabId } = createEmptyPreviewLinkTab(prevTabs)
+  setConversationPreviewTabs(cid, tabs, activeTabId)
+  previewPanelSourceByConversation.value = {
+    ...previewPanelSourceByConversation.value,
+    [cid]: 'link',
+  }
+}
+
+function onUpdatePreviewLinkTabUrl(payload: { tabId: string; url: string }) {
+  const cid = agentStore.currentConversationId?.trim()
+  if (!cid) return
+  const prevTabs = previewLinkTabsByConversation.value[cid] ?? []
+  const tabs = updatePreviewLinkTabUrl(prevTabs, payload.tabId, payload.url)
+  const activeId = activePreviewLinkTabIdByConversation.value[cid] ?? null
+  setConversationPreviewTabs(cid, tabs, activeId)
+}
+
 function onChatPanelClick(event: MouseEvent) {
   handleChatPanelLinkClick(event, openSandboxPreview)
 }
@@ -675,6 +729,16 @@ function shouldPreserveReactiveMessagesWhenChatEmpty(): boolean {
   return Boolean(getConversationChat(cid)?.messages?.length)
 }
 
+function clearHitlQueueBlockIfMessagesResolved(
+  messages: readonly UIMessage[],
+): void {
+  const conversationId = resolveActiveConversationId()
+  if (!conversationId) return
+  if (!conversationHitlBlocksQueue(conversationId)) return
+  if (chatMessagesHavePendingHitl(messages)) return
+  setConversationHitlBlocksQueue(conversationId, false)
+}
+
 function syncReactiveMessagesFromChat(
   raw: UIMessage[] | undefined,
   opts?: { full?: boolean },
@@ -692,6 +756,8 @@ function syncReactiveMessagesFromChat(
       ? normalizeChatMessagesForDisplay(raw)
       : incrementalSyncChatMessages(raw, reactiveMessages.value)
   chatUiPerfMarkEnd('normalize')
+
+  clearHitlQueueBlockIfMessagesResolved(reactiveMessages.value)
 
   const tail = reactiveMessages.value[reactiveMessages.value.length - 1]
   if (UI_CHAT_CONVERSATION_MODE_ONLY) {
@@ -746,6 +812,7 @@ const transport = new IpcAgentChatTransport({
         { conversationId, priority: 'immediate', force: true },
       )
       void refreshPlanModeState(conversationId)
+      void loadFollowUpSuggestions(conversationId)
     }
   },
   onStreamUiChunk(conversationId, meta) {
@@ -798,17 +865,35 @@ function dedupeStoreRowsByIdLastWins(rows: StoreMessage[]): StoreMessage[] {
 
 function storeMessagesToUi(rows: StoreMessage[]): UIMessage[] {
   const uniqueRows = dedupeStoreRowsByIdLastWins(rows)
-  return uniqueRows.map((m) => ({
-    id: m.id,
-    role: m.role,
-    parts: [
-      {
-        type: 'text' as const,
-        text: m.content,
-        state: m.isStreaming ? ('streaming' as const) : ('done' as const),
-      },
-    ],
-  }))
+  return uniqueRows.map((m) => {
+    if (m.role === 'user') {
+      const form = parsePersistedCollectFormResponse(m.content)
+      if (form) {
+        return {
+          id: m.id,
+          role: m.role,
+          parts: [
+            {
+              type: 'data-collect-form-response' as const,
+              id: form.requestId || undefined,
+              data: { values: form.values },
+            },
+          ],
+        } as UIMessage
+      }
+    }
+    return {
+      id: m.id,
+      role: m.role,
+      parts: [
+        {
+          type: 'text' as const,
+          text: m.content,
+          state: m.isStreaming ? ('streaming' as const) : ('done' as const),
+        },
+      ],
+    }
+  })
 }
 
 function conversationMeta(conversationId: string): Conversation | undefined {
@@ -842,6 +927,12 @@ const activeAgentName = computed(() => {
   return formatAgentGroupDisplayName(agent)
 })
 const activeAgentModel = computed(() => agentStore.selectedAgent?.model ?? '')
+const composerAgentProvider = computed(
+  (): ProviderType => agentStore.selectedAgent?.provider ?? 'ollama',
+)
+const composerAgentModel = computed(
+  () => agentStore.selectedAgent?.model ?? '',
+)
 const activeAgentColor = computed(
   () => agentStore.selectedAgent?.color ?? 'neutral',
 )
@@ -872,6 +963,12 @@ const selectedAgentRequiresWorkspace = computed(() =>
 
 const selectedAgentIsCoding = computed(() =>
   agentIsCodingAgent(agentStore.selectedAgent),
+)
+
+const composerSkillId = computed(() =>
+  agentStore.selectedAgent
+    ? resolveAgentSkillId(agentStore.selectedAgent)
+    : null,
 )
 
 const selectedAgentIsGoogleWorkspace = computed(() =>
@@ -1142,10 +1239,14 @@ function resolveActiveConversationId(): string | undefined {
   return agentStore.currentConversationId ?? undefined
 }
 
+const hasPendingHitl = computed(() =>
+  conversationHasPendingHitl(resolveActiveConversationId()),
+)
+
 const planDisplayStatus = computed(() =>
   resolvePlanModeDisplayStatus(
     planModeView.value,
-    conversationHasPendingHitl(resolveActiveConversationId()),
+    hasPendingHitl.value,
   ),
 )
 
@@ -1238,7 +1339,23 @@ async function dequeueAndSendNext(): Promise<void> {
 }
 
 watch(isBusy, (busy, wasBusy) => {
-  if (wasBusy && !busy) void dequeueAndSendNext()
+  // Keep followUpItems while busy so chips appear as soon as the turn ends
+  // (meta is often written mid-stream via generate_follow_up).
+  if (wasBusy && !busy) {
+    void dequeueAndSendNext()
+    if (!hasPendingHitl.value) {
+      void loadFollowUpSuggestions(agentStore.currentConversationId ?? undefined)
+    } else {
+      // HITL pause: do not surface post-turn chips while the turn is suspended.
+      followUpItems.value = []
+    }
+  }
+})
+
+watch(hasPendingHitl, (pending) => {
+  if (pending) {
+    followUpItems.value = []
+  }
 })
 
 function createChatForConversation(
@@ -1262,6 +1379,9 @@ function createChatForConversation(
 
       if (!isAbort) {
         void refreshPlanModeState(conversationId)
+        if (!pendingHitl) {
+          void loadFollowUpSuggestions(conversationId)
+        }
       }
 
       if (isAbort) {
@@ -1362,6 +1482,15 @@ async function rebuildChat() {
   void scrollToBottomIfStuck('auto')
 }
 
+function resetFollowUpUiForConversationSwitch(): void {
+  // Drop previous conversation's chips immediately. Revision is per-conversation
+  // on main, but this panel only tracks the active conversation's watermark —
+  // leaving it high would reject a freshly loaded empty/low-revision catalog.
+  followUpLoadGeneration += 1
+  followUpItems.value = []
+  followUpRevision.value = 0
+}
+
 watch(
   () => agentStore.currentConversationId,
   (conversationId, previousId) => {
@@ -1371,13 +1500,17 @@ watch(
     }
     setVisibleConversationForUiFlush(conversationId)
     streamingTextBuffer.clear()
+    resetFollowUpUiForConversationSwitch()
     void rebuildChat()
     if (conversationId) {
       void loadCodingMode(conversationId)
+      void loadLlmOverride(conversationId)
       void loadPlanModeState(conversationId)
+      void loadFollowUpSuggestions(conversationId)
       if (selectedAgentIsCoding.value) startBackgroundTaskPolling()
     } else {
       codingMode.value = DEFAULT_CODING_MODE
+      llmOverride.value = null
       planModeView.value = defaultPlanModeView()
       backgroundTasks.value = []
       stopBackgroundTaskPolling()
@@ -1394,6 +1527,26 @@ function onPlanModeStateChanged(
   if (!conversationId || conversationId !== resolveActiveConversationId())
     return
   if (payload.view) applyPlanModeView(payload.view)
+}
+
+function onConversationFollowUpsChanged(
+  _event: unknown,
+  payload: {
+    conversationId?: string
+    followUps?: FollowUpItem[]
+    revision?: number
+  },
+) {
+  const conversationId = payload?.conversationId?.trim()
+  if (!conversationId || conversationId !== agentStore.currentConversationId) {
+    return
+  }
+  const items = Array.isArray(payload.followUps) ? payload.followUps : []
+  // HITL suspend/resume owns the turn; ignore premature chips until idle after finish.
+  if (hasPendingHitl.value && items.length > 0) {
+    return
+  }
+  applyFollowUpSuggestions(items, payload.revision)
 }
 
 let unregisterConversationStoreUiSync: (() => void) | null = null
@@ -1418,10 +1571,14 @@ onMounted(() => {
   if (cid) {
     void loadCodingMode(cid)
     void loadPlanModeState(cid)
+    void loadFollowUpSuggestions(cid)
     void loadConversationAttachments(cid)
     if (selectedAgentIsCoding.value) startBackgroundTaskPolling()
   }
   window.ipcRendererChannel?.PlanModeStateChanged?.on?.(onPlanModeStateChanged)
+  window.ipcRendererChannel?.ConversationFollowUpsChanged?.on?.(
+    onConversationFollowUpsChanged,
+  )
   window.ipcRendererChannel?.AgentSandboxOutput?.on?.((_e, payload) => {
     agentStore.recordSandboxOutput(payload)
   })
@@ -1471,6 +1628,9 @@ onUnmounted(() => {
   window.ipcRendererChannel?.PlanModeStateChanged?.removeListener?.(
     onPlanModeStateChanged,
   )
+  window.ipcRendererChannel?.ConversationFollowUpsChanged?.removeListener?.(
+    onConversationFollowUpsChanged,
+  )
   window.ipcRendererChannel?.AgentSandboxOutput?.removeAllListeners?.()
 })
 
@@ -1480,6 +1640,14 @@ async function onCollectFormSubmit(payload: {
 }) {
   const chat = chatInst.value
   if (!chat) return
+  const conversationId = resolveActiveConversationId()
+  // Match onToolApproval: form-request chunks set hitlBlocksQueue, and leaving
+  // it stuck keeps the composer on "Waiting for your approval…" after submit
+  // even while plan execution resumes.
+  if (conversationId) {
+    setConversationHitlBlocksQueue(conversationId, false)
+    void refreshPlanModeState(conversationId)
+  }
   await chat.sendMessage({
     role: 'user',
     parts: [
@@ -1543,6 +1711,118 @@ async function loadCodingMode(conversationId: string) {
   }
   const result = await ch.invoke({ conversationId })
   codingMode.value = result.ok ? result.mode : DEFAULT_CODING_MODE
+}
+
+async function loadLlmOverride(conversationId: string) {
+  const ch = window.ipcRendererChannel?.GetConversationLlmOverride
+  if (!ch) {
+    llmOverride.value = null
+    return
+  }
+  const result = await ch.invoke({ conversationId })
+  llmOverride.value = result.ok ? result.override : null
+}
+
+async function persistLlmOverride(
+  conversationId: string,
+  override: ConversationLlmOverride | null,
+) {
+  const plain = toPlainConversationLlmOverride(override)
+  const ch = window.ipcRendererChannel?.SetConversationLlmOverride
+  if (!ch) {
+    llmOverride.value = plain
+    return
+  }
+  const result = await ch.invoke({ conversationId, override: plain })
+  if (result.ok) llmOverride.value = result.override
+}
+
+async function onLlmOverrideChange(override: ConversationLlmOverride | null) {
+  const conversationId = agentStore.currentConversationId?.trim()
+  const plain = toPlainConversationLlmOverride(override)
+  if (!conversationId) {
+    llmOverride.value = plain
+    return
+  }
+  await persistLlmOverride(conversationId, plain)
+}
+
+async function clearLlmOverrideForConversation(conversationId: string) {
+  await persistLlmOverride(conversationId, null)
+}
+
+async function loadFollowUpSuggestions(conversationId: string | undefined) {
+  const id = conversationId?.trim()
+  if (!id) {
+    followUpItems.value = []
+    followUpRevision.value = 0
+    return
+  }
+  const ch = window.ipcRendererChannel?.GetConversationFollowUps
+  if (!ch) {
+    followUpItems.value = []
+    return
+  }
+  const loadGeneration = followUpLoadGeneration
+  try {
+    const result = await ch.invoke({ conversationId: id })
+    if (loadGeneration !== followUpLoadGeneration) return
+    if (agentStore.currentConversationId !== id) return
+    if (result.ok) {
+      if (hasPendingHitl.value && result.followUps.length > 0) {
+        followUpItems.value = []
+        return
+      }
+      applyFollowUpSuggestions(result.followUps, result.revision)
+    } else {
+      followUpItems.value = []
+    }
+  } catch {
+    if (
+      loadGeneration === followUpLoadGeneration &&
+      agentStore.currentConversationId === id
+    ) {
+      followUpItems.value = []
+    }
+  }
+}
+
+function applyFollowUpSuggestions(
+  items: FollowUpItem[],
+  revision?: number,
+): void {
+  if (typeof revision === 'number' && Number.isFinite(revision)) {
+    if (revision < followUpRevision.value) return
+    followUpRevision.value = revision
+  }
+  followUpItems.value = items
+}
+
+async function clearFollowUpSuggestions(conversationId: string | undefined) {
+  followUpLoadGeneration += 1
+  followUpItems.value = []
+  const id = conversationId?.trim()
+  if (!id) return
+  const ch = window.ipcRendererChannel?.ClearConversationFollowUps
+  if (!ch) return
+  try {
+    const result = await ch.invoke({ conversationId: id })
+    if (typeof result?.revision === 'number' && Number.isFinite(result.revision)) {
+      followUpRevision.value = Math.max(followUpRevision.value, result.revision)
+    }
+  } catch {
+    /* ignore clear failures — UI already cleared */
+  }
+}
+
+async function onFollowUpSelect(item: FollowUpItem) {
+  const conversationId = agentStore.currentConversationId
+  const text = followUpItemToUserMessage(item)
+  if (!text || !chatInst.value || !conversationId) return
+
+  await clearFollowUpSuggestions(conversationId)
+  draft.value = ''
+  void chatInst.value.sendMessage({ text })
 }
 
 async function loadPlanModeState(conversationId: string) {
@@ -2006,6 +2286,9 @@ async function onSubmit() {
   const sourcePaths = [...attachmentSourcePaths.value]
   if (!text && sourcePaths.length === 0) return
 
+  // Composer send: drop follow-up chips and delete followup/meta.json before the new turn.
+  await clearFollowUpSuggestions(agentStore.currentConversationId ?? undefined)
+
   const skillSwitchTarget = text ? parseSkillSwitchCommand(text) : null
   if (skillSwitchTarget) {
     draft.value = ''
@@ -2167,7 +2450,9 @@ async function onSubmit() {
 
 function onSelectAgent(agentId: string) {
   if (!agentId || agentId === agentStore.selectedAgentId) return
+  const conversationId = agentStore.currentConversationId?.trim()
   void agentStore.selectAgent(agentId)
+  if (conversationId) void clearLlmOverrideForConversation(conversationId)
 }
 
 function onStop() {
