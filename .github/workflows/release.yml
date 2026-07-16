@@ -26,11 +26,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Job-level `if` cannot reference `matrix` — build the include list here instead.
+  select-platforms:
+    name: Select platforms
+    if: inputs.confirm == 'release'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - id: select
+        shell: bash
+        run: |
+          case "${{ inputs.platform }}" in
+            mac)
+              matrix='{"include":[{"os":"macos-latest","platform":"mac","npm_script":"release:mac"}]}'
+              ;;
+            win)
+              matrix='{"include":[{"os":"windows-latest","platform":"win","npm_script":"release:win"}]}'
+              ;;
+            *)
+              matrix='{"include":[{"os":"macos-latest","platform":"mac","npm_script":"release:mac"},{"os":"windows-latest","platform":"win","npm_script":"release:win"}]}'
+              ;;
+          esac
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
   release:
     name: Production release (${{ matrix.platform }})
-    if: >
-      inputs.confirm == 'release' &&
-      (inputs.platform == 'all' || inputs.platform == matrix.platform)
+    needs: select-platforms
     runs-on: ${{ matrix.os }}
     # Signing / notarization / AWS secrets live in the "release" environment.
     environment: release
@@ -38,14 +60,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            platform: mac
-            npm_script: release:mac
-          - os: windows-latest
-            platform: win
-            npm_script: release:win
+      matrix: ${{ fromJSON(needs.select-platforms.outputs.matrix) }}
 
     steps:
       - name: Check out repository
