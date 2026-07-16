@@ -10,7 +10,8 @@
             v-if="task.status === 'running'"
             type="button"
             class="bg-tasks__cancel"
-            aria-label="Cancel task"
+            title="Cancel background task"
+            aria-label="Cancel background task"
             @click="emit('cancel', task.id)"
           >
             <UIcon name="i-lucide-x" />

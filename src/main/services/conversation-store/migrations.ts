@@ -21,6 +21,8 @@ export function runMigrations(db: Database.Database): void {
   migrateConversationSettings(db)
   migrateCodingModePlanToExplore(db)
   migrateConversationPlanModeState(db)
+  migrateConversationHooks(db)
+  migrateConversationLlmOverride(db)
   migrateParentMessageId(db)
   migrateEnableSubAgentDelegationDefault(db)
   migrateEnableAllowAsSubAgentDefault(db)
@@ -815,6 +817,22 @@ function migrateConversationPlanModeState(db: Database.Database): void {
   if (!tableHasColumn(db, 'conversation_settings', 'plan_mode_json')) {
     db.exec(
       `ALTER TABLE conversation_settings ADD COLUMN plan_mode_json TEXT NOT NULL DEFAULT '{"planMode":false,"planSlug":null,"pendingPlanActivation":false,"pendingPlanExecution":false}';`,
+    )
+  }
+}
+
+function migrateConversationHooks(db: Database.Database): void {
+  if (!tableHasColumn(db, 'conversation_settings', 'hooks_json')) {
+    db.exec(
+      `ALTER TABLE conversation_settings ADD COLUMN hooks_json TEXT NOT NULL DEFAULT '{"hooks":[]}';`,
+    )
+  }
+}
+
+function migrateConversationLlmOverride(db: Database.Database): void {
+  if (!tableHasColumn(db, 'conversation_settings', 'llm_override_json')) {
+    db.exec(
+      `ALTER TABLE conversation_settings ADD COLUMN llm_override_json TEXT NOT NULL DEFAULT 'null';`,
     )
   }
 }

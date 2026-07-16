@@ -20,7 +20,175 @@
   >
     <UIcon name="i-lucide-square-plus" class="new-session-btn__icon" />
   </button>
-  <div v-if="!collapsed" class="sidebar-section-label">Conversations</div>
+  <div v-if="!collapsed" class="sidebar-section-header">
+    <div class="sidebar-section-label">Conversations</div>
+    <div class="sidebar-section-actions">
+      <div class="conversation-groupby">
+        <button
+          ref="workspaceTriggerRef"
+          type="button"
+          class="conversation-groupby-btn"
+          :class="{ 'conversation-groupby-btn--active': workspaceMenuOpen }"
+          title="New conversation in workspace"
+          aria-label="New conversation in workspace"
+          aria-haspopup="menu"
+          :aria-expanded="workspaceMenuOpen"
+          @click.stop="toggleWorkspaceMenu"
+        >
+          <UIcon
+            name="i-lucide-folder-plus"
+            class="conversation-groupby-btn__icon"
+          />
+        </button>
+      </div>
+      <div class="conversation-groupby">
+        <button
+          ref="groupByTriggerRef"
+          type="button"
+          class="conversation-groupby-btn"
+          :class="{ 'conversation-groupby-btn--active': groupByMenuOpen }"
+          :title="groupByButtonTitle"
+          aria-label="Organize conversation list"
+          aria-haspopup="menu"
+          :aria-expanded="groupByMenuOpen"
+          @click.stop="toggleGroupByMenu"
+        >
+          <UIcon name="i-lucide-layers" class="conversation-groupby-btn__icon" />
+        </button>
+      </div>
+    </div>
+  </div>
+  <Teleport to="body">
+    <div
+      v-if="workspaceMenuOpen"
+      ref="workspaceMenuEl"
+      class="conversation-groupby-menu conversation-groupby-menu--workspaces"
+      :style="workspaceMenuStyle"
+      role="menu"
+      aria-label="New conversation in workspace"
+      @pointerdown.stop
+    >
+      <div class="conversation-groupby-menu__section-label">
+        Existing workspaces
+      </div>
+      <button
+        v-for="workspace in existingWorkspaces"
+        :key="workspace.path"
+        type="button"
+        class="conversation-groupby-menu__option"
+        role="menuitem"
+        :title="workspace.path"
+        @click="startSessionWithWorkspace(workspace.path)"
+      >
+        <UIcon
+          name="i-lucide-folder"
+          class="conversation-groupby-menu__check"
+        />
+        <span class="conversation-groupby-menu__option-text">
+          <span class="conversation-groupby-menu__option-title">
+            {{ workspace.label }}
+          </span>
+          <span class="conversation-groupby-menu__option-sub">
+            {{ workspace.path }}
+          </span>
+        </span>
+      </button>
+      <p
+        v-if="existingWorkspaces.length === 0"
+        class="conversation-groupby-menu__empty"
+      >
+        No workspaces yet
+      </p>
+      <div
+        class="conversation-groupby-menu__divider"
+        role="separator"
+        aria-hidden="true"
+      />
+      <button
+        type="button"
+        class="conversation-groupby-menu__option"
+        role="menuitem"
+        @click="browseWorkspaceAndStartSession"
+      >
+        <UIcon
+          name="i-lucide-folder-search"
+          class="conversation-groupby-menu__check"
+        />
+        Browse…
+      </button>
+    </div>
+    <div
+      v-if="groupByMenuOpen"
+      ref="groupByMenuEl"
+      class="conversation-groupby-menu"
+      :style="groupByMenuStyle"
+      role="menu"
+      aria-label="Organize conversations"
+      @pointerdown.stop
+    >
+      <div class="conversation-groupby-menu__section-label">Group by</div>
+      <button
+        v-for="option in groupByOptions"
+        :key="option.value"
+        type="button"
+        class="conversation-groupby-menu__option"
+        :class="{
+          'conversation-groupby-menu__option--active':
+            groupByMode === option.value,
+        }"
+        role="menuitemradio"
+        :aria-checked="groupByMode === option.value"
+        @click="selectGroupBy(option.value)"
+      >
+        <UIcon
+          :name="
+            groupByMode === option.value
+              ? 'i-lucide-check'
+              : 'i-lucide-circle'
+          "
+          class="conversation-groupby-menu__check"
+          :class="{
+            'conversation-groupby-menu__check--empty':
+              groupByMode !== option.value,
+          }"
+        />
+        {{ option.label }}
+      </button>
+      <div
+        class="conversation-groupby-menu__divider"
+        role="separator"
+        aria-hidden="true"
+      />
+      <div class="conversation-groupby-menu__section-label">Show on item</div>
+      <button
+        v-for="option in labelFieldOptions"
+        :key="option.value"
+        type="button"
+        class="conversation-groupby-menu__option"
+        :class="{
+          'conversation-groupby-menu__option--active':
+            itemLabels[option.value],
+        }"
+        role="menuitemcheckbox"
+        :aria-checked="itemLabels[option.value]"
+        @click="toggleItemLabel(option.value)"
+      >
+        <UIcon
+          :name="
+            itemLabels[option.value]
+              ? 'i-lucide-square-check'
+              : 'i-lucide-square'
+          "
+          class="conversation-groupby-menu__check"
+          :class="{
+            'conversation-groupby-menu__check--off':
+              !itemLabels[option.value],
+          }"
+        />
+        {{ option.label }}
+      </button>
+    </div>
+  </Teleport>
   <ul
     v-if="isConversationListLoading"
     class="agent-list agent-list--loading"
@@ -64,73 +232,131 @@
     class="agent-list"
     :class="{ 'agent-list--collapsed': collapsed }"
   >
-    <li
-      v-for="conv in conversationItems"
-      :key="conv.id"
-      :ref="(el) => setConversationItemRef(el, conv.id)"
-      class="agent-item"
-      :class="{
-        'agent-item--active': isActiveConversation(conv.id),
-        'agent-item--collapsed': collapsed,
-        'agent-item--menu-open': openMenuId === conv.id,
-      }"
-      :data-conversation-id="conv.id"
-      :aria-current="isActiveConversation(conv.id) ? 'true' : undefined"
-      @click="openConversation(conv.id, conv.agentId)"
-    >
-      <UAvatar
-        :alt="agentName(conv.agentId)"
-        size="sm"
-        :color="agentColor(conv.agentId)"
-        :class="{ 'agent-item-avatar--active': isActiveConversation(conv.id) }"
-        :ui="{ fallback: 'font-bold text-xs' }"
-      />
-      <div v-if="!collapsed" class="agent-item-info">
-        <p class="agent-item-name">{{ conv.title }}</p>
-        <p class="agent-item-desc">
-          {{ sessionLabel(conv) }} · {{ agentName(conv.agentId) }} ·
-          {{ formatTime(conv.updatedAt) }}
-        </p>
-      </div>
-      <span v-if="msgCount(conv.id) > 0 && !collapsed" class="msg-badge">
-        {{ msgCount(conv.id) }}
-      </span>
-      <div
-        v-if="!collapsed && canDelete(conv.id)"
-        :ref="(el) => setMenuRoot(el, conv.id)"
-        class="agent-item-actions"
-        @click.stop
+    <template v-for="group in conversationGroups" :key="group.key">
+      <li
+        v-if="showGroupHeaders"
+        class="conversation-group"
+        :title="group.key === NO_WORKSPACE_GROUP_KEY ? undefined : group.key"
       >
         <button
           type="button"
-          class="agent-item-menu-btn"
-          :class="{ 'agent-item-menu-btn--active': openMenuId === conv.id }"
-          title="Conversation actions"
-          aria-label="Conversation actions"
-          aria-haspopup="menu"
-          :aria-expanded="openMenuId === conv.id"
-          @click="toggleMenu(conv.id)"
+          class="conversation-group-toggle"
+          :aria-expanded="isGroupExpanded(group.key)"
+          :aria-label="
+            isGroupExpanded(group.key)
+              ? `Collapse ${group.label}`
+              : `Expand ${group.label}`
+          "
+          @click="toggleGroupExpanded(group.key)"
         >
-          <UIcon name="i-lucide-ellipsis" class="agent-item-menu-btn__icon" />
+          <UIcon
+            name="i-lucide-chevron-right"
+            class="conversation-group-toggle__chevron"
+            :class="{
+              'conversation-group-toggle__chevron--open': isGroupExpanded(
+                group.key,
+              ),
+            }"
+            aria-hidden="true"
+          />
+          <span class="conversation-group-toggle__text">{{ group.label }}</span>
+          <span class="conversation-group-toggle__count">{{
+            group.items.length
+          }}</span>
         </button>
-        <div
-          v-if="openMenuId === conv.id"
-          class="agent-item-menu"
-          role="menu"
-          aria-label="Conversation actions"
+      </li>
+      <li
+        v-for="conv in group.items"
+        v-show="!showGroupHeaders || isGroupExpanded(group.key)"
+        :key="conv.id"
+        :ref="(el) => setConversationItemRef(el, conv.id)"
+        class="agent-item-host"
+        :data-conversation-id="conv.id"
+      >
+        <AppIconTooltip
+          block
+          :delay-duration="350"
+          :content="conversationTooltipContent"
         >
-          <button
-            type="button"
-            class="agent-item-menu__option agent-item-menu__option--danger"
-            role="menuitem"
-            @click="confirmDelete(conv)"
+          <template #content>
+            <div
+              v-if="conversationTooltipModelById[conv.id]"
+              class="app-icon-tooltip__detail"
+            >
+              <p class="app-icon-tooltip__detail-title">
+                {{ conversationTooltipModelById[conv.id]!.title }}
+              </p>
+              <dl class="app-icon-tooltip__detail-rows">
+                <div
+                  v-for="row in conversationTooltipModelById[conv.id]!.rows"
+                  :key="row.label"
+                  class="app-icon-tooltip__detail-row"
+                >
+                  <dt class="app-icon-tooltip__detail-label">{{ row.label }}</dt>
+                  <dd class="app-icon-tooltip__detail-value">{{ row.value }}</dd>
+                </div>
+              </dl>
+            </div>
+          </template>
+          <div
+            class="agent-item"
+            :class="{
+              'agent-item--active': isActiveConversation(conv.id),
+              'agent-item--collapsed': collapsed,
+              'agent-item--nested': showGroupHeaders,
+            }"
+            role="button"
+            tabindex="0"
+            :aria-current="isActiveConversation(conv.id) ? 'true' : undefined"
+            @click="openConversation(conv.id, conv.agentId)"
+            @keydown.enter.prevent="openConversation(conv.id, conv.agentId)"
+            @keydown.space.prevent="openConversation(conv.id, conv.agentId)"
           >
-            <UIcon name="i-lucide-trash-2" class="agent-item-menu__option-icon" />
-            Delete conversation
-          </button>
-        </div>
-      </div>
-    </li>
+            <UAvatar
+              :alt="agentName(conv.agentId)"
+              size="sm"
+              :color="agentColor(conv.agentId)"
+              :class="{
+                'agent-item-avatar--active': isActiveConversation(conv.id),
+              }"
+              :ui="{ fallback: 'font-bold text-xs' }"
+            />
+            <div v-if="!collapsed" class="agent-item-info">
+              <p class="agent-item-name">{{ conv.title }}</p>
+              <p
+                v-if="conversationMetaById[conv.id]"
+                class="agent-item-desc"
+              >
+                {{ conversationMetaById[conv.id] }}
+              </p>
+            </div>
+            <span v-if="msgCount(conv.id) > 0 && !collapsed" class="msg-badge">
+              {{ msgCount(conv.id) }}
+            </span>
+            <div
+              v-if="!collapsed && canDelete(conv.id)"
+              class="agent-item-actions"
+              role="toolbar"
+              aria-label="Conversation actions"
+              @click.stop
+            >
+              <button
+                type="button"
+                class="agent-item-action-btn agent-item-action-btn--danger"
+                title="Delete conversation"
+                aria-label="Delete conversation"
+                @click="confirmDelete(conv)"
+              >
+                <UIcon
+                  name="i-lucide-trash-2"
+                  class="agent-item-action-btn__icon"
+                />
+              </button>
+            </div>
+          </div>
+        </AppIconTooltip>
+      </li>
+    </template>
     <li v-if="conversationItems.length === 0 && !collapsed" class="empty-item">
       No conversations yet.
     </li>
@@ -142,7 +368,33 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAgentStore, type Conversation } from '@store/agent'
 import { useI18n } from '@renderer/composables/useI18n'
 import { canDeleteConversationFromUi } from '@shared/conversation/session-id'
+import { workspaceBasename } from '@shared/agent/workspace'
+import {
+  LAYOUT_PREF_KEYS,
+  readStoredBooleanMap,
+  readStoredString,
+  writeStoredBooleanMap,
+  writeStoredString,
+} from '@renderer/lib/layout-preferences'
+import {
+  groupConversations,
+  NO_WORKSPACE_GROUP_KEY,
+  parseConversationListGroupBy,
+  type ConversationListGroupBy,
+} from '../lib/conversation-list-groups'
+import {
+  buildConversationDetailTooltipModel,
+  buildConversationMetaLine,
+  CONVERSATION_LIST_LABEL_OPTIONS,
+  formatAgentTypeLabel,
+  parseConversationListItemLabels,
+  serializeConversationListItemLabels,
+  type ConversationDetailTooltipModel,
+  type ConversationListItemLabels,
+  type ConversationListLabelField,
+} from '../lib/conversation-list-item-labels'
 import { clearConversationSession } from '../conversation-chat-session'
+import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
 
 const emit = defineEmits<{ 'navigate-chat': [] }>()
 const props = defineProps<{ collapsed?: boolean }>()
@@ -150,9 +402,39 @@ const props = defineProps<{ collapsed?: boolean }>()
 const agentStore = useAgentStore()
 const { t } = useI18n()
 const toast = useToast()
-const openMenuId = ref<string | null>(null)
-const menuRoots = new Map<string, HTMLElement>()
 const conversationItemRefs = new Map<string, HTMLElement>()
+const groupByMenuOpen = ref(false)
+const groupByTriggerRef = ref<HTMLButtonElement | null>(null)
+const groupByMenuEl = ref<HTMLElement | null>(null)
+const groupByMenuStyle = ref<Record<string, string>>({})
+const workspaceMenuOpen = ref(false)
+const workspaceTriggerRef = ref<HTMLButtonElement | null>(null)
+const workspaceMenuEl = ref<HTMLElement | null>(null)
+const workspaceMenuStyle = ref<Record<string, string>>({})
+const groupByMode = ref<ConversationListGroupBy>(
+  parseConversationListGroupBy(
+    readStoredString(LAYOUT_PREF_KEYS.conversationListGroupBy),
+  ),
+)
+/** Keys stored as `${mode}::${groupKey}` marked collapsed (absent = expanded). */
+const collapsedGroups = ref<Record<string, boolean>>(
+  readStoredBooleanMap(LAYOUT_PREF_KEYS.conversationListCollapsedGroups),
+)
+const itemLabels = ref<ConversationListItemLabels>(
+  parseConversationListItemLabels(
+    readStoredString(LAYOUT_PREF_KEYS.conversationListItemLabels),
+  ),
+)
+
+const groupByOptions: Array<{ value: ConversationListGroupBy; label: string }> =
+  [
+    { value: 'none', label: 'No grouping' },
+    { value: 'agent', label: 'Group by agent' },
+    { value: 'workspace', label: 'Group by workspace' },
+    { value: 'source', label: 'Group by data source' },
+  ]
+
+const labelFieldOptions = CONVERSATION_LIST_LABEL_OPTIONS
 
 const conversationItems = computed((): Conversation[] => {
   return Object.values(agentStore.conversationList)
@@ -161,20 +443,112 @@ const conversationItems = computed((): Conversation[] => {
     .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 })
 
+/** Unique workspace folders from existing conversations, newest first. */
+const existingWorkspaces = computed((): Array<{ path: string; label: string }> => {
+  const seen = new Set<string>()
+  const out: Array<{ path: string; label: string }> = []
+  for (const conv of conversationItems.value) {
+    const path = conv.workspacePath?.trim()
+    if (!path || seen.has(path)) continue
+    seen.add(path)
+    out.push({
+      path,
+      label: workspaceBasename(path) || path,
+    })
+  }
+  return out
+})
+
+const conversationGroups = computed(() =>
+  groupConversations(
+    conversationItems.value,
+    props.collapsed ? 'none' : groupByMode.value,
+    agentName,
+  ),
+)
+
+const showGroupHeaders = computed(
+  () => !props.collapsed && groupByMode.value !== 'none',
+)
+
+const groupByButtonTitle = computed(() => {
+  const current =
+    groupByOptions.find((o) => o.value === groupByMode.value)?.label ??
+    'No grouping'
+  return `Organize list (${current})`
+})
+
 const isConversationListLoading = computed(
   () =>
     agentStore.isLoadingInitialConversations ||
     !agentStore.hasLoadedInitialConversations,
 )
 
-function setMenuRoot(el: unknown, conversationId: string) {
-  if (el instanceof HTMLElement) {
-    menuRoots.set(conversationId, el)
-  } else {
-    menuRoots.delete(conversationId)
+watch(groupByMode, (mode) => {
+  writeStoredString(LAYOUT_PREF_KEYS.conversationListGroupBy, mode)
+})
+
+watch(
+  collapsedGroups,
+  (value) => {
+    writeStoredBooleanMap(
+      LAYOUT_PREF_KEYS.conversationListCollapsedGroups,
+      value,
+    )
+  },
+  { deep: true },
+)
+
+watch(
+  itemLabels,
+  (value) => {
+    writeStoredString(
+      LAYOUT_PREF_KEYS.conversationListItemLabels,
+      serializeConversationListItemLabels(value),
+    )
+  },
+  { deep: true },
+)
+
+function toggleItemLabel(field: ConversationListLabelField) {
+  itemLabels.value = {
+    ...itemLabels.value,
+    [field]: !itemLabels.value[field],
   }
 }
 
+function collapsedGroupStorageKey(groupKey: string): string {
+  return `${groupByMode.value}::${groupKey}`
+}
+
+function isGroupExpanded(groupKey: string): boolean {
+  return collapsedGroups.value[collapsedGroupStorageKey(groupKey)] !== true
+}
+
+function toggleGroupExpanded(groupKey: string) {
+  const storageKey = collapsedGroupStorageKey(groupKey)
+  const next = { ...collapsedGroups.value }
+  if (next[storageKey]) {
+    delete next[storageKey]
+  } else {
+    next[storageKey] = true
+  }
+  collapsedGroups.value = next
+}
+
+function ensureActiveConversationGroupExpanded() {
+  if (!showGroupHeaders.value) return
+  const activeId = agentStore.currentConversationId
+  if (!activeId) return
+  const group = conversationGroups.value.find((g) =>
+    g.items.some((item) => item.id === activeId),
+  )
+  if (!group || isGroupExpanded(group.key)) return
+  const storageKey = collapsedGroupStorageKey(group.key)
+  const next = { ...collapsedGroups.value }
+  delete next[storageKey]
+  collapsedGroups.value = next
+}
 function setConversationItemRef(el: unknown, conversationId: string) {
   if (el instanceof HTMLElement) {
     conversationItemRefs.set(conversationId, el)
@@ -190,6 +564,7 @@ function isActiveConversation(conversationId: string): boolean {
 async function scrollActiveConversationIntoView(): Promise<void> {
   const activeId = agentStore.currentConversationId
   if (!activeId || props.collapsed) return
+  ensureActiveConversationGroupExpanded()
   await nextTick()
   conversationItemRefs.get(activeId)?.scrollIntoView({ block: 'nearest' })
 }
@@ -198,24 +573,84 @@ function canDelete(conversationId: string): boolean {
   return canDeleteConversationFromUi(conversationId)
 }
 
-function toggleMenu(conversationId: string) {
-  openMenuId.value = openMenuId.value === conversationId ? null : conversationId
-}
-
-function closeMenu() {
-  openMenuId.value = null
-}
-
-function onDocumentPointerDown(event: PointerEvent) {
-  if (!openMenuId.value) return
-  const root = menuRoots.get(openMenuId.value)
-  if (root && !root.contains(event.target as Node)) {
-    closeMenu()
+function positionFloatingMenu(
+  trigger: HTMLElement | null,
+  width: number,
+): Record<string, string> {
+  if (!trigger) return {}
+  const rect = trigger.getBoundingClientRect()
+  const gap = 4
+  let left = rect.left
+  if (left + width > window.innerWidth - 8) {
+    left = Math.max(8, window.innerWidth - width - 8)
+  }
+  return {
+    position: 'fixed',
+    top: `${rect.bottom + gap}px`,
+    left: `${left}px`,
+    width: `${width}px`,
+    zIndex: '10050',
   }
 }
 
+function positionGroupByMenu() {
+  groupByMenuStyle.value = positionFloatingMenu(groupByTriggerRef.value, 220)
+}
+
+function positionWorkspaceMenu() {
+  workspaceMenuStyle.value = positionFloatingMenu(
+    workspaceTriggerRef.value,
+    260,
+  )
+}
+
+async function toggleGroupByMenu() {
+  workspaceMenuOpen.value = false
+  if (groupByMenuOpen.value) {
+    groupByMenuOpen.value = false
+    return
+  }
+  groupByMenuOpen.value = true
+  await nextTick()
+  positionGroupByMenu()
+}
+
+async function toggleWorkspaceMenu() {
+  groupByMenuOpen.value = false
+  if (workspaceMenuOpen.value) {
+    workspaceMenuOpen.value = false
+    return
+  }
+  workspaceMenuOpen.value = true
+  await nextTick()
+  positionWorkspaceMenu()
+}
+
+function selectGroupBy(mode: ConversationListGroupBy) {
+  groupByMode.value = mode
+  groupByMenuOpen.value = false
+}
+
+function onDocumentPointerDown(event: PointerEvent) {
+  const target = event.target as Node
+  if (groupByMenuOpen.value) {
+    const inTrigger = groupByTriggerRef.value?.contains(target)
+    const inMenu = groupByMenuEl.value?.contains(target)
+    if (!inTrigger && !inMenu) groupByMenuOpen.value = false
+  }
+  if (workspaceMenuOpen.value) {
+    const inTrigger = workspaceTriggerRef.value?.contains(target)
+    const inMenu = workspaceMenuEl.value?.contains(target)
+    if (!inTrigger && !inMenu) workspaceMenuOpen.value = false
+  }
+}
+
+function onWindowReposition() {
+  if (groupByMenuOpen.value) positionGroupByMenu()
+  if (workspaceMenuOpen.value) positionWorkspaceMenu()
+}
+
 async function confirmDelete(conv: Conversation) {
-  closeMenu()
   const isChannel = conv.type === 'channel'
   const ok = window.confirm(
     isChannel
@@ -234,7 +669,9 @@ async function confirmDelete(conv: Conversation) {
 }
 
 onMounted(() => {
-  document.addEventListener('pointerdown', onDocumentPointerDown)
+  document.addEventListener('pointerdown', onDocumentPointerDown, true)
+  window.addEventListener('resize', onWindowReposition)
+  window.addEventListener('scroll', onWindowReposition, true)
   void scrollActiveConversationIntoView()
 })
 
@@ -264,7 +701,9 @@ watch(
 )
 
 onBeforeUnmount(() => {
-  document.removeEventListener('pointerdown', onDocumentPointerDown)
+  document.removeEventListener('pointerdown', onDocumentPointerDown, true)
+  window.removeEventListener('resize', onWindowReposition)
+  window.removeEventListener('scroll', onWindowReposition, true)
 })
 
 async function openConversation(conversationId: string, agentId: string) {
@@ -279,14 +718,35 @@ async function startNewSession() {
   emit('navigate-chat')
 }
 
-function sessionLabel(conv: Conversation): string {
-  if (conv.type === 'channel') return 'Channel'
-  if (conv.type === 'scheduler') return 'Scheduler'
-  return 'Chat'
+async function startSessionWithWorkspace(workspacePath: string) {
+  workspaceMenuOpen.value = false
+  const path = workspacePath.trim()
+  if (!path) return
+  const conv = await agentStore.createNewConversation(undefined, {
+    mode: 'fresh',
+    workspacePath: path,
+  })
+  if (!conv) return
+  await agentStore.selectConversation(conv.id)
+  emit('navigate-chat')
+}
+
+async function browseWorkspaceAndStartSession() {
+  workspaceMenuOpen.value = false
+  const selectCh = window.ipcRendererChannel?.SelectWorkspaceFolder
+  if (!selectCh?.invoke) return
+  const { path } = await selectCh.invoke()
+  if (!path?.trim()) return
+  await startSessionWithWorkspace(path)
 }
 
 function agentName(agentId: string): string {
   return agentStore.agents.find((a) => a.id === agentId)?.name ?? 'Agent'
+}
+
+function agentTypeLabel(agentId: string): string {
+  const agent = agentStore.agents.find((a) => a.id === agentId)
+  return formatAgentTypeLabel(agent)
 }
 
 function agentColor(agentId: string) {
@@ -297,17 +757,54 @@ function msgCount(conversationId: string): number {
   return agentStore.conversations?.[conversationId]?.length ?? 0
 }
 
-function formatTime(date: Date): string {
-  return new Date(date).toLocaleDateString([], {
-    month: 'short',
-    day: 'numeric',
-  })
+const conversationMetaById = computed((): Record<string, string> => {
+  const labels = itemLabels.value
+  const mode = groupByMode.value
+  const out: Record<string, string> = {}
+  for (const conv of conversationItems.value) {
+    out[conv.id] = buildConversationMetaLine(
+      {
+        type: conv.type,
+        agentName: agentName(conv.agentId),
+        updatedAt: conv.updatedAt,
+      },
+      labels,
+      { groupByMode: mode },
+    )
+  }
+  return out
+})
+
+/** Tooltip on the right of each row; left edge flush with the row’s right edge. */
+const conversationTooltipContent = {
+  side: 'right' as const,
+  align: 'start' as const,
+  sideOffset: 0,
+  collisionPadding: 8,
 }
+
+const conversationTooltipModelById = computed(
+  (): Record<string, ConversationDetailTooltipModel> => {
+    const out: Record<string, ConversationDetailTooltipModel> = {}
+    for (const conv of conversationItems.value) {
+      out[conv.id] = buildConversationDetailTooltipModel({
+        title: conv.title,
+        type: conv.type,
+        agentName: agentName(conv.agentId),
+        agentType: agentTypeLabel(conv.agentId),
+        updatedAt: conv.updatedAt,
+        workspacePath: conv.workspacePath,
+        messageCount: msgCount(conv.id),
+      })
+    }
+    return out
+  },
+)
 </script>
 
 <style scoped>
 .sidebar-actions {
-  padding: 12px 12px 6px;
+  padding: 8px 12px 4px;
 }
 .new-session-btn {
   display: flex;
@@ -315,7 +812,7 @@ function formatTime(date: Date): string {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 5px 10px;
   border: 1px dashed var(--ui-border);
   border-radius: 8px;
   background: transparent;
@@ -330,9 +827,9 @@ function formatTime(date: Date): string {
   border-color: var(--color-primary-500);
 }
 .new-session-btn--collapsed {
-  width: 36px;
-  height: 36px;
-  margin: 10px auto 8px;
+  width: 32px;
+  height: 32px;
+  margin: 6px auto 4px;
   padding: 0;
   border-style: solid;
 }
@@ -340,13 +837,200 @@ function formatTime(date: Date): string {
   width: 16px;
   height: 16px;
 }
+.sidebar-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-right: 10px;
+}
+.sidebar-section-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
 .sidebar-section-label {
-  padding: 12px 14px 6px;
+  padding: 8px 14px 4px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ui-text-muted);
+}
+.conversation-groupby {
+  position: relative;
+  flex-shrink: 0;
+}
+.conversation-groupby-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 4px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-text-muted);
+  cursor: pointer;
+}
+.conversation-groupby-btn:hover,
+.conversation-groupby-btn--active {
+  background: color-mix(in srgb, var(--ui-text) 10%, transparent);
+  color: var(--ui-text);
+}
+.conversation-groupby-btn__icon {
+  width: 14px;
+  height: 14px;
+}
+.conversation-groupby-menu {
+  box-sizing: border-box;
+  min-width: 196px;
+  max-width: min(320px, calc(100vw - 16px));
+  max-height: min(360px, calc(100vh - 24px));
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  background: var(--ui-bg-elevated, var(--ui-bg));
+  box-shadow:
+    0 4px 6px color-mix(in srgb, var(--ui-text) 8%, transparent),
+    0 12px 28px color-mix(in srgb, var(--ui-text) 14%, transparent);
+}
+.conversation-groupby-menu--workspaces {
+  min-width: 240px;
+}
+.conversation-groupby-menu__section-label {
+  padding: 6px 10px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ui-text-muted);
+}
+.conversation-groupby-menu__divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: color-mix(in srgb, var(--ui-border) 90%, var(--ui-text) 8%);
+}
+.conversation-groupby-menu__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ui-text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.conversation-groupby-menu__option:hover,
+.conversation-groupby-menu__option--active {
+  background: color-mix(in srgb, var(--ui-text) 8%, transparent);
+}
+.conversation-groupby-menu__check {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--color-primary-500, var(--ui-primary));
+}
+.conversation-groupby-menu__check--empty {
+  opacity: 0;
+}
+.conversation-groupby-menu__check--off {
+  color: var(--ui-text-muted);
+  opacity: 0.7;
+}
+.conversation-groupby-menu__option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.conversation-groupby-menu__option-title {
+  font-size: 13px;
+  color: var(--ui-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conversation-groupby-menu__option-sub {
+  font-size: 10px;
+  color: var(--ui-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conversation-groupby-menu__empty {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--ui-text-muted);
+}
+.conversation-group {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+}
+.conversation-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px 2px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-text-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.conversation-group-toggle:hover {
+  background: color-mix(in srgb, var(--ui-text) 6%, transparent);
+  color: var(--ui-text);
+}
+.conversation-group-toggle__chevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  transition: transform 0.12s ease;
+}
+.conversation-group-toggle__chevron--open {
+  transform: rotate(90deg);
+}
+.conversation-group-toggle__text {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.conversation-group-toggle__count {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--ui-text-muted) 80%, transparent);
+}
+.agent-item--nested {
+  margin-left: 12px;
+  padding-left: 8px;
+  width: calc(100% - 12px);
+  box-sizing: border-box;
+  border-left: 1px solid color-mix(in srgb, var(--ui-border) 80%, transparent);
+  border-radius: 0 8px 8px 0;
+}
+.agent-item--nested.agent-item--active {
+  box-shadow: inset 3px 0 0 var(--color-primary-500, var(--ui-primary));
 }
 .agent-list--loading {
   pointer-events: none;
@@ -376,8 +1060,8 @@ function formatTime(date: Date): string {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 10px 9px 12px;
-  margin-bottom: 2px;
+  padding: 5px 10px 5px 12px;
+  margin-bottom: 1px;
 }
 .agent-list-skeleton__avatar,
 .agent-list-skeleton__line {
@@ -448,20 +1132,26 @@ function formatTime(date: Date): string {
 .agent-list--collapsed {
   padding: 8px 0;
 }
+.agent-item-host {
+  list-style: none;
+  margin: 0 0 1px;
+}
 .agent-item {
   position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 10px 9px 12px;
+  padding: 5px 10px 5px 12px;
   border-radius: 8px;
   cursor: pointer;
   transition:
     background 0.12s,
     border-color 0.12s,
     box-shadow 0.12s;
-  margin-bottom: 2px;
   border: 1px solid transparent;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
 }
 .agent-item:hover {
   background: var(--ui-bg-accented);
@@ -483,7 +1173,7 @@ function formatTime(date: Date): string {
 }
 .agent-item--collapsed {
   justify-content: center;
-  padding: 8px 0;
+  padding: 5px 0;
   border-color: transparent;
   box-shadow: none;
 }
@@ -530,7 +1220,9 @@ function formatTime(date: Date): string {
 }
 
 .agent-item-actions {
-  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   flex-shrink: 0;
   opacity: 0;
   pointer-events: none;
@@ -538,12 +1230,12 @@ function formatTime(date: Date): string {
 }
 
 .agent-item:hover .agent-item-actions,
-.agent-item--menu-open .agent-item-actions {
+.agent-item:focus-within .agent-item-actions {
   opacity: 1;
   pointer-events: auto;
 }
 
-.agent-item-menu-btn {
+.agent-item-action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -556,60 +1248,19 @@ function formatTime(date: Date): string {
   cursor: pointer;
 }
 
-.agent-item-menu-btn:hover,
-.agent-item-menu-btn--active {
+.agent-item-action-btn:hover {
   background: color-mix(in srgb, var(--ui-text) 10%, transparent);
   color: var(--ui-text);
 }
 
-.agent-item-menu-btn__icon {
-  width: 16px;
-  height: 16px;
-}
-
-.agent-item-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 30;
-  min-width: 180px;
-  padding: 4px;
-  border: 1px solid var(--ui-border);
-  border-radius: 10px;
-  background: var(--ui-bg-elevated, var(--ui-bg));
-  box-shadow:
-    0 4px 6px color-mix(in srgb, var(--ui-text) 8%, transparent),
-    0 12px 28px color-mix(in srgb, var(--ui-text) 14%, transparent);
-}
-
-.agent-item-menu__option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 10px;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--ui-text);
-  font: inherit;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.agent-item-menu__option-icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-.agent-item-menu__option--danger {
+.agent-item-action-btn--danger:hover {
+  background: color-mix(in srgb, var(--color-error-500, #ef4444) 12%, transparent);
   color: var(--color-error-600, #dc2626);
 }
 
-.agent-item-menu__option--danger:hover {
-  background: color-mix(in srgb, var(--color-error-500, #ef4444) 12%, transparent);
+.agent-item-action-btn__icon {
+  width: 14px;
+  height: 14px;
 }
 
 .empty-item {

@@ -38,7 +38,7 @@ import type { AgentExecutionSteps } from '@main/agent/types'
 import type { ProviderType } from '@shared/agent/llm-provider-registry'
 import {
   parseAgentStageLlmSettings,
-  serializeStageLlmOverrides,
+  serializeStageLlmDocument,
   type AgentStageLlmSettings,
 } from '@shared/agent/stage-llm-settings'
 
@@ -91,7 +91,10 @@ function buildStageLlmSettings(
     model,
     routingMode: saved?.llmRoutingMode,
     stageLlmJson: saved
-      ? serializeStageLlmOverrides(saved.stageLlm)
+      ? serializeStageLlmDocument({
+          defaultProviderOptions: saved.defaultProviderOptions,
+          stages: saved.stageLlm,
+        })
       : undefined,
   })
 }

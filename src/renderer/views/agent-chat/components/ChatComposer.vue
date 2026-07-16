@@ -12,13 +12,25 @@
         :disabled="workspaceDisabled"
         @update:active-mode="emit('update:codingMode', $event)"
       />
-      <p
-        v-if="planStatusHint"
+      <div
+        v-if="showPlanStatusHint"
         class="composer-plan-mode-hint"
         role="status"
       >
-        {{ planStatusHint }}
-      </p>
+        <span class="composer-plan-mode-hint__text">{{ planStatusHint }}</span>
+        <button
+          type="button"
+          class="composer-plan-mode-hint__dismiss"
+          title="Dismiss"
+          aria-label="Dismiss plan status"
+          @click="dismissPlanStatusHint"
+        >
+          <UIcon
+            name="i-lucide-x"
+            class="composer-plan-mode-hint__dismiss-icon"
+          />
+        </button>
+      </div>
       <WorkspacePathBanner :disabled="workspaceDisabled" />
       <SkillSystemPropertiesForm
         v-if="skillSetup?.needsSetup"
@@ -45,28 +57,34 @@
         :agent-options="agentOptions"
         :chat-agents="chatAgents"
         :conversation-id="conversationId"
+        :skill-id="skillId"
         :workspace-disabled="workspaceDisabled"
         :coding-agent="codingAgent"
         :sub-agent-slash-enabled="subAgentSlashEnabled"
         :staged-attachments="stagedAttachments"
         :can-add-attachments="canAddAttachments"
+        :llm-override="llmOverride"
+        :agent-provider="agentProvider"
+        :agent-model="agentModel"
         placeholder="Message…"
         @update:model-value="emit('update:modelValue', $event)"
+        @update:llm-override="emit('update:llmOverride', $event)"
         @select-agent="emit('select-agent', $event)"
         @pick-attachments="emit('pick-attachments')"
         @remove-attachment="emit('remove-attachment', $event)"
         @add-attachment-paths="emit('add-attachment-paths', $event)"
         @submit="onComposerSubmit"
       />
-      <button
-        type="submit"
-        class="composer-send cp-icon-btn cp-icon-btn--compact"
-        :disabled="sendDisabled || loading"
-        aria-label="Send message"
-        title="Send message"
-      >
-        <UIcon class="cp-icon-btn__glyph" name="i-lucide-arrow-up" />
-      </button>
+      <AppIconTooltip text="Send message">
+        <button
+          type="submit"
+          class="composer-send cp-icon-btn cp-icon-btn--compact"
+          :disabled="sendDisabled || loading"
+          aria-label="Send message"
+        >
+          <UIcon class="cp-icon-btn__glyph" name="i-lucide-arrow-up" />
+        </button>
+      </AppIconTooltip>
     </div>
     <p v-if="workspaceHint" class="composer-workspace-hint">{{ workspaceHint }}</p>
     <p
@@ -87,8 +105,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import type { CodingMode } from '@shared/agent/coding-mode'
+import type { ConversationLlmOverride } from '@shared/agent/conversation-llm-override'
+import type { ProviderType } from '@shared/agent/llm-provider-registry'
 import {
   planModeComposerHint,
   type PlanModeDisplayStatus,
@@ -101,6 +121,7 @@ import BackgroundTaskPanel, {
   type BackgroundTaskView,
 } from './BackgroundTaskPanel.vue'
 import SkillSystemPropertiesForm from './SkillSystemPropertiesForm.vue'
+import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
 import type { SkillSystemPropertyFieldView } from '@renderer/composables/useSkillSystemProperties'
 import type { SkillGroupAgentRef } from '@shared/agent/skill-groups'
 
@@ -136,6 +157,8 @@ const props = defineProps<{
   agentOptions: Array<{ id: string; name: string }>
   chatAgents?: SkillGroupAgentRef[]
   conversationId?: string | null
+  /** Active skill id for skill-owned composer toolbar plugins. */
+  skillId?: string | null
   workspaceDisabled?: boolean
   workspaceHint?: string | null
   googleWorkspaceHint?: string | null
@@ -144,16 +167,22 @@ const props = defineProps<{
   codingAgent?: boolean
   codingMode?: CodingMode
   planDisplayStatus?: PlanModeDisplayStatus
+  /** True while the active chat turn is submitted/streaming. */
+  agentBusy?: boolean
   backgroundTasks?: BackgroundTaskView[]
   subAgentSlashEnabled?: boolean
   stagedAttachments?: StagedChatAttachment[]
   canAddAttachments?: boolean
   skillSetup?: ChatComposerSkillSetupState | null
+  llmOverride?: ConversationLlmOverride | null
+  agentProvider?: ProviderType
+  agentModel?: string
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [v: string]
   'update:codingMode': [mode: CodingMode]
+  'update:llmOverride': [value: ConversationLlmOverride | null]
   'select-agent': [agentId: string]
   'cancel-background-task': [taskId: string]
   'pick-attachments': []
@@ -169,10 +198,61 @@ const showCodingModeBar = computed(() => props.showCodingModeBar === true)
 const subAgentSlashEnabled = computed(() => props.subAgentSlashEnabled === true)
 const stagedAttachments = computed(() => props.stagedAttachments ?? [])
 const canAddAttachments = computed(() => props.canAddAttachments !== false)
+const llmOverride = computed(() => props.llmOverride ?? null)
+const agentProvider = computed((): ProviderType => props.agentProvider ?? 'ollama')
+const agentModel = computed(() => props.agentModel ?? '')
+const agentBusy = computed(() => props.agentBusy === true)
+const planDisplayStatus = computed(
+  () => props.planDisplayStatus ?? 'tool_execute',
+)
 
 const planStatusHint = computed(() =>
-  planModeComposerHint(props.planDisplayStatus ?? 'tool_execute'),
+  planModeComposerHint(planDisplayStatus.value),
 )
+
+/** Manual dismiss for any plan-status banner. */
+const planHintManuallyDismissed = ref(false)
+/**
+ * After a plan-execution turn ends, keep the execute banner hidden until the
+ * next turn starts (status can remain `plan_tool_execute` between turns).
+ */
+const planExecuteHintTurnHidden = ref(
+  planDisplayStatus.value === 'plan_tool_execute' && !agentBusy.value,
+)
+
+const showPlanStatusHint = computed(() => {
+  if (!planStatusHint.value || planHintManuallyDismissed.value) return false
+  if (
+    planDisplayStatus.value === 'plan_tool_execute' &&
+    planExecuteHintTurnHidden.value
+  ) {
+    return false
+  }
+  return true
+})
+
+watch(planDisplayStatus, (status, previous) => {
+  if (status === previous) return
+  planHintManuallyDismissed.value = false
+  planExecuteHintTurnHidden.value =
+    status === 'plan_tool_execute' && !agentBusy.value
+})
+
+watch(agentBusy, (busy, wasBusy) => {
+  if (planDisplayStatus.value !== 'plan_tool_execute') return
+  if (wasBusy === true && !busy) {
+    planExecuteHintTurnHidden.value = true
+    return
+  }
+  if (wasBusy === false && busy) {
+    planExecuteHintTurnHidden.value = false
+    planHintManuallyDismissed.value = false
+  }
+})
+
+function dismissPlanStatusHint() {
+  planHintManuallyDismissed.value = true
+}
 
 function onComposerSubmit() {
   if (props.loading || props.sendDisabled) return
@@ -214,14 +294,46 @@ function onComposerSubmit() {
   line-height: 1.4;
 }
 .composer-plan-mode-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 8px;
-  padding: 6px 10px;
+  padding: 6px 8px 6px 10px;
   border-radius: 6px;
   font-size: 12px;
   line-height: 1.45;
   background: color-mix(in srgb, var(--ui-primary) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--ui-primary) 20%, transparent);
   color: var(--ui-text);
+}
+.composer-plan-mode-hint__text {
+  flex: 1;
+  min-width: 0;
+}
+.composer-plan-mode-hint__dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ui-text-muted);
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.composer-plan-mode-hint__dismiss:hover {
+  background: color-mix(in srgb, var(--ui-text) 10%, transparent);
+  color: var(--ui-text);
+}
+.composer-plan-mode-hint__dismiss-icon {
+  width: 14px;
+  height: 14px;
 }
 .composer-send {
   position: absolute;

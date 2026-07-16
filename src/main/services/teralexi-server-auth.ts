@@ -27,7 +27,7 @@ type ServerAuthResponse = {
 let cachedServerToken: CachedServerToken | null = null
 let inFlightServerToken: Promise<string | null> | null = null
 
-/** Treat token as expired this many ms before JWT `exp` (refresh / clock-skew buffer). */
+/** Treat token as needing refresh this many ms before JWT `exp` (clock-skew buffer). */
 const SERVER_TOKEN_REFRESH_BUFFER_MS = 60_000
 
 function describeServerTokenExpiry(expiresAtMs: number, nowMs = Date.now()) {
@@ -51,7 +51,7 @@ function isServerTokenPastRefreshBuffer(
   const past = nowMs >= expiresAtMs - SERVER_TOKEN_REFRESH_BUFFER_MS
   const timing = describeServerTokenExpiry(expiresAtMs, nowMs)
   if (past) {
-    log.info('Server JWT past refresh buffer; treating as expired', {
+    log.info('Server JWT past refresh buffer; treating as needing refresh', {
       context,
       ...timing,
       note:
@@ -118,10 +118,34 @@ function getValidCachedServerAccessToken(): string | null {
       'in-memory cache',
     )
   ) {
-    cachedServerToken = null
+    // Keep token in memory so resolveTeralexiServerAccessTokenImpl can refresh it.
     return null
   }
   return cachedServerToken.accessToken
+}
+
+function normalizeApiBase(url: string): string {
+  return url.trim().replace(/\/+$/, '')
+}
+
+/**
+ * Return a token suitable for POST /api/v1/auth/token even when past the refresh
+ * buffer. Prefer in-memory, then persisted; keep the JWT until refresh fails.
+ */
+function getServerAccessTokenForRefresh(apiBaseUrl: string): string | null {
+  if (cachedServerToken?.accessToken) {
+    return cachedServerToken.accessToken
+  }
+  const record = loadPersistedServerAuth()
+  if (!record?.accessToken) return null
+  if (normalizeApiBase(record.apiBaseUrl) !== normalizeApiBase(apiBaseUrl)) {
+    return null
+  }
+  cachedServerToken = {
+    accessToken: record.accessToken,
+    expiresAtMs: record.expiresAtMs,
+  }
+  return record.accessToken
 }
 
 export function clearTeralexiServerAuthCache(): void {
@@ -233,12 +257,16 @@ async function resolveTeralexiServerAccessTokenImpl(
     }
   }
 
-  const staleToken = cachedServerToken?.accessToken
-  if (staleToken) {
+  // Soft-expired / near-expiry: refresh while the prior JWT is still acceptable.
+  const refreshCandidate = getServerAccessTokenForRefresh(apiBaseUrl)
+  if (refreshCandidate) {
     try {
+      log.info('Refreshing soft-expired server JWT', {
+        apiBaseUrl: normalizeApiBase(apiBaseUrl),
+      })
       return await refreshServerAccessToken({
         apiBaseUrl,
-        accessToken: staleToken,
+        accessToken: refreshCandidate,
       })
     } catch (err) {
       log.warn('Server JWT refresh failed; re-exchanging Google id_token', { err })

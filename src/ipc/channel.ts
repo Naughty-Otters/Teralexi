@@ -1,4 +1,9 @@
 import type { ProviderType } from '@shared/agent/llm-provider-registry'
+import type {
+  AgentLlmChoice,
+  AgentLlmProviderOptions,
+  AgentLlmStage,
+} from '@shared/agent/stage-llm-settings'
 
 export interface IpcMainEventListener<Send = void, Receive = void> {
   ipcMainHandle: Send extends void
@@ -25,55 +30,55 @@ export class IpcChannelMainClass {
   GetSystemConfig: IpcMainEventListener<
     { key: string; defaultValue?: string },
     string
-  > = null
+  > = null!
   GetSystemConfigs: IpcMainEventListener<
     { keys?: string[] },
     Record<string, string>
-  > = null
+  > = null!
   SetSystemConfig: IpcMainEventListener<
     { key: string; value: string | number | boolean },
     boolean
-  > = null
-  IsUseSysTitle: IpcMainEventListener<void, boolean> = null
+  > = null!
+  IsUseSysTitle: IpcMainEventListener<void, boolean> = null!
   SetAppWindowAppearance: IpcMainEventListener<
     { appearance: 'solid' | 'glass' },
     void
-  > = null
+  > = null!
   /**
    * Exit application
    */
-  AppClose: IpcMainEventListener = null
+  AppClose: IpcMainEventListener = null!
   CheckUpdate: IpcMainEventListener<
     void,
     import('@shared/app-update').AppUpdateMessage | null
-  > = null
-  ConfirmUpdate: IpcMainEventListener = null
-  DownloadUpdate: IpcMainEventListener = null
+  > = null!
+  ConfirmUpdate: IpcMainEventListener = null!
+  DownloadUpdate: IpcMainEventListener = null!
   GetAppVersion: IpcMainEventListener<
     void,
     { version: string; isPackaged: boolean }
-  > = null
+  > = null!
   GetSupportConfig: IpcMainEventListener<
     void,
     import('@shared/support-bundle').SupportConfig
-  > = null
+  > = null!
   ReportClientError: IpcMainEventListener<
     import('@shared/support-bundle').SupportClientErrorPayload,
     void
-  > = null
+  > = null!
   SubmitSupportReport: IpcMainEventListener<
     import('@shared/support-bundle').SupportReportOptions,
     import('@shared/support-bundle').SupportReportResult
-  > = null
+  > = null!
   OpenMessagebox: IpcMainEventListener<
     Electron.MessageBoxOptions,
     Electron.MessageBoxReturnValue
-  > = null
-  StartDownload: IpcMainEventListener<string> = null
-  OpenErrorbox: IpcMainEventListener<{ title: string; message: string }> = null
-  StartServer: IpcMainEventListener<void, string> = null
-  StopServer: IpcMainEventListener<void, string> = null
-  HotUpdate: IpcMainEventListener = null
+  > = null!
+  StartDownload: IpcMainEventListener<string> = null!
+  OpenErrorbox: IpcMainEventListener<{ title: string; message: string }> = null!
+  StartServer: IpcMainEventListener<void, string> = null!
+  StopServer: IpcMainEventListener<void, string> = null!
+  HotUpdate: IpcMainEventListener = null!
   /**
    * Load all skills from the skills directory and return them as Agent objects
    */
@@ -109,11 +114,11 @@ export class IpcChannelMainClass {
       }
       guardrails?: Array<{ rule: string; action: string; message?: string }>
     }>
-  > = null
+  > = null!
   ListWorkflowPanelSkills: IpcMainEventListener<
     void,
     import('@main/workflows/workflow-skills').WorkflowPanelSkillInfo[]
-  > = null
+  > = null!
   /**
    * List persisted agent configurations for a user
    */
@@ -147,16 +152,12 @@ export class IpcChannelMainClass {
       allowSubAgents: boolean
       subAgentIds: string[] | null
       llmRoutingMode: 'unified' | 'per_stage'
-      stageLlm: Partial<
-        Record<
-          'explore' | 'toolLoop' | 'verifier',
-          { provider: ProviderType; model: string }
-        >
-      >
+      stageLlm: Partial<Record<AgentLlmStage, AgentLlmChoice>>
+      defaultProviderOptions?: AgentLlmProviderOptions
       createdAt: string
       updatedAt: string
     }>
-  > = null
+  > = null!
   /**
    * Persist a full editable agent configuration (upsert)
    */
@@ -188,20 +189,16 @@ export class IpcChannelMainClass {
     allowSubAgents: boolean
     subAgentIds: string[] | null
     llmRoutingMode: 'unified' | 'per_stage'
-    stageLlm: Partial<
-      Record<
-        'explore' | 'toolLoop' | 'verifier',
-        { provider: ProviderType; model: string }
-      >
-    >
-  }> = null
+    stageLlm: Partial<Record<AgentLlmStage, AgentLlmChoice>>
+    defaultProviderOptions?: AgentLlmProviderOptions
+  }> = null!
   /**
    * Delete a persisted agent configuration
    */
   DeleteAgentConfiguration: IpcMainEventListener<{
     agentId: string
     userId: string
-  }> = null
+  }> = null!
   /**
    * List all tools available in the shared toolSet (toolSet/index.ts)
    */
@@ -221,18 +218,18 @@ export class IpcChannelMainClass {
         default?: string
       }>
     }>
-  > = null
+  > = null!
   /**
    * Execute a single tool from a skill action folder.
    */
   CallSkillTool: IpcMainEventListener<
     { skillId: string; toolName: string; input: unknown },
     unknown
-  > = null
+  > = null!
   /**
    * Return the resolved path to the skills directory
    */
-  GetSkillsDir: IpcMainEventListener<void, string> = null
+  GetSkillsDir: IpcMainEventListener<void, string> = null!
   /**
    * List read-only skill attachments (refs, scripts, forms) for settings UI.
    */
@@ -245,14 +242,14 @@ export class IpcChannelMainClass {
       source: 'bundled' | 'user'
       sizeBytes: number
     }>
-  > = null
+  > = null!
   /**
    * Read a skill attachment for download (utf8 text or base64 binary).
    */
   ReadSkillAttachment: IpcMainEventListener<
     { skillId: string; relativePath: string },
     { content: string; encoding: 'utf8' | 'base64'; mimeType: string }
-  > = null
+  > = null!
   /**
    * Read skill compilation status and structured artifact for settings review.
    */
@@ -268,7 +265,7 @@ export class IpcChannelMainClass {
       fingerprint: string
       compiledAt: string | null
     }
-  > = null
+  > = null!
   /**
    * Compile skill sources into the structured artifact (manual; not run on app load).
    * When `force` is false, skips LLM if DB row matches current source fingerprint.
@@ -284,7 +281,7 @@ export class IpcChannelMainClass {
       fingerprint: string
       compiledAt: string | null
     }
-  > = null
+  > = null!
   /** List all loadable skills with compilation status (settings Skills tab). */
   ListSkillCompilations: IpcMainEventListener<
     void,
@@ -304,7 +301,7 @@ export class IpcChannelMainClass {
       compileModel: string
       compileLlmSource: 'skill_properties' | 'per_skill'
     }>
-  > = null
+  > = null!
   /** Compile every loadable skill (manual bulk action). */
   CompileAllSkills: IpcMainEventListener<
     { force?: boolean },
@@ -313,7 +310,7 @@ export class IpcChannelMainClass {
       status: 'pending' | 'ready' | 'failed' | 'missing'
       errorMessage: string | null
     }>
-  > = null
+  > = null!
   /** Force recompile skill sources (same as CompileSkill with force: true). */
   RecompileSkill: IpcMainEventListener<
     { skillId: string },
@@ -326,7 +323,7 @@ export class IpcChannelMainClass {
       fingerprint: string
       compiledAt: string | null
     }
-  > = null
+  > = null!
   /** Save user-edited compiled artifact without re-running compile LLM. */
   SaveSkillCompilation: IpcMainEventListener<
     {
@@ -342,26 +339,26 @@ export class IpcChannelMainClass {
       fingerprint: string
       compiledAt: string | null
     }
-  > = null
+  > = null!
   /**
    * Small screenshot / thumbnail for a sandbox output file (image, HTML, PDF).
    */
   GetStepOutputLinkPreview: IpcMainEventListener<
     { fileUrl: string },
     { dataUrl: string; kind: 'image' | 'html' | 'pdf' } | null
-  > = null
+  > = null!
   /**
    * Dry-run preview for file edit/write/patch tools (no writes).
    */
   PreviewFileChange: IpcMainEventListener<
     { toolName: string; input: Record<string, unknown> },
     import('@shared/file-change/types').FileChangePreviewResult
-  > = null
+  > = null!
   /** Dry-run preview for exit_plan_mode approval (plan markdown + todos). */
   PreviewPlanApproval: IpcMainEventListener<
     { conversationId: string; agentSummary?: string },
     import('@shared/agent/plan-approval-preview').PlanApprovalPreviewResult
-  > = null
+  > = null!
   /**
    * List all conversations for a given agent, ordered by most recent
    */
@@ -373,8 +370,9 @@ export class IpcChannelMainClass {
       title: string
       createdAt: string
       updatedAt: string
+      workspacePath?: string | null
     }>
-  > = null
+  > = null!
   /**
    * Create a new conversation record
    */
@@ -387,21 +385,21 @@ export class IpcChannelMainClass {
       createdAt: string
       updatedAt: string
     }
-  > = null
+  > = null!
   /**
    * Update the title of an existing conversation
    */
   UpdateConversationTitle: IpcMainEventListener<{
     conversationId: string
     title: string
-  }> = null
+  }> = null!
   /**
    * Update which agent/skill owns a conversation (persisted per conversation).
    */
   UpdateConversationAgent: IpcMainEventListener<{
     conversationId: string
     agentId: string
-  }> = null
+  }> = null!
   /**
    * Load conversation metadata (agent binding, title, timestamps).
    */
@@ -414,11 +412,11 @@ export class IpcChannelMainClass {
       createdAt: string
       updatedAt: string
     } | null
-  > = null
+  > = null!
   /**
    * Delete a conversation and all its messages
    */
-  DeleteConversation: IpcMainEventListener<{ conversationId: string }> = null
+  DeleteConversation: IpcMainEventListener<{ conversationId: string }> = null!
   /**
    * Clear chat history only — keeps conversation, workspace, and agent binding.
    */
@@ -436,7 +434,7 @@ export class IpcChannelMainClass {
       outputResultsDir: string
       createdAt: string
     }>
-  > = null
+  > = null!
   /**
    * Load all persisted messages for a given conversation
    */
@@ -450,7 +448,7 @@ export class IpcChannelMainClass {
       content: string
       createdAt: string
     }>
-  > = null
+  > = null!
   /**
    * Paginated message history (latest page or older rows before a timestamp).
    */
@@ -467,7 +465,7 @@ export class IpcChannelMainClass {
       }>
       hasOlder: boolean
     }
-  > = null
+  > = null!
   /**
    * Persist a single message
    */
@@ -478,7 +476,7 @@ export class IpcChannelMainClass {
     role: 'user' | 'assistant'
     content: string
     createdAt: string
-  }> = null
+  }> = null!
   /**
    * LLM token usage dashboard: overview stats and daily model breakdown.
    */
@@ -511,21 +509,21 @@ export class IpcChannelMainClass {
         }>
       }>
     }
-  > = null
+  > = null!
   /**
    * Update an existing message's content
    */
   UpdateMessage: IpcMainEventListener<{
     id: string
     content: string
-  }> = null
+  }> = null!
   /**
    * Get all user property key-value pairs for a user
    */
   GetUserProperties: IpcMainEventListener<
     { userId: string },
     Record<string, string>
-  > = null
+  > = null!
   /**
    * Get all user properties with metadata for a user
    */
@@ -537,7 +535,7 @@ export class IpcChannelMainClass {
       propertyValue: string
       updatedAt: string
     }>
-  > = null
+  > = null!
   /**
    * Get a single user property by key
    */
@@ -549,7 +547,7 @@ export class IpcChannelMainClass {
       propertyValue: string
       updatedAt: string
     } | null
-  > = null
+  > = null!
   /**
    * Set a user property key-value pair (upsert)
    */
@@ -557,18 +555,18 @@ export class IpcChannelMainClass {
     userId: string
     propertyKey: string
     propertyValue: string
-  }> = null
+  }> = null!
   /**
    * Delete a single user property by key
    */
   DeleteUserProperty: IpcMainEventListener<{
     userId: string
     propertyKey: string
-  }> = null
+  }> = null!
   /**
    * Delete all user properties for a user
    */
-  ClearUserProperties: IpcMainEventListener<{ userId: string }> = null
+  ClearUserProperties: IpcMainEventListener<{ userId: string }> = null!
   /**
    * List all stored MCP servers for a user
    */
@@ -588,7 +586,7 @@ export class IpcChannelMainClass {
       createdAt: string
       updatedAt: string
     }>
-  > = null
+  > = null!
   /**
    * Create a new MCP server definition
    */
@@ -619,7 +617,7 @@ export class IpcChannelMainClass {
       createdAt: string
       updatedAt: string
     }
-  > = null
+  > = null!
   /**
    * Enable or disable an MCP server
    */
@@ -627,7 +625,7 @@ export class IpcChannelMainClass {
     userId: string
     serverId: string
     enabled: boolean
-  }> = null
+  }> = null!
   /**
    * Delete an MCP server definition
    */
@@ -643,28 +641,28 @@ export class IpcChannelMainClass {
       description: string
       inputSchema?: unknown
     }>
-  > = null
+  > = null!
   /**
    * Whether npx / uvx are available for stdio MCP servers
    */
   GetMcpRuntimeStatus: IpcMainEventListener<
     void,
     import('@main/services/mcp-runtime-check').McpRuntimeStatus
-  > = null
+  > = null!
   /**
    * Execute one tool call on a specific MCP server
    */
   CallMcpServerTool: IpcMainEventListener<
     { userId: string; serverId: string; toolName: string; input: unknown },
     unknown
-  > = null
+  > = null!
   /**
    * Search the official MCP Registry for installable servers
    */
   SearchMcpRegistry: IpcMainEventListener<
     { search?: string; cursor?: string; limit?: number },
     import('@shared/mcp/registry-types').McpRegistrySearchResult
-  > = null
+  > = null!
   /**
    * Load configuration drafts for a registry server
    */
@@ -681,14 +679,14 @@ export class IpcChannelMainClass {
         | import('@shared/mcp/registry-types').McpRegistryServerDraft
         | null
     }
-  > = null
+  > = null!
   /**
    * Save arbitrary data to a file under user.workspace
    */
   SaveDataToFile: IpcMainEventListener<
     { userId: string; relativePath: string; data: unknown },
     { filePath: string }
-  > = null
+  > = null!
   /**
    * List persisted scheduler definitions
    */
@@ -714,7 +712,7 @@ export class IpcChannelMainClass {
       createdAt: string
       updatedAt: string
     }>
-  > = null
+  > = null!
   /**
    * Create or update one scheduler definition
    */
@@ -735,14 +733,14 @@ export class IpcChannelMainClass {
     conversationId: string
     prompt: string
     workflowId: string
-  }> = null
+  }> = null!
   /**
    * Delete one scheduler definition
    */
   DeleteScheduler: IpcMainEventListener<{
     userId: string
     schedulerId: string
-  }> = null
+  }> = null!
   ListWorkflows: IpcMainEventListener<
     { userId: string },
     Array<{
@@ -755,7 +753,7 @@ export class IpcChannelMainClass {
       createdAt: string
       updatedAt: string
     }>
-  > = null
+  > = null!
   GetWorkflowSnapshot: IpcMainEventListener<
     { workflowId: string },
     {
@@ -797,7 +795,7 @@ export class IpcChannelMainClass {
         entitiesDefinitionJson: string
       }
     } | null
-  > = null
+  > = null!
   CompileWorkflow: IpcMainEventListener<
     {
       userId: string
@@ -808,7 +806,7 @@ export class IpcChannelMainClass {
       baseVersionId?: string
     },
     import('@main/workflows/workflow-compiler').WorkflowCompileResponse
-  > = null
+  > = null!
   RunWorkflowCompilerAgent: IpcMainEventListener<
     {
       conversationId: string
@@ -825,11 +823,11 @@ export class IpcChannelMainClass {
       compileHints?: import('@shared/workflows/workflow-studio').WorkflowCompileHints
     },
     import('@shared/workflows/workflow-studio').RunWorkflowCompilerAgentIpcResult
-  > = null
+  > = null!
   ConfirmWorkflowVersion: IpcMainEventListener<
     { userId: string; workflowId: string; versionId: string },
     { ok: true; definitionJson: string }
-  > = null
+  > = null!
   SaveWorkflowDefinitionJson: IpcMainEventListener<
     {
       userId: string
@@ -838,11 +836,11 @@ export class IpcChannelMainClass {
       baseVersionId?: string
     },
     import('@main/workflows/workflow-compiler').SaveWorkflowDefinitionResponse
-  > = null
+  > = null!
   RunWorkflowTest: IpcMainEventListener<
     { workflowId: string; versionId: string; inputs?: Record<string, unknown> },
     import('@shared/workflows/deployment-target').WorkflowTestReport
-  > = null
+  > = null!
   DeployWorkflow: IpcMainEventListener<
     {
       workflowId: string
@@ -852,11 +850,11 @@ export class IpcChannelMainClass {
       workspacePath?: string | null
     },
     import('@shared/workflows/deployment-target').DeployHandle
-  > = null
+  > = null!
   UndeployWorkflow: IpcMainEventListener<
     { deploymentId: string },
     { ok: true }
-  > = null
+  > = null!
   RunWorkflowManual: IpcMainEventListener<
     {
       workflowId: string
@@ -864,19 +862,19 @@ export class IpcChannelMainClass {
       inputs?: Record<string, unknown>
     },
     import('@main/workflows/workflow-executor').WorkflowExecuteResult
-  > = null
+  > = null!
   DeleteWorkflow: IpcMainEventListener<
     { userId: string; workflowId: string },
     { ok: true }
-  > = null
+  > = null!
   CreateWorkflowDraft: IpcMainEventListener<
     { userId: string; name: string; description?: string },
     { workflowId: string }
-  > = null
+  > = null!
   /**
    * Window ready
    */
-  WinReady: IpcMainEventListener = null
+  WinReady: IpcMainEventListener = null!
   /**
    *
    * Open window
@@ -909,7 +907,7 @@ export class IpcChannelMainClass {
      * @type {unknown}
      */
     sendData?: unknown
-  }> = null
+  }> = null!
   /**
    * Start Google OAuth2 sign-in flow, returns the authenticated account info
    */
@@ -920,11 +918,11 @@ export class IpcChannelMainClass {
       name: string
       picture: string
     }
-  > = null
+  > = null!
   /**
    * Sign out and clear stored Teralexi Google account tokens
    */
-  GoogleSignOut: IpcMainEventListener<void, void> = null
+  GoogleSignOut: IpcMainEventListener<void, void> = null!
   /**
    * Return the currently stored Teralexi Google account info, or null if not signed in
    */
@@ -935,21 +933,21 @@ export class IpcChannelMainClass {
       name: string
       picture: string
     } | null
-  > = null
+  > = null!
   /**
    * Return verified subscription entitlement snapshot for the signed-in user.
    */
   GetEntitlement: IpcMainEventListener<
     void,
     import('@shared/subscription/entitlement-types').EntitlementUiSnapshot | null
-  > = null
+  > = null!
   /**
    * Refresh auth + entitlement from the server and return the latest snapshot.
    */
   RefreshEntitlement: IpcMainEventListener<
     void,
     import('@shared/subscription/entitlement-types').EntitlementUiSnapshot | null
-  > = null
+  > = null!
   /**
    * Start Google Workspace OAuth2 sign-in flow (Gmail, Calendar, Drive)
    */
@@ -961,8 +959,8 @@ export class IpcChannelMainClass {
       picture: string
       workspaceAccess: boolean
     }
-  > = null
-  GoogleWorkspaceSignOut: IpcMainEventListener<void, void> = null
+  > = null!
+  GoogleWorkspaceSignOut: IpcMainEventListener<void, void> = null!
   GetGoogleWorkspaceAccount: IpcMainEventListener<
     void,
     {
@@ -971,7 +969,7 @@ export class IpcChannelMainClass {
       picture: string
       workspaceAccess: boolean
     } | null
-  > = null
+  > = null!
   /**
    * Start GitHub OAuth2 sign-in flow, returns the authenticated account info
    */
@@ -985,11 +983,11 @@ export class IpcChannelMainClass {
       skillAccess: boolean
       missingScopes: string[]
     }
-  > = null
+  > = null!
   /**
    * Sign out and clear stored GitHub account tokens
    */
-  GitHubSignOut: IpcMainEventListener<void, void> = null
+  GitHubSignOut: IpcMainEventListener<void, void> = null!
   /**
    * Return the currently stored GitHub account info, or null if not signed in
    */
@@ -1003,7 +1001,7 @@ export class IpcChannelMainClass {
       skillAccess: boolean
       missingScopes: string[]
     } | null
-  > = null
+  > = null!
   /**
    * Return current WhatsApp integration state
    */
@@ -1016,7 +1014,7 @@ export class IpcChannelMainClass {
       qrCodeDataUrl: string | null
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Save the WhatsApp bot display name
    */
@@ -1029,7 +1027,7 @@ export class IpcChannelMainClass {
       qrCodeDataUrl: string | null
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Save the WhatsApp target phone number used by mini chat
    */
@@ -1042,7 +1040,7 @@ export class IpcChannelMainClass {
       qrCodeDataUrl: string | null
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Refresh WhatsApp QR code by restarting the socket session
    */
@@ -1055,7 +1053,7 @@ export class IpcChannelMainClass {
       qrCodeDataUrl: string | null
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Log out WhatsApp and clear local auth session
    */
@@ -1068,7 +1066,7 @@ export class IpcChannelMainClass {
       qrCodeDataUrl: string | null
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Get WhatsApp mini chat messages
    */
@@ -1080,7 +1078,7 @@ export class IpcChannelMainClass {
       fromMe: boolean
       timestamp: number
     }>
-  > = null
+  > = null!
   /**
    * Send one WhatsApp chat message and return updated messages
    */
@@ -1092,7 +1090,7 @@ export class IpcChannelMainClass {
       fromMe: boolean
       timestamp: number
     }>
-  > = null
+  > = null!
   /**
    * Send one WhatsApp message to a specific JID and return updated mini chat messages
    */
@@ -1104,7 +1102,7 @@ export class IpcChannelMainClass {
       fromMe: boolean
       timestamp: number
     }>
-  > = null
+  > = null!
   /**
    * Return current Telegram bot integration state
    */
@@ -1117,7 +1115,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Save the Telegram bot display name
    */
@@ -1130,7 +1128,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Save the Telegram bot token and restart the bot
    */
@@ -1143,7 +1141,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Stop the Telegram bot
    */
@@ -1156,7 +1154,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Get Telegram mini chat messages
    */
@@ -1168,7 +1166,7 @@ export class IpcChannelMainClass {
       fromMe: boolean
       timestamp: number
     }>
-  > = null
+  > = null!
   /**
    * Send one Telegram chat message and return updated messages
    */
@@ -1180,7 +1178,7 @@ export class IpcChannelMainClass {
       fromMe: boolean
       timestamp: number
     }>
-  > = null
+  > = null!
   /**
    * Return current Discord bot integration state
    */
@@ -1193,7 +1191,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Save the Discord bot display name
    */
@@ -1206,7 +1204,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Save the Discord bot token and restart the bot
    */
@@ -1219,7 +1217,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Stop the Discord bot
    */
@@ -1232,7 +1230,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Get Discord mini chat messages
    */
@@ -1244,7 +1242,7 @@ export class IpcChannelMainClass {
       fromMe: boolean
       timestamp: number
     }>
-  > = null
+  > = null!
   /**
    * Send one Discord chat message and return updated messages
    */
@@ -1256,7 +1254,7 @@ export class IpcChannelMainClass {
       fromMe: boolean
       timestamp: number
     }>
-  > = null
+  > = null!
   /**
    * Return current WeChat Work bot integration state
    */
@@ -1269,7 +1267,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Save the WeChat bot display name
    */
@@ -1282,7 +1280,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Save WeChat Work credentials (corpId, corpSecret, agentId) and reconnect
    */
@@ -1295,7 +1293,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Stop the WeChat bot
    */
@@ -1308,7 +1306,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Get WeChat mini chat messages
    */
@@ -1320,7 +1318,7 @@ export class IpcChannelMainClass {
       fromMe: boolean
       timestamp: number
     }>
-  > = null
+  > = null!
   /**
    * Send one WeChat message to a user and return updated messages
    */
@@ -1332,14 +1330,14 @@ export class IpcChannelMainClass {
       fromMe: boolean
       timestamp: number
     }>
-  > = null
+  > = null!
   /**
    * Handle an incoming WeChat webhook payload
    */
   HandleWeChatWebhook: IpcMainEventListener<
     { fromUser: string; text: string; msgId: string; createTime: number },
     void
-  > = null
+  > = null!
   /**
    * Return current Slack bot integration state
    */
@@ -1353,7 +1351,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Save the Slack bot display name
    */
@@ -1367,7 +1365,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Save the Slack bot tokens and restart the bot
    */
@@ -1381,7 +1379,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Stop the Slack bot
    */
@@ -1395,7 +1393,7 @@ export class IpcChannelMainClass {
       status: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
       lastError: string | null
     }
-  > = null
+  > = null!
   /**
    * Get Slack mini chat messages
    */
@@ -1407,7 +1405,7 @@ export class IpcChannelMainClass {
       fromMe: boolean
       timestamp: number
     }>
-  > = null
+  > = null!
   /**
    * Send one Slack chat message and return updated messages
    */
@@ -1419,14 +1417,14 @@ export class IpcChannelMainClass {
       fromMe: boolean
       timestamp: number
     }>
-  > = null
+  > = null!
   /**
    * Send one message through any registered channel target
    */
   SendChannelMessage: IpcMainEventListener<
     { channelId: string; target: string; text: string },
     boolean
-  > = null
+  > = null!
   /**
    * Run the agent engine for a conversation (main process)
    */
@@ -1454,7 +1452,7 @@ export class IpcChannelMainClass {
       errorMessage?: string
       hitlPaused?: boolean
     }
-  > = null
+  > = null!
   /**
    * Directly delegate to a catalog sub-agent from an @mention in the composer.
    */
@@ -1481,14 +1479,14 @@ export class IpcChannelMainClass {
       errorMessage?: string
       hitlPaused?: boolean
     }
-  > = null
+  > = null!
   /**
    * Stop a running agent for a conversation
    */
   StopAgentForConversation: IpcMainEventListener<
     { conversationId: string },
     void
-  > = null
+  > = null!
   /**
    * Pre-warm the in-process cache for a user+agent before the first message.
    * Called by the renderer when the user switches to an agent or opens the chat panel.
@@ -1497,7 +1495,7 @@ export class IpcChannelMainClass {
   WarmAgentCache: IpcMainEventListener<
     { userId: string; agentId?: string },
     void
-  > = null
+  > = null!
   /**
    * Open a file (absolute path or file:// URL) in the OS default application.
    * Returns success=false with an error message when the OS rejects the path.
@@ -1505,7 +1503,7 @@ export class IpcChannelMainClass {
   OpenFileInDefaultApp: IpcMainEventListener<
     { path: string },
     { success: boolean; error?: string }
-  > = null
+  > = null!
   /**
    * Show a Save-As dialog and copy a sandbox file to the user-chosen location.
    * Returns the saved path, or null when the user cancels.
@@ -1513,7 +1511,7 @@ export class IpcChannelMainClass {
   SaveFileAs: IpcMainEventListener<
     { sourcePath: string; defaultName: string },
     { savedPath: string | null }
-  > = null
+  > = null!
   /**
    * Render markdown to PDF and save via a native Save-As dialog.
    * Returns the saved path, or null when the user cancels.
@@ -1525,7 +1523,7 @@ export class IpcChannelMainClass {
       kind?: 'default' | 'research-report'
     },
     { savedPath: string | null; error?: string }
-  > = null
+  > = null!
   /**
    * Position the sandbox results WebContentsView over the given screen rect (or hide).
    */
@@ -1534,9 +1532,23 @@ export class IpcChannelMainClass {
       screenBounds: { x: number; y: number; width: number; height: number }
       fileUrl: string | null
       markdownView?: 'html' | 'raw'
+      /** When true, reload the preview even if the URL/view mode are unchanged. */
+      forceReload?: boolean
     },
     void
-  > = null
+  > = null!
+  /**
+   * History navigation for the sandbox preview WebContentsView (back / forward).
+   */
+  NavigateSandboxOutputView: IpcMainEventListener<
+    { action: 'back' | 'forward' },
+    {
+      ok: boolean
+      canGoBack: boolean
+      canGoForward: boolean
+      url: string
+    }
+  > = null!
   /**
    * Delete on-disk sandbox directories (validated under `~/.teralexi/workspace/sandbox/` or legacy tmpdir).
    */
@@ -1554,7 +1566,7 @@ export class IpcChannelMainClass {
       stack: Array<{ type: 'sandbox' } | { type: 'workspace'; path: string }>
       workspacePath: string | null
     }
-  > = null
+  > = null!
   SetConversationWorkspace: IpcMainEventListener<
     { conversationId: string; path: string },
     {
@@ -1563,7 +1575,7 @@ export class IpcChannelMainClass {
       workspacePath?: string | null
       error?: string
     }
-  > = null
+  > = null!
   ClearConversationWorkspace: IpcMainEventListener<
     { conversationId: string },
     {
@@ -1572,7 +1584,7 @@ export class IpcChannelMainClass {
       workspacePath?: string | null
       error?: string
     }
-  > = null
+  > = null!
 
   // ── Workspace git operations (UI → main process, no agent required) ─────────
 
@@ -1595,12 +1607,12 @@ export class IpcChannelMainClass {
       clean: boolean
       error?: string
     }
-  > = null
+  > = null!
   /** git diff (unstaged or staged) for the workspace. */
   GetWorkspaceGitDiff: IpcMainEventListener<
     { conversationId: string; staged?: boolean; files?: string[] },
     { ok: boolean; diff: string; error?: string }
-  > = null
+  > = null!
   /** git log for the workspace. */
   GetWorkspaceGitLog: IpcMainEventListener<
     { conversationId: string; limit?: number },
@@ -1616,17 +1628,17 @@ export class IpcChannelMainClass {
       }>
       error?: string
     }
-  > = null
+  > = null!
   /** git add files (or all) in the workspace. */
   RunWorkspaceGitAdd: IpcMainEventListener<
     { conversationId: string; files?: string[] },
     { ok: boolean; output?: string; error?: string }
-  > = null
+  > = null!
   /** git commit staged changes in the workspace. */
   RunWorkspaceGitCommit: IpcMainEventListener<
     { conversationId: string; message: string },
     { ok: boolean; hash?: string; output?: string; error?: string }
-  > = null
+  > = null!
   /** git push the current branch to remote. */
   RunWorkspaceGitPush: IpcMainEventListener<
     {
@@ -1636,7 +1648,7 @@ export class IpcChannelMainClass {
       setUpstream?: boolean
     },
     { ok: boolean; output?: string; error?: string }
-  > = null
+  > = null!
   /** Create a GitHub PR via `gh pr create`. */
   RunWorkspaceGitCreatePR: IpcMainEventListener<
     {
@@ -1647,7 +1659,7 @@ export class IpcChannelMainClass {
       draft?: boolean
     },
     { ok: boolean; url?: string; output?: string; error?: string }
-  > = null
+  > = null!
   /** List immediate children under a workspace path (filesystem + git status badges). */
   ListWorkspaceFiles: IpcMainEventListener<
     { conversationId: string; relativePath?: string },
@@ -1661,27 +1673,27 @@ export class IpcChannelMainClass {
       }>
       error?: string
     }
-  > = null
+  > = null!
   /** Start (or restart) filesystem watch for workspace/sandbox files. */
   WatchWorkspaceFiles: IpcMainEventListener<
     { conversationId: string },
     { ok: boolean; error?: string }
-  > = null
+  > = null!
   /** Stop filesystem watch for a conversation. */
   UnwatchWorkspaceFiles: IpcMainEventListener<
     { conversationId: string },
     void
-  > = null
+  > = null!
   /** Fuzzy file search for composer `@file` mentions. */
   SearchWorkspaceFiles: IpcMainEventListener<
     { conversationId: string; query?: string; limit?: number },
     { ok: boolean; paths: string[]; error?: string }
-  > = null
+  > = null!
   /** Pick local files to attach in the chat composer (staging only). */
   PickChatAttachments: IpcMainEventListener<
     void,
     { ok: boolean; paths: string[]; error?: string }
-  > = null
+  > = null!
   /** Copy picked files into the conversation sandbox and persist metadata. */
   IngestChatAttachments: IpcMainEventListener<
     {
@@ -1694,7 +1706,7 @@ export class IpcChannelMainClass {
       attachments: import('@shared/chat/attachments').ChatAttachmentMeta[]
       error?: string
     }
-  > = null
+  > = null!
   /** List chat attachments for a conversation. */
   GetConversationAttachments: IpcMainEventListener<
     { conversationId: string },
@@ -1703,22 +1715,22 @@ export class IpcChannelMainClass {
       attachments: import('@shared/chat/attachments').ChatAttachmentMeta[]
       error?: string
     }
-  > = null
+  > = null!
   /** Search uploaded chat attachments for `@file` mentions. */
   SearchChatAttachments: IpcMainEventListener<
     { conversationId: string; query?: string; limit?: number },
     { ok: boolean; paths: string[]; error?: string }
-  > = null
+  > = null!
   /** Reveal an uploaded chat attachment in the system file manager. */
   RevealChatAttachment: IpcMainEventListener<
     { conversationId: string; sandboxPath: string },
     { ok: boolean; error?: string }
-  > = null
+  > = null!
   /** Open a workspace file in the OS default application. */
   OpenWorkspaceFile: IpcMainEventListener<
     { conversationId: string; relativePath: string },
     { ok: boolean; error?: string }
-  > = null
+  > = null!
   /** Read workspace file text for the in-app editor. */
   ReadWorkspaceFile: IpcMainEventListener<
     { conversationId: string; relativePath: string },
@@ -1730,12 +1742,12 @@ export class IpcChannelMainClass {
       error?: string
       binary?: boolean
     }
-  > = null
+  > = null!
   /** Write workspace file text from the in-app editor. */
   WriteWorkspaceFile: IpcMainEventListener<
     { conversationId: string; relativePath: string; content: string },
     { ok: boolean; error?: string }
-  > = null
+  > = null!
   /** Run a shell command in the workspace files panel context. */
   RunWorkspaceTerminalCommand: IpcMainEventListener<
     { conversationId: string; command: string; relativeCwd?: string },
@@ -1747,12 +1759,12 @@ export class IpcChannelMainClass {
       exitCode?: number
       error?: string
     }
-  > = null
+  > = null!
   /** Interrupt currently running workspace terminal command (Ctrl+C semantics). */
   CancelWorkspaceTerminalCommand: IpcMainEventListener<
     { conversationId: string },
     { ok: boolean; error?: string }
-  > = null
+  > = null!
   /** Start or restart a persistent PTY session for workspace terminal. */
   StartWorkspaceTerminalSession: IpcMainEventListener<
     {
@@ -1763,37 +1775,37 @@ export class IpcChannelMainClass {
       rows?: number
     },
     { ok: boolean; cwd?: string; shell?: string; error?: string }
-  > = null
+  > = null!
   /** Write keyboard input bytes into the persistent PTY session. */
   WriteWorkspaceTerminalInput: IpcMainEventListener<
     { conversationId: string; data: string },
     { ok: boolean; error?: string }
-  > = null
+  > = null!
   /** Resize PTY dimensions to match xterm viewport. */
   ResizeWorkspaceTerminalSession: IpcMainEventListener<
     { conversationId: string; cols: number; rows: number },
     { ok: boolean; error?: string }
-  > = null
+  > = null!
   /** Stop and dispose persistent PTY session for the conversation. */
   StopWorkspaceTerminalSession: IpcMainEventListener<
     { conversationId: string },
     { ok: boolean; error?: string }
-  > = null
+  > = null!
   /** Approve a tool type for the rest of the conversation (session-scoped HITL). */
   AddSessionToolApproval: IpcMainEventListener<
     { conversationId: string; toolName: string },
     { ok: boolean; tools: string[] }
-  > = null
+  > = null!
   /** Manually compact persisted conversation history (`/compact`). */
   CompactConversation: IpcMainEventListener<
     { conversationId: string; hint?: string; userId?: string },
     { ok: boolean; compacted: boolean; message?: string; error?: string }
-  > = null
+  > = null!
   /** Get Kimi-like coding mode for a conversation. */
   GetCodingMode: IpcMainEventListener<
     { conversationId: string },
     { ok: boolean; mode: import('@shared/agent/coding-mode').CodingMode }
-  > = null
+  > = null!
   /** Set Kimi-like coding mode for a conversation. */
   SetCodingMode: IpcMainEventListener<
     {
@@ -1801,7 +1813,77 @@ export class IpcChannelMainClass {
       mode: import('@shared/agent/coding-mode').CodingMode
     },
     { ok: boolean; mode: import('@shared/agent/coding-mode').CodingMode }
-  > = null
+  > = null!
+  /** Get sticky composer LLM override for a conversation. */
+  GetConversationLlmOverride: IpcMainEventListener<
+    { conversationId: string },
+    {
+      ok: boolean
+      override: import('@shared/agent/conversation-llm-override').ConversationLlmOverride | null
+    }
+  > = null!
+  /** Set or clear sticky composer LLM override for a conversation. */
+  SetConversationLlmOverride: IpcMainEventListener<
+    {
+      conversationId: string
+      override: import('@shared/agent/conversation-llm-override').ConversationLlmOverride | null
+    },
+    {
+      ok: boolean
+      override: import('@shared/agent/conversation-llm-override').ConversationLlmOverride | null
+    }
+  > = null!
+  /** Get per-conversation pre/post turn hooks. */
+  GetConversationHooks: IpcMainEventListener<
+    { conversationId: string },
+    {
+      ok: boolean
+      hooks: import('@shared/agent/conversation-hooks').ConversationHookEntry[]
+    }
+  > = null!
+  /** Replace per-conversation pre/post turn hooks. */
+  SetConversationHooks: IpcMainEventListener<
+    {
+      conversationId: string
+      hooks: import('@shared/agent/conversation-hooks').ConversationHookEntry[]
+    },
+    {
+      ok: boolean
+      hooks: import('@shared/agent/conversation-hooks').ConversationHookEntry[]
+    }
+  > = null!
+  /** Read follow-up suggestion chips for a conversation (`followup/meta.json`). */
+  GetConversationFollowUps: IpcMainEventListener<
+    { conversationId: string },
+    {
+      ok: boolean
+      followUps: import('@shared/agent/follow-up').FollowUpItem[]
+      revision: number
+    }
+  > = null!
+  /** Delete follow-up meta for a conversation (clears suggestion chips). */
+  ClearConversationFollowUps: IpcMainEventListener<
+    { conversationId: string },
+    { ok: boolean; revision: number }
+  > = null!
+  /** Skill-owned composer toolbar buttons for the active skill. */
+  GetSkillComposerToolbarPlugins: IpcMainEventListener<
+    { skillId: string; conversationId: string },
+    {
+      ok: boolean
+      plugins: import('@shared/agent/skill-composer-toolbar').SkillComposerToolbarPluginView[]
+    }
+  > = null!
+  /** Run a skill-owned composer toolbar plugin click handler. */
+  InvokeSkillComposerToolbarPlugin: IpcMainEventListener<
+    { skillId: string; conversationId: string; pluginId: string },
+    import('@shared/agent/skill-composer-toolbar').SkillComposerToolbarInvokeResult
+  > = null!
+  /** Preview a toolbar action (confirm dialog) without executing side effects. */
+  PreviewSkillComposerToolbarPlugin: IpcMainEventListener<
+    { skillId: string; conversationId: string; pluginId: string },
+    import('@shared/agent/skill-composer-toolbar').SkillComposerToolbarPreviewResult
+  > = null!
   /** Get high-level planning phase for a conversation. */
   GetPlanModeState: IpcMainEventListener<
     { conversationId: string },
@@ -1809,7 +1891,7 @@ export class IpcChannelMainClass {
       ok: boolean
       view: import('@shared/agent/plan-mode-phase').PlanModeView
     }
-  > = null
+  > = null!
   /** Apply a semantic planning lifecycle transition. */
   TransitionPlanMode: IpcMainEventListener<
     {
@@ -1820,74 +1902,74 @@ export class IpcChannelMainClass {
       ok: boolean
       view: import('@shared/agent/plan-mode-phase').PlanModeView
     }
-  > = null
+  > = null!
   /** List background subagent/shell tasks for a conversation. */
   ListBackgroundTasks: IpcMainEventListener<
     { conversationId?: string },
     Array<
       import('@main/agent/background/background-task-manager').BackgroundTask
     >
-  > = null
+  > = null!
   /** Cancel a background task by id. */
   CancelBackgroundTask: IpcMainEventListener<
     { taskId: string },
     { ok: boolean }
-  > = null
+  > = null!
   /** Install a skill from a GitHub URL into ~/.teralexi/skills. */
   InstallSkillFromGithub: IpcMainEventListener<
     { url: string; skillId?: string },
     { ok: boolean; skillId?: string; error?: string }
-  > = null
+  > = null!
   /** Search ClawHub skill registry. */
   SearchClawHubSkills: IpcMainEventListener<
     { query: string; limit?: number },
     import('@shared/skills/clawhub-types').ClawHubSkillSearchResult
-  > = null
+  > = null!
   /** Inspect one ClawHub skill (latest version + moderation). */
   GetClawHubSkill: IpcMainEventListener<
     { slug: string },
     import('@shared/skills/clawhub-types').ClawHubSkillDetail
-  > = null
+  > = null!
   /** Preview a file from a ClawHub skill package. */
   PreviewClawHubSkillFile: IpcMainEventListener<
     { slug: string; path?: string },
     { content: string }
-  > = null
+  > = null!
   /** Install a skill from ClawHub into ~/.teralexi/skills. */
   InstallClawHubSkill: IpcMainEventListener<
     { slug: string; localSkillId?: string; version?: string },
     import('@shared/skills/clawhub-types').ClawHubInstallResult
-  > = null
+  > = null!
   /** List skills installed from ClawHub. */
   ListClawHubInstalledSkills: IpcMainEventListener<
     void,
     import('@shared/skills/clawhub-types').ClawHubInstalledSkill[]
-  > = null
+  > = null!
   /** Update one ClawHub-installed skill to latest version. */
   UpdateClawHubSkill: IpcMainEventListener<
     { localSkillId: string },
     import('@shared/skills/clawhub-types').ClawHubInstallResult
-  > = null
+  > = null!
   /** Update all ClawHub-installed skills (manual; no auto-update). */
   UpdateAllClawHubSkills: IpcMainEventListener<
     void,
     import('@shared/skills/clawhub-types').ClawHubUpdateBatchResult[]
-  > = null
+  > = null!
   /** Uninstall a ClawHub-managed skill folder. */
   UninstallClawHubSkill: IpcMainEventListener<
     { localSkillId: string },
     { ok: boolean; error?: string }
-  > = null
+  > = null!
   /** Start an editor LSP session for a workspace conversation. */
   EditorLspStartSession: IpcMainEventListener<
     { conversationId: string; workspaceRoot: string },
     { ok: boolean; error?: string }
-  > = null
+  > = null!
   /** Stop the editor LSP session and close owned documents. */
   EditorLspStopSession: IpcMainEventListener<
     { conversationId: string },
     { ok: boolean; error?: string }
-  > = null
+  > = null!
   /** Sync editor buffer to the language server (debounced in main). */
   EditorLspSyncDocument: IpcMainEventListener<
     {
@@ -1897,12 +1979,12 @@ export class IpcChannelMainClass {
       languageId: string
     },
     { ok: boolean; error?: string }
-  > = null
+  > = null!
   /** Close a document in the editor LSP session. */
   EditorLspCloseDocument: IpcMainEventListener<
     { conversationId: string; relativePath: string },
     { ok: boolean; error?: string }
-  > = null
+  > = null!
   /** Forward an LSP request for an open editor document. */
   EditorLspRequest: IpcMainEventListener<
     {
@@ -1912,12 +1994,12 @@ export class IpcChannelMainClass {
       params: unknown
     },
     { ok: boolean; result?: unknown; error?: string }
-  > = null
+  > = null!
   /** Format a workspace file with Prettier when available. */
   FormatWorkspaceFile: IpcMainEventListener<
     { conversationId: string; relativePath: string; content: string },
     { ok: boolean; content?: string; error?: string }
-  > = null
+  > = null!
   /** Lint a workspace file with ESLint when available. */
   LintWorkspaceFile: IpcMainEventListener<
     { conversationId: string; relativePath: string; content: string },
@@ -1934,12 +2016,12 @@ export class IpcChannelMainClass {
       }>
       error?: string
     }
-  > = null
+  > = null!
   /** Native open-file dialog scoped to the conversation workspace/sandbox. */
   PickWorkspaceEditorFile: IpcMainEventListener<
     { conversationId: string },
     { ok: boolean; relativePath?: string | null; error?: string }
-  > = null
+  > = null!
   /** LSP workspace/symbol search for editor go-to-symbol (⌘T). */
   EditorLspWorkspaceSymbols: IpcMainEventListener<
     { conversationId: string; query?: string },
@@ -1948,7 +2030,7 @@ export class IpcChannelMainClass {
       symbols?: import('@shared/editor/workspace-symbol-types').SharedWorkspaceSymbol[]
       error?: string
     }
-  > = null
+  > = null!
   /** FIM-based inline AI completion for the workspace editor. */
   EditorAiComplete: IpcMainEventListener<
     {
@@ -1959,13 +2041,13 @@ export class IpcChannelMainClass {
       relativePath: string
     },
     { ok: boolean; completion?: string; error?: string }
-  > = null
+  > = null!
 }
 export class IpcChannelRendererClass {
   // ipcRenderer
-  DownloadProgress: IpcRendererEventListener<number> = null
-  DownloadError: IpcRendererEventListener<Boolean> = null
-  DownloadPaused: IpcRendererEventListener<Boolean> = null
+  DownloadProgress: IpcRendererEventListener<number> = null!
+  DownloadError: IpcRendererEventListener<Boolean> = null!
+  DownloadPaused: IpcRendererEventListener<Boolean> = null!
   DownloadDone: IpcRendererEventListener<{
     /**
      * Downloaded file path
@@ -1973,10 +2055,10 @@ export class IpcChannelRendererClass {
      * @type {string}
      */
     filePath: string
-  }> = null
+  }> = null!
   updateMsg: IpcRendererEventListener<
     import('@shared/app-update').AppUpdateMessage
-  > = null
+  > = null!
   UpdateProcessStatus: IpcRendererEventListener<{
     status:
       | 'init'
@@ -1986,44 +2068,50 @@ export class IpcChannelRendererClass {
       | 'failed'
       | 'download'
     message: string
-  }> = null
+  }> = null!
 
-  SendDataTest: IpcRendererEventListener<unknown> = null
+  SendDataTest: IpcRendererEventListener<unknown> = null!
   BrowserViewTabDataUpdate: IpcRendererEventListener<{
     bvWebContentsId: number
     title: string
     url: string
     status: 1 | -1 // 1 add/update -1 delete
-  }> = null
+  }> = null!
   BrowserViewTabPositionXUpdate: IpcRendererEventListener<{
     dragTabOffsetX: number
     positionX: number
     bvWebContentsId: number
-  }> = null
-  BrowserTabMouseup: IpcRendererEventListener = null
+  }> = null!
+  BrowserTabMouseup: IpcRendererEventListener = null!
   HotUpdateStatus: IpcRendererEventListener<{
     status: string
     message: string
-  }> = null
+  }> = null!
   ConversationStoreChanged: IpcRendererEventListener<{
     agentId: string
     conversationId: string
-  }> = null
+  }> = null!
   PlanModeStateChanged: IpcRendererEventListener<{
     conversationId: string
     view: import('@shared/agent/plan-mode-phase').PlanModeView
-  }> = null
+  }> = null!
+  /** Fired when followup/meta.json is written or cleared for a conversation. */
+  ConversationFollowUpsChanged: IpcRendererEventListener<{
+    conversationId: string
+    followUps: import('@shared/agent/follow-up').FollowUpItem[]
+    revision: number
+  }> = null!
   ChannelIncomingToAgent: IpcRendererEventListener<{
     channelId: string
     senderTarget: string
     conversationId: string
     agentId: string
-  }> = null
+  }> = null!
   WhatsAppIncomingToAgent: IpcRendererEventListener<{
     agentId: string
     conversationId: string
     senderJid: string
-  }> = null
+  }> = null!
   /**
    * Streaming chunk from the main-process agent engine
    */
@@ -2031,17 +2119,17 @@ export class IpcChannelRendererClass {
     conversationId: string
     assistantId: string
     chunk: string
-  }> = null
+  }> = null!
   /** AI SDK UIMessageChunks from tool-loop streams (text-delta, tool-approval-request, …) */
   AgentUIMessageChunk: IpcRendererEventListener<{
     conversationId: string
     assistantId: string
     chunk: Record<string, unknown>
-  }> = null
+  }> = null!
   AgentStreamFinished: IpcRendererEventListener<{
     conversationId: string
     assistantId: string
-  }> = null
+  }> = null!
   /**
    * Sandbox run ready — Results panel can load `resultsFileUrl` (directory listing).
    */
@@ -2050,37 +2138,43 @@ export class IpcChannelRendererClass {
     sandboxRoot: string
     outputResultsDir: string
     resultsFileUrl: string
-  }> = null
+  }> = null!
   /** Main window blocked a file:// navigation — open sandbox preview in Report panel. */
-  OpenSandboxPreview: IpcRendererEventListener<{ fileUrl: string }> = null
+  OpenSandboxPreview: IpcRendererEventListener<{ fileUrl: string }> = null!
+  /** Sandbox preview WebContentsView navigated (in-page or history). */
+  SandboxOutputViewNavigationChanged: IpcRendererEventListener<{
+    canGoBack: boolean
+    canGoForward: boolean
+    url: string
+  }> = null!
   /** Streaming PTY output chunk for workspace terminal xterm view. */
   WorkspaceTerminalData: IpcRendererEventListener<{
     conversationId: string
     data: string
-  }> = null
+  }> = null!
   /** Session metadata after PTY spawn (cwd/shell). */
   WorkspaceTerminalStarted: IpcRendererEventListener<{
     conversationId: string
     cwd: string
     shell: string
-  }> = null
+  }> = null!
   /** PTY process exit notification. */
   WorkspaceTerminalExit: IpcRendererEventListener<{
     conversationId: string
     exitCode: number
     signal?: number
-  }> = null
+  }> = null!
   /** Workspace or sandbox files changed on disk — refresh file browser / git. */
   WorkspaceFilesChanged: IpcRendererEventListener<{
     conversationId: string
-  }> = null
+  }> = null!
   /** LSP notification pushed from main (diagnostics, etc.). */
   EditorLspNotification: IpcRendererEventListener<{
     conversationId: string
     relativePath: string
     method: string
     params: unknown
-  }> = null
+  }> = null!
   /** Teralexi Google account linked or cleared (browser OAuth callback). */
   GoogleAccountChanged: IpcRendererEventListener<{
     account: {
@@ -2088,11 +2182,11 @@ export class IpcChannelRendererClass {
       name: string
       picture: string
     } | null
-  }> = null
+  }> = null!
   /** Subscription entitlement verified or cleared. */
   EntitlementChanged: IpcRendererEventListener<{
     entitlement: import('@shared/subscription/entitlement-types').EntitlementUiSnapshot | null
-  }> = null
+  }> = null!
   /** Google Workspace account linked or cleared. */
   GoogleWorkspaceAccountChanged: IpcRendererEventListener<{
     account: {
@@ -2101,5 +2195,5 @@ export class IpcChannelRendererClass {
       picture: string
       workspaceAccess: boolean
     } | null
-  }> = null
+  }> = null!
 }

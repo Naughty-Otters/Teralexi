@@ -1,6 +1,14 @@
 import type { SkillCompiledArtifact } from './skill-compiled-schema'
 import type { SkillCompilationStatus } from './skill-compiled-schema'
 import type { SkillSystemPropertySpec } from '@shared/skills/skill-system-properties'
+import type {
+  ExecutionSteps,
+  SkillColor,
+  SkillProperties,
+  SkillProvider,
+  SkillSections,
+  SkillTool,
+} from './types'
 
 export interface SkillDefinition {
   /** Folder name – used as stable id */

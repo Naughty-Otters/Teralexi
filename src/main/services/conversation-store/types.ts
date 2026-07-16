@@ -1,4 +1,6 @@
 import type { CodingMode } from '@shared/agent/coding-mode'
+import type { ConversationHooksConfig } from '@shared/agent/conversation-hooks'
+import type { ConversationLlmOverride } from '@shared/agent/conversation-llm-override'
 import type { AgentPlanModeState } from '@shared/agent/plan-mode'
 import type { ProviderType } from '@shared/agent/llm-provider-registry'
 import type {
@@ -13,6 +15,8 @@ export interface StoredConversation {
   title: string
   createdAt: string
   updatedAt: string
+  /** Joined from conversation_settings when listing; absent on create/get. */
+  workspacePath?: string | null
 }
 
 export interface StoredConversationSettings {
@@ -24,6 +28,10 @@ export interface StoredConversationSettings {
   codingMode: CodingMode
   /** Kimi-style agent-driven explore mode state. */
   planModeState: AgentPlanModeState
+  /** Per-conversation pre/post turn shell hooks. */
+  hooks: ConversationHooksConfig
+  /** Composer LLM override; null = use agent default. */
+  llmOverride: ConversationLlmOverride | null
   updatedAt: string
 }
 
@@ -126,6 +134,8 @@ export interface StoredAgentConfiguration {
   subAgentIds: string[] | null
   llmRoutingMode: AgentLlmRoutingMode
   stageLlm: Partial<Record<AgentLlmStage, AgentLlmChoice>>
+  /** AI SDK `providerOptions` for the default / unified LLM choice. */
+  defaultProviderOptions?: AgentLlmChoice['providerOptions']
   createdAt: string
   updatedAt: string
 }

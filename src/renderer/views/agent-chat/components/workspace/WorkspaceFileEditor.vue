@@ -99,6 +99,7 @@
             type="button"
             class="file-editor-btn"
             title="Format document"
+            aria-label="Format document"
             :disabled="editorLoading || editorSaving || isMutationsDisabled"
             @click="formatDocument"
           >
@@ -108,6 +109,7 @@
             type="button"
             class="file-editor-btn"
             title="Reload from disk"
+            aria-label="Reload from disk"
             :disabled="editorLoading || editorSaving"
             @click="reloadEditorFile"
           >
@@ -135,6 +137,7 @@
             type="button"
             class="file-editor-btn"
             title="Open in default app"
+            aria-label="Open in default app"
             :disabled="editorLoading"
             @click="openFileExternally"
           >
@@ -147,6 +150,7 @@
             type="button"
             class="file-editor-btn"
             title="Close tab"
+            aria-label="Close tab"
             @click="closeEditorFile"
           >
             <UIcon name="i-lucide-x" style="width: 12px; height: 12px" />
@@ -194,8 +198,6 @@
         :editor="monacoEditor"
         :read-only="isMutationsDisabled"
       />
-
-      <WorkspaceXtermConsole v-if="consoleOpen" class="file-editor-terminal" />
     </template>
 
     <WorkspaceQuickOpen
@@ -233,7 +235,6 @@ import { monacoLanguageFromPath } from '@shared/file-type/monaco-language'
 import MonacoEditor from '@renderer/components/code/MonacoEditor.vue'
 import WorkspaceQuickOpen from './WorkspaceQuickOpen.vue'
 import WorkspaceSymbolQuickOpen from './WorkspaceSymbolQuickOpen.vue'
-import WorkspaceXtermConsole from './WorkspaceXtermConsole.vue'
 import type { SharedWorkspaceSymbol } from '@shared/editor/workspace-symbol-types'
 import type { EditorLspStatus } from '@renderer/components/code/monaco-lsp/editor-lsp-controller'
 import { useSandboxOutputView } from '@renderer/composables/useSandboxOutputView'
@@ -261,7 +262,6 @@ const {
   editorBinary,
   editorFileUrl,
   isMutationsDisabled,
-  consoleOpen,
   conversationId,
 } = storeToRefs(gitStore)
 

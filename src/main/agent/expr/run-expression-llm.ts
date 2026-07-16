@@ -1,4 +1,5 @@
 import type { AgentLlmStage } from '@shared/agent/stage-llm-settings'
+import { resolveAiSdkProviderOptions } from '@shared/agent/llm-provider-options'
 import type { AgentMessage } from '../types'
 import type { AgentStepContext } from '../context'
 import type { StepExpressionPlan } from './expression-plan'
@@ -29,6 +30,23 @@ export type RunExpressionLlmObjectOptions = {
   stage?: AgentLlmStage
 }
 
+function expressionLlmCallExtras(
+  ctx: AgentStepContext,
+  stage: AgentLlmStage | undefined,
+): {
+  model: unknown
+  providerOptions?: ReturnType<typeof resolveAiSdkProviderOptions>
+} {
+  const choice = stage
+    ? ctx.resolveStageChoice(stage)
+    : ctx.resolveDefaultLlmChoice()
+  const providerOptions = resolveAiSdkProviderOptions(choice.providerOptions)
+  return {
+    model: stage ? ctx.resolveStageModel(stage) : ctx.model,
+    ...(providerOptions ? { providerOptions } : {}),
+  }
+}
+
 export async function runExpressionLlmText(
   ctx: AgentStepContext,
   plan: Pick<StepExpressionPlan, 'instructions' | 'userPrompt'>,
@@ -48,7 +66,7 @@ export async function runExpressionLlmText(
   }
 
   const streamParams = {
-    model: options?.stage ? ctx.resolveStageModel(options.stage) : ctx.model,
+    ...expressionLlmCallExtras(ctx, options?.stage),
     ...(instructions ? { instructions, system: instructions } : {}),
     messages: llmParams.messages,
     abortSignal: ctx.opts.abortSignal,
@@ -92,7 +110,7 @@ export async function runExpressionLlmObject<T>(
   }
 
   const streamParams = {
-    model: options.stage ? ctx.resolveStageModel(options.stage) : ctx.model,
+    ...expressionLlmCallExtras(ctx, options.stage),
     ...(instructions ? { instructions, system: instructions } : {}),
     messages: llmParams.messages,
     output: options.output,

@@ -271,6 +271,22 @@ export type SettingsPanelLabels = {
     perStage: string
     stageLlms: string
     stageLlmsHint: string
+    reasoningSettings: string
+    reasoningSettingsHint: string
+    reasoningStrength: string
+    reasoningDefault: string
+    reasoningStrengthLevels: {
+      none: string
+      minimal: string
+      low: string
+      medium: string
+      high: string
+      xhigh: string
+      max: string
+    }
+    thinkingBudget: string
+    thinkingBudgetPlaceholder: string
+    showThinking: string
     toolLoopMax: string
     toolLoopMaxHint: string
     todoRetries: string

@@ -15,6 +15,11 @@ export interface SkillTool {
 
 export interface SkillToolModule {
   tools: SkillTool[]
+  /**
+   * Optional composer toolbar buttons for this skill (main-process handlers).
+   * See `SkillComposerToolbarPlugin` in OpenFDE `src/main/skills/composer-toolbar-plugin.ts`.
+   */
+  composerToolbarPlugins?: unknown[]
 }
 
 export type SkillAttachmentContent = {

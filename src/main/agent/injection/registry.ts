@@ -25,6 +25,7 @@ import { sessionToolLedgerInjector } from './injectors/session-tool-ledger'
 import { deepThinkingBeforeAnswerInjector } from './injectors/deep-thinking-before-answer'
 import { multipleBranchThinkingInjector } from './injectors/multiple-branch-thinking'
 import { deepThinkingAfterAnswerInjector } from './injectors/deep-thinking-after-answer'
+import { followUpSuggestionsInjector } from './injectors/follow-up-suggestions'
 import { diagramOutputInjector } from './injectors/diagram-output'
 import { userUploadsInjector } from './injectors/user-uploads'
 
@@ -34,6 +35,7 @@ const ALL_INJECTORS: AgentInjector[] = [
   currentDatetimeInjector,
   userUploadsInjector,
   deepThinkingAfterAnswerInjector,
+  followUpSuggestionsInjector,
   baseToolLoopInjector,
   skillsInjector,
   skillSystemPropertiesInjector,

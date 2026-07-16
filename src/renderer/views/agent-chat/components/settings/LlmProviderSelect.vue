@@ -70,7 +70,11 @@ const props = withDefaults(
     disabled?: boolean
     /** When true, changing provider fetches models for the new provider. */
     prefetchModels?: boolean
-    /** When set, only these providers appear in the menu. */
+    /**
+     * When set, only these providers appear in the menu.
+     * When omitted, only credentials-configured providers are listed
+     * (current selection is always kept visible).
+     */
     providerIds?: readonly ProviderType[]
   }>(),
   {
@@ -87,8 +91,16 @@ const emit = defineEmits<{
 const agentStore = useAgentStore()
 const options = computed(() => {
   const all = LLM_PROVIDER_SETTINGS_OPTIONS
-  if (!props.providerIds?.length) return all
-  const allowed = new Set(props.providerIds)
+  const configured = agentStore.configuredLlmProviderIds
+  const baseIds =
+    props.providerIds !== undefined
+      ? props.providerIds
+      : configured.length > 0
+        ? configured
+        : (LLM_PROVIDER_SETTINGS_OPTIONS.map((o) => o.id) as ProviderType[])
+  const allowed = new Set<string>(baseIds)
+  // Keep an already-selected provider visible even if credentials were removed.
+  if (isProviderType(props.modelValue)) allowed.add(props.modelValue)
   return all.filter((option) => allowed.has(option.id))
 })
 

@@ -1,18 +1,20 @@
 <template>
   <div ref="rootEl" class="agent-picker">
-    <button
-      ref="triggerRef"
-      type="button"
-      class="agent-picker-trigger"
-      :class="{ 'agent-picker-trigger--active': menuOpen }"
-      :title="triggerTitle"
-      :aria-expanded="menuOpen"
-      aria-haspopup="listbox"
-      @mousedown.prevent
-      @click="toggleMenu"
-    >
-      <UIcon class="agent-picker-trigger-icon" name="i-lucide-bot" />
-    </button>
+    <AppIconTooltip :text="triggerTitle">
+      <button
+        ref="triggerRef"
+        type="button"
+        class="agent-picker-trigger"
+        :class="{ 'agent-picker-trigger--active': menuOpen }"
+        :aria-label="triggerTitle"
+        :aria-expanded="menuOpen"
+        aria-haspopup="listbox"
+        @mousedown.prevent
+        @click="toggleMenu"
+      >
+        <UIcon class="agent-picker-trigger-icon" name="i-lucide-bot" />
+      </button>
+    </AppIconTooltip>
     <Teleport to="body">
       <div
         v-if="menuOpen"
@@ -91,6 +93,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
 import {
   agentPickerRowLabel,
   buildAgentPickerEntries,

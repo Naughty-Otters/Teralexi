@@ -54,9 +54,13 @@ describe('resolvePathInContext', () => {
     writeFileSync(join(sandboxRoot, 'plans', 'feature.md'), '# plan')
 
     expect(isSandboxArtifactRelativePath('plans/feature.md')).toBe(true)
+    expect(isSandboxArtifactRelativePath('followup/meta.json')).toBe(true)
     expect(
       resolvePathInContext(sandboxRoot, workspaceRoot, 'plans/feature.md'),
     ).toBe(join(sandboxRoot, 'plans', 'feature.md'))
+    expect(
+      resolvePathInContext(sandboxRoot, workspaceRoot, 'followup/meta.json'),
+    ).toBe(join(sandboxRoot, 'followup', 'meta.json'))
   })
 
   it('rejects host absolute paths when workspace is not set', () => {

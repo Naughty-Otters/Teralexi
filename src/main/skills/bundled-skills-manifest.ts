@@ -121,7 +121,7 @@ export function materializeBundledSkillToDirectory(
 }
 
 export function verifyBundledSkillsManifest(): void {
-  if (BUNDLED_SKILL_IDS.length === 0) {
+  if ((BUNDLED_SKILL_IDS as readonly string[]).length === 0) {
     throw new Error('bundled skills catalog is empty after generation')
   }
   for (const skillId of BUNDLED_SKILL_IDS) {

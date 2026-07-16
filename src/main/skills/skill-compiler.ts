@@ -7,6 +7,7 @@ import { getConversationStore } from '@main/services/conversation-store'
 import { loadAgentRunCredentials } from '@main/agent/utils'
 import { createModelForProvider } from '@main/agent/providers/adapters'
 import { runLlmTextWithRetry } from '@main/agent/providers/stream'
+import type { StreamTextParams } from '@main/agent/llm/runtime'
 import { SKILL_FILES } from './constants'
 import {
   parseSkillCompiledArtifact,
@@ -160,7 +161,7 @@ export function gatherSkillCompileInput(
 ): SkillCompileGatheredInput | null {
   const source = resolveSkillCompilationSource(skillId)
   if (!source) {
-    log.warn({ skillId }, 'skill compile gather: skill not found')
+    log.warn('skill compile gather: skill not found', { skillId })
     return null
   }
 
@@ -174,7 +175,7 @@ export function gatherSkillCompileInput(
   } else if (isEffectiveBundledSkill(skillId)) {
     const bundled = getBundledSkillSource(skillId)
     if (!bundled) {
-      log.warn({ skillId }, 'skill compile gather: bundled source missing')
+      log.warn('skill compile gather: bundled source missing', { skillId })
       return null
     }
     folder = bundledSkillFolder(skillId)
@@ -185,7 +186,7 @@ export function gatherSkillCompileInput(
       bundled.propertiesMd,
     )
   } else {
-    log.warn({ skillId }, 'skill compile gather: skill folder not found')
+    log.warn('skill compile gather: skill folder not found', { skillId })
     return null
   }
 
@@ -201,7 +202,7 @@ export function gatherSkillCompileInput(
     undefined,
   )
   if (!preliminary) {
-    log.warn({ skillId, folder, source }, 'skill compile gather: invalid skill markdown')
+    log.warn('skill compile gather: invalid skill markdown', { skillId, folder, source })
     return null
   }
 
@@ -233,20 +234,16 @@ export function gatherSkillCompileInput(
       attachmentSections.push(section)
       totalChars += section.length
     } catch (err) {
-      log.warn(
-        {
+      log.warn('skill compile gather: skipped attachment', {
           skillId,
           path: att.relativePath,
           ...formatCompileError(err),
-        },
-        'skill compile gather: skipped attachment',
-      )
+        })
     }
   }
 
   const fingerprint = computeSkillSourceFingerprint(skillId)
-  log.info(
-    {
+  log.info('skill compile gather: inputs ready', {
       skillId,
       source,
       folder,
@@ -257,9 +254,7 @@ export function gatherSkillCompileInput(
       textAttachments: attachmentCount,
       binaryAttachments: binaryAttachmentCount,
       compileInputChars: totalChars,
-    },
-    'skill compile gather: inputs ready',
-  )
+    })
 
   return {
     skillId,
@@ -335,7 +330,7 @@ async function runCompileLlm(
     compileLlm.provider,
     compileLlm.model,
     creds,
-  )
+  ) as StreamTextParams['model']
 
   const userMessage = buildCompileUserMessage(input)
   const messages: Array<{ role: 'user'; content: string }> = [
@@ -346,8 +341,7 @@ async function runCompileLlm(
   }
 
   const started = Date.now()
-  log.info(
-    {
+  log.info('skill compile LLM: request start', {
       skillId: input.skillId,
       source: input.source,
       skillProvider: input.provider,
@@ -357,9 +351,7 @@ async function runCompileLlm(
       compileLlmSource: compileLlm.source,
       isRetry: Boolean(retryUser),
       userMessageChars: userMessage.length,
-    },
-    'skill compile LLM: request start',
-  )
+    })
 
   const trimmed = await runLlmTextWithRetry({
     label: 'skillCompile',
@@ -378,15 +370,12 @@ async function runCompileLlm(
     },
   })
 
-  log.info(
-    {
+  log.info('skill compile LLM: request complete', {
       skillId: input.skillId,
       durationMs: Date.now() - started,
       responseChars: trimmed.length,
       isRetry: Boolean(retryUser),
-    },
-    'skill compile LLM: request complete',
-  )
+    })
 
   return trimmed
 }
@@ -408,15 +397,14 @@ async function compileSkillInternal(
   const force = !!options?.force
   const gathered = gather(skillId)
   if (!gathered) {
-    log.warn({ skillId, force }, 'skill compile: aborted (could not gather inputs)')
+    log.warn('skill compile: aborted (could not gather inputs)', { skillId, force })
     return null
   }
 
   const store = getConversationStore()
   const existing = store.getSkillCompilation(skillId, gathered.source)
 
-  log.info(
-    {
+  log.info('skill compile: start', {
       skillId,
       force,
       source: gathered.source,
@@ -425,9 +413,7 @@ async function compileSkillInternal(
       existingStatus: existing?.status ?? 'none',
       existingFingerprint: shortFingerprint(existing?.sourceFingerprint ?? ''),
       fingerprintMatch: existing?.sourceFingerprint === gathered.fingerprint,
-    },
-    'skill compile: start',
-  )
+    })
 
   if (
     !force &&
@@ -435,15 +421,12 @@ async function compileSkillInternal(
     existing.sourceFingerprint === gathered.fingerprint &&
     existing.compiled
   ) {
-    log.info(
-      {
+    log.info('skill compile: using cached artifact (fingerprint unchanged)', {
         skillId,
         source: gathered.source,
         fingerprint: shortFingerprint(gathered.fingerprint),
         compiledAt: existing.compiledAt,
-      },
-      'skill compile: using cached artifact (fingerprint unchanged)',
-    )
+      })
     return existing.compiled
   }
 
@@ -457,10 +440,7 @@ async function compileSkillInternal(
     compiledAt: null,
   })
 
-  log.debug(
-    { skillId, compileSlotsInUse: compileSlots + 1 },
-    'skill compile: acquired compile slot',
-  )
+  log.debug('skill compile: acquired compile slot', { skillId, compileSlotsInUse: compileSlots + 1 })
   await acquireCompileSlot()
   try {
     let raw: string
@@ -489,14 +469,11 @@ async function compileSkillInternal(
     try {
       parsed = parseSkillCompiledArtifact(parseCompileJson(raw))
     } catch (firstErr) {
-      log.warn(
-        {
+      log.warn('skill compile: JSON parse/validate failed, retrying LLM', {
           skillId,
           ...formatCompileError(firstErr),
           responseSnippet: logTextSnippet(raw),
-        },
-        'skill compile: JSON parse/validate failed, retrying LLM',
-      )
+        })
       try {
         raw = await runLlm(gathered, COMPILE_INVALID_JSON_RETRY)
       } catch (retryLlmErr) {
@@ -537,7 +514,7 @@ async function compileSkillInternal(
         })
         return null
       }
-      log.info({ skillId }, 'skill compile: JSON retry succeeded')
+      log.info('skill compile: JSON retry succeeded', { skillId })
     }
 
     if (parsed.skillId !== skillId) {
@@ -556,21 +533,18 @@ async function compileSkillInternal(
       errorMessage: null,
       compiledAt: new Date().toISOString(),
     })
-    log.info(
-      {
+    log.info('skill compile: success', {
         skillId,
         source: gathered.source,
         fingerprint: shortFingerprint(gathered.fingerprint),
         instructionChars: parsed.instructions.instructions.length,
         validationRuleCount: parsed.validation.rules.length,
         thinkingChars: parsed.thinking.instructions.length,
-      },
-      'skill compile: success',
-    )
+      })
     return parsed
   } finally {
     releaseCompileSlot()
-    log.debug({ skillId, compileSlotsInUse: compileSlots }, 'skill compile: released compile slot')
+    log.debug('skill compile: released compile slot', { skillId, compileSlotsInUse: compileSlots })
   }
 }
 
@@ -580,11 +554,11 @@ export async function ensureSkillCompiled(
 ): Promise<SkillCompiledArtifact | null> {
   const existing = inFlightBySkill.get(skillId)
   if (existing) {
-    log.debug({ skillId }, 'skill compile: joining in-flight compile')
+    log.debug('skill compile: joining in-flight compile', { skillId })
     return existing
   }
 
-  log.debug({ skillId }, 'skill compile: scheduling compile')
+  log.debug('skill compile: scheduling compile', { skillId })
   const promise = compileSkillInternal(skillId).finally(() => {
     inFlightBySkill.delete(skillId)
   })
@@ -596,10 +570,7 @@ export async function compileSkill(
   skillId: string,
   options?: CompileSkillOptions,
 ): Promise<SkillCompiledArtifact | null> {
-  log.info(
-    { skillId, force: !!options?.force },
-    'skill compile: compileSkill invoked',
-  )
+  log.info('skill compile: compileSkill invoked', { skillId, force: !!options?.force })
   if (options?.force) {
     return compileSkillInternal(skillId, options)
   }

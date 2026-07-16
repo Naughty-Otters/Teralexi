@@ -10,7 +10,7 @@ import {
 } from './tool-selection'
 
 describe('mandatory tools', () => {
-  it('includes planning, todos, invoke, and promote tools', () => {
+  it('includes planning, todos, invoke, promote, and follow-up tools', () => {
     expect(MANDATORY_TOOL_NAMES.has('read_todos')).toBe(true)
     expect(MANDATORY_TOOL_NAMES.has('update_todos')).toBe(true)
     expect(MANDATORY_TOOL_NAMES.has('enter_plan_mode')).toBe(true)
@@ -19,6 +19,7 @@ describe('mandatory tools', () => {
     expect(MANDATORY_TOOL_NAMES.has('invoke_agents')).toBe(true)
     expect(MANDATORY_TOOL_NAMES.has('wait_for_sub_agent_runs')).toBe(true)
     expect(MANDATORY_TOOL_NAMES.has('promote_artifact')).toBe(true)
+    expect(MANDATORY_TOOL_NAMES.has('generate_follow_up')).toBe(true)
   })
 
   it('sub-agent delegation tools are always enabled when customized off-list', () => {

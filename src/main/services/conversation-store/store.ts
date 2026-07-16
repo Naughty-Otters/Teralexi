@@ -43,6 +43,7 @@ import type {
 } from './types'
 import type { SkillCompilationSource } from '@main/skills/skill-compiled-schema'
 import type { SkillCompiledArtifact } from '@main/skills/skill-compiled-schema'
+import { randomShortUuid } from '@shared/utils/short-uuid'
 
 /**
  * Facade over the SQLite-backed app store. Delegates each domain to a focused repository;
@@ -150,6 +151,28 @@ export class ConversationStore {
       conversationId,
       planModeState,
     )
+  }
+
+  getConversationHooks(conversationId: string) {
+    return this.conversationSettings.getHooks(conversationId)
+  }
+
+  setConversationHooks(
+    conversationId: string,
+    hooks: StoredConversationSettings['hooks'],
+  ): StoredConversationSettings {
+    return this.conversationSettings.setHooks(conversationId, hooks)
+  }
+
+  getConversationLlmOverride(conversationId: string) {
+    return this.conversationSettings.getLlmOverride(conversationId)
+  }
+
+  setConversationLlmOverride(
+    conversationId: string,
+    llmOverride: StoredConversationSettings['llmOverride'],
+  ): StoredConversationSettings {
+    return this.conversationSettings.setLlmOverride(conversationId, llmOverride)
   }
 
   applyCompactionToConversation(args: {

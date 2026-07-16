@@ -27,6 +27,7 @@ export type {
 export {
   getOrCreateSandboxForConversation,
   peekSandboxRootForConversation,
+  resolveSandboxRootForConversation,
   releaseConversationSandbox,
 } from './registry'
 
@@ -50,6 +51,8 @@ export {
   WORKSPACE_PATH_GLOBAL_KEY,
   TERALEXI_AGENT_CONVERSATION_ID_ENV,
   CONVERSATION_ID_GLOBAL_KEY,
+  TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV,
+  ASSISTANT_MESSAGE_ID_GLOBAL_KEY,
   setAgentRunSandboxRoot,
   getAgentRunSandboxRoot,
   setAgentRunSandboxOutputScope,
@@ -69,6 +72,7 @@ export {
   sandboxPathError,
   getWorkspacePathFromEnv,
   getConversationIdFromEnv,
+  getAssistantMessageIdFromEnv,
   resolvePathInContext,
   resolveScopedPathInContext,
   isPathInsideWorkspace,
@@ -99,6 +103,7 @@ export {
 } from './final-result'
 
 export { syncSandboxOutputView } from './output-view'
+export { navigateSandboxOutputView } from './output-view'
 export { removeSandboxDirectories } from './cleanup'
 
 export { buildSandboxInstructionBlock, SANDBOX_LLM } from './instructions'

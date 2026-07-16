@@ -17,9 +17,10 @@ export function normalizePreviewTabUrl(url: string): string {
   const trimmed = url.trim()
   if (!trimmed) return ''
 
-  const lower = trimmed.toLowerCase()
+  const withScheme = ensurePreviewUrlScheme(trimmed)
+  const lower = withScheme.toLowerCase()
   if (lower.startsWith('file://')) {
-    let path = trimmed.slice('file://'.length)
+    let path = withScheme.slice('file://'.length)
     try {
       path = decodeURIComponent(path)
     } catch {
@@ -35,11 +36,36 @@ export function normalizePreviewTabUrl(url: string): string {
   }
 
   try {
-    const parsed = new URL(trimmed)
+    const parsed = new URL(withScheme)
     return parsed.href
   } catch {
+    return withScheme
+  }
+}
+
+/**
+ * Address-bar input without a scheme defaults to https://
+ * (e.g. www.google.com → https://www.google.com/).
+ * Local file paths and URLs that already have a scheme are left alone.
+ */
+export function ensurePreviewUrlScheme(url: string): string {
+  const trimmed = url.trim()
+  if (!trimmed) return ''
+  if (hasExplicitUrlScheme(trimmed) || looksLikeLocalFilePath(trimmed)) {
     return trimmed
   }
+  return `https://${trimmed}`
+}
+
+function hasExplicitUrlScheme(value: string): boolean {
+  return /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)
+}
+
+function looksLikeLocalFilePath(value: string): boolean {
+  if (value.startsWith('/') || value.startsWith('~/') || value.startsWith('~\\')) {
+    return true
+  }
+  return /^[a-zA-Z]:[\\/]/.test(value)
 }
 
 function hashPreviewTabKey(value: string): string {
@@ -102,6 +128,31 @@ export function openPreviewLinkTab(
     label: labelForPreviewUrl(normalized),
   }
   return { tabs: [...tabs, tab], activeTabId: tab.id }
+}
+
+/** Always appends a new blank tab (does not dedupe empty URLs). */
+export function createEmptyPreviewLinkTab(
+  tabs: readonly PreviewLinkTab[],
+): { tabs: PreviewLinkTab[]; activeTabId: string } {
+  const id = `link:empty:${crypto.randomUUID()}`
+  const tab: PreviewLinkTab = {
+    id,
+    url: '',
+    label: 'New tab',
+  }
+  return { tabs: [...tabs, tab], activeTabId: tab.id }
+}
+
+export function updatePreviewLinkTabUrl(
+  tabs: readonly PreviewLinkTab[],
+  tabId: string,
+  url: string,
+): PreviewLinkTab[] {
+  const normalized = normalizePreviewTabUrl(url)
+  const label = normalized ? labelForPreviewUrl(normalized) : 'New tab'
+  return tabs.map((tab) =>
+    tab.id === tabId ? { ...tab, url: normalized, label } : tab,
+  )
 }
 
 export function closePreviewLinkTab(

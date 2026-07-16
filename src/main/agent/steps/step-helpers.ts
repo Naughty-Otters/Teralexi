@@ -248,12 +248,13 @@ function resolveSandboxGlobalsBindings(
     ? toolLoopFilesystemScopeFromStepKey(rawScope)
     : undefined
   const conversationId = runCtx?.sandbox.getConversationId()?.trim()
+  const assistantMessageId = runCtx?.opts.assistantMessageId?.trim()
   const workspacePath =
     runScope?.workspacePath?.trim() ||
     (conversationId
       ? (getWorkspacePath(conversationId) ?? undefined)
       : undefined)
-  return { root, outputScope, workspacePath, conversationId }
+  return { root, outputScope, workspacePath, conversationId, assistantMessageId }
 }
 
 function buildSubAgentDelegationFromRunCtx(
@@ -507,6 +508,8 @@ export type CreateAgentParams = {
   toolChoice?: 'required' | 'auto' | 'none'
   provider?: ProviderType
   modelId?: string
+  /** AI SDK namespaced provider options (e.g. google thinkingConfig). */
+  providerOptions?: Record<string, Record<string, unknown>>
   /** Per-step plan mode refresh (activeTools + injections after enter/exit). */
   prepareStep?: import('ai').PrepareStepFunction
 }
@@ -523,6 +526,7 @@ export function createAgent(params: CreateAgentParams): Agent {
     toolChoice = 'auto',
     provider,
     modelId,
+    providerOptions,
     prepareStep,
   } = params
   const effectiveToolChoice = resolveAgentToolChoice(toolChoice, provider, modelId)
@@ -535,6 +539,7 @@ export function createAgent(params: CreateAgentParams): Agent {
     modelSettings: {
       toolChoice: effectiveToolChoice,
       stopWhen,
+      ...(providerOptions ? { providerOptions } : {}),
       ...(prepareStep ? { prepareStep } : {}),
       ...(abortSignal != null ? { abortSignal } : {}),
     },

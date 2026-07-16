@@ -6,6 +6,7 @@ import type {
   AgentLlmRoutingMode,
   AgentLlmStage,
 } from '@shared/agent/stage-llm-settings'
+import type { ExecutionSteps, SkillTool } from '@main/skills/types'
 
 export type { ProviderType }
 
@@ -86,6 +87,8 @@ export interface Agent {
   compilationStatus?: 'pending' | 'ready' | 'failed' | 'missing'
   llmRoutingMode?: AgentLlmRoutingMode
   stageLlm?: Partial<Record<AgentLlmStage, AgentLlmChoice>>
+  /** AI SDK `providerOptions` for the unified / default LLM. */
+  defaultProviderOptions?: AgentLlmChoice['providerOptions']
 }
 
 export type McpTransportType = 'http' | 'sse' | 'stdio'
@@ -284,6 +287,8 @@ export interface Conversation {
   createdAt: Date
   updatedAt: Date
   type: 'ui' | 'channel' | 'scheduler'
+  /** Absolute workspace folder when set for this conversation. */
+  workspacePath?: string | null
 }
 
 /** One agent run’s sandbox preview metadata (keyed per conversation by `sandboxRoot`). */

@@ -138,10 +138,26 @@ import {
 import {
   releaseConversationSandbox,
   syncSandboxOutputView,
+  navigateSandboxOutputView,
   removeSandboxDirectories,
   releaseSubAgentSandboxesForConversation,
+  resolveSandboxRootForConversation,
 } from '@main/agent/sandbox'
+import {
+  clearFollowUpMeta,
+  readFollowUpMeta,
+} from '@main/agent/follow-up'
 import { serializeNeedsApproval } from '@main/skills/tool-ipc-meta'
+import {
+  invokeComposerToolbarPlugin,
+  listComposerToolbarPluginViews,
+  previewComposerToolbarPlugin,
+} from '@main/skills/composer-toolbar-registry'
+import type {
+  SkillComposerToolbarInvokeResult,
+  SkillComposerToolbarPluginView,
+  SkillComposerToolbarPreviewResult,
+} from '@shared/agent/skill-composer-toolbar'
 import { extractZodParams } from '@main/utils/zod-introspection'
 import { isConversationRunInFlight } from '@main/engine'
 import {
@@ -500,10 +516,11 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       llmRoutingMode: 'unified' | 'per_stage'
       stageLlm: Partial<
         Record<
-          'explore' | 'toolLoop' | 'verifier',
-          { provider: ProviderType; model: string }
+          'explore' | 'toolLoop' | 'toolLoopRecovery' | 'verifier',
+          { provider: ProviderType; model: string; providerOptions?: Record<string, Record<string, unknown>> }
         >
       >
+      defaultProviderOptions?: Record<string, Record<string, unknown>>
     },
   ) => void = (_event, args) => {
     getConversationStore().upsertAgentConfiguration(args)
@@ -2040,9 +2057,24 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       screenBounds: { x: number; y: number; width: number; height: number }
       fileUrl: string | null
       markdownView?: 'html' | 'raw'
+      forceReload?: boolean
     },
   ) => void = async (event, args) => {
     await syncSandboxOutputView(event, args)
+  }
+
+  NavigateSandboxOutputView: (
+    event: Electron.IpcMainInvokeEvent,
+    args: { action: 'back' | 'forward' },
+  ) => Promise<{
+    ok: boolean
+    canGoBack: boolean
+    canGoForward: boolean
+    url: string
+  }> = async (event, args) => {
+    return navigateSandboxOutputView(event, {
+      action: args?.action === 'forward' ? 'forward' : 'back',
+    })
   }
 
   RemoveSandboxDirectories: (
@@ -2500,6 +2532,138 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       mode,
     )
     return { ok: true, mode: saved.codingMode }
+  }
+
+  GetConversationLlmOverride: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string },
+  ) => {
+    ok: boolean
+    override: import('@shared/agent/conversation-llm-override').ConversationLlmOverride | null
+  } = (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) return { ok: false, override: null }
+    const override =
+      getConversationStore().getConversationLlmOverride(conversationId)
+    return { ok: true, override }
+  }
+
+  SetConversationLlmOverride: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: {
+      conversationId: string
+      override: import('@shared/agent/conversation-llm-override').ConversationLlmOverride | null
+    },
+  ) => {
+    ok: boolean
+    override: import('@shared/agent/conversation-llm-override').ConversationLlmOverride | null
+  } = (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) return { ok: false, override: null }
+    const saved = getConversationStore().setConversationLlmOverride(
+      conversationId,
+      args?.override ?? null,
+    )
+    return { ok: true, override: saved.llmOverride }
+  }
+
+  GetConversationHooks: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string },
+  ) => {
+    ok: boolean
+    hooks: import('@shared/agent/conversation-hooks').ConversationHookEntry[]
+  } = (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) return { ok: false, hooks: [] }
+    const hooks =
+      getConversationStore().getConversationHooks(conversationId).hooks
+    return { ok: true, hooks }
+  }
+
+  SetConversationHooks: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: {
+      conversationId: string
+      hooks: import('@shared/agent/conversation-hooks').ConversationHookEntry[]
+    },
+  ) => {
+    ok: boolean
+    hooks: import('@shared/agent/conversation-hooks').ConversationHookEntry[]
+  } = (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) return { ok: false, hooks: [] }
+    const saved = getConversationStore().setConversationHooks(conversationId, {
+      hooks: Array.isArray(args?.hooks) ? args.hooks : [],
+    })
+    return { ok: true, hooks: saved.hooks.hooks }
+  }
+
+  GetConversationFollowUps: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string },
+  ) => {
+    ok: boolean
+    followUps: import('@shared/agent/follow-up').FollowUpItem[]
+    revision: number
+  } = (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) return { ok: false, followUps: [], revision: 0 }
+    const sandboxRoot = resolveSandboxRootForConversation(conversationId)
+    const meta = readFollowUpMeta(sandboxRoot, conversationId)
+    return {
+      ok: true,
+      followUps: meta.followUps,
+      revision: meta.revision ?? 0,
+    }
+  }
+
+  ClearConversationFollowUps: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string },
+  ) => { ok: boolean; revision: number } = (_event, args) => {
+    const conversationId = args?.conversationId?.trim() ?? ''
+    if (!conversationId) return { ok: false, revision: 0 }
+    const sandboxRoot = resolveSandboxRootForConversation(conversationId)
+    const cleared = clearFollowUpMeta(sandboxRoot, conversationId, {
+      enableWrites: false,
+    })
+    return { ok: cleared.ok, revision: cleared.revision }
+  }
+
+  GetSkillComposerToolbarPlugins: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { skillId: string; conversationId: string },
+  ) => Promise<{
+    ok: boolean
+    plugins: SkillComposerToolbarPluginView[]
+  }> = async (_event, args) => {
+    return listComposerToolbarPluginViews({
+      skillId: args?.skillId ?? '',
+      conversationId: args?.conversationId ?? '',
+    })
+  }
+
+  InvokeSkillComposerToolbarPlugin: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { skillId: string; conversationId: string; pluginId: string },
+  ) => Promise<SkillComposerToolbarInvokeResult> = async (_event, args) => {
+    return invokeComposerToolbarPlugin({
+      skillId: args?.skillId ?? '',
+      conversationId: args?.conversationId ?? '',
+      pluginId: args?.pluginId ?? '',
+    })
+  }
+
+  PreviewSkillComposerToolbarPlugin: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { skillId: string; conversationId: string; pluginId: string },
+  ) => Promise<SkillComposerToolbarPreviewResult> = async (_event, args) => {
+    return previewComposerToolbarPlugin({
+      skillId: args?.skillId ?? '',
+      conversationId: args?.conversationId ?? '',
+      pluginId: args?.pluginId ?? '',
+    })
   }
 
   GetPlanModeState: (

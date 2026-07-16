@@ -333,6 +333,23 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     perStage: 'Per-stage configuration',
     stageLlms: 'Stage LLMs',
     stageLlmsHint: 'Configure provider and model for each pipeline stage.',
+    reasoningSettings: 'Reasoning',
+    reasoningSettingsHint:
+      'Optional controls for how hard the model thinks and whether thinking is shown.',
+    reasoningStrength: 'Reasoning strength',
+    reasoningDefault: 'Default',
+    reasoningStrengthLevels: {
+      none: 'None',
+      minimal: 'Minimal',
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High',
+      xhigh: 'Extra high',
+      max: 'Max',
+    },
+    thinkingBudget: 'Thinking token budget',
+    thinkingBudgetPlaceholder: 'e.g. 8192',
+    showThinking: 'Show thinking in the response',
     toolLoopMax: 'Agentic run max steps',
     toolLoopMaxHint:
       'Maximum tool-call iterations per execution step. Range {min}–{max}.',

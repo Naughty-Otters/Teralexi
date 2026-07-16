@@ -1,7 +1,6 @@
 <template>
   <aside class="report-panel">
     <div
-      v-if="hasTabs"
       class="report-panel-tabs"
       role="tablist"
       aria-label="Preview tabs"
@@ -31,7 +30,7 @@
           class="cp-tab cp-tab--link"
           :aria-selected="isLinkTabActive(tab.id)"
           :class="{ 'cp-tab--active': isLinkTabActive(tab.id) }"
-          :title="tab.url"
+          :title="tab.url || tab.label"
           @click="selectLinkTab(tab.id)"
         >
           <span class="cp-tab__label">{{ tab.label }}</span>
@@ -46,6 +45,15 @@
           <UIcon name="i-lucide-x" class="cp-tab__close-icon" />
         </button>
       </div>
+      <button
+        type="button"
+        class="cp-tab cp-tab--add"
+        title="New tab"
+        aria-label="Add new preview tab"
+        @click="addEmptyLinkTab"
+      >
+        <UIcon name="i-lucide-plus" class="cp-tab__add-icon" />
+      </button>
     </div>
 
     <div class="report-panel-url-section">
@@ -73,7 +81,40 @@
         </button>
       </div>
       <div class="report-panel-url-row">
+        <div class="report-panel-nav" role="group" aria-label="Preview navigation">
+          <button
+            type="button"
+            class="cp-icon-btn cp-icon-btn--compact"
+            :disabled="!canGoBack"
+            title="Previous page"
+            aria-label="Previous page"
+            @click="goBack"
+          >
+            <UIcon name="i-lucide-arrow-left" class="cp-icon-btn__glyph" />
+          </button>
+          <button
+            type="button"
+            class="cp-icon-btn cp-icon-btn--compact"
+            :disabled="!canGoForward"
+            title="Next page"
+            aria-label="Next page"
+            @click="goForward"
+          >
+            <UIcon name="i-lucide-arrow-right" class="cp-icon-btn__glyph" />
+          </button>
+          <button
+            type="button"
+            class="cp-icon-btn cp-icon-btn--compact"
+            :disabled="!previewUrl"
+            title="Refresh"
+            aria-label="Refresh preview"
+            @click="refreshPreview"
+          >
+            <UIcon name="i-lucide-refresh-cw" class="cp-icon-btn__glyph" />
+          </button>
+        </div>
         <input
+          ref="urlInputEl"
           v-model="urlDraft"
           type="text"
           class="report-panel-url-input"
@@ -121,7 +162,6 @@ import {
   onMounted,
   ref,
   watch,
-  withDefaults,
 } from 'vue'
 import type { ConversationSandboxRun } from '@store/agent/types'
 import type { PreviewLinkTab } from '../report-preview-tabs'
@@ -154,22 +194,24 @@ const emit = defineEmits<{
   'update:activeLinkTabId': [id: string | null]
   'update:previewSource': [source: ReportPanelPreviewSource]
   'close-link-tab': [tabId: string]
+  'add-link-tab': []
+  'update-link-tab-url': [payload: { tabId: string; url: string }]
+  'open-preview-url': [url: string]
 }>()
 
 const sandboxHostEl = ref<HTMLElement | null>(null)
+const urlInputEl = ref<HTMLInputElement | null>(null)
 /** Editable URL field; synced from the active tab unless the user is typing. */
 const urlDraft = ref('')
 const markdownPreviewView = ref<MarkdownPreviewViewMode>('html')
+const canGoBack = ref(false)
+const canGoForward = ref(false)
 
 const activeLinkTab = computed(() => {
   const id = props.activeLinkTabId
   if (!id) return null
   return props.linkTabs.find((tab) => tab.id === id) ?? null
 })
-
-const hasTabs = computed(
-  () => (props.sandboxRuns?.length ?? 0) > 0 || (props.linkTabs?.length ?? 0) > 0,
-)
 
 function isLinkTabActive(tabId: string): boolean {
   return props.previewSource === 'link' && props.activeLinkTabId === tabId
@@ -189,6 +231,14 @@ function selectSandboxRun(runId: string) {
   emit('update:selectedRunId', runId)
 }
 
+function addEmptyLinkTab() {
+  emit('add-link-tab')
+  void nextTick(() => {
+    urlInputEl.value?.focus()
+    urlInputEl.value?.select()
+  })
+}
+
 const activeRun = computed((): ConversationSandboxRun | null => {
   const runs = props.sandboxRuns ?? []
   if (!runs.length) return null
@@ -206,11 +256,11 @@ const activeResultsFileUrl = computed(() => {
 })
 
 const previewUrl = computed(() => {
-  if (props.previewSource === 'link' && activeLinkTab.value?.url) {
-    return activeLinkTab.value.url
+  if (props.previewSource === 'link') {
+    // Only the committed tab URL — never the live input draft — so typing
+    // in a new/empty tab does not navigate or share the previous tab's URL.
+    return activeLinkTab.value?.url?.trim() || null
   }
-  const typed = urlDraft.value.trim()
-  if (typed) return typed
   return activeResultsFileUrl.value
 })
 
@@ -219,19 +269,24 @@ const showMarkdownViewToggle = computed(() =>
 )
 
 watch(
-  () => [props.previewSource, activeLinkTab.value?.url] as const,
-  ([source, url]) => {
-    if (source === 'link' && url?.trim()) {
-      urlDraft.value = url.trim()
-    }
+  () =>
+    [props.previewSource, props.activeLinkTabId, activeLinkTab.value?.url] as const,
+  ([source, , url]) => {
+    if (source !== 'link') return
+    urlDraft.value = url?.trim() ?? ''
   },
   { immediate: true },
 )
 
 watch(
-  () => [activeRun.value?.id, activeResultsFileUrl.value] as const,
-  ([, url]) => {
-    if (props.previewSource !== 'sandbox-run') return
+  () =>
+    [
+      props.previewSource,
+      activeRun.value?.id,
+      activeResultsFileUrl.value,
+    ] as const,
+  ([source, , url]) => {
+    if (source !== 'sandbox-run') return
     urlDraft.value = url ?? ''
   },
   { immediate: true },
@@ -247,39 +302,48 @@ function screenBoundsForEl(el: HTMLElement) {
   }
 }
 
-async function syncSandboxOutputBounds() {
+async function syncSandboxOutputBounds(options?: { forceReload?: boolean }) {
   const ipc = window.ipcRendererChannel?.SyncSandboxOutputView
   if (!ipc?.invoke) return
   const host = sandboxHostEl.value
-  if (!host) {
+  try {
+    if (!host) {
+      await ipc.invoke({
+        screenBounds: { x: 0, y: 0, width: 0, height: 0 },
+        fileUrl: null,
+      })
+      canGoBack.value = false
+      canGoForward.value = false
+      return
+    }
     await ipc.invoke({
-      screenBounds: { x: 0, y: 0, width: 0, height: 0 },
-      fileUrl: null,
+      screenBounds: screenBoundsForEl(host),
+      fileUrl: previewUrl.value,
+      markdownView: markdownPreviewView.value,
+      forceReload: options?.forceReload === true,
     })
-    return
+  } catch (err) {
+    // Main already surfaces a preview error page when possible; avoid uncaught
+    // renderer promise rejections when SyncSandboxOutputView rejects.
+    console.warn('[ReportPanel] SyncSandboxOutputView failed', err)
   }
-  await ipc.invoke({
-    screenBounds: screenBoundsForEl(host),
-    fileUrl: previewUrl.value,
-    markdownView: markdownPreviewView.value,
-  })
 }
 
 let boundsSyncTimer: ReturnType<typeof setTimeout> | null = null
 
-function scheduleBoundsSync(immediate = false) {
+function scheduleBoundsSync(immediate = false, forceReload = false) {
   if (immediate) {
     if (boundsSyncTimer) {
       clearTimeout(boundsSyncTimer)
       boundsSyncTimer = null
     }
-    void syncSandboxOutputBounds()
+    void syncSandboxOutputBounds({ forceReload })
     return
   }
   if (boundsSyncTimer) clearTimeout(boundsSyncTimer)
   boundsSyncTimer = setTimeout(() => {
     boundsSyncTimer = null
-    void syncSandboxOutputBounds()
+    void syncSandboxOutputBounds({ forceReload })
   }, 32)
 }
 
@@ -289,6 +353,8 @@ async function clearSandboxOutputView() {
     screenBounds: { x: 0, y: 0, width: 0, height: 0 },
     fileUrl: null,
   })
+  canGoBack.value = false
+  canGoForward.value = false
 }
 
 function copyResultsUrl() {
@@ -297,10 +363,90 @@ function copyResultsUrl() {
   void navigator.clipboard.writeText(url)
 }
 
+function applyNavigationState(state: {
+  canGoBack?: boolean
+  canGoForward?: boolean
+  url?: string
+}) {
+  canGoBack.value = Boolean(state.canGoBack)
+  canGoForward.value = Boolean(state.canGoForward)
+  const nextUrl = state.url?.trim()
+  if (!nextUrl) return
+  // Don't clobber the URL field while the user is editing it.
+  if (document.activeElement === urlInputEl.value) return
+
+  if (props.previewSource === 'link') {
+    // Empty/new tabs have no committed URL yet — ignore leftover navigation
+    // events from the previous page so they don't inherit that URL.
+    const committed = activeLinkTab.value?.url?.trim() ?? ''
+    if (!committed || !props.activeLinkTabId) return
+    if (committed !== nextUrl) {
+      emit('update-link-tab-url', {
+        tabId: props.activeLinkTabId,
+        url: nextUrl,
+      })
+    }
+    if (urlDraft.value.trim() !== nextUrl) {
+      urlDraft.value = nextUrl
+    }
+    return
+  }
+
+  if (urlDraft.value.trim() !== nextUrl) {
+    urlDraft.value = nextUrl
+  }
+}
+
+async function navigatePreview(action: 'back' | 'forward') {
+  const ipc = window.ipcRendererChannel?.NavigateSandboxOutputView
+  if (!ipc?.invoke) return
+  const state = await ipc.invoke({ action })
+  applyNavigationState(state)
+}
+
+function goBack() {
+  void navigatePreview('back')
+}
+
+function goForward() {
+  void navigatePreview('forward')
+}
+
+function refreshPreview() {
+  void nextTick(() => {
+    attachSandboxResizeObserver()
+    scheduleBoundsSync(true, true)
+  })
+}
+
 async function applyPreviewUrl() {
+  const nextUrl = urlDraft.value.trim()
+  if (props.previewSource === 'link' && props.activeLinkTabId) {
+    const currentUrl = activeLinkTab.value?.url?.trim() ?? ''
+    if (nextUrl !== currentUrl) {
+      emit('update-link-tab-url', {
+        tabId: props.activeLinkTabId,
+        url: nextUrl,
+      })
+    }
+  } else if (
+    props.previewSource === 'sandbox-run' &&
+    nextUrl &&
+    nextUrl !== (activeResultsFileUrl.value ?? '')
+  ) {
+    // Address-bar navigation away from a sandbox run opens a dedicated link tab.
+    emit('open-preview-url', nextUrl)
+  }
   await nextTick()
   attachSandboxResizeObserver()
   scheduleBoundsSync(true)
+}
+
+function onSandboxNavigationChanged(
+  _event: unknown,
+  payload: { canGoBack: boolean; canGoForward: boolean; url: string },
+) {
+  applyNavigationState(payload)
 }
 
 let sandboxResizeObserver: ResizeObserver | null = null
@@ -331,6 +477,9 @@ watch(
 
 onMounted(() => {
   window.addEventListener('resize', onWindowResize)
+  window.ipcRendererChannel?.SandboxOutputViewNavigationChanged?.on?.(
+    onSandboxNavigationChanged,
+  )
   void nextTick(() => {
     attachSandboxResizeObserver()
     scheduleBoundsSync(true)
@@ -344,6 +493,9 @@ onBeforeUnmount(() => {
   }
   sandboxResizeObserver?.disconnect()
   window.removeEventListener('resize', onWindowResize)
+  window.ipcRendererChannel?.SandboxOutputViewNavigationChanged?.removeListener?.(
+    onSandboxNavigationChanged,
+  )
   void clearSandboxOutputView()
 })
 </script>
@@ -447,6 +599,23 @@ onBeforeUnmount(() => {
   height: 13px;
 }
 
+.cp-tab--add {
+  flex-shrink: 0;
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+  color: var(--ui-text-muted);
+}
+
+.cp-tab--add:hover {
+  color: var(--ui-text);
+}
+
+.cp-tab__add-icon {
+  width: 15px;
+  height: 15px;
+}
+
 .report-panel-url-section {
   flex-shrink: 0;
   padding: 8px 12px 10px;
@@ -488,6 +657,13 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.report-panel-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .report-panel-url-input {

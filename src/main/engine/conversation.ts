@@ -31,15 +31,36 @@ import { clearPlanExecutionCompleted } from '@main/agent/coding/plan-mode-sessio
 import { isPlanModeActive } from '@main/agent/coding/plan-mode-state'
 import { runUserHooks } from '@main/agent/hooks/user-hooks'
 import { getWorkspacePath } from '@main/agent/workspace/conversation-workspace'
+import { clearFollowUpMeta } from '@main/agent/follow-up'
+import { resolveSandboxRootForConversation } from '@main/agent/sandbox'
 import { autoCompactStoredConversationIfNeeded } from '@main/agent/compaction'
 import { resolveResponseLanguageForAgent } from '@main/i18n/resolve-response-language'
 import { StageModelRegistry } from '@main/agent/providers/stage-model-registry'
 import { AgentRun } from '@main/agent/run/agent-run'
 import { mergeSubFlowOutputText } from '@main/agent/run/sub-flow-output-text'
+import { resolveRunLlmFromAgentAndOverride } from '@shared/agent/conversation-llm-override'
 import { resolveDelegatableSubAgentTargets } from '@shared/agent/sub-agent-targets'
 
 const inFlightControllers = new Map<string, AbortController>()
 const log = createLogger('agent.engine')
+
+/** Best-effort reset of follow-up chips for a conversation turn. */
+function resetConversationFollowUps(
+  conversationId: string,
+  options: { enableWrites: boolean },
+): void {
+  try {
+    const sandboxRoot = resolveSandboxRootForConversation(conversationId)
+    clearFollowUpMeta(sandboxRoot, conversationId, {
+      enableWrites: options.enableWrites,
+    })
+  } catch (err) {
+    log.warn('Failed to reset conversation follow-ups', {
+      conversationId,
+      err,
+    })
+  }
+}
 
 function notifyRendererConversationChanged(
   conversationId: string,
@@ -310,21 +331,50 @@ async function executeAgentForConversation(
     webContents,
   } = args
 
+  let workspacePath: string | null = null
   try {
-    let workspacePath: string | null = null
-    try {
-      workspacePath = getWorkspacePath(conversationId)
-    } catch {
-      workspacePath = null
-    }
+    workspacePath = getWorkspacePath(conversationId)
+  } catch {
+    workspacePath = null
+  }
+
+  try {
     await runUserHooks({
       event: 'onSessionStart',
       conversationId,
+      agentId,
       workspacePath,
     })
   } catch {
     // Hooks are optional; do not block agent runs when misconfigured.
   }
+
+  const conversationHooks =
+    getConversationStore().getConversationHooks(conversationId).hooks
+  const userMessage =
+    resolveTurnUserContent({ uiMessages, pendingUserMessage }) ?? undefined
+
+  const preHookResult = await runUserHooks(
+    {
+      event: 'preHook',
+      conversationId,
+      agentId,
+      assistantMessageId,
+      workspacePath,
+      userMessage,
+    },
+    conversationHooks,
+  )
+  if (preHookResult.blocked) {
+    return {
+      finalContent: '',
+      hasError: true,
+      errorMessage: preHookResult.message ?? 'Blocked by conversation pre-hook',
+    }
+  }
+
+  // New turn: drop prior chips and re-enable catalog writes for this run.
+  resetConversationFollowUps(conversationId, { enableWrites: true })
 
   const persistedUserMessageId = persistIncomingUserMessage({
     conversationId,
@@ -403,10 +453,13 @@ async function executeAgentForConversation(
   let hitlPaused = false
 
   try {
+    const llmOverride =
+      getConversationStore().getConversationLlmOverride(conversationId)
+    const runLlm = resolveRunLlmFromAgentAndOverride(agent, llmOverride)
     const opts: AgentResponseOpts = {
-      provider: agent.provider,
-      model: agent.model,
-      stageLlm: agent.stageLlmSettings,
+      provider: runLlm.provider,
+      model: runLlm.model,
+      stageLlm: runLlm.stageLlm,
       systemPrompt: agent.systemPrompt,
       responseLanguage: resolveResponseLanguageForAgent(agent.responseLanguage),
       abortSignal: abortController.signal,
@@ -458,6 +511,24 @@ async function executeAgentForConversation(
         agentId,
         assistantMessageId,
       })
+      try {
+        await runUserHooks(
+          {
+            event: 'postHook',
+            conversationId,
+            agentId,
+            assistantMessageId,
+            workspacePath,
+            userMessage,
+            hasError: false,
+            finalContent: '',
+          },
+          conversationHooks,
+        )
+      } catch {
+        // post-hooks are best-effort
+      }
+      resetConversationFollowUps(conversationId, { enableWrites: false })
       return { finalContent: '', hasError: false }
     }
     hasError = true
@@ -541,11 +612,41 @@ async function executeAgentForConversation(
 
   // Notify the renderer only after persist so ChatPanel.onFinish reload sees the
   // saved assistant row (AgentStreamFinished used to fire from `finally` before save).
-  if (!hitlPaused) {
-    streamBridge.notifyFinished()
+  if (hitlPaused) {
+    // Suspended mid-turn: follow-ups are post-turn only — drop any premature catalog.
+    resetConversationFollowUps(conversationId, { enableWrites: false })
+    return {
+      finalContent,
+      hasError,
+      errorMessage,
+      hitlPaused: true,
+    }
   }
 
-  return { finalContent, hasError, errorMessage, hitlPaused: hitlPaused || undefined }
+  if (hasError) {
+    resetConversationFollowUps(conversationId, { enableWrites: false })
+  }
+  try {
+    await runUserHooks(
+      {
+        event: 'postHook',
+        conversationId,
+        agentId,
+        assistantMessageId,
+        workspacePath,
+        userMessage,
+        hasError,
+        errorMessage,
+        finalContent,
+      },
+      conversationHooks,
+    )
+  } catch {
+    // post-hooks are best-effort
+  }
+  streamBridge.notifyFinished()
+
+  return { finalContent, hasError, errorMessage, hitlPaused: undefined }
 }
 
 export type RunSubAgentMentionArgs = {

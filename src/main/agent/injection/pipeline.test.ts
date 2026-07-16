@@ -226,13 +226,55 @@ describe('injector pipeline', () => {
       [{ role: 'user', content: 'hi' }],
       0,
     )
-    expect(first).toHaveLength(4)
+    expect(first).toHaveLength(5)
     expect(String(first[1].content)).toContain(DEEP_THINKING_BEFORE_MARKER)
     expect(String(first[2].content)).toContain(MULTIPLE_BRANCH_THINKING_MARKER)
     expect(String(first[3].content)).toContain('## Current date and time')
+    expect(String(first[4].content)).toContain('generate_follow_up')
 
     const second = await injectUserMessages(ctx, first, 1)
-    expect(second).toHaveLength(4)
+    expect(second).toHaveLength(5)
+  })
+
+  it('skips injector user messages while tool approvals are still unanswered', async () => {
+    const ctx = makeToolLoopCtx({
+      opts: { skillId: 'coding', conversationId: 'conv-plan-hitl', userId: 'user-1' },
+      agentRun: { meta: { depth: 0 } },
+    }) as never
+
+    const pendingApproval: Parameters<typeof injectUserMessages>[1] = [
+      { role: 'user', content: 'plan this' },
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: 'tc-enter',
+            toolName: 'enter_plan_mode',
+            input: {},
+          },
+          {
+            type: 'tool-approval-request',
+            approvalId: 'ap-enter',
+            toolCallId: 'tc-enter',
+          },
+        ],
+      },
+      {
+        role: 'tool',
+        content: [
+          {
+            type: 'tool-approval-response',
+            approvalId: 'ap-enter',
+            approved: true,
+          },
+        ],
+      },
+    ]
+
+    const blocked = await injectUserMessages(ctx, pendingApproval, 0)
+    expect(blocked).toHaveLength(3)
+    expect(blocked.map((m) => m.role)).toEqual(['user', 'assistant', 'tool'])
   })
 
   it('injects datetime again for a later user turn in the same conversation', async () => {
@@ -270,9 +312,10 @@ describe('injector pipeline', () => {
       0,
     )
 
-    expect(messages).toHaveLength(6)
+    expect(messages).toHaveLength(7)
     expect(String(messages[3].content)).toContain(DEEP_THINKING_BEFORE_MARKER)
     expect(String(messages[4].content)).toContain(MULTIPLE_BRANCH_THINKING_MARKER)
     expect(String(messages[5].content)).toContain('## Current date and time')
+    expect(String(messages[6].content)).toContain('generate_follow_up')
   })
 })

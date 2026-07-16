@@ -1,4 +1,4 @@
-import type { LlmEvent } from '../events'
+import type { LlmEvent } from './events'
 import {
   drainFullStreamToLlmEvents,
   drainTextStreamToLlmEvents,
