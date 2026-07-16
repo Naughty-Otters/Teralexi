@@ -173,7 +173,7 @@ Pull request / push to branch
        ├── build:win64:sit (Windows, signed)
        └── artifacts (signed sit builds)
 
-Actions → Release → confirm "release"
+Actions → Release → confirm "release" → platform (all / mac / win)
        │
        ▼
   Release workflow (TERALEXI_BUILD_ENV=prod → env/.prod.env)
@@ -208,17 +208,18 @@ Actions → Release → confirm "release"
 ### Release workflow — production
 
 **File:** `.github/workflows/release.yml`  
-**Trigger:** Actions → **Release** → Run workflow → type `release` to confirm
+**Trigger:** Actions → **Release** → Run workflow → type `release` to confirm → choose platform (`all` / `mac` / `win`)
 
 | Setting | Value |
 | --- | --- |
 | Build env | `TERALEXI_BUILD_ENV=prod` → `env/.prod.env` |
 | Production API | `BASE_API` in `.prod.env` (e.g. `https://api.teralexi.com/`) |
 | Update feed path | default `{BASE_API}/desktop/releases/stable/` |
+| Platform input | `all` (mac + win), `mac`, or `win` |
 | macOS script | `npm run release:mac` |
 | Windows script | `npm run release:win` |
 | S3 prefix | `desktop/releases/stable/` |
-| Signing | `MAC_SIGN_*` + Apple notarization on macOS; `WIN_SIGN_*` on Windows |
+| Signing | `MAC_SIGN_*` + Apple notarization on macOS; `WIN_SIGN_*` / Azure on Windows |
 
 Each runner receives **only its platform’s signing secrets** (macOS job never gets the Windows `.pfx`, and vice versa).
 
@@ -290,7 +291,7 @@ npm run release:upload-s3
 ### Via GitHub
 
 1. Bump version in `package.json` and `CHANGELOG.md`, push.
-2. Actions → **Release** → Run workflow → type `release`.
+2. Actions → **Release** → Run workflow → type `release` → choose platform (`all` / `mac` / `win`).
 3. Verify S3 keys: `latest-mac.yml`, `latest.yml`, installers.
 
 See [RELEASE.md](./RELEASE.md) for the full release checklist.

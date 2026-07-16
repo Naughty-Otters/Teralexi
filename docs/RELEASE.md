@@ -91,8 +91,9 @@ Production releases are **manual only**:
 1. Open **Actions → Release → Run workflow**
 2. Select the branch or tag to build from
 3. Type `release` in the confirm input
+4. Choose **platform**: `all` (default), `mac`, or `win`
 
-The workflow uses **`env/.prod.env`**, builds **signed** macOS and Windows installers, and uploads to S3 (`desktop/releases/stable/`).
+The workflow uses **`env/.prod.env`**, builds **signed** installers for the selected platform(s), and uploads to S3 (`desktop/releases/stable/`).
 
 If the workflow runs on a version tag (`v0.0.2`), it verifies the tag matches `package.json`. When run from a branch, it uses the current `package.json` version.
 
@@ -176,6 +177,6 @@ Set signing credentials via **shell environment variables** (local) or **GitHub 
 - [ ] Set up code signing (macOS Developer ID + notarization; Windows Authenticode)
 - [ ] GitHub secrets: `MAC_SIGN_*`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`, `WIN_SIGN_*`
 - [ ] Bump version, update `CHANGELOG.md`, push
-- [ ] Run the **Release** workflow with confirm `release`
+- [ ] Run the **Release** workflow with confirm `release` and platform `all` / `mac` / `win`
 - [ ] Verify S3 keys: `latest-mac.yml`, `latest.yml`, installers
 - [ ] Install current version, publish next, confirm in-app update flow
