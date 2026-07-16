@@ -1,9 +1,16 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   loadAgentRunCredentials,
   loadConversationHistory,
   resolveEnabledSkillToolNames,
 } from './agent-run-context'
+
+const { getMessagesMock } = vi.hoisted(() => ({
+  getMessagesMock: vi.fn(() => [
+    { id: 'u1', role: 'user', content: 'hi' },
+    { id: 'a1', role: 'assistant', content: 'hello' },
+  ]),
+}))
 
 vi.mock('@config/system-prop', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@config/system-prop')>()
@@ -18,12 +25,17 @@ vi.mock('@config/system-prop', async (importOriginal) => {
 
 vi.mock('@main/services/conversation-store', () => ({
   getConversationStore: () => ({
-    getMessages: vi.fn(() => [
-      { id: 'u1', role: 'user', content: 'hi' },
-      { id: 'a1', role: 'assistant', content: 'hello' },
-    ]),
+    getMessages: getMessagesMock,
   }),
 }))
+
+beforeEach(() => {
+  getMessagesMock.mockReset()
+  getMessagesMock.mockReturnValue([
+    { id: 'u1', role: 'user', content: 'hi' },
+    { id: 'a1', role: 'assistant', content: 'hello' },
+  ])
+})
 
 describe('loadAgentRunCredentials', () => {
   it('normalizes base URLs from system props', () => {
@@ -43,6 +55,24 @@ describe('loadConversationHistory', () => {
   it('excludes the in-flight assistant message', () => {
     const history = loadConversationHistory('c1', 'a1')
     expect(history).toEqual([{ role: 'user', content: 'hi' }])
+  })
+
+  it('preserves multi-turn store history order', () => {
+    getMessagesMock.mockReturnValueOnce([
+      { id: 'u1', role: 'user', content: 'First question' },
+      { id: 'a1', role: 'assistant', content: 'First answer' },
+      { id: 'u2', role: 'user', content: 'Follow-up question' },
+      { id: 'a2', role: 'assistant', content: '' },
+    ])
+
+    const history = loadConversationHistory('c-multi', 'a2')
+
+    expect(getMessagesMock).toHaveBeenCalledWith('c-multi')
+    expect(history.map((m) => m.content)).toEqual([
+      'First question',
+      'First answer',
+      'Follow-up question',
+    ])
   })
 })
 
