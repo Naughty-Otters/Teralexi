@@ -62,13 +62,12 @@ vi.mock('@main/agent/follow-up', () => ({
   clearFollowUpMeta: vi.fn(() => ({ ok: true, revision: 1 })),
 }))
 
-vi.mock('@main/agent/sandbox', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@main/agent/sandbox')>()
-  return {
-    ...actual,
-    resolveSandboxRootForConversation: vi.fn(() => '/tmp/fake-sandbox'),
-  }
-})
+vi.mock('@main/agent/sandbox', () => ({
+  resolveSandboxRootForConversation: vi.fn(() => '/tmp/fake-sandbox'),
+  getOrCreateSandboxForConversation: vi.fn(),
+  releaseConversationSandbox: vi.fn(),
+  peekSandboxRootForConversation: vi.fn(() => null),
+}))
 
 vi.mock('@logging', () => ({
   runWithAgentRunLog: (_ctx: unknown, fn: () => unknown) => fn(),
@@ -82,6 +81,10 @@ vi.mock('@main/services/chat-attachments', () => ({
 
 vi.mock('@main/agent/flow', () => ({
   streamAgentResponse: streamAgentResponseMock,
+}))
+
+const { loadEngineAgentsMock } = vi.hoisted(() => ({
+  loadEngineAgentsMock: vi.fn(async () => [] as unknown[]),
 }))
 
 const mockEngineAgent = {
@@ -109,15 +112,101 @@ const mockEngineAgent = {
   },
 }
 
-vi.mock('@main/agent/config/context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@main/agent/config/context')>()
-  return {
-    ...actual,
-    ConfigContext: class extends actual.ConfigContext {
-      static loadEngineAgents = vi.fn(async () => [mockEngineAgent])
-    },
+loadEngineAgentsMock.mockResolvedValue([mockEngineAgent])
+
+vi.mock('@main/agent/config/context', () => {
+  class ConfigContext {
+    static ERRORS = { NOT_FOUND: 'Agent not found: {agentId}' }
+    static ENGINE_LOG = {
+      EXECUTION_ABORTED: 'aborted',
+      PREPARED_CONTEXT: 'prepared',
+      COMPLETED: 'completed',
+      FAILED: 'failed',
+      ABORTED: 'aborted-run',
+      PERSIST_ASSISTANT_OK: 'persist-ok',
+      PERSIST_ASSISTANT_FAIL: 'persist-fail',
+      PERSIST_USER_OK: 'user-ok',
+      PERSIST_USER_FAIL: 'user-fail',
+      PERSIST_SANDBOX_FAIL: 'sandbox-fail',
+      MEMORY_RECORD_ENQUEUED: 'memory-enqueued',
+      MEMORY_RECORD_FAIL: 'memory-fail',
+      STOP_REQUESTED: 'stop-requested',
+    }
+    static DEFAULT_USER_ID = 'default'
+    static DEFAULT_RESPONSE_LANGUAGE = 'English'
+    static ANTHROPIC_MODELS: string[] = []
+    static SYSTEM_PROP_KEYS: Record<string, string> = {}
+    static DEFAULTS = {}
+    static loadEngineAgents = loadEngineAgentsMock
   }
+  return { ConfigContext, loadEngineAgents: loadEngineAgentsMock }
 })
+
+vi.mock('@main/agent/hooks/user-hooks', () => ({
+  runUserHooks: vi.fn(async () => ({ blocked: false })),
+}))
+
+vi.mock('@main/agent/compaction', () => ({
+  autoCompactStoredConversationIfNeeded: vi.fn(async () => ({ compacted: false })),
+}))
+
+vi.mock('@main/agent/expr/thread-context-builder', () => ({
+  resolveEffectiveThreadTag: vi.fn(() => 'general'),
+  detectTopicSwitch: vi.fn(() => ({ switched: false })),
+}))
+
+vi.mock('@main/agent/utils/chat-context-settings', () => ({
+  loadChatContextWindowMessages: vi.fn(() => 200),
+}))
+
+vi.mock('@main/agent/coding/plan-mode-session-reminders', () => ({
+  clearPlanExecutionCompleted: vi.fn(),
+}))
+
+vi.mock('@main/agent/coding/plan-mode-state', () => ({
+  isPlanModeActive: vi.fn(() => false),
+}))
+
+vi.mock('@main/agent/workspace/conversation-workspace', () => ({
+  getWorkspacePath: vi.fn(() => null),
+}))
+
+vi.mock('@main/agent/llm/llm-debug-writer', () => ({
+  createLlmDebugRunId: vi.fn(() => 'debug-run-1'),
+}))
+
+vi.mock('@main/agent/llm/log-llm-error', () => ({
+  formatLlmErrorForUi: (err: unknown) =>
+    err instanceof Error ? err.message : String(err),
+  llmErrorFields: () => ({}),
+}))
+
+vi.mock('@main/i18n/resolve-response-language', () => ({
+  resolveResponseLanguageForAgent: vi.fn(() => 'English'),
+}))
+
+vi.mock('@main/agent/bus/agent-event-bus', () => ({
+  createAgentEventBus: vi.fn(() => ({
+    publish: vi.fn(),
+    subscribe: vi.fn(() => () => undefined),
+  })),
+}))
+
+vi.mock('@main/agent/bus/ipc-projector', () => ({
+  attachIpcProjector: vi.fn(() => () => undefined),
+}))
+
+vi.mock('@main/agent/providers/stage-model-registry', () => ({
+  StageModelRegistry: class StageModelRegistry {},
+}))
+
+vi.mock('@main/agent/run/agent-run', () => ({
+  AgentRun: class AgentRun {},
+}))
+
+vi.mock('@main/agent/run/sub-flow-output-text', () => ({
+  mergeSubFlowOutputText: (text: string) => text,
+}))
 
 vi.mock('@main/agent/utils', () => ({
   extractTrailingUserForPersistence: vi.fn(() => null),
@@ -145,6 +234,9 @@ vi.mock('@main/agent/agent-stream-bridge', () => ({
     onChunk: vi.fn(),
     onUIMessageChunk: vi.fn(),
     onStepProgress: vi.fn(),
+    onSubAgentRunEvent: vi.fn(),
+    onSandboxReady: vi.fn(),
+    onSandboxResultWritten: vi.fn(),
     finalize: vi.fn(),
     notifyFinished: notifyFinishedMock,
   })),
@@ -167,6 +259,17 @@ describe('agent engine', () => {
   beforeEach(() => {
     getConversationLlmOverrideMock.mockReset()
     getConversationLlmOverrideMock.mockReturnValue(null)
+    loadConversationHistoryMock.mockReset()
+    loadConversationHistoryMock.mockReturnValue([])
+    loadEngineAgentsMock.mockReset()
+    loadEngineAgentsMock.mockResolvedValue([mockEngineAgent])
+    streamAgentResponseMock.mockReset()
+    streamAgentResponseMock.mockResolvedValue({
+      structuredContent: 'done',
+      shouldPersistMemory: true,
+      hitlPaused: false,
+    })
+    notifyFinishedMock.mockReset()
   })
 
   it('stopAgentForConversation is safe when no controller', () => {
