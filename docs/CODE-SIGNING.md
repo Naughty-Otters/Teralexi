@@ -43,7 +43,7 @@ Each runner receives **only its platform's** signing credentials (macOS job neve
 | Workflow | Trigger | Build env | macOS | Windows | S3 prefix | Signing |
 | --- | --- | --- | --- | --- | --- | --- |
 | **CI** | PR, push, manual | `sit` / `.sit.env` | `build:mac:sit` | `build:win64:sit` | — (artifacts only) | mac + win |
-| **Release** | manual (`release`) | `prod` / `.prod.env` | `release:mac` | `release:win` | `stable/` | mac + win + notarize |
+| **Release** | manual (`release` + platform `all`/`mac`/`win`) | `prod` / `.prod.env` | `release:mac` | `release:win` | `stable/` | selected platform(s) + notarize (mac) |
 
 If signing secrets are missing, workflows still produce unsigned installers.
 

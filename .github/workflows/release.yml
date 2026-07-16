@@ -6,6 +6,15 @@ on:
       confirm:
         description: 'Type "release" to build and publish a production release'
         required: true
+      platform:
+        description: 'Platforms to build and publish'
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - mac
+          - win
 
 permissions:
   contents: read
@@ -19,7 +28,9 @@ concurrency:
 jobs:
   release:
     name: Production release (${{ matrix.platform }})
-    if: inputs.confirm == 'release'
+    if: >
+      inputs.confirm == 'release' &&
+      (inputs.platform == 'all' || inputs.platform == matrix.platform)
     runs-on: ${{ matrix.os }}
     # Signing / notarization / AWS secrets live in the "release" environment.
     environment: release
