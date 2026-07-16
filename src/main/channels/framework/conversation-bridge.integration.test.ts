@@ -30,6 +30,7 @@ const {
   capturedStreamOpts,
   mockEngineAgent,
   loadEngineAgentsMock,
+  loadConversationHistoryMock,
 } = vi.hoisted(() => {
   const conversationMessages: StoredMessage[] = []
   const conversations = new Map<
@@ -52,6 +53,15 @@ const {
     toolNeedsApprovalOverrides: {} as Record<string, boolean>,
   }
   const loadEngineAgentsMock = vi.fn(async () => [mockEngineAgent])
+  const loadConversationHistoryMock = vi.fn(
+    (conversationId: string, assistantMessageId: string) =>
+      conversationMessages
+        .filter(
+          (m) =>
+            m.conversationId === conversationId && m.id !== assistantMessageId,
+        )
+        .map((m) => ({ role: m.role, content: m.content })),
+  )
 
   return {
     streamAgentResponseMock: vi.fn(async (opts: AgentResponseOpts) => {
@@ -72,6 +82,7 @@ const {
     capturedStreamOpts,
     mockEngineAgent,
     loadEngineAgentsMock,
+    loadConversationHistoryMock,
   }
 })
 
@@ -270,16 +281,7 @@ vi.mock('@main/agent/utils', () => ({
     zhipuBaseURL: '',
     openAiCompatible: {},
   })),
-  loadConversationHistory: (
-    conversationId: string,
-    assistantMessageId: string,
-  ) =>
-    conversationMessages
-      .filter(
-        (m) =>
-          m.conversationId === conversationId && m.id !== assistantMessageId,
-      )
-      .map((m) => ({ role: m.role, content: m.content })),
+  loadConversationHistory: loadConversationHistoryMock,
   loadMcpToolsForAgent: vi.fn(async () => []),
   resolveEnabledSkillToolNames: vi.fn(() => undefined),
 }))
@@ -381,6 +383,16 @@ function resetStreamMock() {
   })
   loadEngineAgentsMock.mockReset()
   loadEngineAgentsMock.mockResolvedValue([mockEngineAgent])
+  loadConversationHistoryMock.mockReset()
+  loadConversationHistoryMock.mockImplementation(
+    (conversationId: string, assistantMessageId: string) =>
+      conversationMessages
+        .filter(
+          (m) =>
+            m.conversationId === conversationId && m.id !== assistantMessageId,
+        )
+        .map((m) => ({ role: m.role, content: m.content })),
+  )
 }
 
 describe('channel → engine integration', () => {
@@ -438,6 +450,11 @@ describe('channel → engine integration', () => {
 
     expect(result.hasError).toBe(false)
     expect(loadEngineAgentsMock).toHaveBeenCalled()
+    expect(loadConversationHistoryMock).toHaveBeenCalledWith(
+      CHANNEL_CONVERSATION_ID,
+      assistantMessageId,
+      { currentTag: 'general' },
+    )
     expect(streamAgentResponseMock).toHaveBeenCalledTimes(1)
     const opts = capturedStreamOpts.current
     expect(opts).not.toBeNull()
