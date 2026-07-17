@@ -624,3 +624,14 @@ function syncToolLoopDigestAfterBatch(
   }
   ctx.rebuildStepOutputsFromHistory()
 }
+
+import { PLANNED_TODO_STRATEGY_BUNDLE_MARKER } from '../../../coding/plan-mode-todo-bundle-marker'
+import { registerPlannedTodoStrategyFactory } from '../../../coding/plan-mode-todo-strategy-registry'
+
+registerPlannedTodoStrategyFactory(createPlannedTodoStrategy)
+// Side-effect assignment so minify cannot drop the packaging canary string.
+;(
+  createPlannedTodoStrategy as typeof createPlannedTodoStrategy & {
+    bundleMarker: string
+  }
+).bundleMarker = PLANNED_TODO_STRATEGY_BUNDLE_MARKER

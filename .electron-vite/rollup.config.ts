@@ -223,7 +223,22 @@ export default (env = 'production', type: MainBuildType = 'main-app') => {
           '.js': 'jsx',
         },
       }),
-      process.env.NODE_ENV == 'production' && obfuscator({}),
+      process.env.NODE_ENV == 'production' &&
+        obfuscator({
+          // Keep relative dynamic-import specifiers intact. String-array encoding
+          // previously left paths like ../steps/.../planned-todo-strategy in the
+          // asar bundle, which then failed at runtime inside Electron.
+          reservedStrings: [
+            '\\.\\.\\/',
+            '^\\./',
+            '^@main/',
+            '^@toolSet/',
+            '^@config/',
+            '^node:',
+            // Positive packaging marker for planned-todo strategy (verify-main-bundle).
+            'teralexi:planned-todo-strategy-bundled',
+          ],
+        }),
     ],
     external: (id) => {
       if (resolvedType === 'bootstrap' && isBootstrapMainAppExternal(id)) {
