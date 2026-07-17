@@ -117,10 +117,12 @@ const report = {
   awsRoleSecretShape: roleInfo,
   awsRegionSecretShape: regionInfo,
   trustPolicyHint: {
-    expectedSubExact: `repo:${githubCtx.repository}:environment:release`,
-    expectedSubWildcard: `repo:${githubCtx.repository}:*`,
+    expectedSubExact: claims.sub,
+    expectedSubWildcard: typeof claims.sub === 'string'
+      ? claims.sub.replace(/:[^:]+$/, ':*')
+      : null,
     note:
-      'IAM trust StringLike/StringEquals on token.actions.githubusercontent.com:sub must match oidcClaims.sub exactly (no @numericId suffixes).',
+      'IAM trust StringLike/StringEquals on token.actions.githubusercontent.com:sub must match oidcClaims.sub exactly. Some orgs emit owner/repo @numericId in sub (e.g. repo:Org@123/Repo@456:environment:release) — copy from oidcClaims.sub, do not invent the format.',
   },
 }
 
