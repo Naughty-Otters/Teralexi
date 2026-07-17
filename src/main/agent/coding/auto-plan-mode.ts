@@ -2,7 +2,7 @@ import type { AgentStepContext } from '../context'
 import { skillIsCodingAgent } from '@shared/agent/coding-agent'
 import { getCodingModeForConversation } from './coding-agent-policy'
 import { clearExploreManifest } from './explore-manifest'
-import { hasPersistedPlanTodos } from './plan-mode-execution-bridge'
+import { hasPersistedPlanTodos } from './plan-mode-todo-sync'
 import {
   bootstrapPlanModeStorage,
   isPlanExecutionActive,

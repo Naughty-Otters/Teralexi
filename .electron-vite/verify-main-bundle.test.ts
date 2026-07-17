@@ -1,13 +1,16 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { PLANNED_TODO_STRATEGY_BUNDLE_MARKER } from '../src/main/agent/coding/plan-mode-todo-bundle-marker'
 import {
   findForbiddenSubstringsInMainJs,
+  findMissingRequiredSubstringsInMainJs,
   findUnbundledDynamicImportsInMainJs,
   isForbiddenRuntimeDynamicImport,
   scanSourceTextForForbiddenDynamicImports,
   scanSourcesForForbiddenDynamicImports,
   verifyBootstrapBundleContents,
+  verifyMainAppSourceWiring,
   verifyMainBundle,
   verifyMainBundleContents,
 } from './verify-main-bundle'
@@ -118,20 +121,64 @@ describe('verifyMainBundleContents', () => {
     const leaky = `
       const hooks = await import('../hooks/user-hooks')
       const wf = await import('@main/workflows/workflow-compiler')
+      ${JSON.stringify(PLANNED_TODO_STRATEGY_BUNDLE_MARKER)}
     `
     expect(() => verifyMainBundleContents(leaky)).toThrow(
       /forbidden paths|unexpected filesystem dynamic imports/,
     )
   })
 
-  it('accepts main-app.js with only allowed runtime dynamic imports', () => {
+  it('rejects main-app.js missing the planned-todo packaging marker', () => {
+    const okImports = `
+      import('node:fs')
+      import('playwright-core')
+    `
+    expect(() => verifyMainBundleContents(okImports)).toThrow(
+      /missing required packaged markers/,
+    )
+  })
+
+  it('accepts main-app.js with only allowed runtime dynamic imports and required markers', () => {
     const ok = `
       import('node:fs')
       import('node:crypto')
       import('playwright-core')
       import('cloakbrowser')
+      ${JSON.stringify(PLANNED_TODO_STRATEGY_BUNDLE_MARKER)}
     `
     expect(() => verifyMainBundleContents(ok)).not.toThrow()
+  })
+})
+
+describe('verifyMainAppSourceWiring', () => {
+  it('requires the planned-todo strategy side-effect import in main-app.ts', () => {
+    expect(() =>
+      verifyMainAppSourceWiring(`import './something-else'\n`),
+    ).toThrow(/must statically import/)
+    expect(() =>
+      verifyMainAppSourceWiring(
+        `import './agent/steps/foreach-item/strategies/planned-todo-strategy'\n`,
+      ),
+    ).not.toThrow()
+  })
+
+  it('passes on the live main-app.ts source', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'src', 'main', 'main-app.ts'),
+      'utf8',
+    )
+    expect(() => verifyMainAppSourceWiring(source)).not.toThrow()
+  })
+})
+
+describe('findMissingRequiredSubstringsInMainJs', () => {
+  it('reports when the planned-todo marker is absent', () => {
+    expect(findMissingRequiredSubstringsInMainJs('nope')).toEqual([
+      PLANNED_TODO_STRATEGY_BUNDLE_MARKER,
+    ])
+    expect(
+      findMissingRequiredSubstringsInMainJs(PLANNED_TODO_STRATEGY_BUNDLE_MARKER),
+    ).toEqual([])
   })
 })
 
@@ -226,6 +273,7 @@ describe('packaged main-process dynamic import guard', () => {
     const code = readFileSync(MAIN_APP_JS, 'utf8')
     expect(findUnbundledDynamicImportsInMainJs(code)).toEqual([])
     expect(findForbiddenSubstringsInMainJs(code)).toEqual([])
+    expect(findMissingRequiredSubstringsInMainJs(code)).toEqual([])
   })
 
   it('built bootstrap.js only imports main-app.js when present', () => {
