@@ -34,6 +34,9 @@ const FORBIDDEN_SUBSTRINGS = [
   '@main/agent/llm/llm-debug-writer',
   'node_modules/grammy/out/',
   'grammy/out/platform.node',
+  // Packaged asar regressions: dynamic import left as filesystem path (survives obfuscation).
+  '../steps/',
+  'foreach-item/strategies/planned-todo-strategy',
 ]
 
 const SOURCE_SCAN_ROOTS = [
@@ -60,10 +63,8 @@ function isAllowedRuntimeDynamicImport(spec: string): boolean {
   return false
 }
 
-/** Relative imports allowed at runtime (break ESM cycles; still bundled by Rollup). */
-const ALLOWED_SOURCE_DYNAMIC_IMPORTS = new Set([
-  '../steps/foreach-item/strategies/planned-todo-strategy',
-])
+/** Relative app imports must never remain as runtime dynamic imports in asar. */
+const ALLOWED_SOURCE_DYNAMIC_IMPORTS = new Set<string>()
 
 export function isForbiddenRuntimeDynamicImport(spec: string): boolean {
   if (isAllowedRuntimeDynamicImport(spec)) return false

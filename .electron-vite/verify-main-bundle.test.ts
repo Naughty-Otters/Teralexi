@@ -28,6 +28,7 @@ const REGRESSION_FORBIDDEN_SPECS = [
   '@main/agent/run/agent-run',
   './editor-lsp-bridge',
   '@main/agent/run/resolve-child-agent',
+  '../steps/foreach-item/strategies/planned-todo-strategy',
 ] as const
 
 describe('isForbiddenRuntimeDynamicImport', () => {
@@ -49,14 +50,6 @@ describe('isForbiddenRuntimeDynamicImport', () => {
     for (const spec of REGRESSION_FORBIDDEN_SPECS) {
       expect(isForbiddenRuntimeDynamicImport(spec)).toBe(true)
     }
-  })
-
-  it('allows the planned-todo-strategy cycle breaker', () => {
-    expect(
-      isForbiddenRuntimeDynamicImport(
-        '../steps/foreach-item/strategies/planned-todo-strategy',
-      ),
-    ).toBe(false)
   })
 })
 
@@ -95,13 +88,23 @@ describe('scanSourceTextForForbiddenDynamicImports', () => {
     ])
   })
 
-  it('ignores allowed externals and cycle-breaker imports', () => {
+  it('ignores allowed externals', () => {
     const code = `
       await import('node:fs')
       await import('playwright-core')
-      await import('../steps/foreach-item/strategies/planned-todo-strategy')
     `
     expect(scanSourceTextForForbiddenDynamicImports(code)).toEqual([])
+  })
+
+  it('forbids planned-todo-strategy dynamic import (asar packaging regression)', () => {
+    expect(
+      scanSourceTextForForbiddenDynamicImports(
+        `await import('../steps/foreach-item/strategies/planned-todo-strategy')`,
+        'plan-mode-execution-bridge.ts',
+      ),
+    ).toEqual([
+      "plan-mode-execution-bridge.ts: import('../steps/foreach-item/strategies/planned-todo-strategy')",
+    ])
   })
 
   it('does not flag type-only import() type syntax', () => {
