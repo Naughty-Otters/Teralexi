@@ -123,6 +123,9 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-session-name: teralexi-release-${{ matrix.platform }}-${{ github.run_id }}
           aws-region: ${{ secrets.AWS_REGION }}
+          # v5 tags the session by default; IAM then also requires sts:TagSession on
+          # the role trust policy. Skip tags so a plain AssumeRoleWithWebIdentity trust works.
+          role-skip-session-tagging: true
 
       - name: Upload production release to S3
         env:

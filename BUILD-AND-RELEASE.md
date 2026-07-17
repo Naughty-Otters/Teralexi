@@ -187,7 +187,7 @@ aws iam add-client-id-to-open-id-connect-provider \
 
 ### 2. Create the IAM role with a trust policy
 
-Create a role (name it e.g. `teralexi-release`) whose **trust policy** allows the GitHub OIDC provider to assume it. Replace `<ACCOUNT_ID>` with your 12-digit AWS account ID and `<OWNER>/<REPO>` with your GitHub repo (e.g. `zhenqili/Teralexi`).
+Create a role (name it e.g. `teralexi-release`) whose **trust policy** allows the GitHub OIDC provider to assume it. Replace `<ACCOUNT_ID>` with your 12-digit AWS account ID. For this repo use `Naughty-Otters/Teralexi` (the current GitHub name after rename — not `OpenFDE`, and never include `@numericId` suffixes from the AWS console UI).
 
 ```json
 {
@@ -198,13 +198,16 @@ Create a role (name it e.g. `teralexi-release`) whose **trust policy** allows th
       "Principal": {
         "Federated": "arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
       },
-      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Action": [
+        "sts:AssumeRoleWithWebIdentity",
+        "sts:TagSession"
+      ],
       "Condition": {
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:<OWNER>/<REPO>:*"
+          "token.actions.githubusercontent.com:sub": "repo:Naughty-Otters/Teralexi:*"
         }
       }
     }
@@ -212,7 +215,9 @@ Create a role (name it e.g. `teralexi-release`) whose **trust policy** allows th
 }
 ```
 
-Because the release job runs with `environment: release`, GitHub's token `sub` claim is `repo:<OWNER>/<REPO>:environment:release`. The `repo:<OWNER>/<REPO>:*` wildcard above covers it; tighten it to `repo:<OWNER>/<REPO>:environment:release` if you want to restrict assumption to the `release` environment only.
+`sts:TagSession` is required when `aws-actions/configure-aws-credentials@v5` sends session tags (its default). The Release workflow also sets `role-skip-session-tagging: true` so assumption still works if the trust policy only has `sts:AssumeRoleWithWebIdentity`.
+
+Because the release job runs with `environment: release`, GitHub's token `sub` claim is `repo:Naughty-Otters/Teralexi:environment:release`. The `repo:…:*` wildcard above covers it; tighten it to `repo:Naughty-Otters/Teralexi:environment:release` if you want to restrict assumption to the `release` environment only.
 
 ### 3. Attach an S3 write permission policy to the role
 
@@ -242,7 +247,7 @@ Troubleshooting:
 
 - `getaddrinfo ENOTFOUND sts.<region>.amazonaws.com` → `AWS_REGION` is invalid or has trailing whitespace/newline.
 - `The web identity token provided could not be validated` → OIDC provider not registered, or its audience isn't `sts.amazonaws.com` (step 1).
-- `Not authorized to perform sts:AssumeRoleWithWebIdentity` → trust policy `sub`/`aud` conditions don't match this repo/environment (step 2).
+- `Not authorized to perform sts:AssumeRoleWithWebIdentity` → trust policy `sub`/`aud` don't match (use `repo:Naughty-Otters/Teralexi:*`, no `@id` suffixes / no old `OpenFDE` name), **or** the trust policy is missing `sts:TagSession` while the action is sending session tags, **or** you edited a different role than the ARN in `AWS_ROLE_TO_ASSUME`.
 
 ---
 
