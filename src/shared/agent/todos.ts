@@ -154,6 +154,112 @@ export function replaceTodos(
   return { version: 1, updatedAt: now, todos: normalizeTodos(incoming) }
 }
 
+function normalizeTodoContentKey(content: string): string {
+  return content.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+/**
+ * During approved plan execution, keep the approved step list intact and only
+ * apply status changes from the model. Rejects new/rewritten step text so each
+ * tool loop cannot replace the plan with a different checklist.
+ *
+ * Also rejects updates that would change more than one step's status in a single
+ * call — each execution tool loop should advance only its current task.
+ *
+ * When `activeTodoContent` is set (foreach tool loop), the single allowed status
+ * change must be that step.
+ */
+export function mergeExecutionTodoStatuses(
+  existing: TodoList,
+  incoming: TrackedTodoInput[],
+  options?: {
+    now?: string
+    /** Normalized/raw content of the foreach-assigned step (optional pin). */
+    activeTodoContent?: string
+  },
+): { ok: true; list: TodoList } | { ok: false; error: string } {
+  const now = options?.now ?? new Date().toISOString()
+  if (existing.todos.length === 0) {
+    return { ok: true, list: replaceTodos(incoming, now) }
+  }
+
+  const incomingTodos = normalizeTodos(incoming)
+  if (incomingTodos.length === 0) {
+    return {
+      ok: false,
+      error:
+        'Approved plan execution: send status updates for existing plan steps. ' +
+        'Do not clear the task list.',
+    }
+  }
+
+  const existingKeys = new Set(
+    existing.todos.map((t) => normalizeTodoContentKey(t.content)),
+  )
+  const unknown = incomingTodos.filter(
+    (t) => !existingKeys.has(normalizeTodoContentKey(t.content)),
+  )
+  if (unknown.length > 0) {
+    const sample = unknown
+      .slice(0, 3)
+      .map((t) => `"${t.content}"`)
+      .join(', ')
+    return {
+      ok: false,
+      error:
+        'Approved plan execution: cannot add or rewrite plan steps via update_todos. ' +
+        'Only change status (pending | in_progress | completed | cancelled) on the ' +
+        `existing approved tasks. Unknown steps: ${sample}.`,
+    }
+  }
+
+  const statusByKey = new Map<string, TrackedTodoStatus>()
+  for (const t of incomingTodos) {
+    statusByKey.set(normalizeTodoContentKey(t.content), t.status)
+  }
+
+  const changed = existing.todos.filter((todo) => {
+    const nextStatus = statusByKey.get(normalizeTodoContentKey(todo.content))
+    return Boolean(nextStatus && nextStatus !== todo.status)
+  })
+  if (changed.length > 1) {
+    const sample = changed
+      .slice(0, 3)
+      .map((t) => `"${t.content}"`)
+      .join(', ')
+    return {
+      ok: false,
+      error:
+        'Approved plan execution: update status for at most ONE plan step per ' +
+        `update_todos call (the step you are working on). Changed: ${sample}.`,
+    }
+  }
+
+  const activeKey = options?.activeTodoContent?.trim()
+    ? normalizeTodoContentKey(options.activeTodoContent)
+    : undefined
+  if (activeKey && changed.length === 1) {
+    const changedKey = normalizeTodoContentKey(changed[0]!.content)
+    if (changedKey !== activeKey) {
+      return {
+        ok: false,
+        error:
+          'Approved plan execution: only the current assigned step may change status ' +
+          `via update_todos ("${options!.activeTodoContent!.trim()}"). ` +
+          `Attempted to change "${changed[0]!.content}".`,
+      }
+    }
+  }
+
+  const todos = existing.todos.map((todo) => {
+    const nextStatus = statusByKey.get(normalizeTodoContentKey(todo.content))
+    if (!nextStatus || nextStatus === todo.status) return todo
+    return { ...todo, status: nextStatus }
+  })
+
+  return { ok: true, list: { version: 1, updatedAt: now, todos } }
+}
+
 /** Coerce arbitrary parsed JSON into a valid TodoList (defensive file read). */
 export function parseTodoList(value: unknown): TodoList {
   if (!value || typeof value !== 'object') return emptyTodoList()
@@ -165,6 +271,10 @@ export function parseTodoList(value: unknown): TodoList {
     typeof obj.updatedAt === 'string' ? obj.updatedAt : new Date().toISOString()
   return { version: 1, updatedAt, todos }
 }
+
+/** Shown on update_todos when every actionable task is completed. */
+export const UPDATE_TODOS_ALL_DONE_MESSAGE =
+  'All tasks are complete (allDone=true). Do not call update_todos again. Reply with a brief text summary of what you finished and stop calling tools.'
 
 export type TodoSummary = {
   total: number

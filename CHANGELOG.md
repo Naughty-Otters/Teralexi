@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Tool-output transcript fallback skips empty display placeholders (`result (empty)`,
+  `_(no output)_`, etc.) and includes tool names when available, so thinking-research
+  no longer dumps repeated empty result lines before planning.
+- Composer “Waiting for your approval…” clears after tool approve/deny: HITL queue
+  block is reactive, and the chat transcript syncs to `approval-responded` immediately.
+  Any composer send (including queued while HITL is pending) also dismisses that banner.
 - `list_files`, `grep_files`, `glob_files`, and `search_files` accept
   `include_package_files` (default `false`) to omit `node_modules`, Python package
   dirs (`venv`, `site-packages`, `__pycache__`, etc.), and hidden paths from
@@ -30,8 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stale plan markdown files are pruned on sync, and explore-mode file writes target only
   the canonical plan file (use `update_todos` for step sync).
 - `grep_files` accepts a file path (not only a directory) and searches that single file.
-- `update_todos` is allowed during approved plan execution tool loops; the foreach batch
-  resyncs from disk when the todo list length changes.
+- `update_todos` is allowed during approved plan execution tool loops, but only
+  for a single status change on the currently assigned foreach step (add/rewrite
+  and other-step updates are rejected); the foreach batch still resyncs from disk
+  when the list length changes.
 - Chat scroll window no longer grows unbounded when new messages arrive while the user
   is reading older history (still capped at `CHAT_MESSAGE_WINDOW_MAX` rows in the DOM).
 - Chat UI coalesces high-frequency agent stream IPC to animation frames: throttled
@@ -68,6 +76,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Tool-loop no longer spins forever on repeated `update_todos` once the checklist
+  is `allDone`: identical `ok:true` results are deduped, the tool returns a stop
+  hint, and two consecutive allDone-only `update_todos` steps end the loop
+  (explore/plan todo drafting is unaffected).
 - `ensureDir` no longer misroutes app paths (e.g. `memory/`, `db/`) into channel
   data folders; fixes memory block writes and plan-mode tools (`enter_plan_mode`,
   `exit_plan_mode`) failing with “Cannot open database because the directory does

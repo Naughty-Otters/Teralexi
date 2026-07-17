@@ -1,4 +1,11 @@
-import { isPlanModeActive } from './plan-mode-state'
+import { getActivePlanTodoContent } from './active-plan-todo'
+import { isPlanExecutionActive, isPlanModeActive } from './plan-mode-state'
+import {
+  mergeExecutionTodoStatuses,
+  replaceTodos,
+  type TodoList,
+  type TrackedTodoInput,
+} from '@shared/agent/todos'
 
 /**
  * While explore (`planning`) is active, todos describe the draft plan — not finished work.
@@ -19,4 +26,28 @@ export function explorePhaseTodoUpdateBlockedReason(
     'Mark tasks completed only after exit_plan_mode is approved and execution begins. ' +
     'Call exit_plan_mode when the plan is ready for approval.'
   )
+}
+
+/**
+ * Apply `update_todos` input: full replace while exploring/drafting; status-only
+ * merge onto the approved list during `plan_tool_execute` (pinned to the active
+ * foreach step when one is bound).
+ */
+export function resolveTodoListUpdate(args: {
+  conversationId: string | undefined
+  existing: TodoList | null
+  incoming: TrackedTodoInput[]
+}): { ok: true; list: TodoList } | { ok: false; error: string } {
+  const { conversationId, existing, incoming } = args
+  if (
+    conversationId &&
+    isPlanExecutionActive(conversationId) &&
+    existing &&
+    existing.todos.length > 0
+  ) {
+    return mergeExecutionTodoStatuses(existing, incoming, {
+      activeTodoContent: getActivePlanTodoContent(),
+    })
+  }
+  return { ok: true, list: replaceTodos(incoming) }
 }

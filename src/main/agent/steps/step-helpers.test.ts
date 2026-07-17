@@ -361,6 +361,26 @@ describe('applyPerStreamToolInputDedupe', () => {
     expect(execute).toHaveBeenCalledTimes(1)
   })
 
+  it('dedupes update_todos when result uses ok:true', async () => {
+    const execute = vi.fn(async () => ({
+      ok: true,
+      summary: { allDone: true, total: 1, completed: 1 },
+    }))
+    const toolSet = { update_todos: { execute } }
+    applyPerStreamToolInputDedupe(toolSet)
+
+    const input = { todos: [{ content: 'Done', status: 'completed' }] }
+    const first = await toolSet.update_todos.execute(input)
+    const second = await toolSet.update_todos.execute(input)
+
+    expect(first).toMatchObject({ ok: true })
+    expect(second).toMatchObject({
+      alreadySucceeded: true,
+      tool: 'update_todos',
+    })
+    expect(execute).toHaveBeenCalledTimes(1)
+  })
+
   it('treats read_file content as dedupe success for approval skip', async () => {
     const execute = vi.fn(async () => ({ content: 'file body' }))
     const toolSet = {

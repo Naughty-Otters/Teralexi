@@ -1,6 +1,7 @@
 import { jsonSchema, stepCountIs } from '@teralexi-ai'
-import type { StreamTextParams, StreamTextResult } from '../llm/runtime'
 import { resolveToolLoopMaxIterations } from '@shared/agent/tool-loop'
+import { updateTodosAllDoneSpinStopWhen } from '../expr/update-todos-stop'
+import type { StreamTextParams, StreamTextResult } from '../llm/runtime'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
 import type { AgentStepContext } from '../context'
 import {
@@ -164,10 +165,9 @@ export abstract class AgentStep {
       this.ctx.executionSteps?.toolLoop?.maxIterations ??
         this.ctx.opts.toolLoopMaxIterations,
     )
-    // Bounded only by the iteration budget; the loop ends naturally when the
-    // model stops calling tools. (No longer halts after run_script so scripts
-    // can be chained iteratively.)
-    return [stepCountIs(maxIterations)]
+    // Iteration budget always applies. Also break update_todos allDone spins.
+    // (No longer halts after run_script so scripts can be chained iteratively.)
+    return [stepCountIs(maxIterations), updateTodosAllDoneSpinStopWhen()]
   }
 
   /**

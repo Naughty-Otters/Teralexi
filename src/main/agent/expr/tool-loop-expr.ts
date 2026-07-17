@@ -19,6 +19,11 @@ import {
 } from '../utils/planning-fields'
 import type { AgentFlowContext, AgentStepContext } from '../context'
 import { thinkingWantsDirectAnswer } from './thinking-utils'
+import { updateTodosAllDoneSpinStopWhen } from './update-todos-stop'
+import {
+  clearActivePlanTodoContent,
+  setActivePlanTodoContent,
+} from '../coding/active-plan-todo'
 import { referenceDocBasename } from '../resources/reference-ops'
 import type {
   ReferenceDoc,
@@ -320,16 +325,24 @@ function buildAgentToolSet(
   return toolSet
 }
 
-/** Exported for regression tests — loop ends on iteration budget only, not after run_script. */
+/** Exported for regression tests — iteration budget + allDone update_todos spin break. */
 export function resolveToolLoopStopWhen(flowCtx: AgentStepContext) {
   const maxIterations = resolveToolLoopMaxIterations(
     flowCtx.executionSteps?.toolLoop?.maxIterations ??
       flowCtx.opts.toolLoopMaxIterations,
   )
-  // Only the iteration budget bounds the loop; it otherwise ends naturally when
-  // the model stops calling tools. (We no longer halt after a single
-  // run_script/run_script_file so the agent can chain build → test → fix.)
-  return [stepCountIs(maxIterations)]
+  // Iteration budget always applies. Also break when the model spins on
+  // update_todos after the list is already allDone (common with toolChoice loops).
+  // We no longer halt after a single run_script/run_script_file so the agent can
+  // chain build → test → fix.
+  return [stepCountIs(maxIterations), updateTodosAllDoneSpinStopWhen()]
+}
+
+export function resolveToolLoopMaxTurns(flowCtx: AgentStepContext): number {
+  return resolveToolLoopMaxIterations(
+    flowCtx.executionSteps?.toolLoop?.maxIterations ??
+      flowCtx.opts.toolLoopMaxIterations,
+  )
 }
 
 /**
@@ -530,6 +543,7 @@ async function runStandaloneAgent(parentCtx: AgentStepContext): Promise<void> {
       tools: toolSet,
       instructions,
       stopWhen: resolveToolLoopStopWhen(parentCtx),
+      maxTurns: resolveToolLoopMaxTurns(parentCtx),
       abortSignal: haltCtrl.signal,
       prepareStep: planModePrepareStep,
       provider: attemptChoice.provider,
@@ -800,6 +814,10 @@ export async function executeTodoToolLoop(
     stepGoal,
   )
 
+  const activeTodoContent =
+    plannedTodo.name?.trim() || plannedTodo.description?.trim() || ''
+  setActivePlanTodoContent(activeTodoContent)
+
   const skillId = toolRunCtx.opts.skillId!
   const tools = filterToolsByAvailableSet(
     toolRunCtx.runtimeTools,
@@ -909,6 +927,7 @@ export async function executeTodoToolLoop(
       tools: toolSet,
       instructions,
       stopWhen: resolveToolLoopStopWhen(toolRunCtx),
+      maxTurns: resolveToolLoopMaxTurns(toolRunCtx),
       abortSignal: haltCtrl.signal,
       provider: toolLoopChoice.provider,
       modelId: toolLoopChoice.model,
@@ -1035,6 +1054,7 @@ export async function executeTodoToolLoop(
       classifiedError,
     }
   } finally {
+    clearActivePlanTodoContent()
     toolRunCtx.clearToolLoopOutputScope()
   }
 }

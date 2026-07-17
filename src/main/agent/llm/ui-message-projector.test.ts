@@ -3,6 +3,7 @@ import {
   forwardAgentUiMessageStream,
   reconcilePendingApprovalKeys,
   collectToolOutputFallbackText,
+  isPlaceholderToolResultDisplay,
 } from './ui-message-projector'
 
 describe('forwardAgentUiMessageStream', () => {
@@ -55,6 +56,20 @@ describe('reconcilePendingApprovalKeys', () => {
   })
 })
 
+describe('isPlaceholderToolResultDisplay', () => {
+  it('detects empty formatter placeholders', () => {
+    expect(isPlaceholderToolResultDisplay('**result** _(empty)_')).toBe(true)
+    expect(isPlaceholderToolResultDisplay('**list files** _(empty)_')).toBe(true)
+    expect(isPlaceholderToolResultDisplay('**Terminal**\n\n_(no output)_')).toBe(
+      true,
+    )
+    expect(isPlaceholderToolResultDisplay('**File change** _(no diff preview)_')).toBe(
+      true,
+    )
+    expect(isPlaceholderToolResultDisplay('**read file**\n\nhello')).toBe(false)
+  })
+})
+
 describe('collectToolOutputFallbackText', () => {
   it('fills empty transcript from finalized steps', async () => {
     const text = await collectToolOutputFallbackText({
@@ -69,6 +84,32 @@ describe('collectToolOutputFallbackText', () => {
       text: Promise.resolve('fallback'),
     })
     expect(text).toContain('from steps')
+    expect(text).toContain('ok')
+  })
+
+  it('skips empty result placeholders and labels non-empty query tools', async () => {
+    const text = await collectToolOutputFallbackText({
+      textStream: (async function* () {})(),
+      response: Promise.resolve(),
+      steps: Promise.resolve([
+        {
+          toolResults: [
+            { toolName: 'list_files', output: { entries: [] } },
+            {
+              toolName: 'read_file',
+              input: { path: 'README.md' },
+              output: { content: 'hello world' },
+            },
+            { output: { paths: [] } },
+            { output: { ok: true } },
+          ],
+        },
+      ]),
+    })
+    expect(text).not.toMatch(/result\s*\(empty\)/i)
+    expect(text).not.toContain('_(empty)_')
+    expect(text).toContain('read file')
+    expect(text).toContain('hello world')
     expect(text).toContain('ok')
   })
 })

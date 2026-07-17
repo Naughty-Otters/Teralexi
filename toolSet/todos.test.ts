@@ -85,6 +85,18 @@ describe('todo tools', () => {
     ])
   })
 
+  it('update_todos includes stop message when allDone', async () => {
+    const result = await updateTodos.execute({
+      todos: [{ content: 'Ship feature', status: 'completed' }],
+    })
+    expect(result).toMatchObject({
+      ok: true,
+      done: true,
+      summary: expect.objectContaining({ allDone: true }),
+      message: expect.stringContaining('allDone=true'),
+    })
+  })
+
   it('read_todos returns empty list when file is missing', async () => {
     const result = await readTodos.execute({})
     expect(result).toMatchObject({

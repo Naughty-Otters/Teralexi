@@ -72,6 +72,13 @@ export function buildRepeatToolResultStub(
         message: `web_scrape already ran for \`${url}\` in this session. Use prior results or the explore manifest.`,
       }
     }
+    case 'update_todos':
+      return {
+        alreadySucceeded: true,
+        tool: 'update_todos',
+        message:
+          'Task list already updated with this exact list in this session. Do not call update_todos again with the same todos — continue work or reply with a summary if allDone.',
+      }
     default:
       return {
         alreadySucceeded: true,

@@ -14,7 +14,10 @@ export function buildTaskTrackingBlock(
       '### Task tracking (approved plan execution)',
       'The foreach orchestrator drives tasks from `plans/todos.json` one at a time.',
       'Focus on the current task in your step goal — do not start follow-up work beyond it.',
-      'You may call `update_todos` during tool loops to mark progress, append discovered tasks, or cancel obsolete ones (full list each call).',
+      'You may call `update_todos` only to change status on the current assigned ' +
+        'approved step (at most one status change). Do not add, remove, reorder, rewrite step text, ' +
+        'or update any other plan step.',
+      'When `summary.allDone` is true, do not call `update_todos` again — finish the current step with a brief text summary.',
       'You may call `exit_plan_mode` to leave planning when the plan is ready or scope changes require it.',
       'Do not call `enter_plan_mode` again until execution finishes.',
     ].join('\n')
@@ -26,6 +29,7 @@ export function buildTaskTrackingBlock(
     '- Mark exactly ONE task `in_progress` before you start working it.',
     '- Mark it `completed` immediately when done — do not batch completions.',
     '- Append new tasks as you discover them; mark obsolete ones `cancelled`.',
+    '- When `summary.allDone` is true, do not call `update_todos` again — reply with a brief text summary and stop.',
     '- Skip the tracker only for trivial single-step requests.',
   ].join('\n')
 }

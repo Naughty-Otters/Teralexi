@@ -127,18 +127,33 @@ describe('tool-loop-expr', () => {
     expect(buildSkillsInstructionsBlock({ executionSteps: {} } as never)).toBe('')
   })
 
-  it('resolveToolLoopStopWhen only bounds by iteration count (no run_script halt)', () => {
+  it('resolveToolLoopStopWhen bounds by iteration count and allDone spin', () => {
     const ctx = {
       opts: { toolLoopMaxIterations: 42 },
       executionSteps: { toolLoop: { maxIterations: 30 } },
     } as never
     const stopWhen = resolveToolLoopStopWhen(ctx)
-    expect(stopWhen).toHaveLength(1)
+    expect(stopWhen).toHaveLength(2)
     const expectedMax = resolveToolLoopMaxIterations(30)
     const atLimit = { steps: Array.from({ length: expectedMax }, () => ({})) }
     const belowLimit = { steps: Array.from({ length: expectedMax - 1 }, () => ({})) }
     expect(stopWhen[0](atLimit)).toBe(true)
     expect(stopWhen[0](belowLimit)).toBe(false)
     expect(stepCountIs(expectedMax)(atLimit)).toBe(true)
+    expect(
+      stopWhen[1]({
+        steps: [
+          {
+            toolCalls: [{ toolName: 'update_todos' }],
+            toolResults: [
+              {
+                toolName: 'update_todos',
+                output: { ok: true, summary: { allDone: true } },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toBe(false)
   })
 })
