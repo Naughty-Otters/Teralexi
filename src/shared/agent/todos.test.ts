@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   emptyTodoList,
+  mergeExecutionTodoStatuses,
   normalizeTodos,
   parseTodoList,
   renderTodoChecklist,
@@ -112,6 +113,116 @@ describe('summarizeTodos', () => {
 
   it('allDone is false for an empty list', () => {
     expect(summarizeTodos(emptyTodoList(NOW)).allDone).toBe(false)
+  })
+})
+
+describe('mergeExecutionTodoStatuses', () => {
+  it('applies a single status update while preserving approved step text', () => {
+    const existing = replaceTodos([
+      { content: 'Build UI', status: 'pending' },
+      { content: 'Add tests', status: 'pending' },
+    ], NOW)
+    const merged = mergeExecutionTodoStatuses(existing, [
+      { content: 'Build UI', status: 'completed' },
+      { content: 'Add tests', status: 'pending' },
+    ], { now: NOW })
+    expect(merged).toMatchObject({
+      ok: true,
+      list: {
+        todos: [
+          { content: 'Build UI', status: 'completed' },
+          { content: 'Add tests', status: 'pending' },
+        ],
+      },
+    })
+  })
+
+  it('rejects new or rewritten step text', () => {
+    const existing = replaceTodos([
+      { content: 'Build UI', status: 'pending' },
+    ], NOW)
+    const merged = mergeExecutionTodoStatuses(existing, [
+      { content: 'Totally different task', status: 'in_progress' },
+    ], { now: NOW })
+    expect(merged.ok).toBe(false)
+    if (!merged.ok) {
+      expect(merged.error).toContain('cannot add or rewrite')
+    }
+  })
+
+  it('allows partial status updates without dropping other steps', () => {
+    const existing = replaceTodos([
+      { content: 'One', status: 'pending' },
+      { content: 'Two', status: 'pending' },
+    ], NOW)
+    const merged = mergeExecutionTodoStatuses(existing, [
+      { content: 'One', status: 'completed' },
+    ], { now: NOW })
+    expect(merged).toMatchObject({
+      ok: true,
+      list: {
+        todos: [
+          { content: 'One', status: 'completed' },
+          { content: 'Two', status: 'pending' },
+        ],
+      },
+    })
+  })
+
+  it('rejects changing more than one status in a single call', () => {
+    const existing = replaceTodos([
+      { content: 'One', status: 'pending' },
+      { content: 'Two', status: 'pending' },
+    ], NOW)
+    const merged = mergeExecutionTodoStatuses(existing, [
+      { content: 'One', status: 'completed' },
+      { content: 'Two', status: 'in_progress' },
+    ], { now: NOW })
+    expect(merged.ok).toBe(false)
+    if (!merged.ok) {
+      expect(merged.error).toContain('at most ONE')
+    }
+  })
+
+  it('rejects status changes on a step other than the active assigned todo', () => {
+    const existing = replaceTodos([
+      { content: 'One', status: 'pending' },
+      { content: 'Two', status: 'pending' },
+    ], NOW)
+    const merged = mergeExecutionTodoStatuses(
+      existing,
+      [{ content: 'Two', status: 'completed' }],
+      { now: NOW, activeTodoContent: 'One' },
+    )
+    expect(merged.ok).toBe(false)
+    if (!merged.ok) {
+      expect(merged.error).toContain('current assigned step')
+      expect(merged.error).toContain('One')
+    }
+  })
+
+  it('allows status change only on the active assigned todo', () => {
+    const existing = replaceTodos([
+      { content: 'One', status: 'pending' },
+      { content: 'Two', status: 'pending' },
+    ], NOW)
+    const merged = mergeExecutionTodoStatuses(
+      existing,
+      [
+        { content: 'One', status: 'in_progress' },
+        { content: 'Two', status: 'pending' },
+      ],
+      { now: NOW, activeTodoContent: 'One' },
+    )
+    expect(merged).toMatchObject({
+      ok: true,
+      list: {
+        todos: [
+          { content: 'One', status: 'in_progress' },
+          { content: 'Two', status: 'pending' },
+        ],
+      },
+    })
   })
 })
 

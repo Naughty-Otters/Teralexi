@@ -142,7 +142,7 @@ describe('task tracking injector', () => {
     isPlanExecutionActive.mockReturnValue(true)
     expect(
       buildTaskTrackingBlock([{ name: 'update_todos' }], 'conv-1'),
-    ).toContain('approved plan execution')
+    ).toContain('current assigned')
 
     expect(
       taskTrackingInjector.applies({
