@@ -6,9 +6,13 @@ import {
 } from '@shared/teralexi-protocol'
 import { handleGoogleAccountOAuthDeepLink } from '@main/services/google-account-oauth'
 import { syncStoredGoogleAccountToRenderers } from '@main/services/google-account-notify'
-import { clearTeralexiServerAuthCache } from '@main/services/teralexi-server-auth'
 import { revokeLocalTeralexiAuthSession } from '@main/services/local-auth-session'
 import { getTeralexiProtocolBridge } from '@main/services/teralexi-protocol-bridge'
+import { getTeralexiBaseApiUrl } from '@main/services/teralexi-platform-config'
+import {
+  acceptPresentedServerAccessToken,
+  isLikelyPresentedServerAccessToken,
+} from '@main/services/teralexi-server-auth'
 
 const log = createLogger('services.teralexi-protocol')
 
@@ -36,27 +40,46 @@ export async function dispatchTeralexiUrl(rawUrl: string): Promise<void> {
   }
 
   log.info('Handling teralexi protocol URL', { host: action.type })
-  focusMainWindow()
 
   if (action.type === 'logout') {
-    revokeLocalTeralexiAuthSession('Signed out from Teralexi web authentication')
+    revokeLocalTeralexiAuthSession('Signed out from Teralexi web authentication', {
+      cause: 'web-logout',
+    })
     syncStoredGoogleAccountToRenderers()
+    focusMainWindow()
     return
   }
 
   if (action.type === 'open') {
     try {
+      // Persist account + exchange server JWT before focusing the main window.
+      // Focusing first used to race main-active session checks that revoked the
+      // brand-new login (UI stayed locked).
       await handleGoogleAccountOAuthDeepLink({
         accessToken: action.accessToken,
         refreshToken: action.refreshToken,
         expiresIn: action.expiresIn,
         scope: action.scope,
       })
-      clearTeralexiServerAuthCache()
+      // If the website sent a platform JWT (not Google id_token), cache it so
+      // main-active can authorize without waiting on a Google exchange.
+      if (isLikelyPresentedServerAccessToken(action.accessToken)) {
+        const apiBaseUrl = getTeralexiBaseApiUrl()
+        if (apiBaseUrl) {
+          acceptPresentedServerAccessToken({
+            accessToken: action.accessToken,
+            apiBaseUrl,
+            expiresInSeconds: action.expiresIn,
+          })
+        }
+      }
+      // Do not clearTeralexiServerAuthCache here — that wiped the JWT just
+      // exchanged during onGoogleAccountSignedIn.
       syncStoredGoogleAccountToRenderers()
     } catch (err) {
       log.error('Google OAuth deep link failed', { err })
     }
+    focusMainWindow()
   }
 }
 
@@ -122,9 +145,14 @@ export function registerTeralexiProtocolHandlers(): void {
   })
 
   app.on('second-instance', (_event, argv) => {
-    focusMainWindow()
     const url = extractProtocolUrlFromArgv(argv)
-    if (url) handleTeralexiProtocolUrl(url)
+    if (url) {
+      // dispatchTeralexiUrl focuses after the account is applied so main-active
+      // session checks cannot revoke a brand-new login.
+      handleTeralexiProtocolUrl(url)
+      return
+    }
+    focusMainWindow()
   })
 
   const startupUrl = extractProtocolUrlFromArgv(process.argv)

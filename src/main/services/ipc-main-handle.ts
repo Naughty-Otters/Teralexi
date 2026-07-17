@@ -96,10 +96,8 @@ import { getConversationStore } from './conversation-store'
 import {
   startGoogleAccountSignIn,
   loadStoredAccount,
-  clearStoredAccount,
   googleAccountInfoForUi,
 } from './google-account-oauth'
-import { notifyGoogleAccountChanged } from './google-account-notify'
 import {
   startGoogleWorkspaceSignIn,
   loadStoredAccount as loadStoredGoogleWorkspaceAccount,
@@ -108,6 +106,7 @@ import {
 } from './google-workspace-oauth'
 import { notifyGoogleWorkspaceAccountChanged } from './google-workspace-account-notify'
 import { clearTeralexiServerAuthCache } from './teralexi-server-auth'
+import { revokeLocalTeralexiAuthSession } from './local-auth-session'
 import {
   clearEntitlementSession,
   getEntitlementUiSnapshot,
@@ -1408,7 +1407,9 @@ export class IpcMainHandleClass implements IIpcMainHandle {
   }> = async () => {
     clearTeralexiServerAuthCache()
     const account = await startGoogleAccountSignIn()
-    clearTeralexiServerAuthCache()
+    // Deep link already ran onGoogleAccountSignedIn (JWT exchange). Do not clear
+    // the server auth cache here — that raced with entitlement refresh and could
+    // revoke the just-saved Google account, leaving the UI locked.
     const ui = googleAccountInfoForUi(account)
     await refreshAuthAndEntitlement('sign-in')
     return ui
@@ -1421,10 +1422,10 @@ export class IpcMainHandleClass implements IIpcMainHandle {
   }
 
   GoogleSignOut: (_event: Electron.IpcMainInvokeEvent) => void = () => {
-    clearStoredAccount()
-    clearTeralexiServerAuthCache()
+    revokeLocalTeralexiAuthSession('Signed out from Teralexi', {
+      cause: 'user-sign-out',
+    })
     clearEntitlementSession()
-    notifyGoogleAccountChanged(null)
   }
 
   GetGoogleAccount: (_event: Electron.IpcMainInvokeEvent) => {

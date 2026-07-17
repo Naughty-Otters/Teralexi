@@ -115,6 +115,20 @@ export type AgentStreamCollectSource = {
   usage?: PromiseLike<import('ai').LanguageModelUsage>
 }
 
+type ToolResultRow = {
+  output?: unknown
+  toolName?: string
+  input?: unknown
+  args?: unknown
+}
+
+/** True for formatter placeholders like `**result** _(empty)_` / `_(no output)_`. */
+export function isPlaceholderToolResultDisplay(formatted: string): boolean {
+  const trimmed = formatted.trim()
+  if (!trimmed) return true
+  return /_\((?:empty|no output|no diff preview)\)_\s*$/i.test(trimmed)
+}
+
 export async function collectToolOutputFallbackText(
   result: AgentStreamCollectSource,
 ): Promise<string> {
@@ -123,9 +137,9 @@ export async function collectToolOutputFallbackText(
     if (result.steps) {
       const steps = (await result.steps) as Array<{
         text?: string
-        toolResults?: ReadonlyArray<{ output?: unknown }>
-        staticToolResults?: ReadonlyArray<{ output?: unknown }>
-        dynamicToolResults?: ReadonlyArray<{ output?: unknown }>
+        toolResults?: ReadonlyArray<ToolResultRow>
+        staticToolResults?: ReadonlyArray<ToolResultRow>
+        dynamicToolResults?: ReadonlyArray<ToolResultRow>
       }>
       if (Array.isArray(steps)) {
         for (const step of steps) {
@@ -136,12 +150,19 @@ export async function collectToolOutputFallbackText(
             ...(step.dynamicToolResults ?? []),
           ]
           for (const r of rows) {
-            if (r && typeof r === 'object' && 'output' in r) {
-              const ser = serializeForAgentCollect(
-                (r as { output: unknown }).output,
-              )
-              if (ser.trim()) blocks.push(ser.trim())
-            }
+            if (!r || typeof r !== 'object' || !('output' in r)) continue
+            const toolName =
+              typeof r.toolName === 'string' ? r.toolName.trim() : ''
+            const toolInput = r.input !== undefined ? r.input : r.args
+            const ser = serializeForAgentCollect(r.output, {
+              ...(toolName ? { toolName } : {}),
+              ...(toolInput !== undefined ? { toolInput } : {}),
+            })
+            const trimmed = ser.trim()
+            // Skip empty query/todo/terminal placeholders so thinking-research
+            // (and other tool-only passes) don't dump "result (empty)" spam.
+            if (!trimmed || isPlaceholderToolResultDisplay(trimmed)) continue
+            blocks.push(trimmed)
           }
         }
       }

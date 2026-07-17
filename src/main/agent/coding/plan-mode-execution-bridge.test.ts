@@ -17,6 +17,8 @@ import {
   hasRecentPlanExecutionCompleted,
   resetAllPlanRemindersForTests,
 } from './plan-mode-session-reminders'
+// Side-effect: register planned-todo strategy factory for foreach tests.
+import '../steps/foreach-item/strategies/planned-todo-strategy'
 
 const { planState } = vi.hoisted(() => {
   const planState: AgentPlanModeState = {

@@ -24,6 +24,7 @@ import { TERALEXI_CALLBACK_URL } from '@shared/teralexi-protocol'
 import {
   googleProfileFromIdToken,
   isGoogleIdToken,
+  decodeJwtPayload,
 } from '@shared/google-id-token'
 import { createLogger, traceFunction } from '@main/logger'
 import { notifyGoogleAccountChanged } from '@main/services/google-account-notify'
@@ -195,6 +196,17 @@ async function resolveGoogleUserInfo(
     }
   }
 
+  // Platform JWT from website login — profile claims without calling Google.
+  const jwtProfile = googleProfileFromIdToken(bearerToken)
+  if (jwtProfile?.sub && (jwtProfile.email || jwtProfile.name)) {
+    return {
+      sub: jwtProfile.sub,
+      email: jwtProfile.email,
+      name: jwtProfile.name || jwtProfile.email,
+      picture: jwtProfile.picture,
+    }
+  }
+
   const userInfoRaw = await httpsGet(GOOGLE_USERINFO_URL, bearerToken)
   if (typeof userInfoRaw.error === 'string') {
     throw new Error(
@@ -244,7 +256,7 @@ async function applyGoogleAccountOAuthCallbackImpl(
   const account: GoogleAccount = { tokens, userInfo }
   persistAccount(account)
   notifyGoogleAccountChanged(googleAccountInfoForUi(account))
-  void onGoogleAccountSignedIn()
+  await onGoogleAccountSignedIn()
   return account
 }
 
@@ -333,10 +345,27 @@ export const startGoogleAccountSignIn = traceFunction(
   startGoogleAccountSignInImpl,
 )
 
-/** Google id_token from the linked Teralexi account (for server JWT exchange). */
+/**
+ * Google id_token from the linked Teralexi account (for server JWT exchange).
+ * Returns the raw token even when locally soft-expired so callers can attempt
+ * a remote exchange — blocking here caused main-active `no-token` loops after
+ * the Google id_token's ~1h lifetime while the user was still signed in.
+ */
 export function getTeralexiAccountGoogleIdToken(): string | null {
   const account = loadStoredAccount()
   if (!account) return null
-  if (Date.now() >= account.tokens.expires_at - 60_000) return null
   return account.tokens.id_token?.trim() || null
+}
+
+/**
+ * Platform JWT stored as `access_token` when the website deep link did not
+ * send a Google id_token. Used to bootstrap server auth without exchange.
+ */
+export function getStoredPresentedServerAccessToken(): string | null {
+  const account = loadStoredAccount()
+  if (!account) return null
+  const token = account.tokens.access_token?.trim()
+  if (!token || isGoogleIdToken(token)) return null
+  if (!decodeJwtPayload(token)) return null
+  return token
 }

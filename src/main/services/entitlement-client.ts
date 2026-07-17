@@ -4,7 +4,7 @@ import type {
   EntitlementCache,
 } from '@shared/subscription/entitlement-types'
 import { getTeralexiBaseApiUrl } from './teralexi-platform-config'
-import { getTeralexiServerAccessToken } from './teralexi-server-auth'
+import { getTeralexiServerAccessToken, getLastServerAccessTokenFailure } from './teralexi-server-auth'
 import { verifyEntitlementToken } from './entitlement-verifier'
 import {
   buildEntitlementCache,
@@ -49,9 +49,19 @@ export async function fetchTeralexiCurrentUser(
   return parseJsonResponse<TeralexiMeResponse>(response)
 }
 
+/**
+ * Platform session probe. Distinguishes "no JWT yet" from "server rejected JWT"
+ * so callers can keep Google identity when the token is merely missing.
+ */
 export type TeralexiServerSessionCheck =
   | { ok: true }
-  | { ok: false; message: string; status?: number }
+  | {
+      ok: false
+      /** no-token: never revoke identity. rejected: /me returned 401/403. */
+      reason: 'no-token' | 'rejected'
+      message: string
+      status?: number
+    }
   | { ok: null; transientError: unknown }
 
 /**
@@ -70,8 +80,8 @@ export async function checkTeralexiServerSession(
   if (!accessToken) {
     return {
       ok: false,
+      reason: 'no-token',
       message: 'Teralexi server session is not available',
-      status: 401,
     }
   }
 
@@ -83,7 +93,7 @@ export async function checkTeralexiServerSession(
     const message =
       err instanceof Error ? err.message : 'Teralexi server session check failed'
     if (status === 401 || status === 403) {
-      return { ok: false, message, status }
+      return { ok: false, reason: 'rejected', message, status }
     }
     return { ok: null, transientError: err }
   }
@@ -150,9 +160,11 @@ export async function fetchAndVerifyEntitlementFromNetwork(): Promise<{
 
   const accessToken = await getTeralexiServerAccessToken(apiBaseUrl)
   if (!accessToken) {
-    const error = new Error('Teralexi server access token is not available') as Error & {
-      status?: number
-    }
+    const detail =
+      getLastServerAccessTokenFailure() ||
+      'Teralexi server access token is not available'
+    const error = new Error(detail) as Error & { status?: number }
+    // Client could not obtain a JWT — not necessarily an HTTP 401 from the API.
     error.status = 401
     throw error
   }

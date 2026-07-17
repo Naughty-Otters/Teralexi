@@ -101,15 +101,16 @@ function toolOutputIsDedupeSuccess(
 ): boolean {
   if (result === null || typeof result !== 'object') return false
   const r = result as Record<string, unknown>
+  if (typeof r.error === 'string' && r.error.trim()) return false
   if (toolName === 'read_file') {
-    if (typeof r.error === 'string' && r.error) return false
     return (
       typeof r.content === 'string' ||
       r.isDirectory === true ||
       Array.isArray(r.entries)
     )
   }
-  return r.success === true
+  // Most tools use `success`; task-tracking tools use `ok`.
+  return r.success === true || r.ok === true
 }
 
 export function resolveToolPathNormalizeContextFromRunCtx(
@@ -504,6 +505,8 @@ export type CreateAgentParams = {
   stopWhen:
     | import('ai').StopCondition<ToolSet>
     | import('ai').StopCondition<ToolSet>[]
+  /** Bound for `@ai-sdk-tools/agents` (defaults stopWhen when modelSettings omit it). */
+  maxTurns?: number
   abortSignal?: AbortSignal
   toolChoice?: 'required' | 'auto' | 'none'
   provider?: ProviderType
@@ -522,6 +525,7 @@ export function createAgent(params: CreateAgentParams): Agent {
     tools,
     instructions,
     stopWhen,
+    maxTurns,
     abortSignal,
     toolChoice = 'auto',
     provider,
@@ -536,6 +540,9 @@ export function createAgent(params: CreateAgentParams): Agent {
     tools: tools as Record<string, Tool>,
     instructions,
     memory: getAgentMemoryConfig(),
+    // @ai-sdk-tools/agents defaults to stepCountIs(maxTurns||10) then spreads
+    // modelSettings — pass both so the ToolLoopAgent always has a hard bound.
+    ...(typeof maxTurns === 'number' ? { maxTurns } : {}),
     modelSettings: {
       toolChoice: effectiveToolChoice,
       stopWhen,

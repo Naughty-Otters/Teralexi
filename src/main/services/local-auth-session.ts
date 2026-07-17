@@ -1,7 +1,8 @@
+import { createLogger } from '@main/logger'
 import { clearStoredAccount } from '@main/services/google-account-oauth'
 import { notifyGoogleAccountChanged } from '@main/services/google-account-notify'
 import { clearTeralexiServerAuthCache } from '@main/services/teralexi-server-auth'
-import { createLogger } from '@main/logger'
+import type { AuthIdentityRevokeCause } from '@shared/auth/auth-session-policy'
 import { clearEntitlementCache } from './entitlement-store'
 
 const log = createLogger('services.local-auth-session')
@@ -16,12 +17,22 @@ export function resetLocalAuthSessionListenersForTests(): void {
   clearedListeners.clear()
 }
 
-/** Clear persisted Google account, server JWT cache, and entitlement cache. */
+export type RevokeLocalAuthContext = {
+  /** Required — forces callers to declare why identity is cleared. */
+  cause: AuthIdentityRevokeCause
+} & Record<string, unknown>
+
+/**
+ * Clear persisted Google identity, server JWT, and entitlement.
+ *
+ * Call only for {@link AuthIdentityRevokeCause} values. Entitlement / missing-JWT
+ * failures must NOT use this — see `@shared/auth/auth-session-policy`.
+ */
 export function revokeLocalTeralexiAuthSession(
   message: string,
-  context: Record<string, unknown> = {},
+  context: RevokeLocalAuthContext,
 ): void {
-  log.warn('Server session invalid; signing out locally', { message, ...context })
+  log.warn('Signing out locally', { message, ...context })
   clearStoredAccount()
   clearTeralexiServerAuthCache()
   clearEntitlementCache()

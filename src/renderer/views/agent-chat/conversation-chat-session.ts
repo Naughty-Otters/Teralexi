@@ -1,3 +1,4 @@
+import { shallowRef } from 'vue'
 import { Chat } from '@teralexi-ai/vue'
 import type { UIMessage } from '@teralexi-ai'
 
@@ -15,6 +16,11 @@ const uiSnapshotsByConversationId = new Map<string, UIMessage[]>()
 const messageQueuesByConversationId = new Map<string, QueuedUserMessage[]>()
 /** While set, queued user messages must not be sent (form submit / tool approval pending). */
 const hitlBlocksQueueByConversationId = new Set<string>()
+/**
+ * Bumped whenever {@link setConversationHitlBlocksQueue} mutates the set so Vue
+ * computeds (composer wait banner, dequeue gates) re-evaluate.
+ */
+export const hitlBlocksQueueEpoch = shallowRef(0)
 
 export function cloneUiMessages(messages: UIMessage[]): UIMessage[] {
   return JSON.parse(JSON.stringify(messages)) as UIMessage[]
@@ -75,11 +81,15 @@ export function setConversationHitlBlocksQueue(
   blocked: boolean,
 ): void {
   if (!conversationId.trim()) return
+  const before = hitlBlocksQueueByConversationId.has(conversationId)
   if (blocked) hitlBlocksQueueByConversationId.add(conversationId)
   else hitlBlocksQueueByConversationId.delete(conversationId)
+  const after = hitlBlocksQueueByConversationId.has(conversationId)
+  if (before !== after) hitlBlocksQueueEpoch.value += 1
 }
 
 export function conversationHitlBlocksQueue(conversationId: string): boolean {
+  void hitlBlocksQueueEpoch.value
   return hitlBlocksQueueByConversationId.has(conversationId)
 }
 
@@ -93,5 +103,7 @@ export function clearConversationSession(conversationId: string): void {
   if (!conversationId.trim()) return
   clearConversationChatCache(conversationId)
   messageQueuesByConversationId.delete(conversationId)
-  hitlBlocksQueueByConversationId.delete(conversationId)
+  if (hitlBlocksQueueByConversationId.delete(conversationId)) {
+    hitlBlocksQueueEpoch.value += 1
+  }
 }
