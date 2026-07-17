@@ -117,6 +117,15 @@ jobs:
       #   if: matrix.platform == 'mac'
       #   run: node .github/scripts/verify-mac-update-manifest.mjs build
 
+      - name: Debug OIDC claims (safe)
+        env:
+          OIDC_AUDIENCE: sts.amazonaws.com
+          # Passed only for shape checks; values are never printed (GitHub also masks secrets).
+          AWS_ROLE_TO_ASSUME_VALUE: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          AWS_REGION_VALUE: ${{ secrets.AWS_REGION }}
+          GITHUB_ENVIRONMENT: release
+        run: node .github/scripts/debug-oidc-claims.mjs
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v5
         with:
@@ -139,6 +148,7 @@ jobs:
         with:
           name: teralexi-${{ matrix.platform }}-prod
           path: |
+            oidc-debug.json
             build/*.yml
             build/latest*.yml
             build/*.blockmap
