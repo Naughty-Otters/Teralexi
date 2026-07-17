@@ -57,6 +57,7 @@ vi.mock('@main/services/google-account-notify', () => ({
 import {
   clearEntitlementSession,
   getEntitlementUiSnapshot,
+  onGoogleAccountSignedIn,
   refreshAuthAndEntitlement,
   resetEntitlementSessionForTests,
 } from './entitlement-session'
@@ -134,22 +135,41 @@ describe('refreshAuthAndEntitlement', () => {
     expect(checkTeralexiServerSession).not.toHaveBeenCalled()
   })
 
-  it('signs out locally when server session is revoked on launch', async () => {
+  it('signs out locally when server rejects an established JWT on launch', async () => {
     loadStoredAccount.mockReturnValue({ userInfo: { sub: 'g-1' } })
     checkTeralexiServerSession.mockResolvedValue({
       ok: false,
-      message: 'Teralexi server session is not available',
+      reason: 'rejected',
+      message: 'Unauthorized',
       status: 401,
     })
 
     const snapshot = await refreshAuthAndEntitlement('launch')
 
     expect(revokeLocalTeralexiAuthSession).toHaveBeenCalledWith(
-      'Teralexi server session is not available',
-      expect.objectContaining({ reason: 'launch', status: 401 }),
+      'Unauthorized',
+      expect.objectContaining({
+        cause: 'server-session-rejected',
+        reason: 'launch',
+      }),
     )
     expect(snapshot).toBeNull()
     expect(verifyCachedEntitlementLocally).not.toHaveBeenCalled()
+  })
+
+  it('keeps Google identity when platform JWT is missing on launch', async () => {
+    loadStoredAccount.mockReturnValue({ userInfo: { sub: 'g-1' } })
+    checkTeralexiServerSession.mockResolvedValue({
+      ok: false,
+      reason: 'no-token',
+      message: 'Teralexi server session is not available',
+    })
+
+    const snapshot = await refreshAuthAndEntitlement('launch')
+
+    expect(revokeLocalTeralexiAuthSession).not.toHaveBeenCalled()
+    expect(snapshot?.verifyState).toBe('failed')
+    expect(loadStoredAccount).toHaveBeenCalled()
   })
 
   it('fetches from network when local verification fails', async () => {
@@ -187,7 +207,7 @@ describe('refreshAuthAndEntitlement', () => {
     expect(verifyCachedEntitlementLocally).toHaveBeenCalledTimes(1)
   })
 
-  it('signs out locally on authorization failures during sign-in', async () => {
+  it('keeps the local account on authorization failures during sign-in', async () => {
     loadStoredAccount.mockReturnValue({ userInfo: { sub: 'g-1' } })
     verifyCachedEntitlementLocally.mockResolvedValue(null)
     const authError = new Error('Teralexi server access token is not available') as Error & {
@@ -198,8 +218,38 @@ describe('refreshAuthAndEntitlement', () => {
 
     const snapshot = await refreshAuthAndEntitlement('sign-in')
 
-    expect(revokeLocalTeralexiAuthSession).toHaveBeenCalled()
-    expect(snapshot).toBeNull()
+    expect(revokeLocalTeralexiAuthSession).not.toHaveBeenCalled()
+    expect(snapshot?.verifyState).toBe('failed')
+  })
+
+  /**
+   * Regression: website login persists Google identity, then focus triggers
+   * main-active while the platform JWT is still missing. Must not lock the UI.
+   */
+  it('keeps signed-in after website login when main-active sees no-token', async () => {
+    loadStoredAccount.mockReturnValue({
+      userInfo: { sub: 'g-1', email: 'u@example.com' },
+      tokens: { id_token: 'google-id' },
+    })
+    verifyCachedEntitlementLocally.mockResolvedValue({
+      cache: sampleCache,
+      verifyState: 'verified',
+    })
+
+    await onGoogleAccountSignedIn()
+    expect(revokeLocalTeralexiAuthSession).not.toHaveBeenCalled()
+
+    checkTeralexiServerSession.mockResolvedValue({
+      ok: false,
+      reason: 'no-token',
+      message: 'Teralexi server session is not available',
+    })
+
+    const snapshot = await refreshAuthAndEntitlement('main-active')
+
+    expect(revokeLocalTeralexiAuthSession).not.toHaveBeenCalled()
+    expect(snapshot?.verifyState).toBe('failed')
+    expect(getEntitlementUiSnapshot()?.verifyState).toBe('failed')
   })
 
   it('blocks without signing out for non-session auth failures', async () => {

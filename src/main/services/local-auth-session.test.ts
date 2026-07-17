@@ -53,7 +53,10 @@ describe('local-auth-session', () => {
     const listener = vi.fn()
     onLocalAuthSessionCleared(listener)
 
-    revokeLocalTeralexiAuthSession('Unauthorized', { status: 401 })
+    revokeLocalTeralexiAuthSession('Unauthorized', {
+      cause: 'server-session-rejected',
+      status: 401,
+    })
 
     expect(clearStoredAccount).toHaveBeenCalled()
     expect(clearTeralexiServerAuthCache).toHaveBeenCalled()

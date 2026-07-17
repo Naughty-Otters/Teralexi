@@ -1,5 +1,15 @@
 import type { EntitlementUiSnapshot } from './entitlement-types'
 
+export {
+  decideAfterEntitlementAuthFailure,
+  decideAfterServerSessionCheck,
+  decideExplicitSignOut,
+  shouldRevokeLocalAuthSession,
+  type AuthIdentityDecision,
+  type AuthIdentityRevokeCause,
+  type ServerSessionOutcome,
+} from '@shared/auth/auth-session-policy'
+
 export class EntitlementAuthorizationError extends Error {
   readonly snapshot: EntitlementUiSnapshot | null
   readonly status?: number
@@ -41,21 +51,6 @@ export function classifyEntitlementRefreshError(err: unknown): {
   }
 
   return { kind: 'transient', message, status }
-}
-
-export function shouldRevokeLocalAuthSession(args: {
-  status?: number
-  message: string
-  requiresServerSessionCheck: boolean
-}): boolean {
-  if (args.status === 401 || args.status === 403) return true
-  if (
-    args.requiresServerSessionCheck &&
-    /access token is not available/i.test(args.message)
-  ) {
-    return true
-  }
-  return false
 }
 
 export function isAuthorizationBlocked(

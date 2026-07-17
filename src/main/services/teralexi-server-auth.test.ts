@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getTeralexiAccountGoogleIdToken } = vi.hoisted(() => ({
-  getTeralexiAccountGoogleIdToken: vi.fn(),
-}))
+const { getTeralexiAccountGoogleIdToken, getStoredPresentedServerAccessToken } =
+  vi.hoisted(() => ({
+    getTeralexiAccountGoogleIdToken: vi.fn(),
+    getStoredPresentedServerAccessToken: vi.fn(() => null),
+  }))
 
 vi.mock('@main/services/google-account-oauth', () => ({
   getTeralexiAccountGoogleIdToken,
+  getStoredPresentedServerAccessToken,
 }))
 
 vi.mock('./server-auth-store', () => ({
@@ -36,6 +39,8 @@ describe('teralexi-server-auth', () => {
   beforeEach(() => {
     clearTeralexiServerAuthCache()
     getTeralexiAccountGoogleIdToken.mockReset()
+    getStoredPresentedServerAccessToken.mockReset()
+    getStoredPresentedServerAccessToken.mockReturnValue(null)
     vi.stubGlobal('fetch', vi.fn())
   })
 
@@ -150,5 +155,37 @@ describe('teralexi-server-auth', () => {
         }),
       }),
     )
+  })
+
+  it('exchanges Google id_token remotely when local server JWT is missing', async () => {
+    const serverJwt = makeTestJwt(Math.floor(Date.now() / 1000) + 3600)
+    getTeralexiAccountGoogleIdToken.mockReturnValue('google-id-token')
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ access_token: serverJwt, expires_in: 3600 }),
+    } as Response)
+
+    await expect(
+      getTeralexiServerAccessToken('http://127.0.0.1:8000'),
+    ).resolves.toBe(serverJwt)
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://127.0.0.1:8000/api/v1/auth/google',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ id_token: 'google-id-token' }),
+      }),
+    )
+  })
+
+  it('uses presented platform JWT when Google id_token is unavailable', async () => {
+    const platformJwt = makeTestJwt(Math.floor(Date.now() / 1000) + 3600)
+    getTeralexiAccountGoogleIdToken.mockReturnValue(null)
+    getStoredPresentedServerAccessToken.mockReturnValue(platformJwt)
+
+    await expect(
+      getTeralexiServerAccessToken('http://127.0.0.1:8000'),
+    ).resolves.toBe(platformJwt)
+    expect(fetch).not.toHaveBeenCalled()
   })
 })

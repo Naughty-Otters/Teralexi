@@ -6,8 +6,10 @@ import type { EntitlementUiSnapshot } from '@shared/subscription/entitlement-typ
 import {
   buildFailedEntitlementSnapshot,
   classifyEntitlementRefreshError,
+  decideAfterEntitlementAuthFailure,
+  decideAfterServerSessionCheck,
   isAuthorizationBlocked,
-  shouldRevokeLocalAuthSession,
+  type ServerSessionOutcome,
 } from '@shared/subscription/entitlement-auth-error'
 import { createLogger } from '@main/logger'
 import {
@@ -48,6 +50,7 @@ function isSignedIn(): boolean {
   return loadStoredAccount() != null
 }
 
+/** Session probe runs on cold start / focus / manual — never on fresh sign-in. */
 function requiresServerSessionCheck(reason: EntitlementRefreshReason): boolean {
   return reason === 'launch' || reason === 'main-active' || reason === 'manual'
 }
@@ -62,32 +65,46 @@ function pushSnapshot(snapshot: EntitlementUiSnapshot | null): EntitlementUiSnap
   return snapshot
 }
 
-function signOutDueToServerAuthFailure(
-  message: string,
-  context: Record<string, unknown> = {},
-): EntitlementUiSnapshot | null {
-  revokeLocalTeralexiAuthSession(message, context)
-  return pushSnapshot(null)
+function applyIdentityDecision(
+  decision: ReturnType<typeof decideAfterServerSessionCheck>,
+  context: Record<string, unknown>,
+): EntitlementUiSnapshot | null | undefined {
+  if (decision.action === 'revoke-identity') {
+    revokeLocalTeralexiAuthSession(decision.message, {
+      cause: decision.cause,
+      ...context,
+    })
+    return pushSnapshot(null)
+  }
+  if (decision.blockAuthorization) {
+    clearEntitlementCache()
+    return pushSnapshot(
+      buildFailedEntitlementSnapshot(
+        decision.message ?? 'Teralexi authorization is not available',
+      ),
+    )
+  }
+  return undefined
 }
 
-function handleAuthFailure(
-  reason: EntitlementRefreshReason,
-  classified: { message: string; status?: number },
-): EntitlementUiSnapshot | null {
-  if (
-    shouldRevokeLocalAuthSession({
-      status: classified.status,
-      message: classified.message,
-      requiresServerSessionCheck: requiresServerSessionCheck(reason),
-    })
-  ) {
-    return signOutDueToServerAuthFailure(classified.message, {
-      reason,
-      status: classified.status,
-    })
+function toServerSessionOutcome(
+  session: Awaited<ReturnType<typeof checkTeralexiServerSession>>,
+): ServerSessionOutcome {
+  if (session.ok === true) return { kind: 'active' }
+  if (session.ok === null) {
+    return {
+      kind: 'transient',
+      message:
+        session.transientError instanceof Error
+          ? session.transientError.message
+          : 'Transient server session error',
+    }
   }
-  clearEntitlementCache()
-  return pushSnapshot(buildFailedEntitlementSnapshot(classified.message))
+  if (session.reason === 'no-token') {
+    return { kind: 'no-token', message: session.message }
+  }
+  const status = session.status === 403 ? 403 : 401
+  return { kind: 'rejected', message: session.message, status }
 }
 
 async function ensureServerSessionActive(
@@ -101,28 +118,30 @@ async function ensureServerSessionActive(
 
   log.info('Validating Teralexi server session', { reason, apiBaseUrl })
   const session = await checkTeralexiServerSession(apiBaseUrl)
-  if (session.ok === true) {
+  const outcome = toServerSessionOutcome(session)
+  const decision = decideAfterServerSessionCheck(outcome)
+
+  if (outcome.kind === 'active') {
     log.info('Teralexi server session is active', { reason })
     return undefined
   }
 
-  if (session.ok === false) {
-    log.warn('Teralexi server session is not active', {
+  if (outcome.kind === 'transient') {
+    log.warn('Server session check skipped due to transient error', {
       reason,
-      status: session.status,
-      message: session.message,
+      err: session.ok === null ? session.transientError : undefined,
     })
-    return signOutDueToServerAuthFailure(session.message, {
-      reason,
-      status: session.status,
-    })
+    return undefined
   }
 
-  log.warn('Server session check skipped due to transient error', {
+  log.warn('Teralexi server session check outcome', {
     reason,
-    err: session.transientError,
+    kind: outcome.kind,
+    decision: decision.action,
+    message: outcome.message,
   })
-  return undefined
+
+  return applyIdentityDecision(decision, { reason, sessionKind: outcome.kind })
 }
 
 export function getEntitlementUiSnapshot(): EntitlementUiSnapshot | null {
@@ -189,6 +208,11 @@ async function refreshAuthAndEntitlementImpl(
     return sessionCheck
   }
 
+  // Identity may have been revoked by a confirmed /me rejection above.
+  if (!isSignedIn()) {
+    return pushSnapshot(null)
+  }
+
   if (!isEntitlementVerificationConfigured()) {
     log.warn('Entitlement refresh skipped: signing public key not configured', {
       reason,
@@ -225,7 +249,12 @@ async function refreshAuthAndEntitlementImpl(
     })
 
     if (classified.kind === 'auth') {
-      return handleAuthFailure(reason, classified)
+      // Policy: never revoke Google identity for entitlement failures.
+      const decision = decideAfterEntitlementAuthFailure(classified.message)
+      return applyIdentityDecision(decision, {
+        reason,
+        status: classified.status,
+      }) as EntitlementUiSnapshot | null
     }
 
     const cache = getEntitlementCache()
@@ -273,9 +302,17 @@ export function onConversationStarted(): void {
   runBackgroundRefresh('conversation-started')
 }
 
-/** @internal Used after successful Google sign-in. */
-export function onGoogleAccountSignedIn(): void {
-  runBackgroundRefresh('sign-in')
+/**
+ * After Google account is persisted from browser/website login.
+ * Awaits entitlement refresh so authorization can catch up without clearing identity.
+ */
+export async function onGoogleAccountSignedIn(): Promise<EntitlementUiSnapshot | null> {
+  try {
+    return await refreshAuthAndEntitlement('sign-in')
+  } catch (err) {
+    log.warn('Entitlement refresh failed after Google sign-in', { err })
+    return null
+  }
 }
 
 export function broadcastEntitlementToAllWindows(): void {

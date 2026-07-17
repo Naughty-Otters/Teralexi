@@ -3,7 +3,7 @@ import {
   getTeralexiBaseApiUrl,
   getTeralexiGraphqlUrl,
 } from '@main/services/teralexi-platform-config'
-import { getTeralexiServerAccessToken } from '@main/services/teralexi-server-auth'
+import { getTeralexiServerAccessToken, getLastServerAccessTokenFailure } from '@main/services/teralexi-server-auth'
 import type {
   AddProviderMetricInput,
   ProviderMetricType,
@@ -129,7 +129,10 @@ export async function reportProviderMetric(
     serverAccessToken?.trim() ||
     (await getTeralexiServerAccessToken(apiBaseUrl))
   if (!bearerToken) {
-    throw new Error('Teralexi server access token is not available')
+    throw new Error(
+      getLastServerAccessTokenFailure() ||
+        'Teralexi server access token is not available',
+    )
   }
 
   const response = await fetch(graphqlUrl, {
