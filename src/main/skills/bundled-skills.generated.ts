@@ -156,12 +156,12 @@ Runtime injects mode hints; this ref summarizes behavior for the agent.
 | Mode | Behavior |
 |------|----------|
 | **Normal** | Default. Large tasks may auto-enter explore (read-only) before writes. |
-| **Explore** | Read-only tools only until the user approves writes. Map the codebase; produce a plan (files, steps, risks). |
+| **Explore** | Read-only tools only until the user approves writes. Map the codebase; produce a plan (files, steps, risks) via \`update_todos\`. |
 | **Auto** | Do not ask clarifying questions — make reasonable assumptions and execute. |
 | **YOLO** | Tools run without per-call approval — work carefully. |
-| **Plan mode** | Active after \`enter_plan_mode\`. File writes go to the plan manifest until \`exit_plan_mode\`. Reuse \`plans/manifest.json\` — do not re-scan listed files. |
+| **Plan execute** | After \`exit_plan_mode\` approval: same continuous tool-loop with full tools. Work the approved todo list end-to-end; mark steps via \`update_todos\` until allDone. Reuse \`plans/manifest.json\` — do not re-scan listed files. |
 
-When explore or plan mode is active, prefer \`grep_files\`, \`glob_files\`, \`lsp\`, and \`read_file\` before any edit.
+When explore is active, prefer \`grep_files\`, \`glob_files\`, \`lsp\`, and \`read_file\` before any edit (except the plan file). After approval, implement remaining tasks in one session without spawning a new agent per todo.
 `,
       },
       "refs/procedural-contracts.md": {
