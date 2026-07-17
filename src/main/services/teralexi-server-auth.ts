@@ -1,7 +1,10 @@
-import { decodeJwtPayload } from '@shared/google-id-token'
+import { decodeJwtPayload, isGoogleIdToken } from '@shared/google-id-token'
 import { resolveMetricsApiBaseUrl } from '@shared/teralexi-platform-api'
 import { createLogger } from '@main/logger'
-import { getTeralexiAccountGoogleIdToken } from '@main/services/google-account-oauth'
+import {
+  getStoredPresentedServerAccessToken,
+  getTeralexiAccountGoogleIdToken,
+} from '@main/services/google-account-oauth'
 import {
   clearPersistedServerAuth,
   getPersistedServerAccessToken,
@@ -26,6 +29,17 @@ type ServerAuthResponse = {
 
 let cachedServerToken: CachedServerToken | null = null
 let inFlightServerToken: Promise<string | null> | null = null
+/** Last reason resolve returned null — for actionable UI / logs (not a server body). */
+let lastResolveFailure: string | null = null
+
+export function getLastServerAccessTokenFailure(): string | null {
+  return lastResolveFailure
+}
+
+function setResolveFailure(message: string): null {
+  lastResolveFailure = message
+  return null
+}
 
 /** Treat token as needing refresh this many ms before JWT `exp` (clock-skew buffer). */
 const SERVER_TOKEN_REFRESH_BUFFER_MS = 60_000
@@ -110,6 +124,30 @@ function cacheServerAccessToken(
   return accessToken
 }
 
+/**
+ * Persist a platform JWT presented by the website deep link (not a Google id_token).
+ * Used when `teralexi://open?token=` carries the Teralexi server session directly.
+ */
+export function acceptPresentedServerAccessToken(args: {
+  accessToken: string
+  apiBaseUrl: string
+  expiresInSeconds?: number
+}): string {
+  return cacheServerAccessToken(
+    args.accessToken,
+    args.expiresInSeconds,
+    args.apiBaseUrl,
+  )
+}
+
+/** True when the bearer looks like a non-Google JWT (likely Teralexi platform session). */
+export function isLikelyPresentedServerAccessToken(token: string): boolean {
+  const trimmed = token.trim()
+  if (!trimmed || isGoogleIdToken(trimmed)) return false
+  const payload = decodeJwtPayload(trimmed)
+  return payload != null
+}
+
 function getValidCachedServerAccessToken(): string | null {
   if (!cachedServerToken) return null
   if (
@@ -151,6 +189,7 @@ function getServerAccessTokenForRefresh(apiBaseUrl: string): string | null {
 export function clearTeralexiServerAuthCache(): void {
   cachedServerToken = null
   inFlightServerToken = null
+  lastResolveFailure = null
   clearPersistedServerAuth()
 }
 
@@ -242,6 +281,8 @@ export async function refreshServerAccessToken(args: {
 async function resolveTeralexiServerAccessTokenImpl(
   apiBaseUrl: string,
 ): Promise<string | null> {
+  lastResolveFailure = null
+
   const cached = getValidCachedServerAccessToken()
   if (cached) return cached
 
@@ -271,30 +312,64 @@ async function resolveTeralexiServerAccessTokenImpl(
     } catch (err) {
       log.warn('Server JWT refresh failed; re-exchanging Google id_token', { err })
       cachedServerToken = null
+      // Continue to exchange; keep refresh error if exchange also fails.
+      lastResolveFailure =
+        err instanceof Error
+          ? `Server token refresh failed: ${err.message}`
+          : 'Server token refresh failed'
     }
   }
 
+  // Website deep link may have stored a platform JWT as access_token.
+  const presented = getStoredPresentedServerAccessToken()
+  if (presented) {
+    log.info('Using presented platform JWT from Google account store as server session', {
+      apiBaseUrl: normalizeApiBase(apiBaseUrl),
+    })
+    return cacheServerAccessToken(presented, undefined, apiBaseUrl)
+  }
+
   const idToken = getTeralexiAccountGoogleIdToken()
-  if (!idToken) return null
+  if (!idToken) {
+    log.warn(
+      'No local server JWT and no Google id_token to exchange; cannot obtain remote session',
+      { apiBaseUrl: normalizeApiBase(apiBaseUrl) },
+    )
+    return setResolveFailure(
+      'No platform session and no Google id_token to exchange. Sign in again from the app.',
+    )
+  }
 
   try {
+    log.info('Local server JWT missing; exchanging Google id_token remotely', {
+      apiBaseUrl: normalizeApiBase(apiBaseUrl),
+    })
     return await exchangeGoogleIdTokenForServerAccessToken({
       apiBaseUrl,
       idToken,
     })
   } catch (err) {
+    const detail =
+      err instanceof Error ? err.message : 'Google id_token exchange failed'
     log.warn('Failed to exchange Google id_token for server JWT', { err })
-    return null
+    return setResolveFailure(
+      `Could not exchange Google sign-in for a platform token (${detail}). Check API base URL and /api/v1/auth/google.`,
+    )
   }
 }
 
 export async function getTeralexiServerAccessToken(
   apiBaseUrl: string,
 ): Promise<string | null> {
-  if (!apiBaseUrl.trim()) return null
+  if (!apiBaseUrl.trim()) {
+    return setResolveFailure('Teralexi API base URL is not configured')
+  }
 
   const cached = getValidCachedServerAccessToken()
-  if (cached) return cached
+  if (cached) {
+    lastResolveFailure = null
+    return cached
+  }
 
   if (!inFlightServerToken) {
     inFlightServerToken = resolveTeralexiServerAccessTokenImpl(apiBaseUrl).finally(

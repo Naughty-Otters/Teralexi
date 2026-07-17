@@ -5,7 +5,6 @@ const mockHandleDeepLink = vi.fn(async () => ({
   userInfo: { email: 'a@b.com', name: 'A', picture: '' },
   tokens: {},
 }))
-const mockClearCache = vi.fn()
 const mockSyncStored = vi.fn()
 const mockRevokeLocal = vi.fn()
 
@@ -23,7 +22,12 @@ vi.mock('@main/services/google-account-notify', () => ({
 }))
 
 vi.mock('@main/services/teralexi-server-auth', () => ({
-  clearTeralexiServerAuthCache: () => mockClearCache(),
+  acceptPresentedServerAccessToken: vi.fn(),
+  isLikelyPresentedServerAccessToken: () => false,
+}))
+
+vi.mock('@main/services/teralexi-platform-config', () => ({
+  getTeralexiBaseApiUrl: () => 'http://localhost:8000',
 }))
 
 const { mockWindows, BrowserWindow } = vi.hoisted(() => {
@@ -58,7 +62,6 @@ describe('teralexi-protocol-handler', () => {
     delete (globalThis as Record<string, unknown>).__teralexiProtocolBridge
     mockWindows.length = 0
     mockHandleDeepLink.mockClear()
-    mockClearCache.mockClear()
     mockSyncStored.mockClear()
     mockRevokeLocal.mockClear()
   })
@@ -80,7 +83,6 @@ describe('teralexi-protocol-handler', () => {
       expiresIn: undefined,
       scope: undefined,
     })
-    expect(mockClearCache).toHaveBeenCalled()
     expect(mockSyncStored).toHaveBeenCalled()
   })
 
@@ -102,6 +104,7 @@ describe('teralexi-protocol-handler', () => {
 
     expect(mockRevokeLocal).toHaveBeenCalledWith(
       'Signed out from Teralexi web authentication',
+      { cause: 'web-logout' },
     )
     expect(mockHandleDeepLink).not.toHaveBeenCalled()
     expect(mockSyncStored).toHaveBeenCalled()

@@ -167,6 +167,12 @@ vi.mock('./logger', () => ({
     error: vi.fn(),
     debug: vi.fn(),
   }),
+  traceFunction:
+    (_log: unknown, _name: string, fn: (...args: unknown[]) => unknown) => fn,
+}))
+
+vi.mock('./agent/steps/foreach-item/strategies/planned-todo-strategy', () => ({
+  createPlannedTodoStrategy: vi.fn(),
 }))
 
 const appListeners = new Map<string, (...args: unknown[]) => void>()

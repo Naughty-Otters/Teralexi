@@ -13,12 +13,12 @@ describe('buildRepeatToolResultStub', () => {
     expect(String(stub.message)).toContain('read_file')
   })
 
-  it('returns compact grep_files stub', () => {
-    const stub = buildRepeatToolResultStub('grep_files', {
-      pattern: 'foo',
-      path: '.',
+  it('returns compact update_todos stub', () => {
+    const stub = buildRepeatToolResultStub('update_todos', {
+      todos: [{ content: 'Done', status: 'completed' }],
     }) as Record<string, unknown>
-    expect(stub.alreadySearched).toBe(true)
-    expect(stub.matches).toEqual([])
+    expect(stub.alreadySucceeded).toBe(true)
+    expect(stub.tool).toBe('update_todos')
+    expect(String(stub.message)).toContain('update_todos')
   })
 })

@@ -1243,10 +1243,21 @@ const hasPendingHitl = computed(() =>
   conversationHasPendingHitl(resolveActiveConversationId()),
 )
 
+/**
+ * After the user engages with HITL (approve/deny, form submit, or any composer
+ * send), hide the wait_for_approval composer banner even if the tool part is
+ * still resolving. Reset when a new HITL pause begins.
+ */
+const hitlWaitComposerHintSuppressed = ref(false)
+
+function dismissHitlWaitComposerHint() {
+  hitlWaitComposerHintSuppressed.value = true
+}
+
 const planDisplayStatus = computed(() =>
   resolvePlanModeDisplayStatus(
     planModeView.value,
-    hasPendingHitl.value,
+    hasPendingHitl.value && !hitlWaitComposerHintSuppressed.value,
   ),
 )
 
@@ -1352,9 +1363,11 @@ watch(isBusy, (busy, wasBusy) => {
   }
 })
 
-watch(hasPendingHitl, (pending) => {
+watch(hasPendingHitl, (pending, wasPending) => {
   if (pending) {
     followUpItems.value = []
+    // Fresh HITL pause — show the wait banner until the user engages again.
+    if (!wasPending) hitlWaitComposerHintSuppressed.value = false
   }
 })
 
@@ -1645,6 +1658,7 @@ async function onCollectFormSubmit(payload: {
   // it stuck keeps the composer on "Waiting for your approval…" after submit
   // even while plan execution resumes.
   if (conversationId) {
+    dismissHitlWaitComposerHint()
     setConversationHitlBlocksQueue(conversationId, false)
     void refreshPlanModeState(conversationId)
   }
@@ -1660,7 +1674,7 @@ async function onCollectFormSubmit(payload: {
   } as Parameters<typeof chat.sendMessage>[0])
 }
 
-function onToolApproval(payload: {
+async function onToolApproval(payload: {
   part: unknown
   approved: boolean
   approveForSession?: boolean
@@ -1668,6 +1682,9 @@ function onToolApproval(payload: {
 }) {
   const id = (payload.part as { approval?: { id?: string } }).approval?.id
   if (!id || !chatInst.value) return
+
+  // Hide wait banner immediately on approve or deny (before async resume).
+  dismissHitlWaitComposerHint()
 
   if (payload.approveForSession && payload.approved) {
     const conversationId = agentStore.currentConversationId
@@ -1680,7 +1697,9 @@ function onToolApproval(payload: {
     }
   }
 
-  void chatInst.value.addToolApprovalResponse({
+  // Await so chat.messages flips to approval-responded before we sync the
+  // reactive transcript — otherwise the composer stays on wait_for_approval.
+  await chatInst.value.addToolApprovalResponse({
     id,
     approved: payload.approved,
   })
@@ -1694,6 +1713,7 @@ function onToolApproval(payload: {
         planSlug: planModeView.value.planSlug,
       })
     }
+    syncReactiveMessagesFromChat(chatInst.value.messages, { full: true })
     void refreshPlanModeState(conversationId)
   }
 
@@ -1820,6 +1840,7 @@ async function onFollowUpSelect(item: FollowUpItem) {
   const text = followUpItemToUserMessage(item)
   if (!text || !chatInst.value || !conversationId) return
 
+  dismissHitlWaitComposerHint()
   await clearFollowUpSuggestions(conversationId)
   draft.value = ''
   void chatInst.value.sendMessage({ text })
@@ -2403,6 +2424,9 @@ async function onSubmit() {
   const pendingHitl = conversationHasPendingHitl(conversationId)
 
   if (isBusy.value || pendingHitl) {
+    // User already engaged — don't keep "Waiting for your approval…" on the
+    // composer while their message sits in the queue.
+    dismissHitlWaitComposerHint()
     messageQueue.value = [
       ...messageQueue.value,
       {
@@ -2418,6 +2442,7 @@ async function onSubmit() {
     return
   }
 
+  dismissHitlWaitComposerHint()
   draft.value = ''
   clearStaging()
   armStickToBottom()

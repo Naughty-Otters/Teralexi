@@ -27,6 +27,8 @@ import { loadStoredAccount } from './services/google-account-oauth'
 import { getLspManager, initBundledLspBin } from './agent/lsp'
 import { createLogger } from './logger'
 import { prewarmMcpRuntimeEnvironment } from './services/mcp-runtime-check'
+// Side-effect: register plan-mode todo foreach strategy (asar-safe; no dynamic import).
+import './agent/steps/foreach-item/strategies/planned-todo-strategy'
 
 const log = createLogger('app')
 

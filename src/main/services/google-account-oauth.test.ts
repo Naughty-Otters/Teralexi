@@ -32,6 +32,10 @@ vi.mock('@main/services/google-account-notify', () => ({
   notifyGoogleAccountChanged: vi.fn(),
 }))
 
+vi.mock('@main/services/entitlement-session', () => ({
+  onGoogleAccountSignedIn: vi.fn(async () => null),
+}))
+
 vi.mock('@config/env-overrides', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@config/env-overrides')>()
   return {

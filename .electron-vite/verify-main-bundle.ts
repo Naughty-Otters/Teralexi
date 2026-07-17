@@ -1,9 +1,11 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { PLANNED_TODO_STRATEGY_BUNDLE_MARKER } from '../src/main/agent/coding/plan-mode-todo-bundle-marker'
 
 const MAIN_DIR = join(process.cwd(), 'dist', 'electron', 'main')
 const BOOTSTRAP_JS = join(MAIN_DIR, 'bootstrap.js')
 const MAIN_APP_JS = join(MAIN_DIR, 'main-app.js')
+const MAIN_APP_TS = join(process.cwd(), 'src', 'main', 'main-app.ts')
 
 /** Runtime dynamic imports that must stay external in the main bundle. */
 const ALLOWED_DYNAMIC_IMPORTS = new Set([
@@ -34,7 +36,17 @@ const FORBIDDEN_SUBSTRINGS = [
   '@main/agent/llm/llm-debug-writer',
   'node_modules/grammy/out/',
   'grammy/out/platform.node',
+  // Packaged asar regressions: dynamic import left as filesystem path (survives obfuscation).
+  '../steps/',
+  'foreach-item/strategies/planned-todo-strategy',
 ]
+
+/** Must appear in packaged main-app.js (strategy inlined, not a loose asar file). */
+const REQUIRED_MAIN_APP_SUBSTRINGS = [PLANNED_TODO_STRATEGY_BUNDLE_MARKER]
+
+/** main-app.ts must statically pull the strategy so registration runs at startup. */
+const REQUIRED_MAIN_APP_SOURCE_IMPORT =
+  "./agent/steps/foreach-item/strategies/planned-todo-strategy"
 
 const SOURCE_SCAN_ROOTS = [
   'src/main',
@@ -60,10 +72,8 @@ function isAllowedRuntimeDynamicImport(spec: string): boolean {
   return false
 }
 
-/** Relative imports allowed at runtime (break ESM cycles; still bundled by Rollup). */
-const ALLOWED_SOURCE_DYNAMIC_IMPORTS = new Set([
-  '../steps/foreach-item/strategies/planned-todo-strategy',
-])
+/** Relative app imports must never remain as runtime dynamic imports in asar. */
+const ALLOWED_SOURCE_DYNAMIC_IMPORTS = new Set<string>()
 
 export function isForbiddenRuntimeDynamicImport(spec: string): boolean {
   if (isAllowedRuntimeDynamicImport(spec)) return false
@@ -119,11 +129,30 @@ export function findUnbundledDynamicImportsInMainJs(code: string): string[] {
   return bad
 }
 
+export function findMissingRequiredSubstringsInMainJs(code: string): string[] {
+  return REQUIRED_MAIN_APP_SUBSTRINGS.filter((needle) => !code.includes(needle))
+}
+
+export function verifyMainAppSourceWiring(mainAppSource: string): void {
+  if (!mainAppSource.includes(REQUIRED_MAIN_APP_SOURCE_IMPORT)) {
+    throw new Error(
+      `main-app.ts must statically import '${REQUIRED_MAIN_APP_SOURCE_IMPORT}' so the planned-todo strategy is registered in packaged builds`,
+    )
+  }
+}
+
 export function verifyMainBundleContents(code: string): void {
   const forbidden = findForbiddenSubstringsInMainJs(code)
   if (forbidden.length > 0) {
     throw new Error(
       `main-app.js still references forbidden paths: ${forbidden.join(', ')}`,
+    )
+  }
+
+  const missing = findMissingRequiredSubstringsInMainJs(code)
+  if (missing.length > 0) {
+    throw new Error(
+      `main-app.js is missing required packaged markers (strategy may have been dropped): ${missing.join(', ')}`,
     )
   }
 
@@ -197,6 +226,8 @@ export function scanSourcesForForbiddenDynamicImports(
 }
 
 export function verifyMainBundle(): void {
+  verifyMainAppSourceWiring(readFileSync(MAIN_APP_TS, 'utf8'))
+
   const bootstrapCode = readFileSync(BOOTSTRAP_JS, 'utf8')
   verifyBootstrapBundleContents(bootstrapCode)
 

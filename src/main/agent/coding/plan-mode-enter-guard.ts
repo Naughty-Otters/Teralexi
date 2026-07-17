@@ -4,7 +4,7 @@ import {
   planModeStorageOptionsFromEnv,
   type PlanModeStorageOptions,
 } from './plan-mode-state'
-import { hasPersistedPlanTodos } from './plan-mode-execution-bridge'
+import { hasPersistedPlanTodos } from './plan-mode-todo-sync'
 
 /**
  * When non-null, `enter_plan_mode` must not run (explore already active, executing

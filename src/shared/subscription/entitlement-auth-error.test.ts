@@ -48,36 +48,31 @@ describe('authorization helpers', () => {
 })
 
 describe('shouldRevokeLocalAuthSession', () => {
-  it('revokes on 401 and 403', () => {
+  it('does not revoke for missing-token messages', () => {
+    expect(
+      shouldRevokeLocalAuthSession({
+        status: 401,
+        message: 'Teralexi server session is not available',
+        requiresServerSessionCheck: true,
+      }),
+    ).toBe(false)
+  })
+
+  it('revokes on confirmed Unauthorized when session check is required', () => {
     expect(
       shouldRevokeLocalAuthSession({
         status: 401,
         message: 'Unauthorized',
-        requiresServerSessionCheck: false,
-      }),
-    ).toBe(true)
-    expect(
-      shouldRevokeLocalAuthSession({
-        status: 403,
-        message: 'Forbidden',
-        requiresServerSessionCheck: false,
-      }),
-    ).toBe(true)
-  })
-
-  it('revokes when session check cannot obtain a server token', () => {
-    expect(
-      shouldRevokeLocalAuthSession({
-        message: 'Teralexi server access token is not available',
         requiresServerSessionCheck: true,
       }),
     ).toBe(true)
   })
 
-  it('does not revoke unrelated auth errors during background refresh', () => {
+  it('does not revoke during sign-in style refreshes', () => {
     expect(
       shouldRevokeLocalAuthSession({
-        message: 'Entitlement response missing entitlement_token',
+        status: 401,
+        message: 'Unauthorized',
         requiresServerSessionCheck: false,
       }),
     ).toBe(false)

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { SkillTool } from '@main/skills/actions'
-import { explorePhaseTodoUpdateBlockedReason } from '@main/agent/coding/plan-mode-todo-update-guard'
+import { explorePhaseTodoUpdateBlockedReason, resolveTodoListUpdate } from '@main/agent/coding/plan-mode-todo-update-guard'
 import {
   planModeStorageOptionsFromEnv,
   readPlanModeTodoList,
@@ -9,12 +9,13 @@ import {
 import { getSandboxRootFromEnv, getSandboxOutputScopeFromEnv, getConversationIdFromEnv } from './sandbox-paths'
 import { readTodoList, writeTodoList } from '@main/agent/todos'
 import {
-  replaceTodos,
   renderTodoChecklist,
   summarizeTodos,
   todosNamespaceFromScope,
   TRACKED_TODO_STATUSES,
   TRACKED_TODO_FALLBACK_PLANS,
+  UPDATE_TODOS_ALL_DONE_MESSAGE,
+  type TodoList,
 } from '@shared/agent/todos'
 
 const TODO_TAG = ['task-tracking'] as const
@@ -44,7 +45,7 @@ const trackedTodoInputSchema = z.object({
     .describe('retry | skip | manual_intervention when verification fails.'),
 })
 
-function persistTodoList(list: ReturnType<typeof replaceTodos>): void {
+function persistTodoList(list: TodoList): void {
   const conversationId = getConversationIdFromEnv()
   if (conversationId) {
     writePlanModeTodoList(
@@ -84,9 +85,12 @@ export const updateTodos: SkillTool = {
   name: 'update_todos',
   tags: [...TODO_TAG],
   description:
-    'Maintain the task list for a multi-step job. Send the COMPLETE current list each time (full replace): ' +
-    'mark exactly one task in_progress while you work it, mark it completed the moment it is done, and append new ' +
-    'tasks you discover. Persists to plans/todos.json alongside the plan file. ' +
+    'Maintain the task list for a multi-step job. ' +
+    'While exploring/drafting: send the COMPLETE list each time (full replace). ' +
+    'During approved plan execution: only update status on the current assigned approved step ' +
+    '(at most one status change) — do not add, remove, reorder, rewrite step text, or change other steps. ' +
+    'Mark exactly one task in_progress while you work it, mark it completed when done. ' +
+    'Persists to plans/todos.json alongside the plan file. ' +
     'Statuses: pending | in_progress | completed | cancelled. ' +
     'While exploring (before exit_plan_mode), use only pending or in_progress — not completed. ' +
     'Include success_criteria for every step and verify_command when an objective check exists ' +
@@ -95,7 +99,9 @@ export const updateTodos: SkillTool = {
     todos: z
       .array(trackedTodoInputSchema)
       .min(1)
-      .describe('The complete, ordered task list (replaces the previous list).'),
+      .describe(
+        'Task list. Exploring: full replace. Approved execution: same step texts as the plan; only statuses may change.',
+      ),
   }),
   needsApproval: false,
   async execute(input) {
@@ -125,7 +131,17 @@ export const updateTodos: SkillTool = {
       return { error: exploreBlocked }
     }
 
-    const list = replaceTodos(parsed.data.todos)
+    const existing = loadTodoList()
+    const resolved = resolveTodoListUpdate({
+      conversationId,
+      existing,
+      incoming: parsed.data.todos,
+    })
+    if (!resolved.ok) {
+      return { error: resolved.error }
+    }
+
+    const list = resolved.list
     persistTodoList(list)
     const summary = summarizeTodos(list)
 
@@ -134,6 +150,9 @@ export const updateTodos: SkillTool = {
       todos: list.todos,
       summary,
       checklist: renderTodoChecklist(list),
+      ...(summary.allDone
+        ? { done: true, message: UPDATE_TODOS_ALL_DONE_MESSAGE }
+        : {}),
     }
   },
 }
