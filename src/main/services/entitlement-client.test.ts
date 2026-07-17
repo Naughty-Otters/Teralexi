@@ -33,7 +33,7 @@ describe('checkTeralexiServerSession', () => {
     expect(getTeralexiServerAccessToken).toHaveBeenCalledWith('http://localhost:8000')
   })
 
-  it('returns revoked when /auth/me returns 401', async () => {
+  it('returns rejected when /auth/me returns 401', async () => {
     getTeralexiServerAccessToken.mockResolvedValue('server-jwt')
     vi.stubGlobal(
       'fetch',
@@ -46,18 +46,19 @@ describe('checkTeralexiServerSession', () => {
 
     await expect(checkTeralexiServerSession('http://localhost:8000')).resolves.toEqual({
       ok: false,
+      reason: 'rejected',
       message: 'Unauthorized',
       status: 401,
     })
   })
 
-  it('returns unavailable when access token cannot be resolved', async () => {
+  it('returns no-token when access token cannot be resolved', async () => {
     getTeralexiServerAccessToken.mockResolvedValue(null)
 
     await expect(checkTeralexiServerSession('http://localhost:8000')).resolves.toEqual({
       ok: false,
+      reason: 'no-token',
       message: 'Teralexi server session is not available',
-      status: 401,
     })
   })
 

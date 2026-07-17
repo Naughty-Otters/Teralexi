@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getTeralexiAccountGoogleIdToken, getTeralexiServerAccessToken } =
-  vi.hoisted(() => ({
-    getTeralexiAccountGoogleIdToken: vi.fn(),
-    getTeralexiServerAccessToken: vi.fn(),
-  }))
+const {
+  getTeralexiAccountGoogleIdToken,
+  getTeralexiServerAccessToken,
+  getLastServerAccessTokenFailure,
+} = vi.hoisted(() => ({
+  getTeralexiAccountGoogleIdToken: vi.fn(),
+  getTeralexiServerAccessToken: vi.fn(),
+  getLastServerAccessTokenFailure: vi.fn(() => null),
+}))
 
 vi.mock('@main/services/teralexi-platform-config', () => ({
   getTeralexiBaseApiUrl: vi.fn(() => 'http://127.0.0.1:8000'),
@@ -17,6 +21,7 @@ vi.mock('@main/services/google-account-oauth', () => ({
 
 vi.mock('@main/services/teralexi-server-auth', () => ({
   getTeralexiServerAccessToken,
+  getLastServerAccessTokenFailure,
 }))
 
 vi.mock('./entitlement-session', () => ({
