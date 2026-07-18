@@ -175,6 +175,14 @@ import {
   writeWorkspaceFileContent,
 } from '@main/agent/workspace/git-service'
 import {
+  cancelSubAgentRun,
+  discardSubAgentWorktree,
+  listAllSubAgentRuns,
+  listSubAgentRunsByParent,
+  mergeSubAgentWorktree,
+  openPrForSubAgentWorktree,
+} from '@main/agent/run/sub-agent-run-registry'
+import {
   buildPickChatAttachmentDialogFilters,
   ingestChatAttachments,
   listConversationAttachmentMetas,
@@ -2366,10 +2374,6 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     }>
     error?: string
   }> = async (_event, args) => {
-    const {
-      listAllSubAgentRuns,
-      listSubAgentRunsByParent,
-    } = await import('../agent/run/sub-agent-run-registry')
     const parentRunId = args?.parentRunId?.trim()
     const records = parentRunId
       ? listSubAgentRunsByParent(parentRunId)
@@ -2395,9 +2399,6 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     _event: Electron.IpcMainInvokeEvent,
     args: { runId: string },
   ) => Promise<{ ok: boolean; error?: string }> = async (_event, args) => {
-    const { cancelSubAgentRun } = await import(
-      '../agent/run/sub-agent-run-registry'
-    )
     const runId = args?.runId?.trim()
     if (!runId) return { ok: false, error: 'runId is required' }
     const ok = cancelSubAgentRun(runId)
@@ -2422,11 +2423,6 @@ export class IpcMainHandleClass implements IIpcMainHandle {
   }> = async (_event, args) => {
     const runId = args?.runId?.trim()
     if (!runId) return { ok: false, error: 'runId is required' }
-    const {
-      mergeSubAgentWorktree,
-      discardSubAgentWorktree,
-      openPrForSubAgentWorktree,
-    } = await import('../agent/run/sub-agent-run-registry')
     if (args.action === 'merge') return mergeSubAgentWorktree(runId)
     if (args.action === 'discard') return discardSubAgentWorktree(runId)
     if (args.action === 'open_pr') {
