@@ -272,7 +272,8 @@ const statusText = computed(() => {
   flex-direction: column;
   gap: 0;
   margin: 0;
-  min-width: var(--chat-response-bubble-min-width, 50%);
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--ui-border);

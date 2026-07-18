@@ -611,10 +611,11 @@ function toolGroupIsActive(bubble: AssistantBubbleDescriptor): boolean {
   flex-shrink: 0;
 }
 
-/* Brief mode: each response card (tool, terminal, diff, markdown, …) at least half the chat column. */
+/* Brief mode: each response card spans the full chat column. */
 .assistant-msg-parts:not(.assistant-msg-parts--conversation)
   > :not(.thinking-strip) {
-  min-width: var(--chat-response-bubble-min-width, 50%);
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
 }

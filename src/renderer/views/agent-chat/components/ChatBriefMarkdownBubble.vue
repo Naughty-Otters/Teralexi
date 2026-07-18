@@ -43,7 +43,9 @@ const markdown = computed(() =>
 <style scoped>
 .brief-markdown-bubble {
   position: relative;
-  min-width: var(--chat-response-bubble-min-width, 50%);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding-top: 4px;
   padding-right: 96px;
 }

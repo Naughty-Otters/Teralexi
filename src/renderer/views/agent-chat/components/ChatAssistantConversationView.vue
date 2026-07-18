@@ -841,9 +841,11 @@ function bubblePresentation(
 .conversation-bubble {
   position: relative;
   flex-shrink: 0;
-  align-self: flex-start;
-  min-width: var(--chat-response-bubble-min-width, 50%);
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid var(--ui-border);
@@ -1073,7 +1075,11 @@ function bubblePresentation(
 
 .conversation-fallback-bubble {
   position: relative;
-  min-width: var(--chat-response-bubble-min-width, 50%);
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px 12px;
   border-radius: 10px;
   border: 1px solid var(--ui-border);

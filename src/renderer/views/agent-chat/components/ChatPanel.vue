@@ -2565,8 +2565,8 @@ watchEffect(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  /** Min width for assistant response bubbles (brief + conversation). */
-  --chat-response-bubble-min-width: 50%;
+  /** Full chat-column width for user + assistant response bubbles. */
+  --chat-response-bubble-min-width: 100%;
 }
 .chat-scroll-area {
   flex: 1;
@@ -2607,8 +2607,11 @@ watchEffect(() => {
 }
 .msg-row {
   flex-shrink: 0;
-  max-width: 92%;
-  min-width: var(--chat-response-bubble-min-width, 50%);
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 14px;
@@ -2616,13 +2619,10 @@ watchEffect(() => {
   color: var(--ui-text);
 }
 .msg-row--user {
-  align-self: flex-end;
   background: var(--ui-bg-elevated);
   border: 1px solid var(--ui-border);
 }
 .msg-row--assistant {
-  align-self: flex-start;
-  min-width: var(--chat-response-bubble-min-width, 50%);
   background: var(--ui-bg-elevated);
 }
 
@@ -2631,8 +2631,6 @@ watchEffect(() => {
   background: transparent;
   border: none;
   padding: 0;
-  min-width: var(--chat-response-bubble-min-width, 50%);
-  max-width: 100%;
 }
 
 .message-queue {

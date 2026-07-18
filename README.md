@@ -25,23 +25,19 @@ This repository is for running and contributing from source.
 
 Website agent walkthrough — pick an agent, plan, generate files, and preview the result. More product visuals: [teralexi.com](https://www.teralexi.com/).
 
-<video src="./media/howto_website_2.mp4" controls width="100%"></video>
+[![Watch demo video](./media/web_4.png)](./media/howto_website_2.mp4)
 
-<p>
-  <img src="./media/web_1.png" alt="Pick an agent and start a prompt" width="100%" />
-</p>
-<p>
-  <img src="./media/web_2.png" alt="Agent plans and executes tasks" width="100%" />
-</p>
-<p>
-  <img src="./media/web_3.png" alt="Generated workspace files" width="100%" />
-</p>
-<p>
-  <img src="./media/web_4.png" alt="Live preview beside the workspace" width="100%" />
-</p>
-<p>
-  <img src="./media/web_5.png" alt="Published site preview" width="100%" />
-</p>
+https://github.com/Naughty-Otters/Teralexi/raw/open_source_b/media/howto_website_2.mp4
+
+![Pick an agent and start a prompt](./media/web_1.png)
+
+![Agent plans and executes tasks](./media/web_2.png)
+
+![Generated workspace files](./media/web_3.png)
+
+![Live preview beside the workspace](./media/web_4.png)
+
+![Published site preview](./media/web_5.png)
 
 ## Highlights
 

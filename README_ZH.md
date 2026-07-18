@@ -14,23 +14,19 @@
 
 Website Agent 流程 — 选择 Agent、规划任务、生成文件并预览结果。更多产品介绍见 [teralexi.com](https://www.teralexi.com/)。
 
-<video src="./media/howto_website_2.mp4" controls width="100%"></video>
+[![观看演示视频](./media/web_4.png)](./media/howto_website_2.mp4)
 
-<p>
-  <img src="./media/web_1.png" alt="选择 Agent 并输入提示" width="100%" />
-</p>
-<p>
-  <img src="./media/web_2.png" alt="Agent 规划并执行任务" width="100%" />
-</p>
-<p>
-  <img src="./media/web_3.png" alt="生成的工作区文件" width="100%" />
-</p>
-<p>
-  <img src="./media/web_4.png" alt="工作区旁的实时预览" width="100%" />
-</p>
-<p>
-  <img src="./media/web_5.png" alt="发布站点预览" width="100%" />
-</p>
+https://github.com/Naughty-Otters/Teralexi/raw/open_source_b/media/howto_website_2.mp4
+
+![选择 Agent 并输入提示](./media/web_1.png)
+
+![Agent 规划并执行任务](./media/web_2.png)
+
+![生成的工作区文件](./media/web_3.png)
+
+![工作区旁的实时预览](./media/web_4.png)
+
+![发布站点预览](./media/web_5.png)
 
 ## 功能亮点
 
