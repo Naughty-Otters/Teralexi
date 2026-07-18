@@ -9,6 +9,7 @@ import {
   matchLanguageServer,
   TERALEXI_LSP_BUNDLED_BIN_ENV,
   resolveServerCommand,
+  resolveBundledTsserverPath,
   buildServerPath,
   LANGUAGE_SERVERS,
 } from './language-servers'
@@ -168,5 +169,44 @@ describe('buildServerPath', () => {
       expect(serverPath).toContain('/usr/local/bin')
     }
     expect(p(serverPath)).toContain(p(join('/workspace', 'node_modules', '.bin')))
+  })
+})
+
+describe('resolveBundledTsserverPath', () => {
+  let dir: string
+  const savedEnv = process.env[TERALEXI_LSP_BUNDLED_BIN_ENV]
+  afterEach(() => {
+    if (dir) rmSync(dir, { recursive: true, force: true })
+    if (savedEnv === undefined) delete process.env[TERALEXI_LSP_BUNDLED_BIN_ENV]
+    else process.env[TERALEXI_LSP_BUNDLED_BIN_ENV] = savedEnv
+  })
+
+  it('prefers @typescript/old/lib/tsserver.js next to the bundled bin', () => {
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-tsserver-'))
+    const bundledBin = join(dir, 'node_modules', '.bin')
+    const oldLib = join(dir, 'node_modules', '@typescript', 'old', 'lib')
+    mkdirSync(bundledBin, { recursive: true })
+    mkdirSync(oldLib, { recursive: true })
+    const tsserverJs = join(oldLib, 'tsserver.js')
+    writeFileSync(tsserverJs, 'module.exports = {}')
+    // Classic typescript package without tsserver (typescript6 shape)
+    mkdirSync(join(dir, 'node_modules', 'typescript', 'lib'), { recursive: true })
+    writeFileSync(join(dir, 'node_modules', 'typescript', 'lib', 'typescript.js'), '')
+    process.env[TERALEXI_LSP_BUNDLED_BIN_ENV] = bundledBin
+
+    expect(resolveBundledTsserverPath()).toBe(tsserverJs)
+  })
+
+  it('falls back to typescript/lib/tsserver.js when present', () => {
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-tsserver-classic-'))
+    const bundledBin = join(dir, 'node_modules', '.bin')
+    const tsLib = join(dir, 'node_modules', 'typescript', 'lib')
+    mkdirSync(bundledBin, { recursive: true })
+    mkdirSync(tsLib, { recursive: true })
+    const tsserverJs = join(tsLib, 'tsserver.js')
+    writeFileSync(tsserverJs, 'module.exports = {}')
+    process.env[TERALEXI_LSP_BUNDLED_BIN_ENV] = bundledBin
+
+    expect(resolveBundledTsserverPath()).toBe(tsserverJs)
   })
 })

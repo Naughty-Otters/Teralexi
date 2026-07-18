@@ -5,6 +5,7 @@ import { encodeMessage, MessageBuffer } from './json-rpc'
 import type { JsonRpcMessage, LspDiagnostic } from './types'
 import {
   buildServerPath,
+  resolveBundledTsserverPath,
   resolveServerCommand,
   type LanguageServerDef,
 } from './language-servers'
@@ -102,6 +103,8 @@ export class LspClient {
   }
 
   private async initialize(): Promise<void> {
+    const tsserverPath =
+      this.def.id === 'typescript' ? resolveBundledTsserverPath() : null
     const result = this.request(
       'initialize',
       {
@@ -140,6 +143,16 @@ export class LspClient {
           },
         },
         clientInfo: { name: 'Teralexi', version: '1.0.0' },
+        ...(tsserverPath
+          ? {
+              // Prefer the workspace TypeScript when valid; fall back to the
+              // app-bundled tsserver (needed when `typescript` is typescript6
+              // without tsserver.js, or the workspace has no typescript at all).
+              initializationOptions: {
+                tsserver: { fallbackPath: tsserverPath },
+              },
+            }
+          : {}),
       },
       INITIALIZE_TIMEOUT_MS,
     )
