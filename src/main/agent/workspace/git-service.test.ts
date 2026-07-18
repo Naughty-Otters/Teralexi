@@ -7,6 +7,7 @@ import {
   gitAdd,
   gitCommit,
   gitDiff,
+  gitInit,
   gitLog,
   gitPush,
   searchWorkspaceFiles,
@@ -48,6 +49,26 @@ describe('git-service', () => {
     expect(result.error).toBeTruthy()
   })
 
+  it('gitStatus reports isRepo false for a non-git folder', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-status-norepo-'))
+    const status = await gitStatus(dir)
+    expect(status.isRepo).toBe(false)
+    expect(status.entries).toEqual([])
+    expect(status.error).toBeUndefined()
+  })
+
+  it('gitInit creates a repository that gitStatus recognizes', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-init-'))
+    const before = await gitStatus(dir)
+    expect(before.isRepo).toBe(false)
+
+    const init = await gitInit(dir)
+    expect(init.ok).toBe(true)
+
+    const after = await gitStatus(dir)
+    expect(after.isRepo).toBe(true)
+  })
+
   it('gitDiff includes untracked new files as all-additions diff', async () => {
     dir = mkdtempSync(join(tmpdir(), 'teralexi-git-untracked-'))
     runGit(dir, ['init'])
@@ -69,6 +90,7 @@ describe('git-service', () => {
       ahead: 1,
       behind: 0,
       clean: false,
+      isRepo: true,
       entries: [
         { code: 'M ', index: 'M', worktree: ' ', path: 'staged.ts' },
         { code: ' M', index: ' ', worktree: 'M', path: 'modified.ts' },

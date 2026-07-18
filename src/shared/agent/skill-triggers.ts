@@ -167,6 +167,8 @@ export function formatSkillRoutingInstructionsBlock(
     lines.push(
       '- Single specialist → `invoke_agent` with exact `agentId` from the list',
       '- Parallel specialists → `invoke_agents` with `wait=false`, then `wait_for_sub_agent_runs`',
+      '- Same task, multiple tries → `best_of_n` then pick a worktree to merge or open a PR',
+      '- Detachable background → `invoke_agents` / `best_of_n` with `detach=true`',
     )
   }
 

@@ -30,9 +30,12 @@ import { getWorkspacePath } from '../workspace/conversation-workspace'
 import { shouldPersistAgentMemoryForRun } from '../memory/memory-persistence-gate'
 import { injectResultSnapshotIntoStructuredContent } from '../utils/result-snapshot'
 import {
+  remainingParallelSubAgentSlots,
   spawnSubAgentRun,
   waitForSubAgentRuns,
+  cancelSubAgentRun,
   type SubAgentSpawnResult,
+  type SubAgentWaitResult,
 } from './sub-agent-run-registry'
 import {
   MAX_AGENT_RUN_DEPTH,
@@ -137,7 +140,13 @@ export class AgentRun {
       rootRunId: parent.meta.depth === 0 ? parent.meta.runId : parent.meta.parentRunId ?? parent.meta.runId,
       parentCurrentMessages:
         params.parentCurrentMessages ?? parent.context.currentMessages,
-      parentOpts: parent.context.opts,
+      // Prefer child-specific abort (combined parent+cancel) when spawn sets it.
+      parentOpts: {
+        ...parent.context.opts,
+        ...params.parentOpts,
+        abortSignal:
+          params.parentOpts.abortSignal ?? parent.context.opts.abortSignal,
+      },
       onStepProgress: (payload) => {
         const scope = getCurrentAgentRunScope()
         const wrapped = {
@@ -171,8 +180,9 @@ export class AgentRun {
     const isChild = this.meta.depth > 0
     const conversationId = this.context.opts.conversationId?.trim()
     const workspacePath =
-      (conversationId ? getWorkspacePath(conversationId) : null) ??
-      parentScope?.workspacePath ??
+      this.context.opts.workspacePathOverride?.trim() ||
+      (conversationId ? getWorkspacePath(conversationId) : null) ||
+      parentScope?.workspacePath ||
       undefined
     const initialScope = scopeFromMeta(
       this.meta,
@@ -309,19 +319,46 @@ export class AgentRun {
 
   async spawnChildRun(
     params: ResolveChildAgentParams,
-    opts?: { waitMode?: 'blocking' | 'background' },
+    opts?: { waitMode?: 'blocking' | 'background'; detached?: boolean },
   ): Promise<SubAgentSpawnResult> {
     return spawnSubAgentRun(this, params, opts)
   }
 
-  async waitForChildRuns(runIds: string[]): Promise<AgentRunResult[]> {
-    const records = await waitForSubAgentRuns(runIds)
-    return records.map((r) => {
-      if (!r.result) {
-        throw new Error(r.error ?? `Sub-agent run ${r.runId} has no result`)
-      }
-      return r.result
-    })
+  cancelChildRun(runId: string): boolean {
+    return cancelSubAgentRun(runId)
+  }
+
+  remainingParallelSlots(): number {
+    return remainingParallelSubAgentSlots(this.meta.runId)
+  }
+
+  async waitForChildRuns(runIds: string[]): Promise<SubAgentWaitResult[]> {
+    return waitForSubAgentRuns(runIds)
+  }
+
+  /**
+   * Merge HITL state from a paused child into this parent (same as single
+   * executeChildAndMerge). Used when invoke_agents wait finds awaiting_approval.
+   */
+  mergeChildHitlPause(
+    child: AgentRun,
+    result: AgentRunResult,
+    parentHitlPauseStageId?: FlowStageId,
+  ): void {
+    if (!result.hitlPaused) return
+    if (child.meta.depth > 1) {
+      throw new Error(
+        `Nested agent run paused at depth ${child.meta.depth}; only one level of sub-agent HITL is supported`,
+      )
+    }
+    if (parentHitlPauseStageId) {
+      this.context.setHitlPausedAtStage(parentHitlPauseStageId)
+    }
+    this.saveChildPendingFrame(child, result.pausedStageId)
+    this.context.hitlAwaitingApproval = child.context.hitlAwaitingApproval
+    this.context.hitlAwaitingFormData = child.context.hitlAwaitingFormData
+    this.context.hitlAwaitingManualIntervention =
+      child.context.hitlAwaitingManualIntervention
   }
 
   async executeChildAndMerge(
@@ -338,21 +375,8 @@ export class AgentRun {
       throw new Error(record.error ?? `Sub-agent run ${runId} failed`)
     }
 
-    if (result.hitlPaused && child.meta.depth > 1) {
-      throw new Error(
-        `Nested agent run paused at depth ${child.meta.depth}; only one level of sub-agent HITL is supported`,
-      )
-    }
-
     if (result.hitlPaused) {
-      if (params.parentHitlPauseStageId) {
-        this.context.setHitlPausedAtStage(params.parentHitlPauseStageId)
-      }
-      this.saveChildPendingFrame(child, result.pausedStageId)
-      this.context.hitlAwaitingApproval = child.context.hitlAwaitingApproval
-      this.context.hitlAwaitingFormData = child.context.hitlAwaitingFormData
-      this.context.hitlAwaitingManualIntervention =
-        child.context.hitlAwaitingManualIntervention
+      this.mergeChildHitlPause(child, result, params.parentHitlPauseStageId)
     }
 
     return result

@@ -45,6 +45,7 @@ describe('resolveSkillToolCatalog', () => {
       stubTool('invoke_agent'),
       stubTool('invoke_agents'),
       stubTool('wait_for_sub_agent_runs'),
+      stubTool('best_of_n'),
     ]
     const catalog = resolveSkillToolCatalog(globalWithUniversal, [], ['read_file'])
     expect(catalog.map((t) => t.name)).toEqual([
@@ -55,6 +56,7 @@ describe('resolveSkillToolCatalog', () => {
       'invoke_agent',
       'invoke_agents',
       'wait_for_sub_agent_runs',
+      'best_of_n',
     ])
   })
 

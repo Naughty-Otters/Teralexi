@@ -9,5 +9,6 @@ describe('loadToolSetTools sub-agents', () => {
     expect(names.has('invoke_agent')).toBe(true)
     expect(names.has('invoke_agents')).toBe(true)
     expect(names.has('wait_for_sub_agent_runs')).toBe(true)
+    expect(names.has('best_of_n')).toBe(true)
   })
 })

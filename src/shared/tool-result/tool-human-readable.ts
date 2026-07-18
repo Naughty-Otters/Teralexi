@@ -182,6 +182,8 @@ export function formatToolHumanReadableAction(
       return 'Delegate work to specialist agents'
     case 'wait_for_sub_agent_runs':
       return 'Wait for delegated agents to finish'
+    case 'best_of_n':
+      return 'Run best-of-N parallel candidates'
     case 'promote_artifact':
       return 'Promote output into the workspace'
     default:

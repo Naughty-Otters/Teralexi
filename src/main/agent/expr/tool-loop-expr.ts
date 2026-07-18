@@ -75,7 +75,7 @@ import { isPlanExecutionActive } from '../coding/plan-mode-state'
 import { nudgeExitPlanModeIfNeeded } from '../coding/plan-mode-exit-nudge'
 import { serializeForAgentCollect } from '../llm/ui-message-projector'
 import { PLAN_MODE_TOOL_NAMES } from '@toolSet/planning'
-import { INVOKE_AGENT_TOOL_NAME, SUB_AGENT_TOOL_NAMES } from '@toolSet/sub-agents'
+import { SUB_AGENT_TOOL_NAMES } from '@toolSet/sub-agents'
 import {
   buildSubAgentCatalog,
   formatSubAgentToolSuffix,
@@ -209,7 +209,7 @@ function buildAgentToolSet(
       continue
     }
     if (
-      toolMeta.name === INVOKE_AGENT_TOOL_NAME &&
+      SUB_AGENT_TOOL_NAMES.has(toolMeta.name) &&
       !runCtx.executionSteps?.toolLoop?.allowSubAgents
     ) {
       continue

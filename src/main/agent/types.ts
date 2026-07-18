@@ -75,6 +75,11 @@ export type AgentResponseOpts = {
   responseLanguage?: string
   abortSignal?: AbortSignal
   messages: AgentMessage[]
+  /**
+   * Per-run workspace override (isolated git worktree). When set, tools bind
+   * here instead of the conversation's shared workspace path.
+   */
+  workspacePathOverride?: string
   onChunk: (chunk: string) => void
   /** Raw AI SDK UI chunks (tool approvals, text-delta, etc.) for renderer Chat transport */
   onUIMessageChunk?: (chunk: Record<string, unknown>) => void
@@ -294,6 +299,10 @@ export type SubAgentRunLifecycleEvent =
       agentName: string
       task: string
       waitMode: 'blocking' | 'background'
+      worktreePath?: string
+      worktreeBranch?: string
+      /** When true, parent finished while this run continues (detachable). */
+      detached?: boolean
     }
   | {
       kind: 'finished'
@@ -305,6 +314,10 @@ export type SubAgentRunLifecycleEvent =
       status: SubAgentRunStatus
       reportPreview?: string
       error?: string
+      worktreePath?: string
+      worktreeBranch?: string
+      worktreeDiffStat?: string
+      detached?: boolean
     }
 
 export interface AgentStepContext {

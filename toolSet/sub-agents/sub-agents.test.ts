@@ -91,16 +91,31 @@ describe('sub-agent tools', () => {
       agentName: params.agentId,
     }))
     const waitForChildRuns = vi.fn(async () => [
-      { hitlPaused: false, stepOutputs: { report: 'a' } },
-      { hitlPaused: false, stepOutputs: { report: 'b' } },
+      {
+        runId: 'run-skill:a',
+        agentId: 'skill:a',
+        agentName: 'skill:a',
+        status: 'completed',
+        report: 'a',
+        hitlPaused: false,
+      },
+      {
+        runId: 'run-skill:b',
+        agentId: 'skill:b',
+        agentName: 'skill:b',
+        status: 'completed',
+        report: 'b',
+        hitlPaused: false,
+      },
     ])
 
     bindSubAgentDelegation({
       parentRun: {
-        meta: { depth: 0 },
+        meta: { depth: 0, runId: 'parent' },
         executeChildAndMerge: vi.fn(),
         spawnChildRun,
         waitForChildRuns,
+        remainingParallelSlots: () => 10,
       },
       allowSubAgents: true,
       opts: { userId: 'user-1', conversationId: 'conv-1' },
@@ -108,7 +123,7 @@ describe('sub-agent tools', () => {
       resolveSubAgentTargetId: async (id) => id,
     })
 
-    await invokeAgents.execute({
+    const out = await invokeAgents.execute({
       runs: [
         { agentId: 'skill:a', task: 'Task A' },
         { agentId: 'skill:b', task: 'Task B' },
@@ -123,8 +138,77 @@ describe('sub-agent tools', () => {
         parentOpts: { userId: 'user-1', conversationId: 'conv-1' },
         task: 'Task A',
       },
-      { waitMode: 'blocking' },
+      { waitMode: 'background' },
     )
     expect(waitForChildRuns).toHaveBeenCalledWith(['run-skill:a', 'run-skill:b'])
+    expect(out).toMatchObject({
+      results: [
+        { runId: 'run-skill:a', status: 'completed', report: 'a' },
+        { runId: 'run-skill:b', status: 'completed', report: 'b' },
+      ],
+    })
+  })
+
+  it('invoke_agents preflights parallel slots and empty agentIds', async () => {
+    bindSubAgentDelegation({
+      parentRun: {
+        meta: { depth: 0, runId: 'parent' },
+        executeChildAndMerge: vi.fn(),
+        spawnChildRun: vi.fn(),
+        waitForChildRuns: vi.fn(),
+        remainingParallelSlots: () => 1,
+      },
+      allowSubAgents: true,
+      opts: { userId: 'user-1' },
+      getLatestUserMessageContent: () => '',
+      resolveSubAgentTargetId: async (id) => id,
+    })
+
+    const tooMany = await invokeAgents.execute({
+      runs: [
+        { agentId: 'skill:a', task: 'A' },
+        { agentId: 'skill:b', task: 'B' },
+      ],
+    })
+    expect(tooMany).toMatchObject({ error: expect.stringContaining('slot') })
+
+    const emptyId = await invokeAgents.execute({
+      runs: [{ agentId: '   ', task: 'A' }],
+    })
+    expect(emptyId).toMatchObject({
+      error: expect.stringContaining('non-empty agentId'),
+    })
+  })
+
+  it('invoke_agents wait=false returns runIds without waiting', async () => {
+    const spawnChildRun = vi.fn(async () => ({
+      runId: 'bg-1',
+      agentId: 'skill:a',
+      agentName: 'A',
+    }))
+    const waitForChildRuns = vi.fn()
+    bindSubAgentDelegation({
+      parentRun: {
+        meta: { depth: 0, runId: 'parent' },
+        executeChildAndMerge: vi.fn(),
+        spawnChildRun,
+        waitForChildRuns,
+        remainingParallelSlots: () => 10,
+      },
+      allowSubAgents: true,
+      opts: { userId: 'user-1' },
+      getLatestUserMessageContent: () => '',
+      resolveSubAgentTargetId: async (id) => id,
+    })
+
+    const out = await invokeAgents.execute({
+      wait: false,
+      runs: [{ agentId: 'skill:a', task: 'Task A' }],
+    })
+    expect(out).toEqual({
+      runIds: ['bg-1'],
+      runs: [{ runId: 'bg-1', agentId: 'skill:a', agentName: 'A' }],
+    })
+    expect(waitForChildRuns).not.toHaveBeenCalled()
   })
 })

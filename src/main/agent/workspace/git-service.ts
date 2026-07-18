@@ -2,6 +2,7 @@
  * Thin wrapper around the git CLI.
  *
  * Shared by agent git tools (toolSet/git.ts) and IPC handlers (UI panel).
+ * Uses {@link resolveGitBinary} so a bundled portable Git can replace system PATH.
  */
 import { execFile } from 'child_process'
 import fg from 'fast-glob'
@@ -10,6 +11,12 @@ import { join, relative, resolve } from 'path'
 import { promisify } from 'util'
 import { isLikelyBinary } from '@toolSet/file-system/format-tool-output'
 import { withFileLock } from '@toolSet/file-system/file-io-utils'
+import {
+  GIT_NOT_FOUND_MESSAGE,
+  isGitNotFoundError,
+  isNotAGitRepositoryError,
+  resolveGitBinary,
+} from './git-binary'
 
 const execFileAsync = promisify(execFile)
 
@@ -48,6 +55,10 @@ export type GitStatusResult = {
   behind: number
   entries: GitStatusEntry[]
   clean: boolean
+  /** False when the workspace folder is not inside a git working tree. */
+  isRepo: boolean
+  /** Set when status could not be read (e.g. git binary missing). */
+  error?: string
 }
 
 export type GitLogEntry = {
@@ -103,9 +114,10 @@ export async function runGit(
   args: string[],
   timeoutMs = GIT_TIMEOUT_MS,
 ): Promise<GitResult> {
+  const gitBin = resolveGitBinary()
   try {
     const { stdout, stderr } = await execFileAsync(
-      'git',
+      gitBin,
       ['-c', 'color.ui=false', ...args],
       {
         cwd,
@@ -119,7 +131,15 @@ export async function runGit(
       stderr: stripAnsi(stderr.trimEnd()),
     }
   } catch (err: unknown) {
-    const e = err as { stdout?: string; stderr?: string; message?: string }
+    const e = err as {
+      code?: string | number
+      stdout?: string
+      stderr?: string
+      message?: string
+    }
+    if (e.code === 'ENOENT') {
+      return { ok: false, error: GIT_NOT_FOUND_MESSAGE, stdout: '' }
+    }
     return {
       ok: false,
       error: e.stderr?.trim() || e.message || String(err),
@@ -128,19 +148,32 @@ export async function runGit(
   }
 }
 
+function emptyStatus(
+  partial: Partial<GitStatusResult> & { isRepo: boolean },
+): GitStatusResult {
+  return {
+    branch: '',
+    upstream: null,
+    ahead: 0,
+    behind: 0,
+    entries: [],
+    clean: false,
+    ...partial,
+  }
+}
+
 // ─── git status ───────────────────────────────────────────────────────────────
 
 export async function gitStatus(cwd: string): Promise<GitStatusResult> {
   const result = await runGit(cwd, ['status', '--short', '--branch', '-u'])
   if (!result.ok) {
-    return {
-      branch: '',
-      upstream: null,
-      ahead: 0,
-      behind: 0,
-      entries: [],
-      clean: false,
+    if (isNotAGitRepositoryError(result.error)) {
+      return emptyStatus({ isRepo: false })
     }
+    if (isGitNotFoundError(result.error)) {
+      return emptyStatus({ isRepo: false, error: GIT_NOT_FOUND_MESSAGE })
+    }
+    return emptyStatus({ isRepo: false, error: result.error })
   }
 
   const lines = result.stdout.split('\n')
@@ -199,6 +232,7 @@ export async function gitStatus(cwd: string): Promise<GitStatusResult> {
     behind,
     entries,
     clean: entries.length === 0,
+    isRepo: true,
   }
 }
 
@@ -213,7 +247,7 @@ async function gitDiffUntrackedFile(
 ): Promise<string> {
   try {
     const { stdout } = await execFileAsync(
-      'git',
+      resolveGitBinary(),
       ['-c', 'color.ui=false', 'diff', '--no-index', NULL_DEVICE, relativePath],
       {
         cwd,
@@ -301,6 +335,12 @@ export async function gitLog(cwd: string, limit = 20): Promise<GitLogEntry[]> {
         refs: refs ?? '',
       }
     })
+}
+
+// ─── git init ─────────────────────────────────────────────────────────────────
+
+export async function gitInit(cwd: string): Promise<GitResult> {
+  return runGit(cwd, ['init'])
 }
 
 // ─── git add ──────────────────────────────────────────────────────────────────

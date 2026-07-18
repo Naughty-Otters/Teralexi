@@ -12,6 +12,7 @@ describe('toolSet index', () => {
     expect(tools.map((t) => t.name)).toContain('invoke_agent')
     expect(tools.map((t) => t.name)).toContain('invoke_agents')
     expect(tools.map((t) => t.name)).toContain('wait_for_sub_agent_runs')
+    expect(tools.map((t) => t.name)).toContain('best_of_n')
     expect(tools.map((t) => t.name)).toContain('generate_follow_up')
   })
 })

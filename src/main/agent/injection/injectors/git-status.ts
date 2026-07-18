@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { createLogger } from '@main/logger'
+import { resolveGitBinary } from '../../workspace/git-binary'
 import { loadConversationWorkspace } from '../../workspace/conversation-workspace'
 import type { AgentInjector } from '../types'
 import { INJECTOR_ORDER } from './orders'
@@ -15,7 +16,7 @@ const GIT_TIMEOUT_MS = 4000
 
 function runGit(workspacePath: string, args: string[]): string | null {
   try {
-    return execFileSync('git', args, {
+    return execFileSync(resolveGitBinary(), args, {
       cwd: workspacePath,
       encoding: 'utf8',
       timeout: GIT_TIMEOUT_MS,
