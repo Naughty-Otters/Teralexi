@@ -1,5 +1,5 @@
 import { execFileSync } from 'child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -39,6 +39,21 @@ describe('git-service', () => {
     expect(inside.ok).toBe(true)
     const escape = resolvePathInsideWorkspace(dir, '../outside')
     expect(escape.ok).toBe(false)
+  })
+
+  it('resolvePathInsideWorkspace rejects symlink that points outside the workspace', () => {
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-symlink-ws-'))
+    const outside = mkdtempSync(join(tmpdir(), 'teralexi-git-symlink-out-'))
+    writeFileSync(join(outside, 'secret.txt'), 'top-secret\n')
+    symlinkSync(join(outside, 'secret.txt'), join(dir, 'escape-link.txt'))
+
+    const result = resolvePathInsideWorkspace(dir, 'escape-link.txt')
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toMatch(/escapes the workspace/i)
+    }
+
+    rmSync(outside, { recursive: true, force: true })
   })
 
   it('gitDiff returns error result instead of diff text on failure', async () => {

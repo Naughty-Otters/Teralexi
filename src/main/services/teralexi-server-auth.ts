@@ -28,9 +28,17 @@ type ServerAuthResponse = {
 }
 
 let cachedServerToken: CachedServerToken | null = null
-let inFlightServerToken: Promise<string | null> | null = null
+/** In-flight resolve promises keyed by normalized API base URL. */
+const inFlightServerTokenByApiBase = new Map<string, Promise<string | null>>()
 /** Last reason resolve returned null — for actionable UI / logs (not a server body). */
 let lastResolveFailure: string | null = null
+
+/** Default timeout for `/auth/google` and `/auth/token` fetches. */
+export const TERALEXI_AUTH_FETCH_TIMEOUT_MS = 30_000
+
+function authFetchSignal(timeoutMs = TERALEXI_AUTH_FETCH_TIMEOUT_MS): AbortSignal {
+  return AbortSignal.timeout(timeoutMs)
+}
 
 export function getLastServerAccessTokenFailure(): string | null {
   return lastResolveFailure
@@ -183,7 +191,7 @@ function getServerAccessTokenForRefresh(apiBaseUrl: string): string | null {
 
 export function clearTeralexiServerAuthCache(): void {
   cachedServerToken = null
-  inFlightServerToken = null
+  inFlightServerTokenByApiBase.clear()
   lastResolveFailure = null
   clearPersistedServerAuth()
 }
@@ -234,6 +242,7 @@ async function parseAuthResponse(response: Response): Promise<ServerAuthResponse
 export async function exchangeGoogleIdTokenForServerAccessToken(args: {
   apiBaseUrl: string
   idToken: string
+  timeoutMs?: number
 }): Promise<string> {
   const response = await fetch(`${args.apiBaseUrl}/api/v1/auth/google`, {
     method: 'POST',
@@ -242,6 +251,7 @@ export async function exchangeGoogleIdTokenForServerAccessToken(args: {
       Accept: 'application/json',
     },
     body: JSON.stringify({ id_token: args.idToken }),
+    signal: authFetchSignal(args.timeoutMs),
   })
 
   const payload = await parseAuthResponse(response)
@@ -255,6 +265,7 @@ export async function exchangeGoogleIdTokenForServerAccessToken(args: {
 export async function refreshServerAccessToken(args: {
   apiBaseUrl: string
   accessToken: string
+  timeoutMs?: number
 }): Promise<string> {
   const response = await fetch(`${args.apiBaseUrl}/api/v1/auth/token`, {
     method: 'POST',
@@ -263,6 +274,7 @@ export async function refreshServerAccessToken(args: {
       Accept: 'application/json',
       Authorization: `Bearer ${args.accessToken}`,
     },
+    signal: authFetchSignal(args.timeoutMs),
   })
 
   const payload = await parseAuthResponse(response)
@@ -366,13 +378,16 @@ export async function getTeralexiServerAccessToken(
     return cached
   }
 
-  if (!inFlightServerToken) {
-    inFlightServerToken = resolveTeralexiServerAccessTokenImpl(apiBaseUrl).finally(
-      () => {
-        inFlightServerToken = null
-      },
-    )
+  const key = normalizeApiBase(apiBaseUrl)
+  let inFlight = inFlightServerTokenByApiBase.get(key)
+  if (!inFlight) {
+    inFlight = resolveTeralexiServerAccessTokenImpl(apiBaseUrl).finally(() => {
+      if (inFlightServerTokenByApiBase.get(key) === inFlight) {
+        inFlightServerTokenByApiBase.delete(key)
+      }
+    })
+    inFlightServerTokenByApiBase.set(key, inFlight)
   }
 
-  return inFlightServerToken
+  return inFlight
 }

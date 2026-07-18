@@ -214,4 +214,108 @@ describe('useSkillComposerToolbar', () => {
     await nextTick()
     await vi.waitFor(() => expect(api.plugins.value).toEqual([]))
   })
+
+  it('surfaces refresh IPC rejection instead of silently clearing plugins', async () => {
+    const getPlugins = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        plugins: [
+          {
+            id: 'publish-website',
+            label: 'Publish website',
+            icon: 'globe',
+            enabled: true,
+          },
+        ],
+      })
+      .mockRejectedValueOnce(new Error('IPC bridge down'))
+
+    installIpc({
+      GetSkillComposerToolbarPlugins: getPlugins,
+      PreviewSkillComposerToolbarPlugin: async () => ({ ok: false }),
+      InvokeSkillComposerToolbarPlugin: async () => ({ ok: false }),
+    })
+
+    const skillId = ref<string | null>('website')
+    const conversationId = ref<string | null>('conv-1')
+    const api = scope.run(() =>
+      useSkillComposerToolbar({ skillId, conversationId }),
+    )!
+
+    await vi.waitFor(() => expect(api.plugins.value).toHaveLength(1))
+    expect(api.refreshError.value).toBeNull()
+
+    await api.refresh()
+    expect(api.plugins.value).toEqual([])
+    expect(api.refreshError.value).toBe('IPC bridge down')
+  })
+
+  it('surfaces refresh result.ok=false with error message', async () => {
+    installIpc({
+      GetSkillComposerToolbarPlugins: async () => ({
+        ok: false,
+        error: 'Skill module failed to load',
+        plugins: [],
+      }),
+      PreviewSkillComposerToolbarPlugin: async () => ({ ok: false }),
+      InvokeSkillComposerToolbarPlugin: async () => ({ ok: false }),
+    })
+
+    const skillId = ref('website')
+    const conversationId = ref('conv-1')
+    const api = scope.run(() =>
+      useSkillComposerToolbar({ skillId, conversationId }),
+    )!
+
+    await vi.waitFor(() =>
+      expect(api.refreshError.value).toBe('Skill module failed to load'),
+    )
+    expect(api.plugins.value).toEqual([])
+  })
+
+  it('rejects concurrent invoke of a different plugin while one is running', async () => {
+    let resolveFirst: ((value: unknown) => void) | null = null
+    const invokePlugin = vi.fn((args: { pluginId: string }) => {
+      if (args.pluginId === 'plugin-a') {
+        return new Promise((resolve) => {
+          resolveFirst = resolve
+        })
+      }
+      return Promise.resolve({ ok: true, message: 'b done' })
+    })
+
+    installIpc({
+      GetSkillComposerToolbarPlugins: async () => ({
+        ok: true,
+        plugins: [
+          { id: 'plugin-a', label: 'A', icon: 'a', enabled: true },
+          { id: 'plugin-b', label: 'B', icon: 'b', enabled: true },
+        ],
+      }),
+      PreviewSkillComposerToolbarPlugin: async () => ({ ok: false }),
+      InvokeSkillComposerToolbarPlugin: invokePlugin,
+    })
+
+    const skillId = ref('website')
+    const conversationId = ref('conv-1')
+    const api = scope.run(() =>
+      useSkillComposerToolbar({ skillId, conversationId }),
+    )!
+
+    await vi.waitFor(() => expect(api.plugins.value).toHaveLength(2))
+
+    const first = api.invoke('plugin-a')
+    await vi.waitFor(() => expect(api.invokingId.value).toBe('plugin-a'))
+
+    const second = await api.invoke('plugin-b')
+    expect(second).toMatchObject({
+      ok: false,
+      error: 'Another toolbar action is already running',
+    })
+    expect(invokePlugin).toHaveBeenCalledTimes(1)
+
+    resolveFirst!({ ok: true, message: 'a done' })
+    await expect(first).resolves.toMatchObject({ ok: true, message: 'a done' })
+  })
 })

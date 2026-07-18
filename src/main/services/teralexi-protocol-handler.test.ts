@@ -138,4 +138,18 @@ describe('teralexi-protocol-handler', () => {
     expect(main.focus).toHaveBeenCalled()
     expect(splash.focus).not.toHaveBeenCalled()
   })
+
+  it('syncs account to renderers when deep-link OAuth fails so UI is not left stale', async () => {
+    mockHandleDeepLink.mockRejectedValueOnce(new Error('invalid token'))
+
+    const mod = await import('./teralexi-protocol-handler')
+    mod.setTeralexiProtocolHandlerReady(mod.dispatchTeralexiUrl)
+    mod.handleTeralexiProtocolUrl('teralexi://open?token=bad')
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(mockHandleDeepLink).toHaveBeenCalled()
+    expect(mockSyncStored).toHaveBeenCalled()
+  })
 })
