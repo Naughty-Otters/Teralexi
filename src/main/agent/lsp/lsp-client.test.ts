@@ -13,6 +13,7 @@ vi.mock('node:child_process', () => ({
 vi.mock('./language-servers', () => ({
   resolveServerCommand: () => 'mock-language-server',
   buildServerPath: () => process.env.PATH ?? '',
+  resolveBundledTsserverPath: () => '/mock/node_modules/@typescript/old/lib/tsserver.js',
 }))
 
 import { LspClient } from './lsp-client'
@@ -67,8 +68,10 @@ describe('LspClient', () => {
   })
 
   it('initializes and returns diagnostics after publishDiagnostics', async () => {
+    let initializeParams: Record<string, unknown> | undefined
     const { proc, stdout } = createMockProc((msg) => {
       if (msg.method === 'initialize' && msg.id != null) {
+        initializeParams = msg.params as Record<string, unknown>
         stdout.write(
           encodeMessage({
             jsonrpc: '2.0',
@@ -108,6 +111,12 @@ describe('LspClient', () => {
 
     const client = new LspClient(serverDef, '/workspace')
     await client.start()
+
+    expect(initializeParams?.initializationOptions).toEqual({
+      tsserver: {
+        fallbackPath: '/mock/node_modules/@typescript/old/lib/tsserver.js',
+      },
+    })
 
     const diagnostics = await client.getDiagnostics(
       '/workspace/src/a.ts',

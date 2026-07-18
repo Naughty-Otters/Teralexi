@@ -23,7 +23,7 @@ export function buildMainProcessLogStreams(): LogStreamSpec[] {
     : process.stderr
 
   mainLogStreams = [
-    { stream: consoleOut, level: 'trace' },
+    { stream: consoleOut, level: 'info' },
     { stream: consoleErr, level: 'warn' },
     { stream: fileStream, level: 'info' },
   ]

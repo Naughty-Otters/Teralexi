@@ -71,12 +71,7 @@ function isServerTokenPastRefreshBuffer(
       note:
         'expiresAtMs is absolute wall-clock expiry; now >= expiresAtMs - refreshBufferMs means within the buffer window',
     })
-  } else {
-    log.debug('Server JWT still valid before refresh buffer', {
-      context,
-      ...timing,
-    })
-  }
+  } 
   return past
 }
 
