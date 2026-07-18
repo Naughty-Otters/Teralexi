@@ -14,11 +14,29 @@ export type SubAgentParentRun = {
   }>
   spawnChildRun?: (
     params: SubAgentChildParams,
-    opts?: { waitMode?: 'blocking' | 'background' },
+    opts?: { waitMode?: 'blocking' | 'background'; detached?: boolean },
   ) => Promise<{ runId: string; agentId: string; agentName: string }>
+  cancelChildRun?: (runId: string) => boolean
   waitForChildRuns?: (runIds: string[]) => Promise<
-    Array<{ hitlPaused: boolean; stepOutputs: Record<string, unknown> }>
+    Array<{
+      runId: string
+      agentId: string
+      agentName: string
+      status: string
+      report?: string
+      error?: string
+      hitlPaused: boolean
+      result?: { hitlPaused: boolean; stepOutputs: Record<string, unknown>; pausedStageId?: string }
+      childRun?: unknown
+      worktreePath?: string
+      worktreeBranch?: string
+    }>
   >
+  remainingParallelSlots?: () => number
+  mergeChildHitlPause?: (
+    child: unknown,
+    result: { hitlPaused: boolean; stepOutputs: Record<string, unknown>; pausedStageId?: string },
+  ) => void
 }
 
 export type SubAgentDelegationContext = {

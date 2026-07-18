@@ -164,6 +164,7 @@ import {
   type GitStatusResult,
   gitDiff,
   gitLog,
+  gitInit,
   gitAdd,
   gitCommit,
   gitPush,
@@ -2178,11 +2179,15 @@ export class IpcMainHandleClass implements IIpcMainHandle {
         behind: 0,
         entries: [],
         clean: false,
+        isRepo: false,
         error: resolved.error,
       }
     }
     try {
       const result = await gitStatus(resolved.cwd)
+      if (result.error) {
+        return { ok: false, ...result }
+      }
       return { ok: true, ...result }
     } catch (err) {
       return {
@@ -2193,6 +2198,7 @@ export class IpcMainHandleClass implements IIpcMainHandle {
         behind: 0,
         entries: [],
         clean: false,
+        isRepo: false,
         error: String(err),
       }
     }
@@ -2235,6 +2241,22 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     } catch (err) {
       return { ok: false, commits: [], error: String(err) }
     }
+  }
+
+  RunWorkspaceGitInit: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { conversationId: string },
+  ) => Promise<{ ok: boolean; output?: string; error?: string }> = async (
+    _event,
+    args,
+  ) => {
+    const resolved = resolveWorkspaceCwd(args?.conversationId ?? '', {
+      blockIfRunInFlight: true,
+    })
+    if (!resolved.ok) return { ok: false, error: resolved.error }
+    const result = await gitInit(resolved.cwd)
+    if (!result.ok) return { ok: false, error: result.error }
+    return { ok: true, output: result.stdout || result.stderr }
   }
 
   RunWorkspaceGitAdd: (
@@ -2324,6 +2346,99 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       if (!result.ok) return { ok: false, error: result.error }
       return { ok: true, url: result.url, output: result.url }
     }
+
+  ListSubAgentRuns: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { parentRunId?: string },
+  ) => Promise<{
+    ok: boolean
+    runs: Array<{
+      runId: string
+      agentId: string
+      agentName: string
+      parentRunId: string
+      rootRunId: string
+      task: string
+      status: string
+      error?: string
+      worktreePath?: string
+      worktreeBranch?: string
+    }>
+    error?: string
+  }> = async (_event, args) => {
+    const {
+      listAllSubAgentRuns,
+      listSubAgentRunsByParent,
+    } = await import('../agent/run/sub-agent-run-registry')
+    const parentRunId = args?.parentRunId?.trim()
+    const records = parentRunId
+      ? listSubAgentRunsByParent(parentRunId)
+      : listAllSubAgentRuns()
+    return {
+      ok: true,
+      runs: records.map((r) => ({
+        runId: r.runId,
+        agentId: r.agentId,
+        agentName: r.agentName,
+        parentRunId: r.parentRunId,
+        rootRunId: r.rootRunId,
+        task: r.task,
+        status: r.status,
+        error: r.error,
+        worktreePath: r.worktreePath,
+        worktreeBranch: r.worktreeBranch,
+      })),
+    }
+  }
+
+  CancelSubAgentRun: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { runId: string },
+  ) => Promise<{ ok: boolean; error?: string }> = async (_event, args) => {
+    const { cancelSubAgentRun } = await import(
+      '../agent/run/sub-agent-run-registry'
+    )
+    const runId = args?.runId?.trim()
+    if (!runId) return { ok: false, error: 'runId is required' }
+    const ok = cancelSubAgentRun(runId)
+    return ok ? { ok: true } : { ok: false, error: 'Sub-agent run not found or not running' }
+  }
+
+  ResolveSubAgentWorktree: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: {
+      runId: string
+      action: 'merge' | 'discard' | 'open_pr'
+      title?: string
+      body?: string
+      base?: string
+      draft?: boolean
+    },
+  ) => Promise<{
+    ok: boolean
+    message?: string
+    url?: string
+    error?: string
+  }> = async (_event, args) => {
+    const runId = args?.runId?.trim()
+    if (!runId) return { ok: false, error: 'runId is required' }
+    const {
+      mergeSubAgentWorktree,
+      discardSubAgentWorktree,
+      openPrForSubAgentWorktree,
+    } = await import('../agent/run/sub-agent-run-registry')
+    if (args.action === 'merge') return mergeSubAgentWorktree(runId)
+    if (args.action === 'discard') return discardSubAgentWorktree(runId)
+    if (args.action === 'open_pr') {
+      return openPrForSubAgentWorktree(runId, {
+        title: args.title,
+        body: args.body,
+        base: args.base,
+        draft: args.draft,
+      })
+    }
+    return { ok: false, error: `Unknown action: ${String(args.action)}` }
+  }
 
   ListWorkspaceFiles: (
     _event: Electron.IpcMainInvokeEvent,

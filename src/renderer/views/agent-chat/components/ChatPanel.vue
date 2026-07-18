@@ -270,6 +270,7 @@ import { setTitleBarChatControls } from '@renderer/composables/useTitleBarChatCo
 import { useChatAttachments } from '@renderer/composables/useChatAttachments'
 import type { ChatAttachmentMeta } from '@shared/chat/attachments'
 import { CHAT_MESSAGE_ATTACHMENTS_KEY } from './chatAttachmentContext'
+import { SUBMIT_CHAT_TEXT_KEY } from '../submitChatText'
 
 import {
   createRendererChatGenerateId,
@@ -503,6 +504,12 @@ const messagesEl = ref<HTMLElement | null>(null)
 const messagesContentEl = ref<HTMLElement | null>(null)
 const chatBodyEl = ref<HTMLElement | null>(null)
 const chatInst = shallowRef<InstanceType<typeof Chat> | null>(null)
+
+provide(SUBMIT_CHAT_TEXT_KEY, (text: string) => {
+  const trimmed = text.trim()
+  if (!trimmed || !chatInst.value) return
+  void chatInst.value.sendMessage({ text: trimmed })
+})
 
 const reportPanelResizeEnabled = computed(() => showReportPanel.value)
 

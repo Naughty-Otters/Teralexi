@@ -7,6 +7,7 @@ export const MANDATORY_TOOL_NAMES = new Set<string>([
   'invoke_agent',
   'invoke_agents',
   'wait_for_sub_agent_runs',
+  'best_of_n',
   'promote_artifact',
   'generate_follow_up',
 ])

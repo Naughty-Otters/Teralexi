@@ -3,10 +3,10 @@
     <!-- Branch bar -->
     <div class="git-branch-bar">
       <UIcon name="i-lucide-git-branch" class="git-branch-icon" />
-      <span class="git-branch-name">{{ branch || '—' }}</span>
-      <span v-if="upstream" class="git-upstream">→ {{ upstream }}</span>
-      <span v-if="ahead > 0" class="git-ahead">↑{{ ahead }}</span>
-      <span v-if="behind > 0" class="git-behind">↓{{ behind }}</span>
+      <span class="git-branch-name">{{ isRepo ? (branch || '—') : 'Not a repository' }}</span>
+      <span v-if="isRepo && upstream" class="git-upstream">→ {{ upstream }}</span>
+      <span v-if="isRepo && ahead > 0" class="git-ahead">↑{{ ahead }}</span>
+      <span v-if="isRepo && behind > 0" class="git-behind">↓{{ behind }}</span>
       <button class="git-refresh-btn" title="Refresh git status and file list" aria-label="Refresh git status and file list" :disabled="statusLoading" @click="emit('refresh')">
         <UIcon name="i-lucide-refresh-cw" :class="['git-refresh-icon', { 'git-refresh-icon--spin': statusLoading }]" />
       </button>
@@ -15,6 +15,24 @@
     <!-- Error -->
     <p v-if="statusError" class="git-error">{{ statusError }}</p>
 
+    <!-- Not a git repo -->
+    <div v-else-if="!isRepo && !statusLoading" class="git-init">
+      <UIcon name="i-lucide-git-branch-plus" class="git-init-icon" />
+      <p class="git-init-title">This folder is not a Git repository</p>
+      <p class="git-init-hint">Initialize Git to track changes, commit, and push from this panel.</p>
+      <button
+        class="git-btn git-btn--primary"
+        :disabled="opLoading || mutationsDisabled"
+        :title="mutationsDisabled ? busyTitle : 'Run git init in the workspace folder'"
+        @click="onInit"
+      >
+        <UIcon name="i-lucide-folder-git-2" />
+        {{ opLoading ? 'Initializing…' : 'Initialize repository' }}
+      </button>
+      <p v-if="opError" class="git-op-error">{{ opError }}</p>
+      <p v-if="opSuccess" class="git-op-success">{{ opSuccess }}</p>
+    </div>
+
     <!-- Clean state -->
     <p v-else-if="isClean && !statusLoading" class="git-clean">
       <UIcon name="i-lucide-check-circle" class="git-clean-icon" />
@@ -22,7 +40,7 @@
     </p>
 
     <!-- File list -->
-    <div v-else class="git-file-list">
+    <div v-else-if="isRepo" class="git-file-list">
       <!-- Staged -->
       <template v-if="stagedEntries.length > 0">
         <div class="git-section-header">
@@ -72,7 +90,7 @@
     </div>
 
     <!-- Commit form -->
-    <div v-if="!isClean" class="git-commit-form">
+    <div v-if="isRepo && !isClean" class="git-commit-form">
       <textarea
         v-model="localMessage"
         class="git-commit-input"
@@ -156,6 +174,7 @@ const {
   behind,
   statusLoading,
   statusError,
+  isRepo,
   isClean,
   stagedEntries,
   unstagedEntries,
@@ -201,6 +220,11 @@ watch(
     localPrBody.value = v
   },
 )
+
+function onInit() {
+  if (mutationsDisabled.value) return
+  void gitStore.initRepo()
+}
 
 function onCommit() {
   if (mutationsDisabled.value || !localMessage.value.trim()) return
@@ -260,6 +284,30 @@ function onCreatePr() {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .git-error { margin: 8px 10px; font-size: var(--app-font-size-secondary); color: var(--color-error-600, #dc2626); }
+.git-init {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 16px 10px;
+}
+.git-init-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--ui-text-muted);
+}
+.git-init-title {
+  margin: 0;
+  font-size: var(--app-font-size);
+  font-weight: 600;
+  color: var(--ui-text);
+}
+.git-init-hint {
+  margin: 0 0 4px;
+  font-size: var(--app-font-size-secondary);
+  color: var(--ui-text-muted);
+  line-height: 1.4;
+}
 .git-clean {
   display: flex; align-items: center; gap: 6px;
   margin: 12px 10px;

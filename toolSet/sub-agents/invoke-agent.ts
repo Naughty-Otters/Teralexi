@@ -22,6 +22,12 @@ export const invokeAgent: SkillTool = {
       .boolean()
       .optional()
       .describe('When false, start in background and return runId immediately'),
+    detach: z
+      .boolean()
+      .optional()
+      .describe(
+        'When true, force wait=false so the parent can finish while the child keeps running',
+      ),
   }),
   needsApproval: false,
   async execute(input) {
@@ -30,6 +36,7 @@ export const invokeAgent: SkillTool = {
         agentId: z.string(),
         task: z.string(),
         wait: z.boolean().optional(),
+        detach: z.boolean().optional(),
       })
       .safeParse(input)
     if (!parsed.success) {
@@ -41,7 +48,8 @@ export const invokeAgent: SkillTool = {
       throw new Error('invoke_agent is not enabled for this agent')
     }
 
-    const { agentId, task, wait = true } = parsed.data
+    const { agentId, task, wait: waitInput = true, detach = false } = parsed.data
+    const wait = detach ? false : waitInput
     const requestedId = agentId.trim()
     if (!requestedId) {
       throw new Error('invoke_agent requires agentId')
@@ -68,12 +76,14 @@ export const invokeAgent: SkillTool = {
     if (!wait && parentRun.spawnChildRun) {
       const spawned = await parentRun.spawnChildRun(childParams, {
         waitMode: 'background',
+        detached: detach || undefined,
       })
       return {
         runId: spawned.runId,
         agentId: spawned.agentId,
         agentName: spawned.agentName,
         background: true,
+        detached: detach || undefined,
       }
     }
 

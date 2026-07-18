@@ -17,7 +17,7 @@ import { applyReadFileLedgerGate } from '../expr/read-file-ledger-gate'
 import { applySessionToolApprovals } from '../session-tool-approval'
 import { applyCodingAgentPolicy } from '../coding/coding-agent-policy'
 import { PLAN_MODE_TOOL_NAMES } from '@toolSet/planning'
-import { INVOKE_AGENT_TOOL_NAME } from '@toolSet/sub-agents'
+import { SUB_AGENT_TOOL_NAMES } from '@toolSet/sub-agents'
 import { appendLinkedMarkdownReferenceSections } from './step-reference-link-expand'
 import {
   resolveFlowStepInstructions,
@@ -87,8 +87,8 @@ export abstract class AgentStep {
     for (const toolMeta of tools) {
       if (PLAN_MODE_TOOL_NAMES.has(toolMeta.name) && !isRootRun) continue
       if (
-        toolMeta.name === INVOKE_AGENT_TOOL_NAME &&
-        !runCtx.executionSteps?.toolLoop?.allowSubAgents
+        SUB_AGENT_TOOL_NAMES.has(toolMeta.name) &&
+        (!isRootRun || !runCtx.executionSteps?.toolLoop?.allowSubAgents)
       ) {
         continue
       }

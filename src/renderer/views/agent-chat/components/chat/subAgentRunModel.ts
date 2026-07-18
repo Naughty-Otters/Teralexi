@@ -21,6 +21,10 @@ export type SubAgentRunLifecyclePart = {
   status?: SubAgentRunStatus
   reportPreview?: string
   error?: string
+  worktreePath?: string
+  worktreeBranch?: string
+  worktreeDiffStat?: string
+  detached?: boolean
 }
 
 export type SubAgentRunNode = {
@@ -35,6 +39,10 @@ export type SubAgentRunNode = {
   error?: string
   depth: number
   children: SubAgentRunNode[]
+  worktreePath?: string
+  worktreeBranch?: string
+  worktreeDiffStat?: string
+  detached?: boolean
 }
 
 export const SUB_AGENT_UI_MAX_DEPTH = 2
@@ -72,6 +80,13 @@ export function extractSubAgentLifecycleParts(
           data.waitMode === 'background' || data.waitMode === 'blocking'
             ? data.waitMode
             : undefined,
+        worktreePath:
+          typeof data.worktreePath === 'string' ? data.worktreePath : undefined,
+        worktreeBranch:
+          typeof data.worktreeBranch === 'string'
+            ? data.worktreeBranch
+            : undefined,
+        detached: data.detached === true,
       })
     } else if (data.kind === 'finished') {
       out.push({
@@ -87,6 +102,17 @@ export function extractSubAgentLifecycleParts(
         reportPreview:
           typeof data.reportPreview === 'string' ? data.reportPreview : undefined,
         error: typeof data.error === 'string' ? data.error : undefined,
+        worktreePath:
+          typeof data.worktreePath === 'string' ? data.worktreePath : undefined,
+        worktreeBranch:
+          typeof data.worktreeBranch === 'string'
+            ? data.worktreeBranch
+            : undefined,
+        worktreeDiffStat:
+          typeof data.worktreeDiffStat === 'string'
+            ? data.worktreeDiffStat
+            : undefined,
+        detached: data.detached === true,
       })
     }
   }
@@ -112,6 +138,9 @@ export function buildSubAgentRunTree(
         reportPreview: '',
         depth: 0,
         children: [],
+        worktreePath: event.worktreePath,
+        worktreeBranch: event.worktreeBranch,
+        detached: event.detached,
       })
     } else if (event.kind === 'finished') {
       const node = byRunId.get(event.runId) ?? {
@@ -129,6 +158,10 @@ export function buildSubAgentRunTree(
       node.status = event.status ?? 'completed'
       if (event.reportPreview) node.reportPreview = event.reportPreview
       if (event.error) node.error = event.error
+      if (event.worktreePath) node.worktreePath = event.worktreePath
+      if (event.worktreeBranch) node.worktreeBranch = event.worktreeBranch
+      if (event.worktreeDiffStat) node.worktreeDiffStat = event.worktreeDiffStat
+      if (event.detached) node.detached = true
       byRunId.set(event.runId, node)
     }
   }
@@ -182,4 +215,20 @@ export function flattenSubAgentRunsForDisplay(
 
 export function hasSubAgentRuns(message: UIMessage): boolean {
   return buildSubAgentRunTree(message).length > 0
+}
+
+/** Group completed sibling runs that share the same task (best-of-N). */
+export function groupBestOfNCandidates(
+  nodes: readonly SubAgentRunNode[],
+): SubAgentRunNode[][] {
+  const byTask = new Map<string, SubAgentRunNode[]>()
+  for (const node of nodes) {
+    const task = node.task.trim()
+    // Require worktree isolation so sequential same-task runs don't look like BoN.
+    if (!task || !node.worktreeBranch) continue
+    const list = byTask.get(task) ?? []
+    list.push(node)
+    byTask.set(task, list)
+  }
+  return [...byTask.values()].filter((group) => group.length >= 2)
 }
