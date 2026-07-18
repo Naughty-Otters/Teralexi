@@ -2,6 +2,7 @@ import type { UIMessage } from '@teralexi-ai'
 import { computed, type MaybeRefOrGetter, toValue } from 'vue'
 import { useLazyStandardMarkdown } from '@renderer/composables/useLazyStandardMarkdown'
 import { prepareMarkdownSource } from '@shared/markdown/prepare-markdown-source'
+import { parseAssistantStructuredContent } from '@store/agent/context'
 import { applyStatusBadges } from './assistantStructuredRender'
 import { chatUiBubbleTextKeepChars } from './chatUiSettings'
 import {
@@ -11,6 +12,18 @@ import {
   type StructuredDebugView,
 } from './structuredDebugViewModel'
 import { excludeSubAgentStepProgressParts } from './stepProgressDisplay'
+
+/**
+ * Plain-text source for the conversation/timeline fallback bubble.
+ * Never dump version-2 structured pipeline JSON as markdown — empty
+ * finalResult/report shells would otherwise paint the whole blob in chat.
+ */
+export function assistantFallbackMarkdownSource(raw: string): string {
+  const trimmed = raw.trim()
+  if (!trimmed) return ''
+  if (parseAssistantStructuredContent(trimmed)) return ''
+  return trimmed
+}
 
 export function useAssistantStructuredMessageView(
   messageSource: MaybeRefOrGetter<UIMessage>,
@@ -67,7 +80,8 @@ export function useAssistantStructuredMessageView(
 
   const fallbackHtml = computed(() => {
     void chatUiBubbleTextKeepChars.value
-    const prepared = prepareMarkdownSource(assistantTextRaw.value)
+    const source = assistantFallbackMarkdownSource(assistantTextRaw.value)
+    const prepared = prepareMarkdownSource(source)
     if (!prepared || !markdown.value) return ''
     return applyStatusBadges(markdown.value.render(prepared))
   })

@@ -27,6 +27,10 @@ import {
   highlightUnifiedDiff,
   type HighlightedDiffLine,
 } from '@renderer/lib/shiki/highlight-unified-diff'
+import {
+  countBriefDiffLines,
+  selectBriefDiffLines,
+} from '@renderer/views/agent-chat/components/file-change/unifiedDiffLines'
 import './shiki-shared.css'
 
 const props = withDefaults(
@@ -44,14 +48,16 @@ const props = withDefaults(
 
 const isDark = useAppIsDark()
 const lines = ref<HighlightedDiffLine[]>([])
+
 const visibleLines = computed(() => {
   const max = props.maxLines
   if (max == null || max <= 0) return lines.value
-  return lines.value.slice(0, max)
+  return selectBriefDiffLines(lines.value, max)
 })
 const isTruncated = computed(() => {
   const max = props.maxLines
-  return max != null && max > 0 && lines.value.length > max
+  if (max == null || max <= 0) return false
+  return countBriefDiffLines(lines.value) > max
 })
 let requestId = 0
 

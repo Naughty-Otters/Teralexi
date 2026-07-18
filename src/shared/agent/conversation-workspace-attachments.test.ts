@@ -44,6 +44,7 @@ describe('collectConversationWorkspaceAttachments', () => {
     expect(items[0]?.displayPath).toBe('src/app.ts')
     expect(items[0]?.additions).toBe(1)
     expect(items[0]?.deletions).toBe(1)
+    expect(items[0]?.diff).toContain('+new')
   })
 
   it('includes deleted workspace files and skips sandbox-only outputs', () => {

@@ -737,6 +737,9 @@ function clearHitlQueueBlockIfMessagesResolved(
   if (!conversationHitlBlocksQueue(conversationId)) return
   if (chatMessagesHavePendingHitl(messages)) return
   setConversationHitlBlocksQueue(conversationId, false)
+  // Match transport onHitlBlocksQueue(false): clearing the block must drain
+  // any messages queued while HITL / busy was holding the composer.
+  void nextTick(() => dequeueAndSendNext())
 }
 
 function syncReactiveMessagesFromChat(
@@ -1386,13 +1389,14 @@ function createChatForConversation(
 
     async onFinish({ isAbort }) {
       const chat = getConversationChat(conversationId) ?? chatInst.value
-      const pendingHitl = conversationHasPendingHitl(conversationId)
+      const liveMessages = chat?.messages ?? reactiveMessages.value
+      const messagesPendingHitl = messagesLookPendingHitl(liveMessages)
 
       agentStore.markUiChatInFlight(conversationId, false)
 
       if (!isAbort) {
         void refreshPlanModeState(conversationId)
-        if (!pendingHitl) {
+        if (!messagesPendingHitl) {
           void loadFollowUpSuggestions(conversationId)
         }
       }
@@ -1402,9 +1406,15 @@ function createChatForConversation(
         return
       }
 
-      if (pendingHitl) {
+      // Only live form/approval parts should keep the composer blocked. A stale
+      // HITL queue flag after an empty/completed turn must not skip dequeue.
+      if (messagesPendingHitl) {
         if (chat) syncConversationSnapshot(conversationId)
         return
+      }
+
+      if (conversationHitlBlocksQueue(conversationId)) {
+        setConversationHitlBlocksQueue(conversationId, false)
       }
 
       await agentStore.refreshConversationMessagesTail(conversationId)
@@ -2567,6 +2577,9 @@ watchEffect(() => {
   flex-direction: column;
   /** Full chat-column width for user + assistant response bubbles. */
   --chat-response-bubble-min-width: 100%;
+  /* Keep composer / follow-ups above report-panel DOM chrome when they overlap. */
+  position: relative;
+  z-index: 2;
 }
 .chat-scroll-area {
   flex: 1;
