@@ -82,6 +82,8 @@ function previewToAttachment(
     action: preview.action,
     additions: preview.additions,
     deletions: preview.deletions,
+    diff: preview.diff,
+    moveFrom: preview.moveFrom,
   }
 }
 

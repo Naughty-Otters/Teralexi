@@ -14,6 +14,10 @@ import {
 } from '@shared/agent/llm-error-ui'
 
 import { DEFAULT_USER_ID } from '../../store/modules/agent/config'
+import {
+  parseAssistantStructuredContent,
+  serializeAssistantMessageForHistory,
+} from '../../store/modules/agent/context'
 import { createLogger } from '@renderer/utils/logger'
 import { recordIngressChunk } from './perf/chatUiPerf'
 import {
@@ -22,6 +26,18 @@ import {
 } from './perf/scheduleUiFlush'
 
 const transportLog = createLogger('agent.chat.transport')
+
+/**
+ * Whether `finalContent` from main should be written into the Chat SDK text part.
+ * Empty version-2 shells (paths only) must not be injected — they freeze the UI
+ * and leave the stream/queue path looking dead while the user cannot continue.
+ */
+export function shouldInjectAssistantFinalContent(finalContent: string): boolean {
+  const trimmed = finalContent.trim()
+  if (!trimmed) return false
+  if (!parseAssistantStructuredContent(trimmed)) return true
+  return serializeAssistantMessageForHistory(trimmed).trim().length > 0
+}
 
 /** Context resolved when a send runs. */
 export type IpcAgentRunContext = {
@@ -413,13 +429,7 @@ function createIpcUIMessageReadableStream(opts: {
     }
   }
 
-  async function finishOk() {
-    if (finished) return
-    finished = true
-    flushAllUiForConversation(opts.conversationId)
-    opts.onStreamLifecycle?.(opts.conversationId, 'end')
-    releaseHitlQueueBlockIfIdle()
-    await cleanupListeners()
+  async function writeStreamFinish() {
     if (legacyTextStartSent) {
       await writer
         .write({ type: 'text-end', id: opts.textPartId })
@@ -431,10 +441,33 @@ function createIpcUIMessageReadableStream(opts: {
     await writer.close().catch(() => {})
   }
 
+  async function finishOk(releaseHitlQueue: boolean) {
+    if (finished) return
+    finished = true
+    // UI cleanup must never prevent finish/close — otherwise Chat status stays
+    // submitted/streaming and every later user message only queues.
+    try {
+      flushAllUiForConversation(opts.conversationId)
+      opts.onStreamLifecycle?.(opts.conversationId, 'end')
+      if (releaseHitlQueue) {
+        opts.onHitlBlocksQueue?.(opts.conversationId, false)
+      } else {
+        releaseHitlQueueBlockIfIdle()
+      }
+    } catch (err) {
+      transportLog.error('finishOk UI cleanup failed', {
+        conversationId: opts.conversationId,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
+    await cleanupListeners()
+    await writeStreamFinish()
+  }
+
   async function injectFinalText(finalContent: string) {
     const trimmed = finalContent.trim()
     if (
-      !trimmed ||
+      !shouldInjectAssistantFinalContent(trimmed) ||
       legacyTextStartSent ||
       sawToolApprovalRequestChunk ||
       sawCollectFormRequestChunk
@@ -457,9 +490,16 @@ function createIpcUIMessageReadableStream(opts: {
   async function finishError(text: string) {
     if (finished) return
     finished = true
-    flushAllUiForConversation(opts.conversationId)
-    opts.onStreamLifecycle?.(opts.conversationId, 'end')
-    opts.onHitlBlocksQueue?.(opts.conversationId, false)
+    try {
+      flushAllUiForConversation(opts.conversationId)
+      opts.onStreamLifecycle?.(opts.conversationId, 'end')
+      opts.onHitlBlocksQueue?.(opts.conversationId, false)
+    } catch (err) {
+      transportLog.error('finishError UI cleanup failed', {
+        conversationId: opts.conversationId,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
     await cleanupListeners()
     const message = text.trim() || 'Agent failed'
     transportLog.error('Agent run failed in chat transport', {
@@ -517,10 +557,11 @@ function createIpcUIMessageReadableStream(opts: {
         await finishError(result.errorMessage?.trim() || 'Agent failed')
         return
       }
-      if (!result.hitlPaused) {
+      const hitlPaused = Boolean(result.hitlPaused)
+      if (!hitlPaused) {
         const finalText = result.finalContent.trim()
         if (
-          finalText &&
+          shouldInjectAssistantFinalContent(finalText) &&
           !legacyTextStartSent &&
           !sawToolApprovalRequestChunk &&
           !sawCollectFormRequestChunk
@@ -528,7 +569,9 @@ function createIpcUIMessageReadableStream(opts: {
           await injectFinalText(finalText)
         }
       }
-      await finishOk()
+      // Completed (non-paused) turns must unblock the composer queue even if
+      // an earlier approval/form chunk was seen during the same run.
+      await finishOk(!hitlPaused)
     } catch (e) {
       await finishError(e instanceof Error ? e.message : String(e))
     }

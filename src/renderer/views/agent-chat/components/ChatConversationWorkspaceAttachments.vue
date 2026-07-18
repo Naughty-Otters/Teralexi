@@ -2,10 +2,10 @@
   <section
     v-if="attachments.length > 0"
     class="conv-workspace-files"
-    aria-label="Workspace file changes"
+    aria-label="Changed files"
   >
     <p class="conv-workspace-files__title">
-      Workspace files ({{ attachments.length }})
+      Files ({{ attachments.length }})
     </p>
     <ul class="conv-workspace-files__list">
       <li
@@ -60,7 +60,7 @@ import {
 } from '@shared/file-type/file-type-presentation'
 import AttachmentFileTypeIcon from './AttachmentFileTypeIcon.vue'
 
-const props = defineProps<{
+defineProps<{
   attachments: StepAttachment[]
 }>()
 
@@ -84,7 +84,7 @@ function itemTitle(item: StepAttachment): string {
   const { kindLabel } = resolveFileTypePresentation(path)
   if (item.action === 'delete') return `Deleted ${kindLabel.toLowerCase()}: ${path}`
   if (!item.url) return `${kindLabel}: ${path}`
-  return `Open ${kindLabel.toLowerCase()}: ${path}`
+  return `Open ${kindLabel.toLowerCase()} in preview panel: ${path}`
 }
 
 function onOpen(item: StepAttachment): void {
@@ -100,14 +100,16 @@ function onOpen(item: StepAttachment): void {
 .conv-workspace-files {
   flex-shrink: 0;
   margin: 0 16px 8px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid var(--ui-border);
   background: var(--ui-bg-elevated);
+  max-height: 120px;
+  overflow-y: auto;
 }
 
 .conv-workspace-files__title {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -121,7 +123,7 @@ function onOpen(item: StepAttachment): void {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .conv-workspace-files__item {
@@ -129,13 +131,13 @@ function onOpen(item: StepAttachment): void {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 6px 8px;
+  padding: 4px 8px;
   padding-left: 6px;
   border: 1px solid var(--ui-border);
   border-radius: 6px;
   background: var(--ui-bg);
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ui-text);
   text-align: left;
   cursor: pointer;
@@ -166,8 +168,13 @@ function onOpen(item: StepAttachment): void {
 }
 
 .conv-workspace-files__path {
+  flex: 1;
+  min-width: 0;
   font-family: var(--app-font-family);
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .conv-workspace-files__stats {

@@ -195,7 +195,8 @@ const showRawOutput = computed(
 
 const showParams = ref(false)
 const showResult = ref(false)
-const showChanges = ref(false)
+/** File updates open by default so the brief diff box is visible like Cursor. */
+const showChanges = ref(true)
 
 const copied = ref(false)
 function copyOutput() {

@@ -1,6 +1,7 @@
 import {
   isFileChangeToolName,
   type FileChangeAction,
+  type FileChangePreview,
 } from '@shared/file-change/types'
 import { parseToolFileChanges } from '@shared/file-change/parse-tool-file-changes'
 import { isCaptureArtifactPath } from '@shared/agent/capture-artifact-path'
@@ -19,6 +20,10 @@ export type StepAttachment = {
   action?: FileChangeAction
   additions?: number
   deletions?: number
+  /** Unified diff text when this attachment came from a file-change tool. */
+  diff?: string
+  /** Source path when action is rename. */
+  moveFrom?: string
 }
 
 export type StepOutputLink = {
@@ -212,6 +217,8 @@ function attachmentsFromFileChanges(
       action: preview.action,
       additions: preview.additions,
       deletions: preview.deletions,
+      diff: preview.diff,
+      moveFrom: preview.moveFrom,
     })
   }
   return out
@@ -462,6 +469,118 @@ export function formatStepAttachmentShortcutLabel(
 
 export function stepAttachmentHasDiffStats(attachment: StepAttachment): boolean {
   return (attachment.additions ?? 0) > 0 || (attachment.deletions ?? 0) > 0
+}
+
+export function stepAttachmentHasDiffPreview(attachment: StepAttachment): boolean {
+  return Boolean(attachment.diff?.trim())
+}
+
+/** Convert attachments that carry unified diffs into file-change preview cards. */
+export function stepAttachmentsToFileChangePreviews(
+  attachments: readonly StepAttachment[],
+): FileChangePreview[] {
+  const out: FileChangePreview[] = []
+  for (const attachment of dedupeStepAttachments(attachments)) {
+    const diff = attachment.diff?.trim()
+    if (!diff) continue
+    const path =
+      attachment.displayPath?.trim() ||
+      attachment.label.trim() ||
+      attachment.path.trim()
+    if (!path) continue
+    out.push({
+      path,
+      diff,
+      additions: attachment.additions ?? 0,
+      deletions: attachment.deletions ?? 0,
+      action: attachment.action,
+      moveFrom: attachment.moveFrom,
+    })
+  }
+  return out
+}
+
+/** Resolve a file-change preview to a file:// URL for the chat report panel. */
+export function fileChangePreviewOpenUrl(
+  preview: { path: string; workspacePath?: string; action?: FileChangeAction },
+  fallbackWorkspacePath?: string | null,
+): string | undefined {
+  if (preview.action === 'delete') return undefined
+  const workspace =
+    preview.workspacePath?.trim() || fallbackWorkspacePath?.trim() || undefined
+  const abs = resolveFileChangeAbsolutePath({
+    path: preview.path,
+    workspacePath: workspace,
+  })
+  if (!abs || !isAbsolutePath(abs)) return undefined
+  return buildFilePreviewUrl(abs)
+}
+
+/**
+ * Prefer diffs stored on attachments; otherwise match tool-result file changes
+ * by display/absolute path so older turns without persisted diff still preview.
+ * If matching fails but the section looks like file changes, return all tool diffs.
+ */
+export function resolveFileChangePreviewsForAttachments(
+  attachments: readonly StepAttachment[],
+  toolFileChanges: readonly FileChangePreview[],
+): FileChangePreview[] {
+  const direct = stepAttachmentsToFileChangePreviews(attachments)
+  if (direct.length > 0) return direct
+  if (attachments.length === 0) return []
+  if (toolFileChanges.length === 0) return []
+
+  const byKey = new Map<string, FileChangePreview>()
+  for (const file of toolFileChanges) {
+    const key = normalizePathKey(file.path)
+    if (key) byKey.set(key, file)
+  }
+
+  const out: FileChangePreview[] = []
+  const seen = new Set<string>()
+  for (const attachment of dedupeStepAttachments(attachments)) {
+    const candidates = [
+      attachment.displayPath,
+      attachment.path,
+      attachment.label,
+    ]
+      .map((value) => value?.trim() ?? '')
+      .filter(Boolean)
+
+    let match: FileChangePreview | undefined
+    for (const candidate of candidates) {
+      match = byKey.get(normalizePathKey(candidate))
+      if (match) break
+      const base = pathBasename(candidate).toLowerCase()
+      if (!base) continue
+      for (const [key, file] of byKey) {
+        if (pathBasename(key) === base) {
+          match = file
+          break
+        }
+      }
+      if (match) break
+    }
+    if (!match) continue
+    const key = normalizePathKey(match.path)
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    out.push(match)
+  }
+  if (out.length > 0) return out
+
+  // Matching failed (path shape drift) — still show peeks when this section is
+  // clearly a file-change list and the message has tool diffs available.
+  const looksLikeFileChanges = attachments.some(
+    (item) =>
+      stepAttachmentHasDiffStats(item) ||
+      item.action === 'create' ||
+      item.action === 'modify' ||
+      item.action === 'delete' ||
+      item.action === 'rename' ||
+      Boolean(item.toolName && isFileChangeToolName(item.toolName)),
+  )
+  return looksLikeFileChanges ? [...toolFileChanges] : []
 }
 
 export function stepAttachmentsToOutputLinks(

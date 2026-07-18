@@ -180,6 +180,33 @@ export function resolveConversationToolResponseBubbles(
   return dedupeLatestTodoToolBubble(out)
 }
 
+/** All file-change previews from tool parts on a message (no viewer gate). */
+export function collectMessageFileChangePreviews(
+  message: UIMessage,
+): ReturnType<typeof parseToolFileChanges> {
+  const out: ReturnType<typeof parseToolFileChanges> = []
+  const seen = new Set<string>()
+
+  const pushFiles = (output: unknown) => {
+    for (const file of parseToolFileChanges(output)) {
+      const key = `${file.path}\0${file.diff}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push(file)
+    }
+  }
+
+  for (const part of message.parts) {
+    if (!isToolOrDynamicToolUIPart(part as UIMessagePart<any, UITools>)) continue
+    pushFiles(getToolPartOutput(part))
+    // Some SDK shapes keep the raw execute payload alongside `output`.
+    const row = part as { result?: unknown; preliminary?: unknown }
+    if (row.result !== undefined) pushFiles(row.result)
+    if (row.preliminary !== undefined) pushFiles(row.preliminary)
+  }
+  return out
+}
+
 /** Step-progress rows that start a tool-loop tool panel. */
 export function isToolLoopPanelBoundary(
   data: AgentStepProgressData,
