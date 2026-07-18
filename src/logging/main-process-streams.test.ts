@@ -24,6 +24,7 @@ describe('buildMainProcessLogStreams', () => {
     >('./main-process-streams')
     const streams = buildMainProcessLogStreams()
     expect(streams).toHaveLength(3)
+    expect(streams.map((s) => s.level)).toEqual(['trace', 'warn', 'info'])
     expect(mkdirSync).toHaveBeenCalledWith('/mock/logs', { recursive: true })
     const again = buildMainProcessLogStreams()
     expect(again).toBe(streams)
