@@ -238,11 +238,21 @@ const showLlmOverride = computed(
 const {
   plugins: skillToolbarPlugins,
   invokingId: skillToolbarInvokingId,
+  refreshError: skillToolbarRefreshError,
   preview: previewSkillToolbarPlugin,
   invoke: invokeSkillToolbarPlugin,
 } = useSkillComposerToolbar({
   skillId: computed(() => props.skillId),
   conversationId: computed(() => props.conversationId),
+})
+
+watch(skillToolbarRefreshError, (message) => {
+  if (!message?.trim()) return
+  toast.add({
+    title: 'Toolbar actions unavailable',
+    description: message,
+    color: 'error',
+  })
 })
 
 const {

@@ -78,6 +78,9 @@ export async function dispatchTeralexiUrl(rawUrl: string): Promise<void> {
       syncStoredGoogleAccountToRenderers()
     } catch (err) {
       log.error('Google OAuth deep link failed', { err })
+      // Push current stored account (likely null) so the UI does not keep a
+      // stale signed-in state after a failed deep-link exchange.
+      syncStoredGoogleAccountToRenderers()
     }
     focusMainWindow()
   }

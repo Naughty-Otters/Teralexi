@@ -6,6 +6,7 @@
  */
 import { execFile } from 'child_process'
 import fg from 'fast-glob'
+import { realpathSync } from 'fs'
 import { readFile, readdir, stat, writeFile } from 'fs/promises'
 import { join, relative, resolve } from 'path'
 import { promisify } from 'util'
@@ -490,7 +491,7 @@ export async function listWorkspaceFiles(
   return { ok: true, entries }
 }
 
-/** Resolve a workspace-relative path and ensure it stays inside `cwd`. */
+/** Resolve a workspace-relative path and ensure it stays inside `cwd` (symlink-aware). */
 export function resolvePathInsideWorkspace(
   cwd: string,
   relativePath: string,
@@ -502,12 +503,38 @@ export function resolvePathInsideWorkspace(
 
   const absCwd = resolve(cwd)
   const absTarget = resolve(absCwd, trimmed)
-  const rel = relative(absCwd, absTarget)
+
+  // Follow symlinks on the nearest existing ancestor so a link inside the
+  // workspace cannot escape to an outside file (e.g. `link -> /etc/passwd`).
+  const resolvedCwd = resolvePathForContainment(absCwd)
+  const resolvedTarget = resolvePathForContainment(absTarget)
+  const rel = relative(resolvedCwd, resolvedTarget)
   if (rel.startsWith('..') || rel === '..') {
     return { ok: false, error: 'Path escapes the workspace folder.' }
   }
 
   return { ok: true, absolutePath: absTarget }
+}
+
+/**
+ * Resolve a path for containment comparison, following symlinks.
+ * For paths that do not exist yet, realpath the nearest existing ancestor.
+ */
+function resolvePathForContainment(filePath: string): string {
+  const abs = resolve(filePath)
+  let current = abs
+  const tail: string[] = []
+  for (;;) {
+    try {
+      const real = realpathSync(current)
+      return tail.length > 0 ? join(real, ...tail) : real
+    } catch {
+      const parent = resolve(current, '..')
+      if (parent === current) return abs
+      tail.unshift(current.split(/[/\\]/).pop() ?? '')
+      current = parent
+    }
+  }
 }
 
 // ─── search workspace files (composer @ mentions) ────────────────────────────

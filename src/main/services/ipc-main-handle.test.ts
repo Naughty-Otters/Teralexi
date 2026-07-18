@@ -106,6 +106,23 @@ vi.mock('./remove-sandbox-directories', () => ({
   removeSandboxDirectories: vi.fn(),
 }))
 
+vi.mock('./teralexi-server-auth', () => ({
+  clearTeralexiServerAuthCache: vi.fn(),
+}))
+
+vi.mock('./local-auth-session', () => ({
+  revokeLocalTeralexiAuthSession: vi.fn(),
+}))
+
+vi.mock('./entitlement-session', () => ({
+  clearEntitlementSession: vi.fn(),
+  getEntitlementUiSnapshot: vi.fn(),
+  onConversationStarted: vi.fn(),
+  refreshAuthAndEntitlement: vi.fn(async () => null),
+}))
+
+import { startGoogleAccountSignIn, googleAccountInfoForUi } from './google-account-oauth'
+import { clearTeralexiServerAuthCache } from './teralexi-server-auth'
 import { IpcMainHandleClass } from './ipc-main-handle'
 
 describe('IpcMainHandleClass', () => {
@@ -125,5 +142,36 @@ describe('IpcMainHandleClass', () => {
       defaultValue: 'fallback',
     })
     expect(value).toBe('fallback')
+  })
+
+  it('GoogleSignIn does not clear server JWT before OAuth so failed re-login keeps session', async () => {
+    vi.mocked(startGoogleAccountSignIn).mockRejectedValueOnce(
+      new Error('user cancelled'),
+    )
+
+    const ipc = new IpcMainHandleClass()
+    await expect(ipc.GoogleSignIn({} as never)).rejects.toThrow('user cancelled')
+    expect(clearTeralexiServerAuthCache).not.toHaveBeenCalled()
+  })
+
+  it('GoogleSignIn returns UI account after successful OAuth without pre-clearing JWT', async () => {
+    vi.mocked(startGoogleAccountSignIn).mockResolvedValueOnce({
+      email: 'a@b.com',
+      name: 'A',
+      picture: '',
+    } as never)
+    vi.mocked(googleAccountInfoForUi).mockReturnValueOnce({
+      email: 'a@b.com',
+      name: 'A',
+      picture: '',
+    })
+
+    const ipc = new IpcMainHandleClass()
+    await expect(ipc.GoogleSignIn({} as never)).resolves.toEqual({
+      email: 'a@b.com',
+      name: 'A',
+      picture: '',
+    })
+    expect(clearTeralexiServerAuthCache).not.toHaveBeenCalled()
   })
 })

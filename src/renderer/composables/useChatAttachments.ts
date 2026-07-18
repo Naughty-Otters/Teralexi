@@ -54,6 +54,9 @@ export function useChatAttachments(options: {
         return
       }
       addSourcePaths(result.paths ?? [])
+    } catch (err) {
+      error.value =
+        err instanceof Error ? err.message : 'Could not pick files.'
     } finally {
       picking.value = false
     }

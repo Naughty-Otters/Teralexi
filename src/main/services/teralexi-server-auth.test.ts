@@ -188,4 +188,93 @@ describe('teralexi-server-auth', () => {
     ).resolves.toBe(platformJwt)
     expect(fetch).not.toHaveBeenCalled()
   })
+
+  it('passes AbortSignal on auth exchange and refresh fetches', async () => {
+    const serverJwt = makeTestJwt(Math.floor(Date.now() / 1000) + 3600)
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ access_token: serverJwt, expires_in: 3600 }),
+    } as Response)
+
+    await exchangeGoogleIdTokenForServerAccessToken({
+      apiBaseUrl: 'http://127.0.0.1:8000',
+      idToken: 'google-id-token',
+    })
+    expect(fetch).toHaveBeenCalledWith(
+      'http://127.0.0.1:8000/api/v1/auth/google',
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    )
+
+    await refreshServerAccessToken({
+      apiBaseUrl: 'http://127.0.0.1:8000',
+      accessToken: serverJwt,
+    })
+    expect(fetch).toHaveBeenLastCalledWith(
+      'http://127.0.0.1:8000/api/v1/auth/token',
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    )
+  })
+
+  it('rejects when auth fetch is aborted by timeout', async () => {
+    vi.mocked(fetch).mockImplementation((_url, init) => {
+      return new Promise((_resolve, reject) => {
+        const signal = init?.signal
+        if (!signal) {
+          reject(new Error('expected AbortSignal'))
+          return
+        }
+        if (signal.aborted) {
+          reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }))
+          return
+        }
+        signal.addEventListener('abort', () => {
+          reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }))
+        })
+      })
+    })
+
+    await expect(
+      exchangeGoogleIdTokenForServerAccessToken({
+        apiBaseUrl: 'http://127.0.0.1:8000',
+        idToken: 'google-id-token',
+        timeoutMs: 1,
+      }),
+    ).rejects.toMatchObject({ name: 'AbortError' })
+  })
+
+  it('scopes in-flight resolve by apiBaseUrl so concurrent bases do not share a promise', async () => {
+    const jwtA = makeTestJwt(Math.floor(Date.now() / 1000) + 3600)
+    const jwtB = makeTestJwt(Math.floor(Date.now() / 1000) + 7200)
+    getTeralexiAccountGoogleIdToken.mockReturnValue('google-id-token')
+
+    const pending = new Map<string, (value: Response) => void>()
+    vi.mocked(fetch).mockImplementation((url) => {
+      const href = String(url)
+      return new Promise((resolve) => {
+        pending.set(href, resolve)
+      })
+    })
+
+    const pA = getTeralexiServerAccessToken('http://a.example:8000')
+    const pB = getTeralexiServerAccessToken('http://b.example:8000')
+
+    await vi.waitFor(() => expect(pending.size).toBe(2))
+
+    pending.get('http://a.example:8000/api/v1/auth/google')!({
+      ok: true,
+      json: async () => ({ access_token: jwtA, expires_in: 3600 }),
+    } as Response)
+    pending.get('http://b.example:8000/api/v1/auth/google')!({
+      ok: true,
+      json: async () => ({ access_token: jwtB, expires_in: 7200 }),
+    } as Response)
+
+    await expect(pA).resolves.toBe(jwtA)
+    await expect(pB).resolves.toBe(jwtB)
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
 })

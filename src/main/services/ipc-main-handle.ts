@@ -105,7 +105,6 @@ import {
   googleWorkspaceAccountInfoForUi,
 } from './google-workspace-oauth'
 import { notifyGoogleWorkspaceAccountChanged } from './google-workspace-account-notify'
-import { clearTeralexiServerAuthCache } from './teralexi-server-auth'
 import { revokeLocalTeralexiAuthSession } from './local-auth-session'
 import {
   clearEntitlementSession,
@@ -1414,11 +1413,10 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     name: string
     picture: string
   }> = async () => {
-    clearTeralexiServerAuthCache()
+    // Do not clear the server JWT before OAuth completes — a failed re-login
+    // would leave Google identity without a platform session. Successful
+    // sign-in already exchanges/overwrites the JWT via onGoogleAccountSignedIn.
     const account = await startGoogleAccountSignIn()
-    // Deep link already ran onGoogleAccountSignedIn (JWT exchange). Do not clear
-    // the server auth cache here — that raced with entitlement refresh and could
-    // revoke the just-saved Google account, leaving the UI locked.
     const ui = googleAccountInfoForUi(account)
     await refreshAuthAndEntitlement('sign-in')
     return ui
