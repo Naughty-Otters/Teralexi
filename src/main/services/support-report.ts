@@ -102,7 +102,7 @@ export async function submitSupportReport(
         zipPath: built.zipPath,
         uploaded: false,
         error:
-          'Support bundle saved locally. Set BASE_API in env/.dev.env (or app.base.apiUrl) to enable upload.',
+          'Support bundle saved locally. Set BASE_API in env/.dev.env, env/.dev.local.env, or process env (or app.base.apiUrl) to enable upload.',
       }
     }
 

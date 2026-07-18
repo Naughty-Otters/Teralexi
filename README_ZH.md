@@ -1,35 +1,93 @@
-# Electron-Vite-template
+# Teralexi
 
-![GitHub Repo stars](https://img.shields.io/github/stars/umbrella22/electron-vite-template)
-[![vue](https://img.shields.io/badge/vue-3.5.16-brightgreen.svg)](https://github.com/vuejs/vue-next)
-[![vite](https://img.shields.io/badge/vite-6.3.5-brightgreen.svg)](https://github.com/vitejs/vite)
-[![element-ui](https://img.shields.io/badge/element-plus-brightgreen.svg)](https://www.npmjs.org/package/element-plus)
-[![electron](https://img.shields.io/badge/electron-34.5.8-brightgreen.svg)](https://github.com/electron/electron)
-[![license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/umbrella22/electron-vite-template/blob/master/LICENSE)
+本地 AI Agent 桌面应用 — 调研、编码、手机端对话、Skills & MCP 扩展、自选 LLM、本地记忆，都在你的机器上完成。
 
-[国内访问地址](https://gitee.com/Zh-Sky/electron-vite-template)
+[English](./README.md) · [产品官网](https://www.teralexi.com/)
 
-### 请确保您的 node 版本大于等于 20，并使用 `npm` 作为包管理工具
+## 下载安装包
 
-#### 如何安装
+不想从源码构建？请直接从 **[teralexi.com](https://www.teralexi.com/)** 下载 macOS / Windows 安装包。
+
+本仓库用于从源码运行与贡献。
+
+## 演示
+
+Website Agent 流程 — 选择 Agent、规划任务、生成文件并预览结果。更多产品介绍见 [teralexi.com](https://www.teralexi.com/)。
+
+<video src="./media/howto_website_2.mp4" controls width="100%"></video>
+
+<p>
+  <img src="./media/web_1.png" alt="选择 Agent 并输入提示" width="100%" />
+</p>
+<p>
+  <img src="./media/web_2.png" alt="Agent 规划并执行任务" width="100%" />
+</p>
+<p>
+  <img src="./media/web_3.png" alt="生成的工作区文件" width="100%" />
+</p>
+<p>
+  <img src="./media/web_4.png" alt="工作区旁的实时预览" width="100%" />
+</p>
+<p>
+  <img src="./media/web_5.png" alt="发布站点预览" width="100%" />
+</p>
+
+## 功能亮点
+
+- Agent 调研：浏览、收集资料，关键步骤可审批
+- 工作区与内置 IDE，变更前可审阅 git diff
+- 渠道对话（WhatsApp、Slack、Google、Discord 等）
+- Skills & MCP，自定义技能目录：`~/.teralexi/skills/`
+- 本地与云端 LLM（Ollama、OpenAI、Anthropic、Gemini 等）
+- 本地优先记忆与定时 Agent 任务
+
+## 从源码运行
+
+**环境要求：** Node.js 22+，使用 `npm`。
 
 ```bash
-npm config edit
-# 该命令会打开npm的配置文件，请在空白处添加
-# registry=https://registry.npmmirror.com
-# electron_mirror=https://cdn.npmmirror.com/binaries/electron/
-# electron_builder_binaries_mirror=https://npmmirror.com/mirrors/electron-builder-binaries/
-# 然后关闭该窗口，重启命令行.
 npm install
-
-# 启动之后，会在9080端口监听
 npm run dev
-
-# build命令在不同系统环境中，需要的的不一样，需要自己根据自身环境进行配置
-npm run build
-
 ```
 
----
+`npm run dev` 使用 Electron 热更新，默认连接 **生产** 平台 API（`https://api.teralexi.com/`）。
 
-# [更新日志](/CHANGELOG.md)
+### 使用本地后端
+
+仅在需要时覆盖：
+
+```bash
+cp env/.dev.local.env.example env/.dev.local.env
+# 编辑 env/.dev.local.env 中的 BASE_API，然后：
+npm run dev
+```
+
+或一次性：
+
+```bash
+BASE_API=http://localhost:8000 npm run dev
+```
+
+## 常用命令
+
+```bash
+npm run dev          # 桌面应用（默认生产 API）
+npm run build        # 生产桌面构建
+npm run build:web    # 渲染/主进程构建（CI 校验）
+npm run test:unit    # 单元测试
+```
+
+## 文档
+
+| 文档 | 说明 |
+| --- | --- |
+| [BUILD-AND-RELEASE.md](./BUILD-AND-RELEASE.md) | 环境、本地构建、CI 与发布 |
+| [CODING.md](./CODING.md) | 贡献者 UI / IPC 说明 |
+| [skills/SKILL-DEVELOPMENT.md](./skills/SKILL-DEVELOPMENT.md) | 编写 Agent Skills |
+| [docs/](./docs/) | 发布、签名、支持上传 |
+| [CHANGELOG.md](./CHANGELOG.md) | 版本历史 |
+| [teralexi.com](https://www.teralexi.com/) | 下载与产品介绍 |
+
+## 许可证
+
+Teralexi 使用 [Apache License 2.0](./LICENSE)。
