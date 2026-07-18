@@ -5,7 +5,7 @@
   "main": "./dist/electron/main/bootstrap.js",
   "author": "Naughty-Otters",
   "description": "Teralexi project",
-  "license": "PolyForm-Noncommercial-1.0.0",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Naughty-Otters/Teralexi.git"

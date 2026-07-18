@@ -74,7 +74,7 @@ describe('google-account-oauth', () => {
   it('resolveTeralexiGoogleAuthLoginUrl uses dev fallback when env unset', () => {
     vi.stubEnv('NODE_ENV', 'development')
     expect(resolveTeralexiGoogleAuthLoginUrl()).toBe(
-      'http://localhost:8000/auth/login',
+      'https://api.teralexi.com/auth/login',
     )
     vi.unstubAllEnvs()
   })

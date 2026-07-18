@@ -28,6 +28,7 @@ yarn-error.log*
 .env*.local
 .env
 env/.signing.env
+env/.dev.local.env
 *.p12
 *.pfx
 

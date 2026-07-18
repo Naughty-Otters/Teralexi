@@ -209,7 +209,7 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     includeSandbox: 'Include sandbox files (may be large)',
     uploadEndpoint: 'Upload endpoint:',
     uploadHint:
-      'Set BASE_API in env/.dev.env (maps to app.base.apiUrl) to enable authenticated upload to /support/upload.',
+      'Set BASE_API (env/.dev.env, env/.dev.local.env, or process env) to enable authenticated upload to /support/upload.',
     bundleSavedTo: 'Bundle saved to:',
     uploadsRemainingToday: 'Uploads remaining today:',
     uploadDailyLimitReached:
