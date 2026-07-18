@@ -308,9 +308,11 @@ function guessLanguageFromPath(path: string): string {
 @import '@renderer/components/code/terminal-theme.css';
 
 .conv-tool-response {
-  align-self: flex-start;
-  min-width: var(--chat-response-bubble-min-width, 50%);
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--ui-border);
   border-radius: 8px;
   background: var(--ui-bg);
