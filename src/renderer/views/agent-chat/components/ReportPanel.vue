@@ -169,6 +169,7 @@ import {
   isMarkdownPreviewFileUrl,
   type MarkdownPreviewViewMode,
 } from '@shared/file-type/markdown-preview-url'
+import { sandboxPreviewSuppressed } from '../sandboxPreviewSuppress'
 
 export type ReportPanelPreviewSource = 'sandbox-run' | 'link'
 
@@ -305,6 +306,11 @@ function screenBoundsForEl(el: HTMLElement) {
 async function syncSandboxOutputBounds(options?: { forceReload?: boolean }) {
   const ipc = window.ipcRendererChannel?.SyncSandboxOutputView
   if (!ipc?.invoke) return
+  // Modals/dialogs can't stack above Electron WebContentsView — detach while suppressed.
+  if (sandboxPreviewSuppressed.value) {
+    await clearSandboxOutputView()
+    return
+  }
   const host = sandboxHostEl.value
   try {
     if (!host) {
@@ -475,6 +481,14 @@ watch(
   { flush: 'post' },
 )
 
+watch(sandboxPreviewSuppressed, (suppressed) => {
+  if (suppressed) {
+    void clearSandboxOutputView()
+    return
+  }
+  scheduleBoundsSync(true, true)
+})
+
 onMounted(() => {
   window.addEventListener('resize', onWindowResize)
   window.ipcRendererChannel?.SandboxOutputViewNavigationChanged?.on?.(
@@ -508,6 +522,8 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .report-panel-tabs {

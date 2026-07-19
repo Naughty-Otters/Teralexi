@@ -21,6 +21,9 @@ import {
 
 const log = createLogger('services.app-web-publish')
 
+/** Default timeout for publish upload fetch. */
+export const APP_WEB_PUBLISH_FETCH_TIMEOUT_MS = 60_000
+
 export type AppWebPublishSuccess = {
   ok: true
   userId: number
@@ -95,6 +98,7 @@ export async function publishStaticSiteZip(args: {
   origin?: string
   accessToken?: string | null
   maxBytes?: number
+  timeoutMs?: number
 }): Promise<AppWebPublishResult> {
   const origin = (args.origin ?? getTeralexiBaseApiUrl()).trim()
   if (!origin) {
@@ -162,12 +166,22 @@ export async function publishStaticSiteZip(args: {
       headers: { Authorization: `Bearer ${accessToken}` },
       body: form,
       redirect: 'manual',
+      signal: AbortSignal.timeout(
+        args.timeoutMs ?? APP_WEB_PUBLISH_FETCH_TIMEOUT_MS,
+      ),
     })
   } catch (err) {
+    const aborted =
+      err instanceof Error &&
+      (err.name === 'AbortError' || err.name === 'TimeoutError')
     return {
       ok: false,
       code: 'network',
-      error: err instanceof Error ? err.message : String(err),
+      error: aborted
+        ? 'Publish request timed out. Check your network and try again.'
+        : err instanceof Error
+          ? err.message
+          : String(err),
     }
   }
 

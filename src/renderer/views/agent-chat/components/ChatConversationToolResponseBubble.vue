@@ -31,7 +31,7 @@
             {{ statusLabel }}
           </span>
           <span
-            v-if="!expanded && compactHint"
+            v-if="!expanded && compactHint && viewer !== 'diff'"
             class="conv-tool-response__hint"
             :title="compactHint"
           >
@@ -41,19 +41,29 @@
       </button>
     </header>
 
-    <div v-show="expanded" class="conv-tool-response__body-wrap">
+    <!-- File updates: always show a Cursor-style brief diff peek. -->
+    <div
+      v-if="viewer === 'diff' && fileChanges.length"
+      class="conv-tool-response__body-wrap conv-tool-response__body-wrap--diff"
+    >
+      <div class="conv-tool-response__body conv-tool-response__body--diff">
+        <FileChangeStack
+          :files="fileChanges"
+          compact
+          :brief-lines="expanded ? undefined : TOOL_LOOP_BRIEF_DIFF_LINES"
+        />
+      </div>
+      <div v-if="errorText" class="conv-tool-response__error" role="alert">
+        <ShikiCodeBlock :code="errorText" language="text" variant="tool" compact />
+      </div>
+    </div>
+
+    <div v-show="expanded && viewer !== 'diff'" class="conv-tool-response__body-wrap">
       <ChatTodoChecklist
         v-if="viewer === 'todo' && todoItems"
         class="conv-tool-response__body"
         :todos="todoItems"
       />
-
-      <div
-        v-else-if="viewer === 'diff' && fileChanges.length"
-        class="conv-tool-response__body"
-      >
-        <FileChangeStack :files="fileChanges" compact />
-      </div>
 
       <div v-else-if="viewer === 'patch'" class="conv-tool-response__body">
         <p v-if="patchPreview.path" class="conv-tool-response__path">
@@ -133,6 +143,7 @@ import {
   extractPatchPreview,
   viewerPresentation,
 } from './chat/conversationToolResponseModel'
+import { TOOL_LOOP_BRIEF_DIFF_LINES } from './chat/toolLoopPanelItems'
 import {
   extractTerminalView,
   formatToolOutput,
@@ -308,9 +319,11 @@ function guessLanguageFromPath(path: string): string {
 @import '@renderer/components/code/terminal-theme.css';
 
 .conv-tool-response {
-  align-self: flex-start;
-  min-width: var(--chat-response-bubble-min-width, 50%);
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--ui-border);
   border-radius: 8px;
   background: var(--ui-bg);
@@ -325,6 +338,8 @@ function guessLanguageFromPath(path: string): string {
 .conv-tool-response--diff,
 .conv-tool-response--patch {
   border-color: color-mix(in srgb, var(--color-warning-500, #f59e0b) 28%, var(--ui-border));
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .conv-tool-response--file,
@@ -449,6 +464,18 @@ function guessLanguageFromPath(path: string): string {
 
 .conv-tool-response__body {
   padding: 8px 10px;
+}
+
+.conv-tool-response__body--diff {
+  padding: 0;
+}
+
+.conv-tool-response__body--diff :deep(.fcs > .fc:last-child) {
+  border-bottom: none;
+}
+
+.conv-tool-response__body--diff :deep(.shiki-surface) {
+  max-height: none;
 }
 
 .conv-tool-response__body--terminal {

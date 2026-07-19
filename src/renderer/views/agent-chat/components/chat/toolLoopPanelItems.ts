@@ -6,8 +6,8 @@ import {
 /** Max tool rows mounted in the tool-loop sub-panel (latest kept). */
 export const TOOL_LOOP_PANEL_MAX_ITEMS = 10
 
-/** Diff lines shown in compact tool-loop rows and collapsed tool bubbles. */
-export const TOOL_LOOP_BRIEF_DIFF_LINES = 4
+/** Diff lines shown in Cursor-style file update boxes (collapsed / brief). */
+export const TOOL_LOOP_BRIEF_DIFF_LINES = 5
 
 export function visibleToolLoopPanelItems<T>(
   items: readonly T[],

@@ -1,5 +1,5 @@
 import { execFileSync } from 'child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -7,6 +7,7 @@ import {
   gitAdd,
   gitCommit,
   gitDiff,
+  gitInit,
   gitLog,
   gitPush,
   searchWorkspaceFiles,
@@ -40,12 +41,47 @@ describe('git-service', () => {
     expect(escape.ok).toBe(false)
   })
 
+  it('resolvePathInsideWorkspace rejects symlink that points outside the workspace', () => {
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-symlink-ws-'))
+    const outside = mkdtempSync(join(tmpdir(), 'teralexi-git-symlink-out-'))
+    writeFileSync(join(outside, 'secret.txt'), 'top-secret\n')
+    symlinkSync(join(outside, 'secret.txt'), join(dir, 'escape-link.txt'))
+
+    const result = resolvePathInsideWorkspace(dir, 'escape-link.txt')
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toMatch(/escapes the workspace/i)
+    }
+
+    rmSync(outside, { recursive: true, force: true })
+  })
+
   it('gitDiff returns error result instead of diff text on failure', async () => {
     dir = mkdtempSync(join(tmpdir(), 'teralexi-git-norepo-'))
     const result = await gitDiff(dir, {})
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.error).toBeTruthy()
+  })
+
+  it('gitStatus reports isRepo false for a non-git folder', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-status-norepo-'))
+    const status = await gitStatus(dir)
+    expect(status.isRepo).toBe(false)
+    expect(status.entries).toEqual([])
+    expect(status.error).toBeUndefined()
+  })
+
+  it('gitInit creates a repository that gitStatus recognizes', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'teralexi-git-init-'))
+    const before = await gitStatus(dir)
+    expect(before.isRepo).toBe(false)
+
+    const init = await gitInit(dir)
+    expect(init.ok).toBe(true)
+
+    const after = await gitStatus(dir)
+    expect(after.isRepo).toBe(true)
   })
 
   it('gitDiff includes untracked new files as all-additions diff', async () => {
@@ -69,6 +105,7 @@ describe('git-service', () => {
       ahead: 1,
       behind: 0,
       clean: false,
+      isRepo: true,
       entries: [
         { code: 'M ', index: 'M', worktree: ' ', path: 'staged.ts' },
         { code: ' M', index: ' ', worktree: 'M', path: 'modified.ts' },

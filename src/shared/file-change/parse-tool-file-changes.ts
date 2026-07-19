@@ -31,7 +31,8 @@ function displayPath(rawPath: unknown, sandboxRoot?: unknown, workspacePath?: un
   if (!normalized.startsWith('/') && !/^[A-Za-z]:/.test(normalized)) {
     return normalized
   }
-  return basenameOnly(normalized)
+  // Keep absolute path so the UI can strip against the active workspace later.
+  return normalized
 }
 
 function parseFileChangeEntry(

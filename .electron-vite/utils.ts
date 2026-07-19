@@ -55,9 +55,30 @@ export function applyBuildEnvFromArgv(): TeralexiBuildEnv {
 const getEnvPath = () =>
   rootResolve('env', buildEnvToEnvFileName(getBuildEnvMode()))
 
+const getSharedEnvPath = () => rootResolve('env', '.env')
+
+const getDevLocalEnvPath = () => rootResolve('env', '.dev.local.env')
+
 export const getConfig = () => {
-  applyBuildEnvFromArgv()
-  return config({ path: getEnvPath() }).parsed
+  const mode = applyBuildEnvFromArgv()
+  const base = config({ path: getEnvPath() }).parsed ?? {}
+  if (mode !== 'dev') return base
+
+  // Priority (later wins): .dev.env → .env → .dev.local.env
+  const shared = config({
+    path: getSharedEnvPath(),
+    override: true,
+  }).parsed
+  const local = config({
+    path: getDevLocalEnvPath(),
+    override: true,
+  }).parsed
+
+  return {
+    ...base,
+    ...(shared ?? {}),
+    ...(local ?? {}),
+  }
 }
 
 export const logStats = (proc: string, data: any) => {

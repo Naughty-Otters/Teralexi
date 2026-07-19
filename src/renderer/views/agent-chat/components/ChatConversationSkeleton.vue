@@ -57,16 +57,11 @@ const rows = [
 
 .chat-conversation-skeleton__row {
   display: flex;
-  max-width: 92%;
-  min-width: min(50%, 320px);
-}
-
-.chat-conversation-skeleton__row--assistant {
-  align-self: flex-start;
-}
-
-.chat-conversation-skeleton__row--user {
-  align-self: flex-end;
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .chat-conversation-skeleton__bubble {
@@ -79,14 +74,6 @@ const rows = [
   border: 1px solid var(--ui-border);
   background: var(--ui-bg-elevated);
   box-sizing: border-box;
-}
-
-.chat-conversation-skeleton__bubble--user {
-  min-width: 220px;
-}
-
-.chat-conversation-skeleton__bubble--assistant {
-  min-width: 280px;
 }
 
 .chat-conversation-skeleton__line {

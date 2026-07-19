@@ -37,7 +37,9 @@ import { autoCompactStoredConversationIfNeeded } from '@main/agent/compaction'
 import { resolveResponseLanguageForAgent } from '@main/i18n/resolve-response-language'
 import { StageModelRegistry } from '@main/agent/providers/stage-model-registry'
 import { AgentRun } from '@main/agent/run/agent-run'
-import { mergeSubFlowOutputText } from '@main/agent/run/sub-flow-output-text'
+import {
+  resolveSubAgentSummaryText,
+} from '@main/agent/run/sub-flow-output-text'
 import { resolveRunLlmFromAgentAndOverride } from '@shared/agent/conversation-llm-override'
 import { resolveDelegatableSubAgentTargets } from '@shared/agent/sub-agent-targets'
 
@@ -845,7 +847,7 @@ async function executeSubAgentMentionDelegation(
     })
 
     hitlPaused = childResult.hitlPaused
-    finalContent = mergeSubFlowOutputText(childResult.stepOutputs, 'report')
+    finalContent = resolveSubAgentSummaryText(childResult.stepOutputs)
 
     log.info('Sub-agent mention delegation completed', {
       conversationId,

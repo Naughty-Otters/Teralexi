@@ -11,141 +11,92 @@
 | **Workflow run** | [View logs](https://github.com/Naughty-Otters/Teralexi/actions/runs/29621032911) |
 <!-- ci-status-end -->
 
-Teralexi is an Electron desktop app for running and managing AI agents in a local desktop workspace. It combines a Vue 3 renderer, Electron main process services, persisted conversations, tool execution, MCP integrations, scheduled jobs, and channel/account integrations inside one desktop app.
+Local AI agent desktop — research, code, chat from your phone, extend with skills & MCP, pick any LLM, and build memory over time, all on your machine.
 
-[For Chinese Developers](./README_ZH.md)
+[中文说明](./README_ZH.md) · [Product site](https://www.teralexi.com/)
+
+## Download
+
+Prefer a ready-made installer? Get macOS and Windows builds from **[teralexi.com](https://www.teralexi.com/)** — no build required.
+
+This repository is for running and contributing from source.
+
+## Demo
+
+Website agent walkthrough — pick an agent, plan, generate files, and preview the result. More product visuals: [teralexi.com](https://www.teralexi.com/).
+
+[![Watch demo video](./media/web_4.png)](./media/howto_website_2.mp4)
+
+https://github.com/Naughty-Otters/Teralexi/raw/open_source_b/media/howto_website_2.mp4
+
+![Pick an agent and start a prompt](./media/web_1.png)
+
+![Agent plans and executes tasks](./media/web_2.png)
+
+![Generated workspace files](./media/web_3.png)
+
+![Live preview beside the workspace](./media/web_4.png)
+
+![Published site preview](./media/web_5.png)
 
 ## Highlights
-- Multi-agent chat UI with conversation history and in-app settings
-- Provider support for Ollama, OpenAI, Anthropic, and Gemini
-- Tool approvals, collect-form interactions, and sandbox result/report panels
-- MCP server management and shared tool-set integrations
-- Extensible agent skills (bundled defaults + user skills under `~/.teralexi/skills/`)
-- Scheduler support for recurring actions
-- Desktop integrations including tray behavior, updates, downloads, and Google/WhatsApp flows
 
-## Tech Stack
-- `electron`
-- `vue`
-- `vite`
-- `pinia`
-- `@nuxt/ui`
-- `typescript`
-- `better-sqlite3`
-- `vitest`
+- Research with an agent that browses, gathers sources, and keeps you in the loop
+- Workspace & built-in IDE with inline git diff review before changes land
+- Channel chat (WhatsApp, Slack, Google, Discord, and more)
+- Skills & MCP hub, plus custom skills under `~/.teralexi/skills/`
+- Local and cloud LLM providers (Ollama, OpenAI, Anthropic, Gemini, and more)
+- Local-first memory and scheduled agent jobs
 
-## Requirements
-- Node.js `22` or newer
-- `npm` as the package manager
+## Build from source
 
-## Getting Started
+**Requirements:** Node.js 22+ and `npm`.
+
 ```bash
-# install dependencies
 npm install
-
-# run the desktop app in development (uses env/.dev.env)
 npm run dev
-
-# run the renderer/main/preload build used by CI validation
-npm run build:web
-
-# build the production desktop app (uses env/.prod.env)
-npm run build
 ```
 
-For environment files, staging vs production builds, and GitHub Actions, see **[BUILD-AND-RELEASE.md](./BUILD-AND-RELEASE.md)**.
+`npm run dev` uses Electron hot reload and connects to the **production** platform API (`https://api.teralexi.com/`) by default.
 
-## Useful Scripts
+### Use your own backend
+
+Point at a local or staging API only when you need to:
+
 ```bash
-# development
+cp env/.dev.local.env.example env/.env
+# edit BASE_API in env/.env, then:
 npm run dev
-
-# production builds (env/.prod.env)
-npm run build
-npm run build:web
-npm run build:mac
-npm run build:win32
-npm run build:win64
-npm run build:dir
-
-# staging / SIT builds (env/.sit.env)
-npm run build:sit
-npm run build:mac:sit
-npm run build:win64:sit
-
-# testing
-npm run test
-npm run test:unit
-npm run test:unit:coverage
-npm run test:unit:watch
 ```
 
-## Unit Testing
-Unit tests use [Vitest](https://vitest.dev/) with co-located `*.test.ts` files next to each module.
+Or one-off:
 
-- Run tests: `npm run test:unit`
-- Run tests with coverage (enforced thresholds): `npm run test:unit:coverage`
-- Watch mode: `npm run test:unit:watch`
-- Config: `vitest.config.ts`, setup: `vitest.setup.ts`
-- Patterns: `src/**/*.test.ts`, `skills/**/*.test.ts`, `config/**/*.test.ts`, `.electron-vite/**/*.test.ts`
-
-CI enforces **70%** line, statement, and function coverage on unit-testable code. Integration boundaries (Electron IPC, SQLite store, WhatsApp, full agent flow orchestration, shell subprocess tools) are excluded from that gate; see `coverage.exclude` in `vitest.config.ts`. Per-area floors in `coverage.thresholds` also use **70%** for lines, statements, and functions.
-
-## GitHub Actions
-
-Both workflows are triggered manually from the **Actions** tab. See **[BUILD-AND-RELEASE.md](./BUILD-AND-RELEASE.md)** for full details.
-
-| Workflow | Purpose | Environment |
-| --- | --- | --- |
-| [CI](.github/workflows/ci.yml) | Unit tests + internal desktop builds | Staging (`env/.sit.env`) |
-| [Release](.github/workflows/release.yml) | Build production installers and upload to private S3 | Production (`env/.prod.env`) |
-
-**CI** (manual `workflow_dispatch`):
-
-1. **Unit tests** (Windows) — `npm run test:unit`.
-2. **Staging build** (macOS + Windows) — `build:mac:sit` / `build:win64:sit`; uploads `teralexi-<platform>-sit-<run>-<sha>` artifacts (14-day retention).
-3. **Update README** — refreshes the CI status table at the top of this file.
-
-**Release** (manual `workflow_dispatch`, confirm input `release`):
-
-- Production builds via `release:mac` / `release:win`, then `release:upload-s3` to private S3. Clients fetch updates from public `{BASE_API}/desktop/releases/stable/` (see [docs/DESKTOP-RELEASES.md](./docs/DESKTOP-RELEASES.md)).
-
-## Project Layout
-```text
-src/main/         Electron main-process code and desktop services
-src/preload/      Preload bridge exposed to the renderer
-src/renderer/     Vue app, views, components, store, and UI utilities
-src/ipc/          Shared IPC channel definitions
-skills/           Skill and tool-set definitions used by agents (see [Skill development guide](./skills/SKILL-DEVELOPMENT.md))
-.github/workflows CI workflows
+```bash
+BASE_API=http://localhost:8000 npm run dev
 ```
 
-## Skill development
+Local load order for `npm run dev`: `env/.dev.env` → `env/.env` (wins) → `env/.dev.local.env` (wins if present).
 
-Agent skills are markdown folders that define workflows, tools, forms, and reference assets. Bundled skills ship in [`skills/`](./skills/) (including **default** and **github**); install your own under `~/.teralexi/skills/` (same folder id overrides bundled defaults).
+## Useful commands
 
-**[→ Step-by-step skill development guide](./skills/SKILL-DEVELOPMENT.md)**
+```bash
+npm run dev          # desktop app (production API by default)
+npm run build        # production desktop build
+npm run build:web    # renderer/main/preload build (CI validation)
+npm run test:unit    # unit tests
+```
 
-## Coding guide
+## Documentation
 
-UI and implementation notes for contributors (file-change diff UI, HITL preview IPC, shared types):
-
-**[→ CODING.md](./CODING.md)**
-
-## Build & release
-
-Environment files (`env/.dev.env`, `env/.sit.env`, `env/.prod.env`), local build commands, and GitHub Actions workflows:
-
-**[→ BUILD-AND-RELEASE.md](./BUILD-AND-RELEASE.md)**
-
-## Notes
-- CI uses Node.js 22.x to match local development requirements.
-- Run `npm run test:unit:coverage` locally when you need the coverage HTML report.
+| Doc | Purpose |
+| --- | --- |
+| [BUILD-AND-RELEASE.md](./BUILD-AND-RELEASE.md) | Env modes, local builds, CI & release |
+| [CODING.md](./CODING.md) | Contributor UI / IPC notes |
+| [skills/SKILL-DEVELOPMENT.md](./skills/SKILL-DEVELOPMENT.md) | Authoring agent skills |
+| [docs/](./docs/) | Releases, code signing, support upload |
+| [CHANGELOG.md](./CHANGELOG.md) | Version history |
+| [teralexi.com](https://www.teralexi.com/) | Download & product overview |
 
 ## License
 
-Teralexi is licensed under the [PolyForm Noncommercial License 1.0.0](./LICENSE).
-
-You may use, modify, and distribute the software for **noncommercial purposes**, including personal use, learning, hobby projects, and noncommercial use by educational and nonprofit organizations.
-
-**Commercial use** (including commercial distribution, SaaS/hosted services, resale, or integration into commercial products) and **any other use beyond the noncommercial terms** require a separate written license from the copyright holder. Contact the project owner via [GitHub Issues](https://github.com/Naughty-Otters/Teralexi/issues).
+Teralexi is licensed under the [Apache License 2.0](./LICENSE).

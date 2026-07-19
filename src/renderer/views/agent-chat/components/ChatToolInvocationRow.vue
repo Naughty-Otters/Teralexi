@@ -195,7 +195,8 @@ const showRawOutput = computed(
 
 const showParams = ref(false)
 const showResult = ref(false)
-const showChanges = ref(false)
+/** File updates open by default so the brief diff box is visible like Cursor. */
+const showChanges = ref(true)
 
 const copied = ref(false)
 function copyOutput() {
@@ -216,6 +217,11 @@ function copyOutput() {
   max-width: 100%;
   font-size: 13px;
   line-height: 1.45;
+  overflow: hidden;
+}
+.tr:has(.tr__changes) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 .tr__top {
   display: flex;
@@ -341,8 +347,12 @@ function copyOutput() {
 .tr__diff-del { color: var(--color-error-600, #dc2626); }
 
 .tr__changes {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--ui-border);
+  padding: 0;
+  margin: 0;
+  border-bottom: none;
+}
+.tr__changes :deep(.fcs > .fc:last-child) {
+  border-bottom: none;
 }
 
 .tr__copy {

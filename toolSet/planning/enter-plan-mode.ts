@@ -22,7 +22,7 @@ export const enterPlanMode: SkillTool = {
       .optional()
       .describe('Short title for the plan (used in plan filename slug).'),
   }),
-  needsApproval: true,
+  needsApproval: false,
   async execute(input) {
     const conversationId = getConversationIdFromEnv()
     if (!conversationId) {

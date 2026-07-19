@@ -258,4 +258,54 @@ describe('app-web-publish-client', () => {
       rmSync(siteDir, { recursive: true, force: true })
     }
   })
+
+  it('passes AbortSignal on publish upload fetch', async () => {
+    entitlementWithPublish()
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        user_id: 1,
+        url: '/app/web/1/',
+        file_count: 1,
+        bytes: 1,
+      }),
+      text: async () => '',
+      headers: new Headers(),
+    })
+
+    await publishStaticSiteZip({ zipBuffer: Buffer.from('z') })
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:8000/api/v1/app/web/upload',
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    )
+  })
+
+  it('returns network timeout error when publish fetch is aborted', async () => {
+    entitlementWithPublish()
+    fetchMock.mockImplementation((_url, init) => {
+      return new Promise((_resolve, reject) => {
+        const signal = init?.signal
+        if (!signal) {
+          reject(new Error('expected AbortSignal'))
+          return
+        }
+        signal.addEventListener('abort', () => {
+          reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }))
+        })
+      })
+    })
+
+    const result = await publishStaticSiteZip({
+      zipBuffer: Buffer.from('z'),
+      timeoutMs: 1,
+    })
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'network',
+      error: expect.stringMatching(/timed out/i),
+    })
+  })
 })

@@ -76,10 +76,15 @@ describe('buildAgentToolSet sub-agent tools', () => {
       description: 'Invoke configured sub-agent',
       source: 'skill' as const,
     },
+    {
+      name: 'invoke_agents',
+      description: 'Invoke multiple sub-agents',
+      source: 'skill' as const,
+    },
   ]
   const tools = filterToolsByAvailableSet(runtimeTools)
 
-   it('registers invoke_agent only when allowSubAgents is enabled', () => {
+   it('registers sub-agent tools only when allowSubAgents is enabled', () => {
     const without = buildAgentToolSetForTests(
       tools,
       makeRunCtx({
@@ -90,6 +95,7 @@ describe('buildAgentToolSet sub-agent tools', () => {
       'demo',
     )
     expect(without[INVOKE_AGENT_TOOL_NAME]).toBeUndefined()
+    expect(without.invoke_agents).toBeUndefined()
 
     const withDelegation = buildAgentToolSetForTests(
       tools,
@@ -106,6 +112,7 @@ describe('buildAgentToolSet sub-agent tools', () => {
       'demo',
     )
     expect(withDelegation[INVOKE_AGENT_TOOL_NAME]).toBeDefined()
+    expect(withDelegation.invoke_agents).toBeDefined()
   })
 
   it('omits all sub-agent delegation tools on nested runs', () => {

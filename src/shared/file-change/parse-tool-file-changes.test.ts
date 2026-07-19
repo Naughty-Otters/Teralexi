@@ -157,7 +157,7 @@ describe('parseToolFileChanges', () => {
       deletions: 1,
     })
     expect(files[1]).toMatchObject({
-      path: 'file.ts',
+      path: '/abs/outside/file.ts',
       action: 'rename',
       additions: 0,
       deletions: 0,
@@ -209,7 +209,7 @@ describe('parseToolFileChanges', () => {
     expect(splitUnifiedDiff(combined)).toHaveLength(2)
     expect(files).toHaveLength(2)
     expect(files[0]?.path).toBe('a.ts')
-    expect(files[1]?.path).toBe('base.txt#2')
+    expect(files[1]?.path).toBe('/sandbox/base.txt#2')
     expect((files[0]?.additions ?? 0) + (files[1]?.additions ?? 0)).toBe(3)
     expect((files[0]?.deletions ?? 0) + (files[1]?.deletions ?? 0)).toBe(1)
   })

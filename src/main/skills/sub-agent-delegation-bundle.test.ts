@@ -60,7 +60,13 @@ describe('sub-agent delegation across skill bundles', () => {
       }),
       task: 'List top-level folders',
     })
-    expect(result).toBe('child output')
+    expect(result).toMatchObject({
+      status: 'completed',
+      summary: 'child output',
+      filesTouched: [],
+      openQuestions: [],
+      agentId: 'skill:coding',
+    })
     clearSubAgentDelegation()
   })
 })

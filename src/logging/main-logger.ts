@@ -4,7 +4,7 @@ import { buildMainProcessLogStreams } from './main-process-streams'
 
 const framework = createLoggingFramework({
   runtime: 'main',
-  level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
+  level: 'info',
   base: {
     processType: 'main',
   },

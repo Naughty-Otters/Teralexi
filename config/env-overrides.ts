@@ -91,13 +91,20 @@ export function parseEnvFile(
   return entries
 }
 
-/** Build-time env file for the active mode (`env/.dev.env`, `.sit.env`, or `.prod.env`). */
+/** Build-time env files for the active mode (`env/.dev.env` [+ `env/.env` + optional `.dev.local.env`], `.sit.env`, or `.prod.env`). */
 export function resolveBuildTimeEnvFilePaths(
   cwd = process.cwd(),
   processEnv: NodeJS.ProcessEnv = process.env,
 ): string[] {
   const mode = resolveBuildEnv(processEnv)
-  return [join(cwd, 'env', buildEnvToEnvFileName(mode))]
+  const paths = [join(cwd, 'env', buildEnvToEnvFileName(mode))]
+  // Local overrides for open-source / personal backends (dev only).
+  // Later files win: `.dev.env` → `.env` → `.dev.local.env`
+  if (mode === 'dev') {
+    paths.push(join(cwd, 'env', '.env'))
+    paths.push(join(cwd, 'env', '.dev.local.env'))
+  }
+  return paths
 }
 
 /** @deprecated Use {@link resolveBuildTimeEnvFilePaths}. */

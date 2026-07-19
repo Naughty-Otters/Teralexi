@@ -8,6 +8,9 @@ import { planModeStorageOptionsFromEnv } from '../../coding/plan-mode-state'
 import { resolvePlanModeStorage } from '../../coding/plan-mode-storage-impl'
 import type { AgentInjector } from '../types'
 import { INJECTOR_ORDER } from './orders'
+import { createMtimeKeyedCache, pathMtimeKey } from '../injector-cache'
+
+const exploreManifestCache = createMtimeKeyedCache<string>()
 
 export const exploreManifestInjector: AgentInjector = {
   id: 'explore-manifest',
@@ -28,11 +31,24 @@ export const exploreManifestInjector: AgentInjector = {
   injectInstructions({ ctx }) {
     const conversationId = ctx.opts.conversationId?.trim()
     if (!conversationId) return null
-    const manifest = readExploreManifest(
+    const storage = resolvePlanModeStorage(
       conversationId,
       planModeStorageOptionsFromEnv(conversationId),
     )
-    if (!manifest || !exploreManifestHasContent(manifest)) return null
-    return formatExploreManifestForInstructions(manifest)
+    if (!storage) return null
+    const manifestPath = storage.manifestFile.absolutePath
+    return (
+      exploreManifestCache.getOrCompute(
+        [conversationId, pathMtimeKey(manifestPath)],
+        () => {
+          const manifest = readExploreManifest(
+            conversationId,
+            planModeStorageOptionsFromEnv(conversationId),
+          )
+          if (!manifest || !exploreManifestHasContent(manifest)) return ''
+          return formatExploreManifestForInstructions(manifest) || ''
+        },
+      ) || null
+    )
   },
 }

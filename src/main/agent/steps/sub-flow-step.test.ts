@@ -7,12 +7,14 @@ vi.mock('../run/resolve-child-agent', () => ({
   resolveEngineAgent: vi.fn(),
   formatSubFlowStepTitle: vi.fn(() => 'Child Agent'),
   mergeSubFlowOutputText: vi.fn(() => 'merged child output'),
+  resolveSubAgentSummaryText: vi.fn(() => 'merged child output'),
 }))
 
 import {
   formatSubFlowStepTitle,
   mergeSubFlowOutputText,
   resolveEngineAgent,
+  resolveSubAgentSummaryText,
 } from '../run/resolve-child-agent'
 
 const sampleEntry: StepOutputEntry = {
@@ -64,6 +66,7 @@ describe('subFlowFlowStepDefinition', () => {
     vi.mocked(resolveEngineAgent).mockReset()
     vi.mocked(formatSubFlowStepTitle).mockClear()
     vi.mocked(mergeSubFlowOutputText).mockClear()
+    vi.mocked(resolveSubAgentSummaryText).mockClear()
     vi.mocked(resolveEngineAgent).mockResolvedValue({
       id: 'skill:child',
       name: 'Child',
@@ -109,7 +112,8 @@ describe('subFlowFlowStepDefinition', () => {
         parentHitlPauseStageId: SUB_FLOW_STEP_ID,
       }),
     )
-    expect(mergeSubFlowOutputText).toHaveBeenCalled()
+    expect(mergeSubFlowOutputText).not.toHaveBeenCalled()
+    expect(resolveSubAgentSummaryText).toHaveBeenCalled()
     expect(recordStepOutput).toHaveBeenCalledWith(
       SUB_FLOW_STEP_ID,
       'Child Agent',

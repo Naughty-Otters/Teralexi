@@ -75,6 +75,7 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
   const ahead = ref(0)
   const behind = ref(0)
   const statusEntries = ref<GitStatusEntry[]>([])
+  const isRepo = ref(true)
   const statusLoading = ref(false)
   const statusError = ref<string | null>(null)
 
@@ -162,7 +163,9 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
   const prTitle = ref('')
   const prBody = ref('')
 
-  const isClean = computed(() => statusEntries.value.length === 0)
+  const isClean = computed(
+    () => isRepo.value && statusEntries.value.length === 0,
+  )
 
   const stagedEntries = computed(() =>
     statusEntries.value.filter((e) => e.index !== ' ' && e.index !== '?'),
@@ -334,6 +337,7 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
       ahead.value = 0
       behind.value = 0
       statusEntries.value = []
+      isRepo.value = true
       commits.value = []
       fileEntries.value = []
       diff.value = ''
@@ -488,7 +492,19 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
         ahead.value = result.ahead
         behind.value = result.behind
         statusEntries.value = result.entries.map((entry) => ({ ...entry }))
+        isRepo.value = result.isRepo !== false
+        statusError.value = null
+      } else if (result.isRepo === false && !result.error) {
+        // Non-repo workspace: treat as success with empty status.
+        branch.value = ''
+        upstream.value = null
+        ahead.value = 0
+        behind.value = 0
+        statusEntries.value = []
+        isRepo.value = false
+        statusError.value = null
       } else if (!silent) {
+        isRepo.value = result.isRepo === true
         statusError.value = result.error ?? 'git status failed.'
       }
     } catch (err) {
@@ -706,6 +722,37 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     const slash = normalized.lastIndexOf('/')
     const parent = slash >= 0 ? normalized.slice(0, slash) : '.'
     await refreshFiles(parent)
+  }
+
+  async function initRepo(): Promise<boolean> {
+    if (isMutationsDisabled.value) return false
+    const cid = requireConversationId()
+    if (!cid) return false
+    const ch = window.ipcRendererChannel?.RunWorkspaceGitInit
+    if (!ch?.invoke) return false
+
+    opLoading.value = true
+    opError.value = null
+    opSuccess.value = null
+    try {
+      const result = await ch.invoke({ conversationId: cid })
+      if (result.ok) {
+        opSuccess.value = 'Git repository initialized.'
+        await Promise.all([
+          refreshStatus(),
+          refreshLog(),
+          refreshFiles(undefined, { silent: true }),
+        ])
+        return true
+      }
+      opError.value = result.error ?? 'git init failed.'
+      return false
+    } catch (err) {
+      opError.value = String(err)
+      return false
+    } finally {
+      opLoading.value = false
+    }
   }
 
   async function stageAll(): Promise<boolean> {
@@ -1081,6 +1128,7 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     ahead,
     behind,
     statusEntries,
+    isRepo,
     statusLoading,
     statusError,
     diff,
@@ -1146,6 +1194,7 @@ export const useWorkspaceGitStore = defineStore('workspace-git', () => {
     navigateFilesToHighlight,
     stageAll,
     stageFiles,
+    initRepo,
     commit,
     push,
     createPR,

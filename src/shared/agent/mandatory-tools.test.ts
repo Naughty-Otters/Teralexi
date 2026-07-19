@@ -18,6 +18,7 @@ describe('mandatory tools', () => {
     expect(MANDATORY_TOOL_NAMES.has('invoke_agent')).toBe(true)
     expect(MANDATORY_TOOL_NAMES.has('invoke_agents')).toBe(true)
     expect(MANDATORY_TOOL_NAMES.has('wait_for_sub_agent_runs')).toBe(true)
+    expect(MANDATORY_TOOL_NAMES.has('best_of_n')).toBe(true)
     expect(MANDATORY_TOOL_NAMES.has('promote_artifact')).toBe(true)
     expect(MANDATORY_TOOL_NAMES.has('generate_follow_up')).toBe(true)
   })

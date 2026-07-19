@@ -270,6 +270,7 @@ import { setTitleBarChatControls } from '@renderer/composables/useTitleBarChatCo
 import { useChatAttachments } from '@renderer/composables/useChatAttachments'
 import type { ChatAttachmentMeta } from '@shared/chat/attachments'
 import { CHAT_MESSAGE_ATTACHMENTS_KEY } from './chatAttachmentContext'
+import { SUBMIT_CHAT_TEXT_KEY } from '../submitChatText'
 
 import {
   createRendererChatGenerateId,
@@ -504,6 +505,12 @@ const messagesContentEl = ref<HTMLElement | null>(null)
 const chatBodyEl = ref<HTMLElement | null>(null)
 const chatInst = shallowRef<InstanceType<typeof Chat> | null>(null)
 
+provide(SUBMIT_CHAT_TEXT_KEY, (text: string) => {
+  const trimmed = text.trim()
+  if (!trimmed || !chatInst.value) return
+  void chatInst.value.sendMessage({ text: trimmed })
+})
+
 const reportPanelResizeEnabled = computed(() => showReportPanel.value)
 
 const {
@@ -737,6 +744,9 @@ function clearHitlQueueBlockIfMessagesResolved(
   if (!conversationHitlBlocksQueue(conversationId)) return
   if (chatMessagesHavePendingHitl(messages)) return
   setConversationHitlBlocksQueue(conversationId, false)
+  // Match transport onHitlBlocksQueue(false): clearing the block must drain
+  // any messages queued while HITL / busy was holding the composer.
+  void nextTick(() => dequeueAndSendNext())
 }
 
 function syncReactiveMessagesFromChat(
@@ -1386,13 +1396,14 @@ function createChatForConversation(
 
     async onFinish({ isAbort }) {
       const chat = getConversationChat(conversationId) ?? chatInst.value
-      const pendingHitl = conversationHasPendingHitl(conversationId)
+      const liveMessages = chat?.messages ?? reactiveMessages.value
+      const messagesPendingHitl = messagesLookPendingHitl(liveMessages)
 
       agentStore.markUiChatInFlight(conversationId, false)
 
       if (!isAbort) {
         void refreshPlanModeState(conversationId)
-        if (!pendingHitl) {
+        if (!messagesPendingHitl) {
           void loadFollowUpSuggestions(conversationId)
         }
       }
@@ -1402,9 +1413,15 @@ function createChatForConversation(
         return
       }
 
-      if (pendingHitl) {
+      // Only live form/approval parts should keep the composer blocked. A stale
+      // HITL queue flag after an empty/completed turn must not skip dequeue.
+      if (messagesPendingHitl) {
         if (chat) syncConversationSnapshot(conversationId)
         return
+      }
+
+      if (conversationHitlBlocksQueue(conversationId)) {
+        setConversationHitlBlocksQueue(conversationId, false)
       }
 
       await agentStore.refreshConversationMessagesTail(conversationId)
@@ -2565,8 +2582,11 @@ watchEffect(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  /** Min width for assistant response bubbles (brief + conversation). */
-  --chat-response-bubble-min-width: 50%;
+  /** Full chat-column width for user + assistant response bubbles. */
+  --chat-response-bubble-min-width: 100%;
+  /* Keep composer / follow-ups above report-panel DOM chrome when they overlap. */
+  position: relative;
+  z-index: 2;
 }
 .chat-scroll-area {
   flex: 1;
@@ -2607,8 +2627,11 @@ watchEffect(() => {
 }
 .msg-row {
   flex-shrink: 0;
-  max-width: 92%;
-  min-width: var(--chat-response-bubble-min-width, 50%);
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 14px;
@@ -2616,13 +2639,10 @@ watchEffect(() => {
   color: var(--ui-text);
 }
 .msg-row--user {
-  align-self: flex-end;
   background: var(--ui-bg-elevated);
   border: 1px solid var(--ui-border);
 }
 .msg-row--assistant {
-  align-self: flex-start;
-  min-width: var(--chat-response-bubble-min-width, 50%);
   background: var(--ui-bg-elevated);
 }
 
@@ -2631,8 +2651,6 @@ watchEffect(() => {
   background: transparent;
   border: none;
   padding: 0;
-  min-width: var(--chat-response-bubble-min-width, 50%);
-  max-width: 100%;
 }
 
 .message-queue {

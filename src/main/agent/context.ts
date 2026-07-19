@@ -1,5 +1,3 @@
-import { join } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
 import { z } from 'zod'
 import type {
   AgentResponseOpts,
@@ -8,25 +6,17 @@ import type {
   AgentStepContextHistory,
   AgentStepContextMap,
   AgentStepId,
-  AgentStepProgressPayload,
   StepOutputs,
   RuntimeToolMeta,
-  AssistantSubStep,
-  AssistantStructuredContent,
-  StepRunCapture,
   ThinkingResult,
   PlanningResult,
   SummaryResult,
-  ResearchReportRef,
   SkillChainPlan,
 } from './types'
 import type { ParsedCollectFormSchema } from './form/schema'
 import type { ResearchResumeState } from './steps/research/config'
 import type { AgentLlmStage } from '@shared/agent/stage-llm-settings'
-import {
-  limitMessageContentForPersistence,
-  limitPersistedStepText,
-} from '@shared/persistence/limit-persisted-content'
+import { limitPersistedStepText } from '@shared/persistence/limit-persisted-content'
 import {
   hasToolLoopRecoveryOverride,
   resolveToolLoopExecutionChoice as resolveToolLoopExecutionChoiceFromSettings,
@@ -39,20 +29,13 @@ import type { FlowPipelineRegistry, FlowStepConfig } from './flow/pipeline'
 import type { FlowStageId } from './constants/step-ids'
 import { ReferenceContext } from './resources/context'
 import { FormContext, type FormFlowHost } from './form/context'
-import { formatPlanningExpectations } from './utils/agent-parsing'
-import {
-  formatSummaryForContext,
-  summaryDisplayText,
-} from './utils/summary-parse'
 import { ProviderContext } from './providers/context'
 import { SandboxContext } from './sandbox/context'
 import {
-  buildOutputLinksFromPaths,
-  collectOutputLinksForStep,
-  collectSandboxOutputLinkPaths,
-  sandboxOutputDir,
-} from './sandbox/step-output-links'
-import { formatToolResultForDisplay } from '@shared/tool-result/format-tool-result-for-display'
+  setAgentRunAssistantMessageId,
+  setAgentRunConversationId,
+} from './sandbox/run-context'
+import { collectOutputLinksForStep } from './sandbox/step-output-links'
 import { isMandatoryTool } from '@shared/agent/mandatory-tools'
 import { PLAN_MODE_ALWAYS_IN_CATALOG_TOOL_NAMES } from '@toolSet/planning'
 import { isPlanModeActive } from './coding/plan-mode-state'
@@ -60,16 +43,6 @@ import { isSubAgentAgentRun } from './run/sub-agent-run-policy'
 import { createLogger } from '@main/logger'
 import type { ToolInputDedupeState } from './steps/step-helpers'
 import { ToolReadCache } from './expr/tool-read-cache'
-
-function formatAgentStepOutputBody(
-  step: Pick<AgentStepSnapshot, 'renderedOutput' | 'output'>,
-): string {
-  const rendered = step.renderedOutput?.trim()
-  if (rendered) return rendered
-  if (typeof step.output === 'string') return step.output.trim()
-  if (step.output != null) return formatToolResultForDisplay(step.output)
-  return ''
-}
 import {
   ensureScopedStepKey,
   formatScopedStageId,
@@ -79,103 +52,53 @@ import {
   toolLoopFilesystemScopeFromStepKey,
 } from './run/flow-scoped-ids'
 import { getCurrentAgentRunScope } from './run/run-scope'
-import { PIPELINE_CONTEXT_LLM, STRUCTURED_CONTENT_LLM } from './constants'
 import {
   COLLECT_FORM_STEP_ID,
-  FOREACH_ITEM_STEP_ID,
   PLANNING_STEP_ID,
   PROMPT_STEP_ID,
   REPORT_STEP_ID,
-  SEARCH_STEP_ID,
-  WEB_SCRAPE_STEP_ID,
-  CREATE_PAPER_STEP_ID,
   SKILLS_STEP_ID,
   SUMMARY_STEP_ID,
   THINKING_STEP_ID,
   TOOL_LOOP_STEP_ID,
-  TOOL_LOOP_STEP_TITLE,
 } from './constants/step-ids'
-import {
-  isAgenticRunParentStepTitle,
-  isAgenticRunPerTaskStepTitle,
-} from '@shared/agent/agentic-run-labels'
 import { StepOutputStore } from './steps/step-output-store'
-import type {
-  CreatePaperStepData,
-  StepData,
-  StepOutputEntry,
-} from './steps/step-io'
+import type { StepData, StepOutputEntry } from './steps/step-io'
 import type { AgentRun } from './run/agent-run'
-import { buildPipelineConversationTurns } from './pipeline-conversation-persist'
+import type { StepAttachment } from '@shared/agent/step-attachment'
 import {
-  dedupeStepAttachments,
-  mergeStepAttachments,
-  type StepAttachment,
-} from '@shared/agent/step-attachment'
+  buildPipelineContextMessages as buildPipelineContextMessagesHelper,
+  type PipelineContextMessageOptions,
+} from './context/pipeline-context-messages'
+import { buildStructuredAssistantContent as buildStructuredAssistantContentHelper } from './context/structured-assistant-content'
+import {
+  appendStepAttachments as appendStepAttachmentsHelper,
+  getAggregatedAttachmentsForStage as getAggregatedAttachmentsForStageHelper,
+  getStepAttachments as getStepAttachmentsHelper,
+  getToolLoopAttachmentsForTodo as getToolLoopAttachmentsForTodoHelper,
+  mergeAttachmentsWithScanLinks,
+  mergeToolLoopAttachmentsIntoParent as mergeToolLoopAttachmentsIntoParentHelper,
+} from './context/step-attachments'
+import {
+  emitStepProgress as emitStepProgressHelper,
+  publishStepProgress as publishStepProgressHelper,
+  shouldRegisterToolLoopStepContext,
+} from './context/step-progress-policy'
+import {
+  aggregateStringOutputsFromHistory,
+  buildToolLoopOutputDigest as buildToolLoopOutputDigestHelper,
+  formatAgentStepOutputBody,
+  formatOrderedExecutionForSummary as formatOrderedExecutionForSummaryHelper,
+  formatPlannedTasksOutlineForSummary as formatPlannedTasksOutlineForSummaryHelper,
+  getCompletedStepsForId,
+  latestStructuredOutputFromHistory,
+} from './context/step-io-history'
+import { collectSandboxArtifactPaths } from './context/sandbox-artifact-paths'
 
-function uniqueStrings(paths: string[]): string[] {
-  return [...new Set(paths.map((p) => p.trim()).filter(Boolean))]
-}
+export type { PipelineContextMessageOptions }
+export { collectSandboxArtifactPaths }
 
-function flowStageIdForStepCapture(
-  stepType: StepRunCapture['stepType'],
-): FlowStageId | undefined {
-  switch (stepType) {
-    case 'ThinkingStep':
-      return THINKING_STEP_ID
-    case 'PlanningStep':
-      return PLANNING_STEP_ID
-    case 'SearchStep':
-      return SEARCH_STEP_ID
-    case 'WebScrapeStep':
-      return WEB_SCRAPE_STEP_ID
-    case 'CreatePaperStep':
-      return CREATE_PAPER_STEP_ID
-    case 'SkillsToolExecutionStep':
-      return TOOL_LOOP_STEP_ID
-    case 'SummaryStep':
-      return SUMMARY_STEP_ID
-    case 'ReportStep':
-      return REPORT_STEP_ID
-    default:
-      return undefined
-  }
-}
-
-function buildResearchReportRef(
-  outputStore: StepOutputStore,
-): ResearchReportRef | undefined {
-  const entries = outputStore.all(CREATE_PAPER_STEP_ID)
-  if (entries.length === 0) return undefined
-  const data = entries[entries.length - 1]?.data as
-    | CreatePaperStepData
-    | undefined
-  const pdfPath = data?.outputPath?.trim()
-  if (!pdfPath) return undefined
-  try {
-    const paperExcerpt = data.rendered?.trim() || data.text?.trim()
-    return {
-      pdfPath,
-      pdfUrl: pathToFileURL(pdfPath).href,
-      topic: data.topic ?? '',
-      sourceCount: data.sourceCount ?? 0,
-      ...(paperExcerpt ? { paperExcerpt } : {}),
-    }
-  } catch {
-    return undefined
-  }
-}
-
-function latestCreatePaperDigest(outputStore: StepOutputStore): string {
-  const entries = outputStore.all(CREATE_PAPER_STEP_ID)
-  if (entries.length === 0) return ''
-  const data = entries[entries.length - 1]?.data as
-    | CreatePaperStepData
-    | undefined
-  return data?.rendered?.trim() || data?.text?.trim() || ''
-}
-
-const STEP_OUTPUT_KEY_BY_ID = {
+const STEP_OUTPUT_KEY_BY_ID: Partial<Record<AgentStepId, keyof StepOutputs>> = {
   [THINKING_STEP_ID]: 'thinking',
   [PLANNING_STEP_ID]: 'planning',
   [SKILLS_STEP_ID]: 'skills',
@@ -183,22 +106,6 @@ const STEP_OUTPUT_KEY_BY_ID = {
   [SUMMARY_STEP_ID]: 'summary',
   [REPORT_STEP_ID]: 'report',
   [PROMPT_STEP_ID]: 'prompt',
-} as const satisfies Partial<Record<AgentStepId, keyof StepOutputs>>
-
-export type PipelineContextMessageOptions = {
-  /** Skills + tool-loop material (default true). */
-  execution?: boolean
-  /** Thinking digest (e.g. report). */
-  thinking?: boolean
-  /** Planning text / final goal (e.g. report). */
-  planning?: boolean
-  /** Pipeline summary (goal, plan, execution) for the report step. */
-  summary?: boolean
-  /**
-   * Analysis/report: include final goal, ordered planned tasks, and per-todo tool
-   * output (not the raw history aggregate that duplicates batch rollups under HITL).
-   */
-  orderedExecution?: boolean
 }
 
 function deepClone<T>(value: T): T {
@@ -219,22 +126,6 @@ export function cloneStepHistory(
   value: AgentStepContextHistory,
 ): AgentStepContextHistory {
   return deepClone(value)
-}
-
-/** Sandbox dirs where artifacts typically land (for path hints on exports). */
-export function collectSandboxArtifactPaths(
-  sandbox?: SandboxContext,
-): string[] {
-  const layout = sandbox?.layout
-  if (!layout) return []
-  return uniqueStrings([
-    layout.root,
-    layout.outputDir,
-    join(layout.root, 'output', 'results'),
-    join(layout.root, 'output', 'toolLoop'),
-    layout.refsDir,
-    layout.scriptsDir,
-  ])
 }
 
 export {
@@ -593,161 +484,7 @@ export class AgentFlowContext {
   buildPipelineContextMessages(
     opts: PipelineContextMessageOptions = {},
   ): AgentMessage[] {
-    const includeExecution = opts.execution !== false
-    const messages: AgentMessage[] = []
-    const reg = this.pipelineRegistry
-
-    if (opts.thinking) {
-      const def = reg?.get(THINKING_STEP_ID)
-      const entries = this.outputStore.all(THINKING_STEP_ID)
-      if (def?.toContextMessages && entries.length > 0) {
-        messages.push(...def.toContextMessages(entries, this))
-      } else {
-        const raw = this.stepOutputs.thinking?.raw?.trim()
-        if (raw) {
-          messages.push({
-            role: 'user',
-            content: `${PIPELINE_CONTEXT_LLM.THINKING}\n\n${raw}`,
-          })
-        }
-      }
-    }
-
-    if (opts.planning) {
-      const def = reg?.get(PLANNING_STEP_ID)
-      const entries = this.outputStore.all(PLANNING_STEP_ID)
-      if (def?.toContextMessages && entries.length > 0) {
-        messages.push(...def.toContextMessages(entries, this))
-      } else {
-        const plan = this.stepOutputs.planning
-        const planText = plan?.raw?.trim() || plan?.finalGoal?.trim()
-        if (planText) {
-          messages.push({
-            role: 'user',
-            content: `${PIPELINE_CONTEXT_LLM.PLANNING}\n\n${planText}`,
-          })
-        }
-      }
-    }
-
-    if (opts.orderedExecution) {
-      const plan = this.stepOutputs.planning
-      const finalGoal = plan?.finalGoal?.trim()
-      if (finalGoal) {
-        messages.push({
-          role: 'user',
-          content: `${PIPELINE_CONTEXT_LLM.FINAL_GOAL}\n\n${finalGoal}`,
-        })
-      }
-      const planData =
-        this.outputStore.latest<import('./steps/step-io').PlanningStepData>(
-          PLANNING_STEP_ID,
-        )
-      const expectations = plan?.expectations ?? planData?.expectations ?? []
-      if (expectations.length > 0) {
-        messages.push({
-          role: 'user',
-          content: `${PIPELINE_CONTEXT_LLM.RUN_EXPECTATIONS}\n\n${formatPlanningExpectations(expectations)}`,
-        })
-      }
-      const outline = this.formatPlannedTasksOutlineForSummary()
-      if (outline) {
-        messages.push({
-          role: 'user',
-          content: `${PIPELINE_CONTEXT_LLM.PLANNED_TASKS}\n\n${outline}`,
-        })
-      }
-    }
-
-    if (includeExecution) {
-      const searchDef = reg?.get(SEARCH_STEP_ID)
-      const searchEntries = this.outputStore.all(SEARCH_STEP_ID)
-      if (searchDef?.toContextMessages && searchEntries.length > 0) {
-        messages.push(...searchDef.toContextMessages(searchEntries, this))
-      }
-
-      const webScrapeDef = reg?.get(WEB_SCRAPE_STEP_ID)
-      const webScrapeEntries = this.outputStore.all(WEB_SCRAPE_STEP_ID)
-      if (webScrapeDef?.toContextMessages && webScrapeEntries.length > 0) {
-        messages.push(...webScrapeDef.toContextMessages(webScrapeEntries, this))
-      }
-
-      const createPaperDef = reg?.get(CREATE_PAPER_STEP_ID)
-      const createPaperEntries = this.outputStore.all(CREATE_PAPER_STEP_ID)
-      if (createPaperDef?.toContextMessages && createPaperEntries.length > 0) {
-        messages.push(
-          ...createPaperDef.toContextMessages(createPaperEntries, this),
-        )
-      }
-
-      const def = reg?.get(TOOL_LOOP_STEP_ID)
-      const entries = this.outputStore.all(TOOL_LOOP_STEP_ID)
-      if (
-        def?.toContextMessages &&
-        entries.length > 0 &&
-        !opts.orderedExecution
-      ) {
-        messages.push(...def.toContextMessages(entries, this))
-      } else {
-        const skills = this.stepOutputs.skills?.trim()
-        if (skills) {
-          messages.push({
-            role: 'user',
-            content: `${PIPELINE_CONTEXT_LLM.SKILLS_OUTPUT}\n\n${skills}`,
-          })
-        }
-        if (opts.orderedExecution) {
-          const ordered = this.formatOrderedExecutionForSummary()
-          if (ordered.toolExecution?.trim()) {
-            messages.push({
-              role: 'user',
-              content: `${PIPELINE_CONTEXT_LLM.TOOL_EXECUTION_ORDERED}\n\n${ordered.toolExecution.trim()}`,
-            })
-          }
-          if (ordered.skillsFallback?.trim()) {
-            messages.push({
-              role: 'user',
-              content: `${PIPELINE_CONTEXT_LLM.SKILLS_OUTPUT}\n\n${ordered.skillsFallback.trim()}`,
-            })
-          }
-        } else {
-          const toolLoop = this.stepOutputs.toolLoop?.trim()
-          if (toolLoop) {
-            messages.push({
-              role: 'user',
-              content: `${PIPELINE_CONTEXT_LLM.TOOL_EXECUTION_OUTPUT}\n\n${toolLoop}`,
-            })
-          }
-        }
-      }
-
-      // Append collected form values so downstream steps (summary, retry) see what was submitted.
-      const formEntries = Object.entries(this.collectedFormByTodoId)
-      if (formEntries.length > 0) {
-        const lines = formEntries
-          .map(([id, vals]) => `Todo #${id}: ${JSON.stringify(vals)}`)
-          .join('\n')
-        messages.push({
-          role: 'user',
-          content: `Collected form data:\n${lines}`,
-        })
-      }
-    }
-
-    if (opts.summary) {
-      const def = reg?.get(SUMMARY_STEP_ID)
-      const entries = this.outputStore.all(SUMMARY_STEP_ID)
-      if (def?.toContextMessages && entries.length > 0) {
-        messages.push(...def.toContextMessages(entries, this))
-      } else if (this.stepOutputs.summary?.summary?.trim()) {
-        messages.push({
-          role: 'user',
-          content: `${PIPELINE_CONTEXT_LLM.RUN_SUMMARY}\n\n${formatSummaryForContext(this.stepOutputs.summary)}`,
-        })
-      }
-    }
-
-    return messages
+    return buildPipelineContextMessagesHelper(this, opts)
   }
 
   /** Last user message in the thread (walks backward). Falls back to last message content if none. */
@@ -800,282 +537,7 @@ export class AgentFlowContext {
   }
 
   buildStructuredAssistantContent(): string {
-    const reg = this.pipelineRegistry
-    const planning = this.stepOutputs.planning
-    const planRaw = planning?.raw?.trim() ?? ''
-    const toolOutput = this.stepOutputs.toolLoop?.trim() ?? ''
-    const skillsOutput = this.stepOutputs.skills?.trim() ?? ''
-    const runSummary = this.stepOutputs.summary
-      ? summaryDisplayText(this.stepOutputs.summary)
-      : ''
-    const report = this.stepOutputs.report?.trim() ?? ''
-
-    const subSteps: AssistantSubStep[] = []
-    const stepCaptures: StepRunCapture[] = []
-
-    const sandboxOutputPaths = collectSandboxOutputLinkPaths(this.sandbox)
-
-    const thinkingRaw = this.stepOutputs.thinking?.raw?.trim() ?? ''
-    const directAnswerResponse =
-      this.stepOutputs.thinking?.execution_mode === 'direct_answer'
-        ? this.stepOutputs.thinking?.response?.trim() ?? ''
-        : ''
-
-    const stageOrder: FlowStageId[] = [
-      THINKING_STEP_ID,
-      PLANNING_STEP_ID,
-      SEARCH_STEP_ID,
-      WEB_SCRAPE_STEP_ID,
-      CREATE_PAPER_STEP_ID,
-      TOOL_LOOP_STEP_ID,
-      SUMMARY_STEP_ID,
-      REPORT_STEP_ID,
-    ]
-    if (reg) {
-      for (const stageId of stageOrder) {
-        const def = reg.get(stageId)
-        const entries = this.outputStore.all(stageId)
-        if (!def || entries.length === 0) continue
-        const sub = def.toSubStep?.(entries, this)
-        if (sub) subSteps.push(sub)
-        const cap = def.toStepCapture?.(entries, this)
-        if (cap) stepCaptures.push(cap)
-      }
-    } else {
-      if (thinkingRaw) {
-        subSteps.push({
-          type: 'ThinkingStep',
-          title: 'Thinking',
-          content: thinkingRaw,
-        })
-        stepCaptures.push({
-          stepType: 'ThinkingStep',
-          title: 'Thinking',
-          content: thinkingRaw,
-          outputPaths: [],
-        })
-      }
-      if (planRaw) {
-        subSteps.push({
-          type: 'PlanningStep',
-          title: 'Planning',
-          content: planRaw,
-        })
-        stepCaptures.push({
-          stepType: 'PlanningStep',
-          title: 'Planning',
-          content: planRaw,
-          outputPaths: [],
-        })
-      }
-      const toolExecutionContent = [toolOutput, skillsOutput]
-        .filter(Boolean)
-        .join('\n\n')
-        .trim()
-      if (toolExecutionContent) {
-        subSteps.push({
-          type: 'SkillsToolExecutionStep',
-          title: TOOL_LOOP_STEP_TITLE,
-          content: toolExecutionContent,
-        })
-        stepCaptures.push({
-          stepType: 'SkillsToolExecutionStep',
-          title: TOOL_LOOP_STEP_TITLE,
-          content: toolExecutionContent,
-          outputPaths:
-            sandboxOutputPaths.length > 0 ? [...sandboxOutputPaths] : [],
-        })
-      }
-      if (runSummary) {
-        subSteps.push({
-          type: 'SummaryStep',
-          title: 'Summary',
-          content: runSummary,
-        })
-        stepCaptures.push({
-          stepType: 'SummaryStep',
-          title: 'Summary',
-          content: runSummary,
-          outputPaths: [],
-        })
-      }
-      if (report) {
-        subSteps.push({ type: 'ReportStep', title: 'Report', content: report })
-        const reportPaths =
-          this.sandbox.layout != null
-            ? [
-                join(
-                  this.sandbox.layout.root,
-                  'output',
-                  'results',
-                  'result-snapshot.pdf',
-                ),
-              ]
-            : []
-        stepCaptures.push({
-          stepType: 'ReportStep',
-          title: 'Report',
-          content: report,
-          outputPaths: reportPaths,
-        })
-      }
-    }
-
-    const planningRefPaths = uniqueStrings(
-      (planning?.todoList ?? []).flatMap((t) => [
-        ...(t.reference_doc?.map((d) =>
-          this.references.referenceLocationString(d),
-        ) ?? []),
-        ...(t.reference_scripts?.map((s) =>
-          this.references.referenceLocationString(s),
-        ) ?? []),
-      ]),
-    )
-
-    const completedTodoOutputs =
-      planning?.todoList
-        .filter((item) => item.status === 'completed' && item.output?.trim())
-        .map(
-          (item) =>
-            `${STRUCTURED_CONTENT_LLM.COMPLETED_TASK.replace('{id}', String(item.id)).replace('{description}', item.description)}\n${item.output!.trim()}`,
-        ) ?? []
-
-    const finalGoalResult =
-      completedTodoOutputs.length > 0
-        ? [
-            planning?.finalGoal?.trim()
-              ? `${STRUCTURED_CONTENT_LLM.GOAL_PREFIX} ${planning.finalGoal.trim()}`
-              : '',
-            ...completedTodoOutputs,
-          ]
-            .filter(Boolean)
-            .join('\n\n')
-        : ''
-
-    const toolExecutionContent = [toolOutput, skillsOutput]
-      .filter(Boolean)
-      .join('\n\n')
-      .trim()
-    const createPaperDigest = latestCreatePaperDigest(this.outputStore)
-
-    const aggregatedSections: string[] = []
-    if (directAnswerResponse) {
-      aggregatedSections.push(directAnswerResponse)
-    }
-    if (thinkingRaw) {
-      aggregatedSections.push(
-        `${STRUCTURED_CONTENT_LLM.SECTION_THINKING}\n\n${thinkingRaw}`,
-      )
-    }
-    if (finalGoalResult) {
-      aggregatedSections.push(
-        `${STRUCTURED_CONTENT_LLM.SECTION_GOALS_COMPLETED}\n\n${finalGoalResult}`,
-      )
-    } else if (planRaw) {
-      aggregatedSections.push(
-        `${STRUCTURED_CONTENT_LLM.SECTION_PLANNING}\n\n${planRaw}`,
-      )
-    }
-    if (toolExecutionContent) {
-      aggregatedSections.push(
-        `${STRUCTURED_CONTENT_LLM.SECTION_SKILLS_TOOL}\n\n${toolExecutionContent}`,
-      )
-    }
-    if (runSummary) {
-      aggregatedSections.push(
-        `${STRUCTURED_CONTENT_LLM.SECTION_SUMMARY}\n\n${runSummary}`,
-      )
-    }
-    if (report) {
-      aggregatedSections.push(
-        `${STRUCTURED_CONTENT_LLM.SECTION_REPORT}\n\n${report}`,
-      )
-    } else if (createPaperDigest) {
-      aggregatedSections.push(
-        `${STRUCTURED_CONTENT_LLM.SECTION_RESEARCH_REPORT}\n\n${createPaperDigest}`,
-      )
-    }
-
-    const aggregatedFinal = aggregatedSections
-      .join(STRUCTURED_CONTENT_LLM.SECTION_SEPARATOR)
-      .trim()
-
-    const legacyFallback =
-      directAnswerResponse ||
-      finalGoalResult ||
-      report ||
-      createPaperDigest ||
-      skillsOutput ||
-      toolOutput ||
-      runSummary ||
-      thinkingRaw ||
-      ''
-
-    const finalResult = aggregatedFinal || legacyFallback
-
-    const researchReport = buildResearchReportRef(this.outputStore)
-    const pipelineConversation = buildPipelineConversationTurns(this)
-
-    const allArtifactPaths = uniqueStrings([
-      ...planningRefPaths,
-      ...collectSandboxArtifactPaths(this.sandbox),
-      ...stepCaptures.flatMap((s) => s.outputPaths),
-      ...(researchReport ? [researchReport.pdfPath] : []),
-    ])
-
-    const outputRoot = this.sandbox.getRoot()
-      ? sandboxOutputDir(this.sandbox.getRoot()!)
-      : undefined
-
-    for (let i = 0; i < stepCaptures.length; i++) {
-      const capture = stepCaptures[i]!
-      const stageId = flowStageIdForStepCapture(capture.stepType)
-      const attachments = stageId
-        ? this.getAggregatedAttachmentsForStage(stageId)
-        : []
-      const pathLinks = buildOutputLinksFromPaths(capture.outputPaths, {
-        restrictToDir: outputRoot,
-      })
-      const pathAttachments: StepAttachment[] = []
-      for (const link of pathLinks) {
-        let absPath = link.url
-        try {
-          absPath = fileURLToPath(link.url)
-        } catch {
-          /* keep url as path fallback */
-        }
-        pathAttachments.push({
-          path: absPath,
-          label: link.label,
-          url: link.url,
-        })
-      }
-      const merged = dedupeStepAttachments([...attachments, ...pathAttachments])
-      if (merged.length > 0) {
-        capture.attachments = merged
-      }
-    }
-
-    const structuredContent: AssistantStructuredContent = {
-      version: 2,
-      assistantContent: {
-        outer: {
-          finalResult,
-          report,
-          stepCaptures: stepCaptures.length > 0 ? stepCaptures : undefined,
-          allArtifactPaths:
-            allArtifactPaths.length > 0 ? allArtifactPaths : undefined,
-          ...(researchReport ? { researchReport } : {}),
-          ...(pipelineConversation.length > 0 ? { pipelineConversation } : {}),
-        },
-        subSteps,
-      },
-    }
-
-    return limitMessageContentForPersistence(
-      JSON.stringify(structuredContent),
-      'assistant',
-    )
+    return buildStructuredAssistantContentHelper(this)
   }
 
   /** Completed steps in pipeline order (for persistence / reload). */
@@ -1090,115 +552,45 @@ export class AgentFlowContext {
   }
 
   getStepAttachments(stepKey: string): StepAttachment[] {
-    return [...(this.stepAttachmentsByKey.get(stepKey) ?? [])]
+    return getStepAttachmentsHelper(this.stepAttachmentsByKey, stepKey)
   }
 
   /** Output files produced by the latest completed tool-loop run for a todo. */
   getToolLoopAttachmentsForTodo(todoId: number): StepAttachment[] {
-    const steps = this.getOrderedStepContexts().filter(
-      (s) =>
-        s.stepId === TOOL_LOOP_STEP_ID &&
-        Boolean(s.completedAt) &&
-        s.meta?.todoId === todoId,
+    return getToolLoopAttachmentsForTodoHelper(
+      this.getOrderedStepContexts(),
+      this.stepAttachmentsByKey,
+      todoId,
     )
-    if (steps.length === 0) return []
-    return this.getStepAttachments(steps[steps.length - 1]!.key)
   }
 
   appendStepAttachments(stepKey: string, items: readonly StepAttachment[]): void {
-    if (!items.length) return
-    const merged = mergeStepAttachments(
-      this.stepAttachmentsByKey.get(stepKey) ?? [],
-      items,
-    )
-    this.stepAttachmentsByKey.set(stepKey, merged)
+    appendStepAttachmentsHelper(this.stepAttachmentsByKey, stepKey, items)
   }
 
   /** Union tool-loop attachments (includes per-todo child runs) for structured captures. */
   getAggregatedAttachmentsForStage(stageId: FlowStageId): StepAttachment[] {
-    if (stageId === TOOL_LOOP_STEP_ID || stageId === SKILLS_STEP_ID) {
-      let merged: StepAttachment[] = []
-      for (const step of this.stepHistory) {
-        if (step.stepId !== TOOL_LOOP_STEP_ID) continue
-        merged = mergeStepAttachments(
-          merged,
-          this.getStepAttachments(step.key),
-        )
-      }
-      return merged
-    }
-    let merged: StepAttachment[] = []
-    for (const step of this.stepHistory) {
-      if (step.stepId !== stageId) continue
-      merged = mergeStepAttachments(merged, this.getStepAttachments(step.key))
-    }
-    return merged
+    return getAggregatedAttachmentsForStageHelper(
+      this.stepHistory,
+      this.stepAttachmentsByKey,
+      stageId,
+    )
   }
 
   mergeToolLoopAttachmentsIntoParent(parentStepKey: string): void {
-    const parent = this.stepHistory.find((s) => s.key === parentStepKey)
-    if (!parent) return
-
-    let merged = this.getStepAttachments(parentStepKey)
-
-    for (const step of this.stepHistory) {
-      if (step.stepId !== TOOL_LOOP_STEP_ID) continue
-      if (step.key === parentStepKey) continue
-      merged = mergeStepAttachments(merged, this.getStepAttachments(step.key))
-      merged = this.appendScanLinksToAttachments(
-        merged,
-        collectOutputLinksForStep(step, this.sandbox, this.references),
-      )
-    }
-
-    merged = this.appendScanLinksToAttachments(
-      merged,
-      collectOutputLinksForStep(parent, this.sandbox, this.references),
+    mergeToolLoopAttachmentsIntoParentHelper(
+      {
+        stepHistory: this.stepHistory,
+        stepAttachmentsByKey: this.stepAttachmentsByKey,
+        sandbox: this.sandbox,
+        references: this.references,
+        publishStepProgress: (step) => this.publishStepProgress(step),
+      },
+      parentStepKey,
     )
-
-    if (merged.length === 0) return
-    this.stepAttachmentsByKey.set(parentStepKey, merged)
-    this.publishStepProgress(parent)
   }
 
-  private appendScanLinksToAttachments(
-    attachments: readonly StepAttachment[],
-    scanLinks: Array<{ label: string; url: string }>,
-  ): StepAttachment[] {
-    let merged = [...attachments]
-    const seenPaths = new Set(
-      merged.map((a) => a.path.replace(/\\/g, '/').toLowerCase()),
-    )
-    for (const link of scanLinks) {
-      let absPath: string | undefined
-      try {
-        absPath = fileURLToPath(link.url)
-      } catch {
-        continue
-      }
-      const key = absPath.replace(/\\/g, '/').toLowerCase()
-      if (seenPaths.has(key)) continue
-      seenPaths.add(key)
-      merged = mergeStepAttachments(merged, [
-        {
-          path: absPath,
-          label: link.label,
-          url: link.url,
-        },
-      ])
-    }
-    return dedupeStepAttachments(merged)
-  }
-
-  private mergeAttachmentsWithScanLinks(
-    stepContext: AgentStepSnapshot,
-    scanLinks: Array<{ label: string; url: string }>,
-  ): StepAttachment[] {
-    const attachments = this.getStepAttachments(stepContext.key)
-    return this.appendScanLinksToAttachments(attachments, scanLinks)
-  }
-
-  getStepContext(stepId: AgentStepId): AgentStepSnapshot | undefined {
+    getStepContext(stepId: AgentStepId): AgentStepSnapshot | undefined {
     return this.stepContexts[stepId]
   }
 
@@ -1248,7 +640,7 @@ export class AgentFlowContext {
         ...meta,
       }
     }
-    if (this.shouldRegisterToolLoopStepContext(stepId, title, meta)) {
+    if (shouldRegisterToolLoopStepContext(stepId, title, meta)) {
       this.stepContexts[stepId] = stepContext
     }
     this.publishStepProgress(stepContext)
@@ -1304,7 +696,8 @@ export class AgentFlowContext {
       this.sandbox,
       this.references,
     )
-    const attachments = this.mergeAttachmentsWithScanLinks(
+    const attachments = mergeAttachmentsWithScanLinks(
+      this.stepAttachmentsByKey,
       stepContext,
       scanLinks,
     )
@@ -1389,86 +782,16 @@ export class AgentFlowContext {
     this.currentMessages = [...this.opts.messages, ...assistantTurns]
   }
 
-  private getCompletedStepsForId(stepId: AgentStepId): AgentStepSnapshot[] {
-    return this.getOrderedStepContexts().filter(
-      (s) => s.stepId === stepId && Boolean(s.completedAt),
-    )
-  }
-
-  private formatCompletedStepSegment(step: AgentStepSnapshot): string {
-    const body = formatAgentStepOutputBody(step)
-    const summary = step.summary?.trim()
-    const parts: string[] = []
-    if (step.title?.trim()) parts.push(`**${step.title.trim()}**`)
-    if (step.goal?.trim()) parts.push(`**Goal:**\n${step.goal.trim()}`)
-    if (summary) parts.push(`**Summary:**\n${summary}`)
-    if (body) parts.push(body)
-    return parts.join('\n\n').trim()
-  }
-
-  private aggregateStringOutputsFromHistory(stepId: AgentStepId): string {
-    if (stepId === TOOL_LOOP_STEP_ID) {
-      const digest = this.buildToolLoopOutputDigest()
-      if (digest) return digest
+  private stepIoHistoryHost() {
+    return {
+      outputStore: this.outputStore,
+      stepOutputs: this.stepOutputs,
+      getOrderedStepContexts: () => this.getOrderedStepContexts(),
     }
-    return this.getCompletedStepsForId(stepId)
-      .filter((s) => s.meta?.pendingApproval !== true)
-      .map((s) => this.formatCompletedStepSegment(s))
-      .filter(Boolean)
-      .join('\n\n---\n\n')
   }
 
-  /** Completed tool-loop rows excluding HITL pause snapshots. */
-  private getToolLoopStepsForDigest(): AgentStepSnapshot[] {
-    return this.getCompletedStepsForId(TOOL_LOOP_STEP_ID).filter(
-      (s) => s.meta?.pendingApproval !== true,
-    )
-  }
-
-  private isBatchToolLoopRollupStep(step: AgentStepSnapshot): boolean {
-    return (
-      isAgenticRunParentStepTitle(step.title) &&
-      typeof step.meta?.todoId !== 'number'
-    )
-  }
-
-  private latestToolLoopStepByTodoId(
-    steps: AgentStepSnapshot[],
-  ): Map<number, AgentStepSnapshot> {
-    const byTodo = new Map<number, AgentStepSnapshot>()
-    for (const s of steps) {
-      const todoId = s.meta?.todoId
-      if (typeof todoId !== 'number' || !Number.isFinite(todoId)) continue
-      const prev = byTodo.get(todoId)
-      if (!prev || s.sequence > prev.sequence) {
-        byTodo.set(todoId, s)
-      }
-    }
-    return byTodo
-  }
-
-  /**
-   * Planned-task outline for summary/report (status + output excerpt from plan state).
-   */
   formatPlannedTasksOutlineForSummary(): string {
-    const planData =
-      this.outputStore.latest<import('./steps/step-io').PlanningStepData>(
-        PLANNING_STEP_ID,
-      )
-    const todos =
-      planData?.todoList ?? this.stepOutputs.planning?.todoList ?? []
-    if (todos.length === 0) return ''
-    return todos
-      .map((t) => {
-        const head = `- Task ${t.id} [${t.status}]: ${t.name?.trim() || '(unnamed)'}`
-        const desc = t.description?.trim()
-        const criteria = t.success_criteria?.trim()
-        const lines = [head]
-        if (desc) lines.push(`  Description: ${desc}`)
-        if (criteria) lines.push(`  Success criteria: ${criteria}`)
-        return lines.join('\n')
-      })
-      .join('\n')
+    return formatPlannedTasksOutlineForSummaryHelper(this.stepIoHistoryHost())
   }
 
   /**
@@ -1478,110 +801,45 @@ export class AgentFlowContext {
     toolExecution: string
     skillsFallback: string
   } {
-    const planData =
-      this.outputStore.latest<import('./steps/step-io').PlanningStepData>(
-        PLANNING_STEP_ID,
-      )
-    const plan = this.stepOutputs.planning
-    const todos = planData?.todoList ?? plan?.todoList ?? []
-    const steps = this.getToolLoopStepsForDigest()
-    const byTodoId = this.latestToolLoopStepByTodoId(steps)
-    const hasPerTodoSteps = byTodoId.size > 0
-
-    const sections: string[] = []
-
-    if (todos.length > 0) {
-      for (const t of todos) {
-        const step = byTodoId.get(t.id)
-        const header = STRUCTURED_CONTENT_LLM.TASK_HEADER.replace(
-          '{id}',
-          String(t.id),
-        )
-          .replace(
-            '{name}',
-            t.name?.trim() || STRUCTURED_CONTENT_LLM.TASK_UNNAMED,
-          )
-          .replace('{status}', t.status)
-        if (step) {
-          const body = this.formatCompletedStepSegment(step)
-          sections.push(body ? `${header}\n\n${body}` : header)
-          continue
-        }
-        const out = t.output?.trim()
-        if (!out) {
-          sections.push(
-            `${header}\n\n(No tool-loop step output recorded for this task.)`,
-          )
-        }
-      }
-    } else if (hasPerTodoSteps) {
-      const ordered = [...byTodoId.entries()].sort(([a], [b]) => a - b)
-      for (const [, step] of ordered) {
-        const seg = this.formatCompletedStepSegment(step)
-        if (seg) sections.push(seg)
-      }
-    }
-
-    if (sections.length === 0) {
-      const fallback = steps
-        .filter((s) => !hasPerTodoSteps || !this.isBatchToolLoopRollupStep(s))
-        .map((s) => this.formatCompletedStepSegment(s))
-        .filter(Boolean)
-        .join('\n\n---\n\n')
-      return { toolExecution: fallback, skillsFallback: '' }
-    }
-
-    return { toolExecution: sections.join('\n\n---\n\n'), skillsFallback: '' }
+    return formatOrderedExecutionForSummaryHelper(this.stepIoHistoryHost())
   }
 
   /** Canonical tool-loop digest for {@link stepOutputs} and downstream steps. */
   buildToolLoopOutputDigest(): string {
-    const { toolExecution } = this.formatOrderedExecutionForSummary()
-    if (toolExecution.trim()) return toolExecution.trim()
-    return this.getToolLoopStepsForDigest()
-      .filter((s) => !this.isBatchToolLoopRollupStep(s))
-      .map((s) => this.formatCompletedStepSegment(s))
-      .filter(Boolean)
-      .join('\n\n---\n\n')
+    return buildToolLoopOutputDigestHelper(this.stepIoHistoryHost())
   }
 
-  private latestStructuredOutputFromHistory<T>(
-    stepId: AgentStepId,
-  ): T | undefined {
-    const steps = this.getCompletedStepsForId(stepId)
-    if (steps.length === 0) return undefined
-    return steps[steps.length - 1]!.output as T
-  }
-
-  /**
+    /**
    * Rebuilds {@link stepOutputs} from every completed row in {@link stepHistory}
    * so multiple runs of the same stepId (todos, retries, approval resume) are all
    * visible to summary, report, and structured content builders.
    */
   rebuildStepOutputsFromHistory(): void {
     const next: StepOutputs = {}
+    const ordered = this.getOrderedStepContexts()
 
     const thinking =
-      this.latestStructuredOutputFromHistory<ThinkingResult>(THINKING_STEP_ID)
+      latestStructuredOutputFromHistory<ThinkingResult>(ordered, THINKING_STEP_ID)
     if (thinking) next.thinking = thinking
 
     const planning =
-      this.latestStructuredOutputFromHistory<PlanningResult>(PLANNING_STEP_ID)
+      latestStructuredOutputFromHistory<PlanningResult>(ordered, PLANNING_STEP_ID)
     if (planning) next.planning = planning
 
-    const skills = this.aggregateStringOutputsFromHistory(SKILLS_STEP_ID)
+    const ioHost = this.stepIoHistoryHost()
+    const skills = aggregateStringOutputsFromHistory(ioHost, SKILLS_STEP_ID)
     if (skills) next.skills = skills
 
-    const toolLoop = this.aggregateStringOutputsFromHistory(TOOL_LOOP_STEP_ID)
+    const toolLoop = aggregateStringOutputsFromHistory(ioHost, TOOL_LOOP_STEP_ID)
     if (toolLoop) next.toolLoop = toolLoop
 
     let summary =
-      this.latestStructuredOutputFromHistory<SummaryResult>(SUMMARY_STEP_ID)
+      latestStructuredOutputFromHistory<SummaryResult>(ordered, SUMMARY_STEP_ID)
     if (!summary) {
-      const legacy = this.latestStructuredOutputFromHistory<{
+      const legacy = latestStructuredOutputFromHistory<{
         summary?: string
         reason?: string
-      }>('analysis' as AgentStepId)
+      }>(ordered, 'analysis' as AgentStepId)
       const legacyText = legacy?.summary?.trim() || legacy?.reason?.trim() || ''
       if (legacyText) {
         summary = {
@@ -1595,7 +853,7 @@ export class AgentFlowContext {
     }
     if (summary) next.summary = summary
 
-    const reportSteps = this.getCompletedStepsForId(REPORT_STEP_ID)
+    const reportSteps = getCompletedStepsForId(ordered, REPORT_STEP_ID)
     const lastReport = reportSteps[reportSteps.length - 1]
     const report = lastReport
       ? (lastReport.renderedOutput?.trim() ??
@@ -1603,7 +861,7 @@ export class AgentFlowContext {
       : ''
     if (report) next.report = report
 
-    const prompt = this.aggregateStringOutputsFromHistory(PROMPT_STEP_ID)
+    const prompt = aggregateStringOutputsFromHistory(ioHost, PROMPT_STEP_ID)
     if (prompt) next.prompt = prompt
 
     this.stepOutputs = next
@@ -1639,122 +897,39 @@ export class AgentFlowContext {
     stepId?: AgentStepId,
     instanceKey?: string,
   ): void {
-    if (!chunk) return
-    let target = instanceKey
-      ? this.stepHistory.find((step) => step.key === instanceKey)
-      : stepId
-        ? this.stepContexts[stepId] ??
-          this.stepHistory.find((step) => step.stepId === stepId)
-        : this.getLatestStepContext()
-    if (!target || !this.opts.onStepProgress) {
-      if (this.opts.onStepProgress && this.stepHistory.length > 0) {
-        target = this.getLatestStepContext()
-      }
-    }
-    if (!target || !this.opts.onStepProgress) {
-      this.opts.onChunk(chunk)
-      return
-    }
-    const next = limitPersistedStepText(
-      (this.stepProgressTextByKey.get(target.key) ?? '') + chunk,
+    emitStepProgressHelper(
+      {
+        opts: this.opts,
+        stepHistory: this.stepHistory,
+        stepContexts: this.stepContexts,
+        stepProgressTextByKey: this.stepProgressTextByKey,
+        stepAttachmentsByKey: this.stepAttachmentsByKey,
+        flowId: this.flowId,
+        lastHitlPausedStageId: this.lastHitlPausedStageId,
+        getLatestStepContext: () => this.getLatestStepContext(),
+      },
+      chunk,
+      stepId,
+      instanceKey,
     )
-    this.stepProgressTextByKey.set(target.key, next)
-    const publishTarget = this.resolvePublishStepProgressTarget(target, chunk)
-    if (!publishTarget) return
-    this.publishStepProgress(publishTarget)
-  }
-
-  /**
-   * Per-todo tool-loop steps are not streamed directly; mirror their progress
-   * onto the batch parent so live IPC/UI updates stay visible.
-   */
-  private resolvePublishStepProgressTarget(
-    stepContext: AgentStepSnapshot,
-    chunk: string,
-  ): AgentStepSnapshot | null {
-    if (this.shouldPublishStepProgress(stepContext)) return stepContext
-    const parent = this.stepContexts[TOOL_LOOP_STEP_ID]
-    if (!parent || parent.key === stepContext.key) return null
-    if (!this.shouldPublishStepProgress(parent)) return null
-    const parentNext = limitPersistedStepText(
-      (this.stepProgressTextByKey.get(parent.key) ?? '') + chunk,
-    )
-    this.stepProgressTextByKey.set(parent.key, parentNext)
-    return parent
   }
 
   private getLatestStepContext(): AgentStepSnapshot | undefined {
     return [...this.stepHistory].sort((a, b) => b.sequence - a.sequence)[0]
   }
 
-  private buildStepProgressPayload(
-    stepContext: AgentStepSnapshot,
-  ): AgentStepProgressPayload {
-    const attachments = this.getStepAttachments(stepContext.key)
-    const runScope = getCurrentAgentRunScope()
-    const flowId = runScope?.runId ?? this.flowId
-    return {
-      stepKey: stepContext.key,
-      stepId: stepContext.stepId,
-      title: stepContext.title,
-      sequence: stepContext.sequence,
-      content: this.stepProgressTextByKey.get(stepContext.key) ?? '',
-      status: stepContext.completedAt ? 'completed' : 'running',
-      goal: stepContext.goal,
-      summary: stepContext.summary,
-      ...(attachments.length ? { attachments } : {}),
-      ...(flowId ? { runId: flowId, flowId } : {}),
-      ...(runScope?.parentRunId ? { parentRunId: runScope.parentRunId } : {}),
-      ...(this.lastHitlPausedStageId
-        ? { scopedStageId: this.lastHitlPausedStageId }
-        : {}),
-    }
-  }
-
-  private isPerTaskToolLoopStep(step: AgentStepSnapshot): boolean {
-    if (step.stepId !== TOOL_LOOP_STEP_ID) return false
-    if (step.meta?.suppressToolLoopUi === true) return true
-    if (typeof step.meta?.todoId === 'number') return true
-    return isAgenticRunPerTaskStepTitle(step.title)
-  }
-
-  /** Only the batch parent agentic-run row is streamed; per-todo attempts stay internal. */
-  private shouldRegisterToolLoopStepContext(
-    stepId: AgentStepId,
-    title: string,
-    meta?: Record<string, unknown>,
-  ): boolean {
-    if (stepId !== TOOL_LOOP_STEP_ID) return true
-    if (meta?.suppressToolLoopUi === true) return false
-    if (typeof meta?.todoId === 'number') return false
-    return title.trim() === TOOL_LOOP_STEP_TITLE
-  }
-
-  /** Per-todo foreach shells (title = task name); orchestration stays on the parent Agentic Run stream. */
-  private isPerTaskForeachItemStep(step: AgentStepSnapshot): boolean {
-    return (
-      step.stepId === FOREACH_ITEM_STEP_ID &&
-      typeof step.meta?.todoId === 'number'
-    )
-  }
-
-  private shouldPublishStepProgress(stepContext: AgentStepSnapshot): boolean {
-    if (this.isPerTaskForeachItemStep(stepContext)) return false
-    if (this.isPerTaskToolLoopStep(stepContext)) return false
-    const parentKey = this.stepContexts[TOOL_LOOP_STEP_ID]?.key
-    if (
-      stepContext.stepId === TOOL_LOOP_STEP_ID &&
-      parentKey &&
-      stepContext.key !== parentKey
-    ) {
-      return false
-    }
-    return true
-  }
-
   private publishStepProgress(stepContext: AgentStepSnapshot): void {
-    if (!this.shouldPublishStepProgress(stepContext)) return
-    this.opts.onStepProgress?.(this.buildStepProgressPayload(stepContext))
+    publishStepProgressHelper(
+      {
+        opts: this.opts,
+        stepContexts: this.stepContexts,
+        flowId: this.flowId,
+        lastHitlPausedStageId: this.lastHitlPausedStageId,
+        stepProgressTextByKey: this.stepProgressTextByKey,
+        stepAttachmentsByKey: this.stepAttachmentsByKey,
+      },
+      stepContext,
+    )
   }
 }
 
@@ -2033,6 +1208,8 @@ export class AgentStepContext {
   syncSandboxForToolExecution(toolLoopScope?: string): void {
     this.sandbox.syncBindingToTools()
     this.sandbox.syncWorkspaceToTools()
+    setAgentRunConversationId(this.sandbox.getConversationId())
+    setAgentRunAssistantMessageId(this.opts.assistantMessageId)
     const scope = toolLoopFilesystemScopeFromStepKey(toolLoopScope ?? '')
     if (!scope) return
     this.sandbox.activateToolLoopOutputScope(scope)

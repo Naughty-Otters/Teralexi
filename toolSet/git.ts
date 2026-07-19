@@ -15,7 +15,13 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { z } from 'zod'
 import type { SkillTool } from '@main/skills/actions'
-import { ghCreatePr as ghCreatePrService } from '@main/agent/workspace/git-service'
+import {
+  ghCreatePr as ghCreatePrService,
+} from '@main/agent/workspace/git-service'
+import {
+  GIT_NOT_FOUND_MESSAGE,
+  resolveGitBinary,
+} from '@main/agent/workspace/git-binary'
 import { getSandboxRootFromEnv } from './sandbox-paths'
 import { resolveActiveGitCwd } from './git-cwd'
 import { stampCommandToolResult } from '@shared/tool-result/terminal-capture'
@@ -70,8 +76,9 @@ export async function runGitCommand(options: {
   }
 
   const cwd = cwdResolved.cwd
+  const gitBin = resolveGitBinary()
   try {
-    const { stdout, stderr } = await execFileAsync('git', args, {
+    const { stdout, stderr } = await execFileAsync(gitBin, args, {
       cwd,
       timeout: timeoutMs ?? DEFAULT_TIMEOUT_MS,
       maxBuffer: MAX_BUFFER,
@@ -103,8 +110,7 @@ export async function runGitCommand(options: {
         cwd,
         command: formatGitCommand(args),
         args,
-        error:
-          'git executable not found on PATH. Install Git and ensure it is available to the app.',
+        error: GIT_NOT_FOUND_MESSAGE,
       }
     }
     const exitCode = typeof execErr.code === 'number' ? execErr.code : 1

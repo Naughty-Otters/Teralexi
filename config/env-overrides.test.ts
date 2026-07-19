@@ -82,6 +82,13 @@ APP_DEV_PORT=3000
     expect(
       resolveBuildTimeEnvFilePaths(fakeRepo(), { TERALEXI_BUILD_ENV: 'prod' }),
     ).toEqual([join(fakeRepo(), 'env', '.prod.env')])
+    expect(
+      resolveBuildTimeEnvFilePaths(fakeRepo(), { TERALEXI_BUILD_ENV: 'dev' }),
+    ).toEqual([
+      join(fakeRepo(), 'env', '.dev.env'),
+      join(fakeRepo(), 'env', '.env'),
+      join(fakeRepo(), 'env', '.dev.local.env'),
+    ])
   })
 
   it('loads dev env file when unpackaged', () => {
@@ -89,7 +96,7 @@ APP_DEV_PORT=3000
       pathEndsWith(String(target), 'env/.dev.env'),
     )
     vi.mocked(readFileSync).mockReturnValue(
-      "BASE_API = 'http://127.0.0.1:8000'\n",
+      "BASE_API = 'https://api.teralexi.com/'\n",
     )
 
     const overrides = loadEnvOverrides({
@@ -98,7 +105,77 @@ APP_DEV_PORT=3000
       processEnv: { TERALEXI_BUILD_ENV: 'dev' },
     })
 
-    expect(overrides.get('app.base.apiUrl')).toBe('http://127.0.0.1:8000')
+    expect(overrides.get('app.base.apiUrl')).toBe('https://api.teralexi.com/')
+  })
+
+  it('merges env/.env over env/.dev.env when present', () => {
+    vi.mocked(existsSync).mockImplementation(
+      (target) =>
+        pathEndsWith(String(target), 'env/.dev.env') ||
+        pathEndsWith(String(target), 'env/.env'),
+    )
+    vi.mocked(readFileSync).mockImplementation((target) => {
+      if (pathEndsWith(String(target), 'env/.env')) {
+        return "BASE_API = 'http://localhost:8000'\n"
+      }
+      return "BASE_API = 'https://api.teralexi.com/'\n"
+    })
+
+    const overrides = loadEnvOverrides({
+      knownKeys: ['app.base.apiUrl'],
+      searchRoots: ['/Users/tester/code/Teralexi'],
+      processEnv: { TERALEXI_BUILD_ENV: 'dev' },
+    })
+
+    expect(overrides.get('app.base.apiUrl')).toBe('http://localhost:8000')
+  })
+
+  it('merges env/.dev.local.env over env/.env when present', () => {
+    vi.mocked(existsSync).mockImplementation(
+      (target) =>
+        pathEndsWith(String(target), 'env/.dev.env') ||
+        pathEndsWith(String(target), 'env/.env') ||
+        pathEndsWith(String(target), 'env/.dev.local.env'),
+    )
+    vi.mocked(readFileSync).mockImplementation((target) => {
+      if (pathEndsWith(String(target), 'env/.dev.local.env')) {
+        return "BASE_API = 'http://127.0.0.1:9000'\n"
+      }
+      if (pathEndsWith(String(target), 'env/.env')) {
+        return "BASE_API = 'http://localhost:8000'\n"
+      }
+      return "BASE_API = 'https://api.teralexi.com/'\n"
+    })
+
+    const overrides = loadEnvOverrides({
+      knownKeys: ['app.base.apiUrl'],
+      searchRoots: ['/Users/tester/code/Teralexi'],
+      processEnv: { TERALEXI_BUILD_ENV: 'dev' },
+    })
+
+    expect(overrides.get('app.base.apiUrl')).toBe('http://127.0.0.1:9000')
+  })
+
+  it('merges env/.dev.local.env over env/.dev.env when present', () => {
+    vi.mocked(existsSync).mockImplementation(
+      (target) =>
+        pathEndsWith(String(target), 'env/.dev.env') ||
+        pathEndsWith(String(target), 'env/.dev.local.env'),
+    )
+    vi.mocked(readFileSync).mockImplementation((target) => {
+      if (pathEndsWith(String(target), 'env/.dev.local.env')) {
+        return "BASE_API = 'http://localhost:8000'\n"
+      }
+      return "BASE_API = 'https://api.teralexi.com/'\n"
+    })
+
+    const overrides = loadEnvOverrides({
+      knownKeys: ['app.base.apiUrl'],
+      searchRoots: ['/Users/tester/code/Teralexi'],
+      processEnv: { TERALEXI_BUILD_ENV: 'dev' },
+    })
+
+    expect(overrides.get('app.base.apiUrl')).toBe('http://localhost:8000')
   })
 
   it('uses baked values when packaged', () => {

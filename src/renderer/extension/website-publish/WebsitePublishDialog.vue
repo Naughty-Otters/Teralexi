@@ -217,6 +217,7 @@ import type {
   SkillComposerToolbarPreviewResult,
 } from '@shared/agent/skill-composer-toolbar'
 import { openExternalUrl } from '@renderer/lib/open-external-url'
+import { useSandboxPreviewSuppress } from '@renderer/views/agent-chat/sandboxPreviewSuppress'
 
 export type WebsitePublishDialogPhase = 'confirm' | 'publishing' | 'result'
 
@@ -236,6 +237,9 @@ const emit = defineEmits<{
 const titleId = 'website-publish-dialog-title'
 const copied = ref(false)
 let copiedTimer: ReturnType<typeof setTimeout> | null = null
+
+// Native report-panel WebContentsView ignores CSS z-index — hide it while open.
+useSandboxPreviewSuppress(() => props.open)
 
 watch(
   () => props.open,
@@ -332,7 +336,8 @@ function openUrl() {
 .wp-dialog-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  /* Above teleported menus (~10050) and report-panel DOM; title bar stays higher. */
+  z-index: 20000;
   display: grid;
   place-items: center;
   background: rgba(0, 0, 0, 0.45);

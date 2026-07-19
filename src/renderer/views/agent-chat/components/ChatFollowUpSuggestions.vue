@@ -48,11 +48,14 @@ const recommendedId = computed(() => sortedItems.value[0]?.id ?? null)
 
 <style scoped>
 .chat-follow-ups {
+  position: relative;
+  z-index: 40;
   margin: 0.65rem 0 0.15rem;
   padding: 0.55rem 0.7rem;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--ui-border, #d4d4d8) 80%, transparent);
   background: color-mix(in srgb, var(--ui-bg, #fff) 92%, var(--ui-primary, #3b82f6) 8%);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--ui-text) 8%, transparent);
 }
 
 .chat-follow-ups__title {

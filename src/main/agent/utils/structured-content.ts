@@ -129,8 +129,9 @@ export function serializeAssistantMessageForHistory(raw: string): string {
     }
   }
 
-  const joined = lines.join('\n\n').trim()
-  return joined || raw
+  // Empty structured shells (artifact paths only, no user-facing text) must not
+  // fall back to raw JSON — that poisons history and can stall later turns.
+  return lines.join('\n\n').trim()
 }
 
 /** Outbound channel/scheduler reply: user-facing text only (no tools, reasoning, or step dumps). */

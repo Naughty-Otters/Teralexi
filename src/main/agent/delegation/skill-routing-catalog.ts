@@ -13,6 +13,7 @@ import {
   type SkillRoutingEntry,
 } from '@shared/agent/skill-triggers'
 import {
+  BEST_OF_N_TOOL_NAME,
   INVOKE_AGENT_TOOL_NAME,
   INVOKE_AGENTS_TOOL_NAME,
   SUB_AGENT_TOOL_NAMES,
@@ -21,6 +22,7 @@ import {
 const INVOKE_GATED_TOOL_NAMES = new Set([
   INVOKE_AGENT_TOOL_NAME,
   INVOKE_AGENTS_TOOL_NAME,
+  BEST_OF_N_TOOL_NAME,
 ])
 
 export type SkillRoutingCatalog = {
@@ -192,7 +194,11 @@ export function formatSubAgentToolSuffix(
   toolName: string,
   catalog: SkillRoutingCatalog,
 ): string | null {
-  if (toolName !== INVOKE_AGENT_TOOL_NAME && toolName !== INVOKE_AGENTS_TOOL_NAME) {
+  if (
+    toolName !== INVOKE_AGENT_TOOL_NAME &&
+    toolName !== INVOKE_AGENTS_TOOL_NAME &&
+    toolName !== BEST_OF_N_TOOL_NAME
+  ) {
     return null
   }
   const invokeEntries = catalog.entries.filter((e) => e.canInvoke)

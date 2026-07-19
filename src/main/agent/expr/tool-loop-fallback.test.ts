@@ -112,4 +112,32 @@ describe('resolveToolLoopFallback', () => {
     })
     expect(action).toEqual({ type: 'abort' })
   })
+
+  it('does not retry context overflow by default', () => {
+    const action = resolveToolLoopFallback({
+      failureKind: 'execution_error',
+      fallbackPlan: 'retry',
+      attempt: 1,
+      maxAttempts: 3,
+      failureSummary: 'context length exceeded',
+      classifiedError: classified(ErrorCategory.CONTEXT_OVERFLOW, false),
+    })
+    expect(action).toEqual({
+      type: 'skip_todo',
+      reason: 'context length exceeded',
+    })
+  })
+
+  it('retries context overflow when allowContextOverflowRecovery is set', () => {
+    const action = resolveToolLoopFallback({
+      failureKind: 'execution_error',
+      fallbackPlan: 'retry',
+      attempt: 1,
+      maxAttempts: 3,
+      failureSummary: 'context length exceeded',
+      classifiedError: classified(ErrorCategory.CONTEXT_OVERFLOW, false),
+      allowContextOverflowRecovery: true,
+    })
+    expect(action.type).toBe('retry_attempt')
+  })
 })

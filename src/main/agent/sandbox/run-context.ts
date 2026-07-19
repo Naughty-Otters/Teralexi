@@ -1,13 +1,9 @@
 /**
  * Active agent-run sandbox root for shell tools.
  *
- * Skill tools are often loaded from a separate esbuild bundle; they read this
- * location via `process.env` and `globalThis` (bundles share the same isolate,
- * so globalThis is reliable when env propagation is odd in Electron).
- *
- * Per-run values live in {@link runWithAgentRunScope} (AsyncLocalStorage).
- * Process globals/env are updated only inside {@link runWithExclusiveSandboxGlobals}
- * so concurrent agent runs cannot overwrite each other's sandbox paths.
+ * Skill tools are often loaded from a separate esbuild bundle; they resolve
+ * paths via getters that prefer {@link runWithAgentRunScope} (AsyncLocalStorage),
+ * then fall back to `process.env` / `globalThis` for tests and legacy callers.
  */
 import { createLogger, traceFunction } from '@main/logger'
 import {
@@ -79,8 +75,12 @@ export function clearAgentRunSandboxGlobals(): void {
 
 function setAgentRunSandboxRootImpl(root: string | undefined): void {
   const scope = getCurrentAgentRunScope()
-  if (!scope) return
-  scope.sandboxRoot = root?.trim() || undefined
+  if (scope) {
+    scope.sandboxRoot = root?.trim() || undefined
+    return
+  }
+  // Outside an agent-run ALS scope (tests / IPC): bind process globals.
+  applySandboxRootToGlobals(root)
 }
 
 function getAgentRunSandboxRootImpl(): string | undefined {
@@ -110,8 +110,11 @@ export const getAgentRunSandboxRoot = traceFunction(
 function setAgentRunSandboxOutputScopeImpl(scope: string | undefined): void {
   const trimmed = scope?.trim() || undefined
   const runScope = getCurrentAgentRunScope()
-  if (!runScope) return
-  runScope.sandboxOutputScope = trimmed
+  if (runScope) {
+    runScope.sandboxOutputScope = trimmed
+    return
+  }
+  applySandboxOutputScopeToGlobals(trimmed)
 }
 
 function getAgentRunSandboxOutputScopeImpl(): string | undefined {
@@ -160,8 +163,11 @@ function applyWorkspacePathToGlobals(workspacePath: string | undefined): void {
 
 function setAgentRunWorkspacePathImpl(workspacePath: string | undefined): void {
   const scope = getCurrentAgentRunScope()
-  if (!scope) return
-  scope.workspacePath = workspacePath?.trim() || undefined
+  if (scope) {
+    scope.workspacePath = workspacePath?.trim() || undefined
+    return
+  }
+  applyWorkspacePathToGlobals(workspacePath)
 }
 
 function getAgentRunWorkspacePathImpl(): string | undefined {
@@ -202,3 +208,89 @@ export function setAgentRunWorkspaceGlobal(workspacePath: string | undefined): v
 export function clearAgentRunWorkspaceGlobal(): void {
   applyWorkspacePathToGlobals(undefined)
 }
+
+// ── Conversation / assistant ids (ALS-first) ─────────────────────────────────
+
+function setAgentRunConversationIdImpl(conversationId: string | undefined): void {
+  const scope = getCurrentAgentRunScope()
+  const trimmed = conversationId?.trim() || undefined
+  if (scope) {
+    scope.conversationId = trimmed
+    return
+  }
+  const g = globalThis as unknown as Record<string, unknown>
+  if (trimmed) {
+    process.env[TERALEXI_AGENT_CONVERSATION_ID_ENV] = trimmed
+    g[CONVERSATION_ID_GLOBAL_KEY] = trimmed
+  } else {
+    delete process.env[TERALEXI_AGENT_CONVERSATION_ID_ENV]
+    delete g[CONVERSATION_ID_GLOBAL_KEY]
+  }
+}
+
+function getAgentRunConversationIdImpl(): string | undefined {
+  const fromScope = getCurrentAgentRunScope()?.conversationId?.trim()
+  if (fromScope) return fromScope
+
+  const g = globalThis as unknown as Record<string, unknown>
+  const fromGlobal = g[CONVERSATION_ID_GLOBAL_KEY]
+  if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
+    return fromGlobal.trim()
+  }
+  return process.env[TERALEXI_AGENT_CONVERSATION_ID_ENV]?.trim() || undefined
+}
+
+export const setAgentRunConversationId = traceFunction(
+  log,
+  'setAgentRunConversationId',
+  setAgentRunConversationIdImpl,
+)
+
+export const getAgentRunConversationId = traceFunction(
+  log,
+  'getAgentRunConversationId',
+  getAgentRunConversationIdImpl,
+)
+
+function setAgentRunAssistantMessageIdImpl(
+  assistantMessageId: string | undefined,
+): void {
+  const scope = getCurrentAgentRunScope()
+  const trimmed = assistantMessageId?.trim() || undefined
+  if (scope) {
+    scope.assistantMessageId = trimmed
+    return
+  }
+  const g = globalThis as unknown as Record<string, unknown>
+  if (trimmed) {
+    process.env[TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV] = trimmed
+    g[ASSISTANT_MESSAGE_ID_GLOBAL_KEY] = trimmed
+  } else {
+    delete process.env[TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV]
+    delete g[ASSISTANT_MESSAGE_ID_GLOBAL_KEY]
+  }
+}
+
+function getAgentRunAssistantMessageIdImpl(): string | undefined {
+  const fromScope = getCurrentAgentRunScope()?.assistantMessageId?.trim()
+  if (fromScope) return fromScope
+
+  const g = globalThis as unknown as Record<string, unknown>
+  const fromGlobal = g[ASSISTANT_MESSAGE_ID_GLOBAL_KEY]
+  if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
+    return fromGlobal.trim()
+  }
+  return process.env[TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV]?.trim() || undefined
+}
+
+export const setAgentRunAssistantMessageId = traceFunction(
+  log,
+  'setAgentRunAssistantMessageId',
+  setAgentRunAssistantMessageIdImpl,
+)
+
+export const getAgentRunAssistantMessageId = traceFunction(
+  log,
+  'getAgentRunAssistantMessageId',
+  getAgentRunAssistantMessageIdImpl,
+)

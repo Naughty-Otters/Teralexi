@@ -29,7 +29,12 @@ app.support.uploadUrl=support/upload
 
 Values may be relative paths (joined with `BASE_API`) or legacy absolute URLs.
 
-Upload requires the user to be signed in with Google so the app can attach a server JWT (`Authorization: Bearer …`).
+Upload requires the user to be signed in so the app can attach a platform
+`access_token` (`Authorization: Bearer …`). Sessions renew via
+`refresh_token` (`POST /api/v1/auth/refresh`); see
+[SUBSCRIPTION-INTEGRATION.md](./SUBSCRIPTION-INTEGRATION.md).
+
+Upload is also gated by the verified entitlement feature `support.upload`.
 
 ## Request
 

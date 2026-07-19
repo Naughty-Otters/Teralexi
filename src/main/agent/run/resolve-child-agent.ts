@@ -27,9 +27,13 @@ import {
 import { createSubAgentLlmDebugRunId } from '../llm/llm-debug-writer'
 import { resolveResponseLanguageForAgent } from '@main/i18n/resolve-response-language'
 import { StageModelRegistry } from '../providers/stage-model-registry'
-import { mergeSubFlowOutputText } from './sub-flow-output-text'
+import { mergeSubFlowOutputText, resolveSubAgentSummaryText } from './sub-flow-output-text'
 
-export { mergeSubFlowOutputText } from './sub-flow-output-text'
+export {
+  mergeSubFlowOutputText,
+  buildSubAgentBrief,
+  resolveSubAgentSummaryText,
+} from './sub-flow-output-text'
 
 export type { SubAgentContextEnvelope }
 
@@ -49,6 +53,16 @@ export type ResolveChildAgentParams = {
   rootRunId?: string
   /** Restrict child tool loop to these names; `'all'` keeps catalog defaults. */
   allowedToolNames?: string[] | 'all'
+  /**
+   * Override workspace path for this child (e.g. isolated git worktree).
+   * When set, tools bind here instead of the parent conversation workspace.
+   */
+  workspacePathOverride?: string
+  /**
+   * When true (default if unset and parent workspace is a git repo), create an
+   * isolated git worktree for file-mutating parallel agents.
+   */
+  isolateGitWorktree?: boolean
   /** Parent pipeline stage to record when the child pauses for HITL. */
   parentHitlPauseStageId?: FlowStageId
   onChunk?: AgentResponseOpts['onChunk']
@@ -65,13 +79,14 @@ export function buildContextEnvelope(
     task: string
     conversationId?: string
     assistantMessageId?: string
+    workspacePathOverride?: string
   },
 ): SubAgentContextEnvelope {
   const conversationId =
     args.conversationId?.trim() || parentContext.opts.conversationId
-  const workspacePath = conversationId
-    ? getWorkspacePath(conversationId) ?? undefined
-    : undefined
+  const workspacePath =
+    args.workspacePathOverride?.trim() ||
+    (conversationId ? getWorkspacePath(conversationId) ?? undefined : undefined)
 
   return {
     rootRunId: args.rootRunId,
@@ -112,6 +127,7 @@ function resolveSeedMessages(params: ResolveChildAgentParams): AgentMessage[] {
       task: params.task,
       conversationId: params.parentOpts.conversationId,
       assistantMessageId: params.parentOpts.assistantMessageId,
+      workspacePathOverride: params.workspacePathOverride,
     })
     return trimContextMessages(mergeContextEnvelopeMessages(envelope))
   }
@@ -210,6 +226,7 @@ export async function buildChildAgentResponseOpts(
     abortSignal: parentOpts.abortSignal,
     llmDebugRunId,
     messages,
+    workspacePathOverride: params.workspacePathOverride,
     executionSteps: agent.executionSteps,
     toolLoopMaxIterations:
       agent.executionSteps?.toolLoop?.maxIterations ?? agent.toolLoopMaxIterations,
@@ -245,7 +262,7 @@ export function subAgentReportPreview(
   stepOutputs: StepOutputs,
   maxLen = 240,
 ): string {
-  const text = mergeSubFlowOutputText(stepOutputs, 'report')
+  const text = resolveSubAgentSummaryText(stepOutputs)
   const trimmed = text.trim()
   if (trimmed.length <= maxLen) return trimmed
   return `${trimmed.slice(0, maxLen)}…`

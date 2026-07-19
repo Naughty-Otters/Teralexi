@@ -27,7 +27,9 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+env/.env
 env/.signing.env
+env/.dev.local.env
 *.p12
 *.pfx
 

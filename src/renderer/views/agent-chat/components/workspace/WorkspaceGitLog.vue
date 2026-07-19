@@ -12,6 +12,7 @@
       </button>
     </div>
     <p v-if="error" class="git-log-error">{{ error }}</p>
+    <p v-else-if="!isRepo && !loading" class="git-log-empty">Initialize a repository to see commits.</p>
     <p v-else-if="!commits.length && !loading" class="git-log-empty">No commits yet.</p>
     <div v-else class="git-log-list">
       <div v-for="c in commits" :key="c.hash" class="git-log-entry" :title="c.subject">
@@ -28,7 +29,7 @@ import { storeToRefs } from 'pinia'
 import { useWorkspaceGitStore } from '@store/workspace-git'
 
 const gitStore = useWorkspaceGitStore()
-const { commits, logLoading: loading, logError: error } = storeToRefs(gitStore)
+const { commits, logLoading: loading, logError: error, isRepo } = storeToRefs(gitStore)
 
 const emit = defineEmits<{ refresh: [] }>()
 </script>

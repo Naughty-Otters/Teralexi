@@ -237,6 +237,9 @@ export default (env = 'production', type: MainBuildType = 'main-app') => {
             '^node:',
             // Positive packaging marker for planned-todo strategy (verify-main-bundle).
             'teralexi:planned-todo-strategy-bundled',
+            'teralexi:executable-tool-registry-bundled',
+            'teralexi:mid-loop-budget-bundled',
+            'teralexi:active-tools-tier-bundled',
           ],
         }),
     ],

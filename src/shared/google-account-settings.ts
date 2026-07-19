@@ -1,9 +1,9 @@
 export const TERALEXI_GOOGLE_AUTH_LOGIN_URL_KEY =
   'app.teralexi.googleAuthLoginUrl' as const
 
-/** Dev fallback when env file is not loaded (see env/.dev.env). */
+/** Fallback when env file is not loaded (defaults to production; see env/.dev.env). */
 export const DEFAULT_TERALEXI_GOOGLE_AUTH_LOGIN_URL_DEV =
-  'http://localhost:8000/auth/login'
+  'https://api.teralexi.com/auth/login'
 
 export const GOOGLE_ACCOUNT_NOT_CONFIGURED = 'GOOGLE_ACCOUNT_NOT_CONFIGURED'
 

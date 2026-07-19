@@ -50,6 +50,7 @@ describe('coding skill catalog', () => {
     expect(catalogNames.has('exit_plan_mode')).toBe(true)
     expect(catalogNames.has('invoke_agent')).toBe(true)
     expect(catalogNames.has('invoke_agents')).toBe(true)
+    expect(catalogNames.has('best_of_n')).toBe(true)
   })
 
   it('includes workspace file CRUD and verification tools coding workflow needs', async () => {

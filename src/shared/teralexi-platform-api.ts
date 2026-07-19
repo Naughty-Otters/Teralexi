@@ -4,6 +4,16 @@ export const TERALEXI_BASE_API_URL_KEY = 'app.base.apiUrl'
 export const TERALEXI_PLATFORM_PATHS = {
   graphql: 'graphql',
   googleAuthLogin: 'auth/login',
+  /** Exchange Google id_token → platform access + refresh. */
+  authGoogle: 'api/v1/auth/google',
+  /** Rotate session with opaque refresh_token (not Bearer access JWT). */
+  authRefresh: 'api/v1/auth/refresh',
+  /** Optional Google re-bind while access JWT is still valid. */
+  authToken: 'api/v1/auth/token',
+  /** Revoke refresh-token family. */
+  authLogout: 'api/v1/auth/logout',
+  authMe: 'api/v1/auth/me',
+  subscriptionEntitlement: 'api/v1/subscription/entitlement',
   supportUpload: 'support/upload',
   /** Authenticated static site publish (multipart zip). */
   appWebUpload: 'api/v1/app/web/upload',
