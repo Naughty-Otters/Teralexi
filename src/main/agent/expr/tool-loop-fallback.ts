@@ -44,6 +44,12 @@ export function isNonRetryableClassifiedError(
   return !classified.isRetryable || NON_RETRYABLE_CATEGORIES.has(classified.category)
 }
 
+export function isContextOverflowClassifiedError(
+  classified?: ClassifiedError,
+): boolean {
+  return classified?.category === ErrorCategory.CONTEXT_OVERFLOW
+}
+
 function planAfterExhaustedRetries(
   fallbackPlan: ToolLoopFallbackPlan,
   reason: string,
@@ -81,6 +87,11 @@ export function resolveToolLoopFallback(params: {
   maxAttempts: number
   failureSummary: string
   classifiedError?: ClassifiedError
+  /**
+   * When true, CONTEXT_OVERFLOW may return retry_attempt once so the caller
+   * can force-compact and resume. Caller must gate with its own one-shot flag.
+   */
+  allowContextOverflowRecovery?: boolean
 }): ToolLoopFallbackAction {
   const {
     failureKind,
@@ -89,11 +100,22 @@ export function resolveToolLoopFallback(params: {
     maxAttempts,
     failureSummary,
     classifiedError,
+    allowContextOverflowRecovery = false,
   } = params
   const reason = failureSummary.trim() || failureKind
 
   if (classifiedError?.category === ErrorCategory.ABORT) {
     return { type: 'abort' }
+  }
+
+  if (
+    allowContextOverflowRecovery &&
+    isContextOverflowClassifiedError(classifiedError)
+  ) {
+    return {
+      type: 'retry_attempt',
+      reason: `${reason} — compacting context and retrying once`,
+    }
   }
 
   const canRetry = attempt < maxAttempts && fallbackPlan === 'retry'

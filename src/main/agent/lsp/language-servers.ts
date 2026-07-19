@@ -103,6 +103,41 @@ export function initBundledLspBin(appRootCandidates: string[]): string | null {
   return null
 }
 
+/**
+ * Locate a real `tsserver.js` shipped with the app.
+ *
+ * This repo aliases `typescript` → `@typescript/typescript6`, which has no
+ * `lib/tsserver.js`. The classic tsserver lives under `@typescript/old` (and in
+ * a normal `typescript` install under `typescript/lib`). typescript-language-server
+ * needs one of those paths via `initializationOptions.tsserver.fallbackPath`
+ * when the workspace has no valid TypeScript install of its own.
+ */
+export function resolveBundledTsserverPath(): string | null {
+  const candidates: string[] = []
+
+  const bundledDir = bundledBinDir()
+  if (bundledDir) {
+    const nodeModules = dirname(bundledDir)
+    candidates.push(
+      join(nodeModules, '@typescript', 'old', 'lib', 'tsserver.js'),
+      join(nodeModules, 'typescript', 'lib', 'tsserver.js'),
+    )
+  }
+
+  for (const root of [process.cwd()]) {
+    if (!root?.trim()) continue
+    candidates.push(
+      join(root, 'node_modules', '@typescript', 'old', 'lib', 'tsserver.js'),
+      join(root, 'node_modules', 'typescript', 'lib', 'tsserver.js'),
+    )
+  }
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate
+  }
+  return null
+}
+
 function binFileName(command: string): string {
   return process.platform === 'win32' ? `${command}.cmd` : command
 }
@@ -111,8 +146,9 @@ function binFileName(command: string): string {
  * Resolve the executable to spawn for a server. Resolution order:
  *  1. project-local — `<workspace>/node_modules/.bin/<cmd>` (matches the
  *     project's own server/TypeScript version when present);
- *  2. app-bundled — the app ships `typescript-language-server` + `typescript`
- *     and `pyright`, so any workspace gets code intelligence out of the box;
+ *  2. app-bundled — the app ships `typescript-language-server` (+ a real
+ *     `tsserver` via `@typescript/old` / classic `typescript`) and `pyright`,
+ *     so any workspace gets code intelligence out of the box;
  *  3. bare command — resolved via PATH (global install).
  *
  * Neither (1) nor PATH is guaranteed in the Electron process, so (2) is the

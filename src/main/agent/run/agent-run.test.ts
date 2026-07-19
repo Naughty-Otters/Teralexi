@@ -9,6 +9,7 @@ import { AgentRun } from './agent-run'
 import { runWithAgentRunScope } from './run-scope'
 import { MAX_AGENT_RUN_DEPTH } from './types'
 import * as resolveChildAgent from './resolve-child-agent'
+import { clearSubAgentRunRegistryForTests } from './sub-agent-run-registry'
 
 const baseOpts = {
   provider: 'ollama' as const,
@@ -24,6 +25,7 @@ const baseOpts = {
 describe('AgentRun', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    clearSubAgentRunRegistryForTests()
   })
 
   it('forFlow wires agentRun on flow context', () => {
@@ -124,7 +126,7 @@ describe('AgentRun', () => {
     const flow = new AgentFlow(baseOpts, {})
     const parentRun = AgentRun.forFlow(flow)
 
-    vi.spyOn(parentRun, 'forkChild').mockResolvedValue({
+    vi.spyOn(AgentRun, 'createChild').mockResolvedValue({
       meta: { runId: 'child-run', depth: 1, agentId: 'skill:child' },
       context: {
         hitlAwaitingApproval: true,
@@ -188,7 +190,7 @@ describe('AgentRun', () => {
     const flow = new AgentFlow(baseOpts, {})
     const parentRun = AgentRun.forFlow(flow)
 
-    vi.spyOn(parentRun, 'forkChild').mockResolvedValue({
+    vi.spyOn(AgentRun, 'createChild').mockResolvedValue({
       meta: { runId: 'deep-child', depth: 2, agentId: 'skill:child' },
       context: {
         hitlAwaitingApproval: true,

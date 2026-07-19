@@ -5,6 +5,7 @@
 import { mkdirSync } from 'fs'
 import { join } from 'path'
 import { toolLoopFilesystemScopeFromStepKey } from '../run/flow-scoped-ids'
+import { getCurrentAgentRunScope } from '../run/run-scope'
 
 export const TERALEXI_AGENT_SANDBOX_OUTPUT_SCOPE_ENV =
   'TERALEXI_AGENT_SANDBOX_OUTPUT_SCOPE' as const
@@ -13,7 +14,11 @@ export const SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY =
 
 const TOOL_LOOP_OUTPUT_SEGMENT = 'toolLoop' as const
 
+/** Active tool-loop output scope (ALS → global → env). */
 export function getSandboxOutputScopeFromEnv(): string | undefined {
+  const fromScope = getCurrentAgentRunScope()?.sandboxOutputScope?.trim()
+  if (fromScope) return fromScope
+
   const g = globalThis as unknown as Record<string, unknown>
   const fromGlobal = g[SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY]
   if (typeof fromGlobal === 'string' && fromGlobal.trim()) {

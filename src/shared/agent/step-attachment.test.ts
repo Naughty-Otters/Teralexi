@@ -9,6 +9,8 @@ import {
   pdfPreviewUrlFromAttachments,
   stepAttachmentsToOutputLinks,
   stepHasPdfAttachment,
+  resolveFileChangePreviewsForAttachments,
+  fileChangePreviewOpenUrl,
   type StepAttachment,
 } from './step-attachment'
 
@@ -33,6 +35,8 @@ describe('extractAttachmentsFromToolResult', () => {
     expect(items[0]?.path).toBe('/sandbox/out/new.txt')
     expect(items[0]?.toolName).toBe('write_file')
     expect(items[0]?.action).toBe('create')
+    expect(items[0]?.diff).toContain('+hi')
+    expect(items[0]?.additions).toBe(1)
   })
 
   it('skips capture logs for run_script attachments', () => {
@@ -374,5 +378,86 @@ describe('stepAttachmentsToOutputLinks', () => {
         url: 'file:///sandbox/out/report.pdf',
       },
     ])
+  })
+})
+
+describe('resolveFileChangePreviewsForAttachments', () => {
+  it('uses diffs stored on attachments', () => {
+    const previews = resolveFileChangePreviewsForAttachments(
+      [
+        {
+          path: '/project/src/app.ts',
+          label: 'app.ts',
+          displayPath: 'src/app.ts',
+          additions: 1,
+          deletions: 1,
+          diff: '@@ -1 +1 @@\n-old\n+new',
+          action: 'modify',
+        },
+      ],
+      [],
+    )
+    expect(previews).toHaveLength(1)
+    expect(previews[0]?.path).toBe('src/app.ts')
+    expect(previews[0]?.diff).toContain('+new')
+  })
+
+  it('falls back to matching tool file changes by path', () => {
+    const previews = resolveFileChangePreviewsForAttachments(
+      [
+        {
+          path: '/project/src/app.ts',
+          label: 'app.ts',
+          displayPath: 'src/app.ts',
+          additions: 1,
+          deletions: 1,
+        },
+      ],
+      [
+        {
+          path: 'src/app.ts',
+          diff: '@@ -1 +1 @@\n-old\n+new',
+          additions: 1,
+          deletions: 1,
+          action: 'modify',
+        },
+      ],
+    )
+    expect(previews).toHaveLength(1)
+    expect(previews[0]?.diff).toContain('+new')
+  })
+})
+
+describe('fileChangePreviewOpenUrl', () => {
+  it('builds file:// URLs for js and html the same way', () => {
+    expect(
+      fileChangePreviewOpenUrl({
+        path: 'src/app.js',
+        workspacePath: '/Users/me/project',
+      }),
+    ).toBe('file:///Users/me/project/src/app.js')
+    expect(
+      fileChangePreviewOpenUrl({
+        path: 'index.html',
+        workspacePath: '/Users/me/project',
+      }),
+    ).toBe('file:///Users/me/project/index.html')
+  })
+
+  it('uses fallback workspace path when preview omits workspacePath', () => {
+    expect(
+      fileChangePreviewOpenUrl({ path: 'src/a.ts' }, '/ws'),
+    ).toBe('file:///ws/src/a.ts')
+  })
+
+  it('returns undefined for deletes and unresolved relative paths', () => {
+    expect(
+      fileChangePreviewOpenUrl({
+        path: 'gone.js',
+        workspacePath: '/ws',
+        action: 'delete',
+      }),
+    ).toBeUndefined()
+    expect(fileChangePreviewOpenUrl({ path: 'relative/only.js' })).toBeUndefined()
   })
 })

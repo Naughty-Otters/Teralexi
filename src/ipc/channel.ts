@@ -1605,6 +1605,7 @@ export class IpcChannelMainClass {
         origPath?: string
       }>
       clean: boolean
+      isRepo: boolean
       error?: string
     }
   > = null!
@@ -1628,6 +1629,11 @@ export class IpcChannelMainClass {
       }>
       error?: string
     }
+  > = null!
+  /** git init in the workspace folder. */
+  RunWorkspaceGitInit: IpcMainEventListener<
+    { conversationId: string },
+    { ok: boolean; output?: string; error?: string }
   > = null!
   /** git add files (or all) in the workspace. */
   RunWorkspaceGitAdd: IpcMainEventListener<
@@ -1659,6 +1665,43 @@ export class IpcChannelMainClass {
       draft?: boolean
     },
     { ok: boolean; url?: string; output?: string; error?: string }
+  > = null!
+  /** List sub-agent runs (active + completed) for the agents dashboard. */
+  ListSubAgentRuns: IpcMainEventListener<
+    { parentRunId?: string },
+    {
+      ok: boolean
+      runs: Array<{
+        runId: string
+        agentId: string
+        agentName: string
+        parentRunId: string
+        rootRunId: string
+        task: string
+        status: string
+        error?: string
+        worktreePath?: string
+        worktreeBranch?: string
+      }>
+      error?: string
+    }
+  > = null!
+  /** Cancel a running sub-agent. */
+  CancelSubAgentRun: IpcMainEventListener<
+    { runId: string },
+    { ok: boolean; error?: string }
+  > = null!
+  /** Merge / discard / open-PR for an isolated sub-agent worktree. */
+  ResolveSubAgentWorktree: IpcMainEventListener<
+    {
+      runId: string
+      action: 'merge' | 'discard' | 'open_pr'
+      title?: string
+      body?: string
+      base?: string
+      draft?: boolean
+    },
+    { ok: boolean; message?: string; url?: string; error?: string }
   > = null!
   /** List immediate children under a workspace path (filesystem + git status badges). */
   ListWorkspaceFiles: IpcMainEventListener<

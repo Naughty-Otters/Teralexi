@@ -110,8 +110,39 @@
       >
         <span class="conversation-bubble__placeholder">typing…</span>
       </div>
-      <ul
+      <div
         v-if="
+          isAttachmentsSection(section) &&
+          isBubbleExpanded(section, sectionIndex) &&
+          fileChangePreviewsForSection(section).length
+        "
+        class="conversation-bubble__file-changes"
+        @click.stop
+      >
+        <FileChangeStack
+          :files="fileChangePreviewsForSection(section)"
+          compact
+          :brief-lines="TOOL_LOOP_BRIEF_DIFF_LINES"
+        />
+      </div>
+      <div
+        v-else-if="
+          isAttachmentsSection(section) &&
+          isBubbleExpanded(section, sectionIndex) &&
+          diffToolResponseBubbles.length
+        "
+        class="conversation-bubble__file-changes"
+        @click.stop
+      >
+        <ChatConversationToolResponseBubble
+          v-for="toolBubble in diffToolResponseBubbles"
+          :key="toolBubble.key"
+          :part="toolBubble.part"
+          :viewer="toolBubble.viewer"
+        />
+      </div>
+      <ul
+        v-else-if="
           isAttachmentsSection(section) &&
           isBubbleExpanded(section, sectionIndex) &&
           attachmentItemsForSection(section).length
@@ -270,9 +301,10 @@
 
 <script setup lang="ts">
 import type { UIMessage } from '@teralexi-ai'
-import { computed, nextTick, ref, watch, watchEffect } from 'vue'
+import { computed, defineAsyncComponent, nextTick, ref, watch, watchEffect } from 'vue'
 import {
   dedupeStepAttachments,
+  resolveFileChangePreviewsForAttachments,
   stepAttachmentHasDiffStats,
   stepAttachmentsToOutputLinks,
   type StepAttachment,
@@ -286,7 +318,10 @@ import {
   resolveFileTypePresentation,
 } from '@shared/file-type/file-type-presentation'
 import { chatUiBubbleCssVars } from '../chatUiSettings'
-import { useAssistantStructuredMessageView } from '../useAssistantStructuredMessageView'
+import {
+  assistantFallbackMarkdownSource,
+  useAssistantStructuredMessageView,
+} from '../useAssistantStructuredMessageView'
 import ChatConversationSnapshotPreview from './ChatConversationSnapshotPreview.vue'
 import ChatConversationToolResponseBubble from './ChatConversationToolResponseBubble.vue'
 import AttachmentFileTypeIcon from './AttachmentFileTypeIcon.vue'
@@ -302,6 +337,7 @@ import {
 import {
   conversationShouldUseToolLoopPanel,
   conversationToolBubblesToPanelItems,
+  collectMessageFileChangePreviews,
   isToolLoopAnchorComplete,
   listToolLoopProgressAnchors,
   partitionToolsByToolLoopBoundaries,
@@ -323,8 +359,13 @@ import {
   shouldShowToolCallLists,
 } from '@shared/agent/tool-call-list-display'
 import { chatUiThinkingBubbleDisplay, chatUiToolCallListDisplay } from '../chatUiSettings'
+import { TOOL_LOOP_BRIEF_DIFF_LINES } from './chat/toolLoopPanelItems'
 import type { StructuredDebugSection } from '../structuredDebugViewModel'
 import type { StepOutputLinkView } from '../stepOutputLinksRender'
+
+const FileChangeStack = defineAsyncComponent(
+  () => import('./file-change/FileChangeStack.vue'),
+)
 
 function sectionExpandKey(
   section: StructuredDebugSection,
@@ -341,6 +382,9 @@ function isBubbleExpanded(
   const key = sectionExpandKey(section, sectionIndex)
   const explicit = bubbleViewExpanded.value[key]
   if (typeof explicit === 'boolean') return explicit
+
+  // File-change peeks live in the expanded body — keep these open by default.
+  if (isAttachmentsSection(section)) return true
 
   const tone = bubblePresentation(section).tone
   if (isTextResponseConversationSection(section)) return true
@@ -403,7 +447,9 @@ const {
   isStreaming,
 } = useAssistantStructuredMessageView(() => props.message)
 
-const fallbackMarkdown = computed(() => assistantTextRaw.value.trim())
+const fallbackMarkdown = computed(() =>
+  assistantFallbackMarkdownSource(assistantTextRaw.value),
+)
 
 const conversationSections = computed(() =>
   filterVisibleConversationBubbles(sections.value, {
@@ -426,6 +472,11 @@ const visibleToolResponseBubbles = computed(() =>
     toolResponseBubbles.value,
     chatUiToolCallListDisplay.value,
   ),
+)
+
+/** File-change tools always keep a Cursor-style peek, even when tool lists are hidden. */
+const diffToolResponseBubbles = computed(() =>
+  toolResponseBubbles.value.filter((bubble) => bubble.viewer === 'diff'),
 )
 
 const useToolLoopPanel = computed(
@@ -545,6 +596,35 @@ function attachmentItemsForSection(
   return dedupeStepAttachments(section.attachments ?? [])
 }
 
+const messageFileChangePreviews = computed(() =>
+  collectMessageFileChangePreviews(props.message),
+)
+
+function fileChangePreviewsForSection(section: StructuredDebugSection) {
+  const attachments = attachmentItemsForSection(section)
+  const fromTools = messageFileChangePreviews.value
+  const resolved = resolveFileChangePreviewsForAttachments(
+    attachments,
+    fromTools,
+  )
+  if (resolved.length > 0) return resolved
+  // Last resort: any file-change tool diffs on this message.
+  if (
+    fromTools.length > 0 &&
+    attachments.some(
+      (item) =>
+        stepAttachmentHasDiffStats(item) ||
+        item.action === 'create' ||
+        item.action === 'modify' ||
+        item.action === 'delete' ||
+        item.action === 'rename',
+    )
+  ) {
+    return fromTools
+  }
+  return []
+}
+
 function attachmentFilePath(item: StepAttachment): string {
   return item.displayPath || item.label || item.path
 }
@@ -585,6 +665,7 @@ function onSectionActivate(
   if (event?.target instanceof Element) {
     if (event.target.closest('.conversation-bubble__title')) return
     if (event.target.closest('.conversation-bubble__file-item')) return
+    if (event.target.closest('.conversation-bubble__file-changes')) return
     if (event.target.closest('.chat-bubble-action-btn')) return
   }
   openPreview(primaryPreviewUrl(section))
@@ -841,9 +922,11 @@ function bubblePresentation(
 .conversation-bubble {
   position: relative;
   flex-shrink: 0;
-  align-self: flex-start;
-  min-width: var(--chat-response-bubble-min-width, 50%);
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid var(--ui-border);
@@ -964,6 +1047,23 @@ function bubblePresentation(
   gap: 4px;
 }
 
+.conversation-bubble:has(.conversation-bubble__file-changes) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  overflow: hidden;
+}
+
+.conversation-bubble__file-changes {
+  margin: 6px -12px -10px;
+  width: calc(100% + 24px);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.conversation-bubble__file-changes :deep(.fcs > .fc:last-child) {
+  border-bottom: none;
+}
+
 .conversation-bubble__file-item {
   display: flex;
   align-items: center;
@@ -1073,7 +1173,11 @@ function bubblePresentation(
 
 .conversation-fallback-bubble {
   position: relative;
-  min-width: var(--chat-response-bubble-min-width, 50%);
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px 12px;
   border-radius: 10px;
   border: 1px solid var(--ui-border);

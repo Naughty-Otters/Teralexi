@@ -2,16 +2,10 @@ import { realpathSync } from 'fs'
 import path from 'path'
 import {
   TERALEXI_AGENT_SANDBOX_OUTPUT_SCOPE_ENV,
-  TERALEXI_AGENT_SANDBOX_ROOT_ENV,
-  TERALEXI_AGENT_WORKSPACE_PATH_ENV,
-  TERALEXI_AGENT_CONVERSATION_ID_ENV,
-  TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV,
-  SANDBOX_OUTPUT_SCOPE_GLOBAL_KEY,
-  SANDBOX_ROOT_GLOBAL_KEY,
-  WORKSPACE_PATH_GLOBAL_KEY,
-  CONVERSATION_ID_GLOBAL_KEY,
-  ASSISTANT_MESSAGE_ID_GLOBAL_KEY,
   getAgentRunWorkspacePath,
+  getAgentRunSandboxRoot,
+  getAgentRunConversationId,
+  getAgentRunAssistantMessageId,
 } from './run-context'
 import {
   ensureToolLoopStepOutputDirs,
@@ -42,12 +36,7 @@ export {
 }
 
 export function getSandboxRootFromEnv(): string | undefined {
-  const g = globalThis as unknown as Record<string, unknown>
-  const fromGlobal = g[SANDBOX_ROOT_GLOBAL_KEY]
-  if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
-    return fromGlobal.trim()
-  }
-  return process.env[TERALEXI_AGENT_SANDBOX_ROOT_ENV]?.trim() || undefined
+  return getAgentRunSandboxRoot()
 }
 
 export function requireActiveSandbox():
@@ -330,37 +319,17 @@ export function assertMoveAllowed(
 
 /** Active user project folder for this agent run (ALS → global → env). */
 export function getWorkspacePathFromEnv(): string | null {
-  const fromRun = getAgentRunWorkspacePath()
-  if (fromRun) return fromRun
-
-  const g = globalThis as unknown as Record<string, unknown>
-  const fromGlobal = g[WORKSPACE_PATH_GLOBAL_KEY]
-  if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
-    return fromGlobal.trim()
-  }
-  return process.env[TERALEXI_AGENT_WORKSPACE_PATH_ENV]?.trim() || null
+  return getAgentRunWorkspacePath() ?? null
 }
 
-/** Active conversation id for plan-mode tools (global → env). */
+/** Active conversation id for plan-mode tools (ALS → global → env). */
 export function getConversationIdFromEnv(): string | undefined {
-  const g = globalThis as unknown as Record<string, unknown>
-  const fromGlobal = g[CONVERSATION_ID_GLOBAL_KEY]
-  if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
-    return fromGlobal.trim()
-  }
-  return process.env[TERALEXI_AGENT_CONVERSATION_ID_ENV]?.trim() || undefined
+  return getAgentRunConversationId()
 }
 
-/** Active assistant message id for the current turn (global → env). */
+/** Active assistant message id for the current turn (ALS → global → env). */
 export function getAssistantMessageIdFromEnv(): string | undefined {
-  const g = globalThis as unknown as Record<string, unknown>
-  const fromGlobal = g[ASSISTANT_MESSAGE_ID_GLOBAL_KEY]
-  if (typeof fromGlobal === 'string' && fromGlobal.trim()) {
-    return fromGlobal.trim()
-  }
-  return (
-    process.env[TERALEXI_AGENT_ASSISTANT_MESSAGE_ID_ENV]?.trim() || undefined
-  )
+  return getAgentRunAssistantMessageId()
 }
 
 /**

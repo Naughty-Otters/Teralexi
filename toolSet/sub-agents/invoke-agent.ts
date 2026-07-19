@@ -7,13 +7,14 @@ import {
   resolveSubAgentTargetIdFromDelegation,
 } from './delegation-context'
 import { INVOKE_AGENT_TOOL_NAME, SUB_AGENT_TAG } from './constants'
-import { mergeSubFlowOutputText } from '@main/agent/run/sub-flow-output-text'
+import { buildSubAgentBrief } from '@main/agent/run/sub-flow-output-text'
 
 export const invokeAgent: SkillTool = {
   name: INVOKE_AGENT_TOOL_NAME,
   tags: [...SUB_AGENT_TAG],
   description:
-    'Delegate a sub-task to another configured agent. Returns the sub-agent report or summary. ' +
+    'Delegate a sub-task to another configured agent. Returns a short structured brief ' +
+    '(summary, filesTouched, status) — not a full tool transcript. ' +
     'Set wait=false to run in parallel and receive a runId; use wait_for_sub_agent_runs to collect results.',
   inputSchema: z.object({
     agentId: z.string().min(1).describe('Catalog agent id to run'),
@@ -22,6 +23,12 @@ export const invokeAgent: SkillTool = {
       .boolean()
       .optional()
       .describe('When false, start in background and return runId immediately'),
+    detach: z
+      .boolean()
+      .optional()
+      .describe(
+        'When true, force wait=false so the parent can finish while the child keeps running',
+      ),
   }),
   needsApproval: false,
   async execute(input) {
@@ -30,6 +37,7 @@ export const invokeAgent: SkillTool = {
         agentId: z.string(),
         task: z.string(),
         wait: z.boolean().optional(),
+        detach: z.boolean().optional(),
       })
       .safeParse(input)
     if (!parsed.success) {
@@ -41,7 +49,8 @@ export const invokeAgent: SkillTool = {
       throw new Error('invoke_agent is not enabled for this agent')
     }
 
-    const { agentId, task, wait = true } = parsed.data
+    const { agentId, task, wait: waitInput = true, detach = false } = parsed.data
+    const wait = detach ? false : waitInput
     const requestedId = agentId.trim()
     if (!requestedId) {
       throw new Error('invoke_agent requires agentId')
@@ -68,12 +77,14 @@ export const invokeAgent: SkillTool = {
     if (!wait && parentRun.spawnChildRun) {
       const spawned = await parentRun.spawnChildRun(childParams, {
         waitMode: 'background',
+        detached: detach || undefined,
       })
       return {
         runId: spawned.runId,
         agentId: spawned.agentId,
         agentName: spawned.agentName,
         background: true,
+        detached: detach || undefined,
       }
     }
 
@@ -81,6 +92,12 @@ export const invokeAgent: SkillTool = {
     if (result.hitlPaused) {
       throw new Error('Sub-agent paused for human approval')
     }
-    return mergeSubFlowOutputText(result.stepOutputs, 'report')
+    return buildSubAgentBrief({
+      runId: parentRun.meta?.runId ? `${parentRun.meta.runId}:child` : 'child',
+      agentId: resolvedId,
+      agentName: resolvedId,
+      status: 'completed',
+      stepOutputs: result.stepOutputs as never,
+    })
   },
 }

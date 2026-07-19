@@ -12,6 +12,7 @@ import {
   movePath,
   normalizeLineEndings,
   readTextFileIfExists,
+  stripUnifiedDiffHeaders,
   trimDiff,
   toToolAbsolutePath,
   toToolDisplayPath,
@@ -37,6 +38,43 @@ describe('file-io-utils', () => {
     expect(meta.diff).toContain('+three')
     expect(meta.additions).toBeGreaterThan(0)
     expect(meta.deletions).toBeGreaterThan(0)
+  })
+
+  it('keeps only one unchanged context line around each change', () => {
+    const oldText = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].join('\n') + '\n'
+    const newText = ['a', 'b', 'c', 'X', 'e', 'f', 'g'].join('\n') + '\n'
+    const meta = createDiffMetadata('app.js', oldText, newText)
+    const body = meta.diff
+      .split('\n')
+      .filter(
+        (line) =>
+          (line.startsWith('+') ||
+            line.startsWith('-') ||
+            line.startsWith(' ')) &&
+          !line.startsWith('+++') &&
+          !line.startsWith('---'),
+      )
+    // one context before, the change pair, one context after
+    expect(body).toEqual([' c', '-d', '+X', ' e'])
+    expect(meta.diff).not.toContain('Index:')
+    expect(meta.diff).not.toContain('===')
+    expect(meta.diff).not.toContain('--- ')
+    expect(meta.diff).not.toContain('+++ ')
+    expect(meta.diff).not.toContain('@@')
+  })
+
+  it('strips unified diff file and hunk headers', () => {
+    const raw = [
+      'Index: app.js',
+      '===================================================================',
+      '--- app.js',
+      '+++ app.js',
+      '@@ -807,44 +807,9 @@',
+      ' keep',
+      '-old',
+      '+new',
+    ].join('\n')
+    expect(stripUnifiedDiffHeaders(raw)).toBe(' keep\n-old\n+new')
   })
 
   it('builds file preview rows with moveFrom and relative path', () => {

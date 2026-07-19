@@ -3,6 +3,11 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { PLANNED_TODO_STRATEGY_BUNDLE_MARKER } from '../src/main/agent/coding/plan-mode-todo-bundle-marker'
 import {
+  ACTIVE_TOOLS_TIER_BUNDLE_MARKER,
+  EXECUTABLE_TOOL_REGISTRY_BUNDLE_MARKER,
+  MID_LOOP_BUDGET_BUNDLE_MARKER,
+} from '../src/main/agent/harness-bundle-markers'
+import {
   findForbiddenSubstringsInMainJs,
   findMissingRequiredSubstringsInMainJs,
   findUnbundledDynamicImportsInMainJs,
@@ -67,6 +72,17 @@ describe('scanSourceTextForForbiddenDynamicImports', () => {
         'step-helpers.ts',
       ),
     ).toEqual(["step-helpers.ts: import('../hooks/user-hooks')"])
+  })
+
+  it('flags CommonJS require of relative app modules', () => {
+    expect(
+      scanSourceTextForForbiddenDynamicImports(
+        `require('./executable-tool-registry-state').clearExecutableToolRegistry()`,
+        'skill-module-loader.ts',
+      ),
+    ).toEqual([
+      "skill-module-loader.ts: require('./executable-tool-registry-state')",
+    ])
   })
 
   it('allows bootstrap to import main-app dynamically', () => {
@@ -145,6 +161,9 @@ describe('verifyMainBundleContents', () => {
       import('playwright-core')
       import('cloakbrowser')
       ${JSON.stringify(PLANNED_TODO_STRATEGY_BUNDLE_MARKER)}
+      ${JSON.stringify(EXECUTABLE_TOOL_REGISTRY_BUNDLE_MARKER)}
+      ${JSON.stringify(MID_LOOP_BUDGET_BUNDLE_MARKER)}
+      ${JSON.stringify(ACTIVE_TOOLS_TIER_BUNDLE_MARKER)}
     `
     expect(() => verifyMainBundleContents(ok)).not.toThrow()
   })
@@ -172,13 +191,18 @@ describe('verifyMainAppSourceWiring', () => {
 })
 
 describe('findMissingRequiredSubstringsInMainJs', () => {
-  it('reports when the planned-todo marker is absent', () => {
-    expect(findMissingRequiredSubstringsInMainJs('nope')).toEqual([
-      PLANNED_TODO_STRATEGY_BUNDLE_MARKER,
-    ])
-    expect(
-      findMissingRequiredSubstringsInMainJs(PLANNED_TODO_STRATEGY_BUNDLE_MARKER),
-    ).toEqual([])
+  const ALL_MARKERS = [
+    PLANNED_TODO_STRATEGY_BUNDLE_MARKER,
+    EXECUTABLE_TOOL_REGISTRY_BUNDLE_MARKER,
+    MID_LOOP_BUDGET_BUNDLE_MARKER,
+    ACTIVE_TOOLS_TIER_BUNDLE_MARKER,
+  ]
+
+  it('reports when packaging markers are absent', () => {
+    expect(findMissingRequiredSubstringsInMainJs('nope')).toEqual(ALL_MARKERS)
+    expect(findMissingRequiredSubstringsInMainJs(ALL_MARKERS.join('\n'))).toEqual(
+      [],
+    )
   })
 })
 

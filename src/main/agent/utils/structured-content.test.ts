@@ -125,6 +125,21 @@ describe('structured-content', () => {
     expect(serializeAssistantMessageForHistory('plain text')).toBe('plain text')
   })
 
+  it('returns empty string for empty structured shells (never raw JSON)', () => {
+    const raw = JSON.stringify({
+      version: 2,
+      assistantContent: {
+        outer: {
+          finalResult: '',
+          report: '',
+          allArtifactPaths: ['/tmp/sandbox', '/tmp/sandbox/output'],
+        },
+        subSteps: [],
+      },
+    })
+    expect(serializeAssistantMessageForHistory(raw)).toBe('')
+  })
+
   it('serializeAssistantMessageForExternalReply sends report only', () => {
     const payload = {
       version: 2,

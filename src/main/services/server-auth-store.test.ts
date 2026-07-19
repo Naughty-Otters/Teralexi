@@ -11,6 +11,7 @@ vi.mock('@config/teralexi-home', () => ({
 import {
   clearPersistedServerAuth,
   getPersistedServerAccessToken,
+  getPersistedServerRefreshToken,
   resetServerAuthStoreForTests,
   savePersistedServerAuth,
 } from './server-auth-store'
@@ -37,10 +38,27 @@ describe('server-auth-store', () => {
     expect(getPersistedServerAccessToken('http://localhost:8000/')).toBe('server-jwt')
   })
 
+  it('persists and returns refresh_token even when access is soft-expired', () => {
+    savePersistedServerAuth({
+      apiBaseUrl: 'http://localhost:8000',
+      accessToken: 'server-jwt',
+      refreshToken: 'refresh-opaque',
+      expiresAtMs: Date.now() - 1_000,
+      refreshExpiresAtMs: Date.now() + 86_400_000,
+    })
+    resetServerAuthStoreForTests()
+
+    expect(getPersistedServerAccessToken('http://localhost:8000')).toBeNull()
+    expect(getPersistedServerRefreshToken('http://localhost:8000')).toBe(
+      'refresh-opaque',
+    )
+  })
+
   it('clears persisted auth on disk', () => {
     savePersistedServerAuth({
       apiBaseUrl: 'http://localhost:8000',
       accessToken: 'server-jwt',
+      refreshToken: 'refresh-opaque',
       expiresAtMs: Date.now() + 60 * 60_000,
     })
     const path = join(accountsDir, 'server-auth.json')
@@ -50,6 +68,7 @@ describe('server-auth-store', () => {
 
     expect(existsSync(path)).toBe(false)
     expect(getPersistedServerAccessToken('http://localhost:8000')).toBeNull()
+    expect(getPersistedServerRefreshToken('http://localhost:8000')).toBeNull()
   })
 
   it('removes empty auth files', () => {

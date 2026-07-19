@@ -136,6 +136,19 @@
           <button
             type="button"
             class="file-editor-btn"
+            title="Open in preview panel"
+            aria-label="Open in preview panel"
+            :disabled="editorLoading || !canOpenInPreview"
+            @click="openInPreviewPanel"
+          >
+            <UIcon
+              name="i-lucide-panel-right"
+              style="width: 12px; height: 12px"
+            />
+          </button>
+          <button
+            type="button"
+            class="file-editor-btn"
             title="Open in default app"
             aria-label="Open in default app"
             :disabled="editorLoading"
@@ -239,6 +252,8 @@ import type { SharedWorkspaceSymbol } from '@shared/editor/workspace-symbol-type
 import type { EditorLspStatus } from '@renderer/components/code/monaco-lsp/editor-lsp-controller'
 import { useSandboxOutputView } from '@renderer/composables/useSandboxOutputView'
 import AttachmentFileTypeIcon from '../AttachmentFileTypeIcon.vue'
+import { requestSandboxPreview } from '../../sandboxPreviewBridge'
+import { buildFilePreviewUrl } from '@shared/agent/step-attachment'
 
 const lspHostEnabled = ref(true)
 
@@ -263,6 +278,7 @@ const {
   editorFileUrl,
   isMutationsDisabled,
   conversationId,
+  workspacePath,
 } = storeToRefs(gitStore)
 
 const editorPaneRef = ref<HTMLElement | null>(null)
@@ -294,6 +310,19 @@ const editorLanguage = computed(() =>
 const binaryPreviewUrl = computed(() =>
   editorBinary.value ? editorFileUrl.value : null,
 )
+
+const previewPanelUrl = computed(() => {
+  const fromTab = editorFileUrl.value?.trim()
+  if (fromTab) return fromTab
+  const rel = editorPath.value?.trim()
+  const root = workspacePath.value?.trim()
+  if (!rel || !root) return null
+  const base = root.replace(/\\/g, '/').replace(/\/+$/, '')
+  const part = rel.replace(/\\/g, '/').replace(/^\/+/, '')
+  return buildFilePreviewUrl(`${base}/${part}`) ?? null
+})
+
+const canOpenInPreview = computed(() => Boolean(previewPanelUrl.value))
 
 useSandboxOutputView(binaryPreviewHostEl, binaryPreviewUrl)
 
@@ -344,6 +373,12 @@ function requestEditorFocusAfterTabChange() {
 function openFileExternally() {
   if (!editorPath.value) return
   void gitStore.openFile(editorPath.value)
+}
+
+function openInPreviewPanel() {
+  const url = previewPanelUrl.value
+  if (!url) return
+  requestSandboxPreview(url)
 }
 
 function onEmptyEditorMouseDown() {

@@ -1,6 +1,11 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { PLANNED_TODO_STRATEGY_BUNDLE_MARKER } from '../src/main/agent/coding/plan-mode-todo-bundle-marker'
+import {
+  ACTIVE_TOOLS_TIER_BUNDLE_MARKER,
+  EXECUTABLE_TOOL_REGISTRY_BUNDLE_MARKER,
+  MID_LOOP_BUDGET_BUNDLE_MARKER,
+} from '../src/main/agent/harness-bundle-markers'
 
 const MAIN_DIR = join(process.cwd(), 'dist', 'electron', 'main')
 const BOOTSTRAP_JS = join(MAIN_DIR, 'bootstrap.js')
@@ -41,8 +46,13 @@ const FORBIDDEN_SUBSTRINGS = [
   'foreach-item/strategies/planned-todo-strategy',
 ]
 
-/** Must appear in packaged main-app.js (strategy inlined, not a loose asar file). */
-const REQUIRED_MAIN_APP_SUBSTRINGS = [PLANNED_TODO_STRATEGY_BUNDLE_MARKER]
+/** Must appear in packaged main-app.js (strategy / harness modules inlined). */
+const REQUIRED_MAIN_APP_SUBSTRINGS = [
+  PLANNED_TODO_STRATEGY_BUNDLE_MARKER,
+  EXECUTABLE_TOOL_REGISTRY_BUNDLE_MARKER,
+  MID_LOOP_BUDGET_BUNDLE_MARKER,
+  ACTIVE_TOOLS_TIER_BUNDLE_MARKER,
+]
 
 /** main-app.ts must statically pull the strategy so registration runs at startup. */
 const REQUIRED_MAIN_APP_SOURCE_IMPORT =
@@ -64,6 +74,9 @@ const SOURCE_SCAN_SKIP = /\.(test|integration\.test|mocked\.test)\.ts$/
 const RUNTIME_DYNAMIC_IMPORT_RE =
   /(?:await\s+import|void\s+import)\(\s*['"]([^'"]+)['"]/g
 
+/** CommonJS require of relative/alias app modules — also forbidden in packaged main. */
+const RUNTIME_REQUIRE_RE = /require\(\s*['"]([^'"]+)['"]\s*\)/g
+
 const BOOTSTRAP_ALLOWED_DYNAMIC_IMPORTS = new Set(['./main-app', './main-app.js'])
 
 function isAllowedRuntimeDynamicImport(spec: string): boolean {
@@ -75,10 +88,31 @@ function isAllowedRuntimeDynamicImport(spec: string): boolean {
 /** Relative app imports must never remain as runtime dynamic imports in asar. */
 const ALLOWED_SOURCE_DYNAMIC_IMPORTS = new Set<string>()
 
+/** App path aliases that must be statically bundled (never left as runtime load). */
+const FORBIDDEN_APP_ALIASES = [
+  '@main',
+  '@toolSet',
+  '@config',
+  '@shared',
+  '@logging',
+  '@ipcManager',
+  '@skills',
+  '@teralexi-ai',
+  '@teralexi/skill-sdk',
+] as const
+
 export function isForbiddenRuntimeDynamicImport(spec: string): boolean {
   if (isAllowedRuntimeDynamicImport(spec)) return false
   if (ALLOWED_SOURCE_DYNAMIC_IMPORTS.has(spec)) return false
-  if (spec.startsWith('.') || spec.startsWith('@')) return true
+  if (spec.startsWith('.')) return true
+  if (
+    FORBIDDEN_APP_ALIASES.some(
+      (alias) => spec === alias || spec.startsWith(`${alias}/`),
+    )
+  ) {
+    return true
+  }
+  // Other @scoped packages (e.g. @whiskeysockets/baileys) are node_modules externals.
   return false
 }
 
@@ -98,6 +132,13 @@ export function scanSourceTextForForbiddenDynamicImports(
     }
     if (!isForbiddenRuntimeDynamicImport(spec)) continue
     violations.push(`${relPath}: import('${spec}')`)
+  }
+  for (const match of content.matchAll(RUNTIME_REQUIRE_RE)) {
+    const spec = match[1]
+    if (!spec) continue
+    // Node builtins / packages are fine; relative and @alias app paths are not.
+    if (!isForbiddenRuntimeDynamicImport(spec)) continue
+    violations.push(`${relPath}: require('${spec}')`)
   }
   return violations
 }

@@ -14,6 +14,7 @@ export function useSkillComposerToolbar(opts: {
 }) {
   const plugins = ref<SkillComposerToolbarPluginView[]>([])
   const invokingId = ref<string | null>(null)
+  const refreshError = ref<string | null>(null)
   const lastResult = ref<SkillComposerToolbarInvokeResult | null>(null)
   const lastPreview = ref<SkillComposerToolbarPreviewResult | null>(null)
 
@@ -25,6 +26,7 @@ export function useSkillComposerToolbar(opts: {
     const ch = window.ipcRendererChannel?.GetSkillComposerToolbarPlugins
     if (!skillId || !conversationId || !ch?.invoke) {
       plugins.value = []
+      refreshError.value = null
       return
     }
     try {
@@ -35,9 +37,20 @@ export function useSkillComposerToolbar(opts: {
       ) {
         return
       }
-      plugins.value = result.ok && Array.isArray(result.plugins) ? result.plugins : []
-    } catch {
+      if (result.ok && Array.isArray(result.plugins)) {
+        plugins.value = result.plugins
+        refreshError.value = null
+        return
+      }
       plugins.value = []
+      refreshError.value =
+        !result.ok && 'error' in result && typeof result.error === 'string'
+          ? result.error
+          : 'Failed to load toolbar actions'
+    } catch (err) {
+      plugins.value = []
+      refreshError.value =
+        err instanceof Error ? err.message : String(err)
     }
   }
 
@@ -74,6 +87,14 @@ export function useSkillComposerToolbar(opts: {
     const ch = window.ipcRendererChannel?.InvokeSkillComposerToolbarPlugin
     if (!skillId || !conversationId || !ch?.invoke) {
       const fail = { ok: false as const, error: 'Toolbar plugin unavailable' }
+      lastResult.value = fail
+      return fail
+    }
+    if (invokingId.value) {
+      const fail = {
+        ok: false as const,
+        error: 'Another toolbar action is already running',
+      }
       lastResult.value = fail
       return fail
     }
@@ -156,6 +177,7 @@ export function useSkillComposerToolbar(opts: {
   return {
     plugins: visiblePlugins,
     invokingId,
+    refreshError,
     lastResult,
     lastPreview,
     refresh,

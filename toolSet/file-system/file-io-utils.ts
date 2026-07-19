@@ -109,23 +109,51 @@ export function trimDiff(diff: string): string {
   return trimmedLines.join('\n')
 }
 
+/**
+ * Drop unified-diff file/hunk headers so chat peeks only show +/- and context.
+ * Path/action live on {@link FileChangePreview} fields separately.
+ */
+export function stripUnifiedDiffHeaders(diff: string): string {
+  return diff
+    .split('\n')
+    .filter((line) => {
+      if (line.startsWith('Index: ')) return false
+      if (line.startsWith('diff --git ')) return false
+      if (line.startsWith('===')) return false
+      if (line.startsWith('--- ') || line.startsWith('+++ ')) return false
+      if (line.startsWith('@@')) return false
+      return (
+        line.startsWith('+') || line.startsWith('-') || line.startsWith(' ')
+      )
+    })
+    .join('\n')
+}
+
 export interface DiffMetadata {
   diff: string
   additions: number
   deletions: number
 }
 
+/** Unchanged lines kept around each change when building unified diffs for chat. */
+export const FILE_CHANGE_DIFF_CONTEXT_LINES = 1
+
 export function createDiffMetadata(
   filePath: string,
   contentOld: string,
   contentNew: string,
 ): DiffMetadata {
-  const diff = trimDiff(
-    createTwoFilesPatch(
-      filePath,
-      filePath,
-      normalizeLineEndings(contentOld),
-      normalizeLineEndings(contentNew),
+  const diff = stripUnifiedDiffHeaders(
+    trimDiff(
+      createTwoFilesPatch(
+        filePath,
+        filePath,
+        normalizeLineEndings(contentOld),
+        normalizeLineEndings(contentNew),
+        undefined,
+        undefined,
+        { context: FILE_CHANGE_DIFF_CONTEXT_LINES },
+      ),
     ),
   )
 

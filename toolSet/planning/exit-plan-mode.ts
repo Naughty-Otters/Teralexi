@@ -45,7 +45,7 @@ export const exitPlanMode: SkillTool = {
       .optional()
       .describe('One-paragraph summary of the plan for the approval prompt.'),
   }),
-  needsApproval: true,
+  needsApproval: false,
   async execute(input) {
     const conversationId = getConversationIdFromEnv()
     if (!conversationId) {

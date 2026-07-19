@@ -4,6 +4,16 @@
       <UIcon name="i-lucide-list-checks" class="todo-header-icon" />
       <span class="todo-header-title">Tasks</span>
       <span class="todo-progress">{{ summary.completed }}/{{ actionable }}</span>
+      <UButton
+        v-if="pendingTodos.length >= 2"
+        size="xs"
+        color="primary"
+        variant="soft"
+        class="todo-parallel-btn"
+        @click="emitParallel"
+      >
+        Run in parallel
+      </UButton>
     </div>
     <ul class="todo-list">
       <li
@@ -28,10 +38,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import type { TrackedTodo, TrackedTodoStatus } from '@shared/agent/todos'
+import {
+  SUBMIT_CHAT_TEXT_KEY,
+  buildParallelTodosPrompt,
+} from '../submitChatText'
 
 const props = defineProps<{ todos: TrackedTodo[] }>()
+
+const emit = defineEmits<{
+  'run-parallel': [todos: TrackedTodo[]]
+}>()
 
 const summary = computed(() => {
   let completed = 0
@@ -44,6 +62,21 @@ const summary = computed(() => {
 })
 
 const actionable = computed(() => props.todos.length - summary.value.cancelled)
+
+const pendingTodos = computed(() =>
+  props.todos.filter(
+    (t) => t.status === 'pending' || t.status === 'in_progress',
+  ),
+)
+
+function emitParallel(): void {
+  const submit = inject(SUBMIT_CHAT_TEXT_KEY, null)
+  if (submit) {
+    void submit(buildParallelTodosPrompt(pendingTodos.value))
+    return
+  }
+  emit('run-parallel', pendingTodos.value)
+}
 
 function statusIcon(status: TrackedTodoStatus): string {
   switch (status) {
@@ -90,6 +123,9 @@ function statusIcon(status: TrackedTodoStatus): string {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--ui-text-muted);
+}
+.todo-parallel-btn {
+  flex-shrink: 0;
 }
 .todo-list {
   list-style: none;
