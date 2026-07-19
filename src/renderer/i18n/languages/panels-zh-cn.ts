@@ -48,6 +48,7 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     disconnectBot: '断开机器人',
     signIn: '登录',
     signOut: '退出登录',
+    deleteAccount: '删除账户',
     exportBundle: '导出诊断包',
     submitReport: '提交报告',
     checkForUpdates: '检查更新',
@@ -74,6 +75,7 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     signedIn: '已登录',
     notSignedIn: '未登录',
     signingIn: '登录中…',
+    deletingAccount: '正在删除账户…',
     processing: '处理中…',
     notConfigured: '未配置',
     latestVersion: '已是最新版本。',
@@ -189,6 +191,12 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     intro:
       'Teralexi 桌面应用。已安装版本可从 BASE_API 检查更新（设置 → 关于）。',
     sourceHint: '当前从源码运行 — 自动更新仅适用于打包安装。',
+    legalTitle: '隐私与支持',
+    legalIntro: '查看 Teralexi 如何处理数据，联系 Naughty Otters LLC，或获取产品帮助。',
+    privacyPolicy: '隐私政策',
+    termsOfService: '服务条款',
+    helpSupport: '帮助与支持',
+    contactSupport: '发送邮件',
   },
   support: {
     intro:
@@ -212,6 +220,16 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
       signInHint:
         '关联 Teralexi Google 账户。将在系统浏览器中完成认证，并通过 teralexi:// 返回应用。',
       signInWithGoogle: '使用 Google 登录',
+      deleteAccountHint:
+        '永久删除您的 Teralexi 账户、订阅以及已发布的站点。本机会话与工作区文件不会自动删除。',
+      deleteAccountConfirm:
+        '确定永久删除 Teralexi 账户及已发布站点？此操作无法撤销。本机上的会话与工作区文件会保留，除非您自行删除。',
+      deleteAccountSuccess: '您的 Teralexi 账户已删除。',
+      deleteAccountRetryable:
+        '账户清理遇到临时错误，账户可能仍存在 — 请重试。',
+      deleteAccountSignedOut:
+        '会话已过期，您已退出登录。如仍需删除账户，请重新登录后再试。',
+      deleteAccountFailed: '无法删除账户。请重试或联系支持。',
     },
     github: {
       signedInHint:

@@ -12,6 +12,12 @@ export const TERALEXI_PLATFORM_PATHS = {
   authToken: 'api/v1/auth/token',
   /** Revoke refresh-token family. */
   authLogout: 'api/v1/auth/logout',
+  /**
+   * Permanently delete the signed-in platform account (App Store Guideline 5.1.1(v)).
+   * `DELETE` with JSON body `{ "confirm": true }` + Bearer access JWT.
+   * See OpenFDEServer `docs/subscription-integration/account-deletion.md`.
+   */
+  authDeleteAccount: 'api/v1/auth/account',
   authMe: 'api/v1/auth/me',
   subscriptionEntitlement: 'api/v1/subscription/entitlement',
   supportUpload: 'support/upload',

@@ -86,11 +86,33 @@ export function useGoogleAccount() {
     account.value = null
   }
 
+  async function deleteAccount(): Promise<{
+    serverDeleted: boolean
+    localCleared: boolean
+    errorCode?:
+      | 'confirm_required'
+      | 'auth_required'
+      | 'retryable'
+      | 'unavailable'
+      | 'no_session'
+      | 'request_failed'
+    serverMessage: string
+  } | null> {
+    const channel = window.ipcRendererChannel?.DeleteTeralexiAccount
+    if (!channel?.invoke) return null
+    const result = await channel.invoke()
+    if (result?.localCleared) {
+      account.value = null
+    }
+    return result
+  }
+
   return {
     account,
     refresh,
     signIn,
     signOut,
+    deleteAccount,
     isSignedIn: computed(() => account.value != null),
   }
 }

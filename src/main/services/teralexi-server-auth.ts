@@ -423,6 +423,54 @@ export async function logoutServerSession(args: {
   }
 }
 
+export type DeleteAccountServerResult =
+  | { ok: true }
+  | { ok: false; status: number; message: string }
+
+/**
+ * Permanently delete the platform account (`DELETE /api/v1/auth/account`).
+ * Contract: {@link https://github.com/Naughty-Otters} OpenFDEServer
+ * `docs/subscription-integration/account-deletion.md` — body must be
+ * `{ "confirm": true }` with Bearer access JWT.
+ */
+export async function deleteAccountServerSession(args: {
+  apiBaseUrl: string
+  accessToken: string
+  /** Must be true — server rejects anything else with 400. */
+  confirm?: boolean
+  timeoutMs?: number
+}): Promise<DeleteAccountServerResult> {
+  const confirm = args.confirm !== false
+  const response = await fetch(
+    authUrl(args.apiBaseUrl, TERALEXI_PLATFORM_PATHS.authDeleteAccount),
+    {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${args.accessToken}`,
+      },
+      body: JSON.stringify({ confirm }),
+      signal: authFetchSignal(args.timeoutMs),
+    },
+  )
+  if (response.ok || response.status === 204) {
+    return { ok: true }
+  }
+  const payload = (await response.json().catch(() => ({}))) as {
+    detail?: string
+    message?: string
+  }
+  return {
+    ok: false,
+    status: response.status,
+    message:
+      payload.detail ||
+      payload.message ||
+      `Account deletion failed with HTTP ${response.status}`,
+  }
+}
+
 /**
  * Optional re-bind of Google while the access token is still valid
  * (`POST /api/v1/auth/token` with a fresh Google id_token).

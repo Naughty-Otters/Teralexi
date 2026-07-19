@@ -82,6 +82,25 @@
       </div>
     </div>
 
+    <div class="sp-card about-legal-card">
+      <div class="sp-section-title">{{ p.about.legalTitle }}</div>
+      <p class="about-legal-intro">{{ p.about.legalIntro }}</p>
+      <div class="about-legal-links">
+        <button type="button" class="about-btn" @click="openPrivacy">
+          {{ p.about.privacyPolicy }}
+        </button>
+        <button type="button" class="about-btn" @click="openTerms">
+          {{ p.about.termsOfService }}
+        </button>
+        <button type="button" class="about-btn" @click="openSupport">
+          {{ p.about.helpSupport }}
+        </button>
+        <button type="button" class="about-btn" @click="openSupportEmail">
+          {{ p.about.contactSupport }}
+        </button>
+      </div>
+    </div>
+
     <SupportReportPanel />
   </section>
 </template>
@@ -96,6 +115,13 @@ import {
   loadAppVersion,
   useAppUpdate,
 } from '@renderer/composables/useAppUpdate'
+import { openExternalUrl } from '@renderer/lib/open-external-url'
+import {
+  TERALEXI_PRIVACY_POLICY_URL,
+  TERALEXI_SUPPORT_MAILTO,
+  TERALEXI_SUPPORT_URL,
+  TERALEXI_TERMS_OF_SERVICE_URL,
+} from '@shared/product-legal-urls'
 import SupportReportPanel from './SupportReportPanel.vue'
 import './sp-shared.css'
 
@@ -127,6 +153,22 @@ async function onDownload() {
 
 async function onInstall() {
   await installAppUpdate()
+}
+
+function openPrivacy() {
+  openExternalUrl(TERALEXI_PRIVACY_POLICY_URL)
+}
+
+function openTerms() {
+  openExternalUrl(TERALEXI_TERMS_OF_SERVICE_URL)
+}
+
+function openSupport() {
+  openExternalUrl(TERALEXI_SUPPORT_URL)
+}
+
+function openSupportEmail() {
+  openExternalUrl(TERALEXI_SUPPORT_MAILTO)
 }
 
 onMounted(async () => {
@@ -207,6 +249,25 @@ onMounted(async () => {
 }
 
 .about-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.about-legal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.about-legal-intro {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ui-text-muted);
+}
+
+.about-legal-links {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
