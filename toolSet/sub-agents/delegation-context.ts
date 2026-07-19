@@ -1,3 +1,5 @@
+import { getCurrentAgentRunScope } from '@main/agent/run/run-scope'
+
 export type SubAgentChildParams = {
   agentId: string
   parentOpts: Record<string, unknown>
@@ -24,6 +26,9 @@ export type SubAgentParentRun = {
       agentName: string
       status: string
       report?: string
+      summary?: string
+      filesTouched?: string[]
+      openQuestions?: string[]
       error?: string
       hitlPaused: boolean
       result?: { hitlPaused: boolean; stepOutputs: Record<string, unknown>; pausedStageId?: string }
@@ -58,11 +63,17 @@ export type SubAgentDelegationContext = {
 /**
  * Skill tools are esbuild-bundled into per-module caches while the main process
  * imports this file directly — a module-level singleton would not be shared.
- * Use a process-global stack (same pattern as sandbox globals).
+ * Use a process-global stack (same pattern as sandbox globals), keyed by runId
+ * when an AgentRun ALS scope is active so concurrent roots do not cross-bind.
  */
 const SUB_AGENT_DELEGATION_STACK_KEY = '__teralexiSubAgentDelegationStack'
 
-type DelegationStack = SubAgentDelegationContext[]
+type DelegationStackEntry = {
+  runId?: string
+  ctx: SubAgentDelegationContext
+}
+
+type DelegationStack = DelegationStackEntry[]
 
 function delegationStack(): DelegationStack {
   const g = globalThis as Record<string, unknown>
@@ -74,15 +85,30 @@ function delegationStack(): DelegationStack {
   return stack
 }
 
+function currentRunId(): string | undefined {
+  return getCurrentAgentRunScope()?.runId
+}
+
 export function bindSubAgentDelegation(
   ctx: SubAgentDelegationContext | undefined,
 ): void {
   if (!ctx) return
-  delegationStack().push(ctx)
+  delegationStack().push({ runId: currentRunId(), ctx })
 }
 
 export function clearSubAgentDelegation(): void {
   const stack = delegationStack()
+  const runId = currentRunId()
+  if (!runId) {
+    if (stack.length > 0) stack.pop()
+    return
+  }
+  for (let i = stack.length - 1; i >= 0; i--) {
+    if (stack[i]?.runId === runId) {
+      stack.splice(i, 1)
+      return
+    }
+  }
   if (stack.length > 0) stack.pop()
 }
 
@@ -93,7 +119,14 @@ export function resetSubAgentDelegationStack(): void {
 
 export function getSubAgentDelegation(): SubAgentDelegationContext | undefined {
   const stack = delegationStack()
-  return stack[stack.length - 1]
+  const runId = currentRunId()
+  if (runId) {
+    for (let i = stack.length - 1; i >= 0; i--) {
+      const entry = stack[i]
+      if (entry?.runId === runId) return entry.ctx
+    }
+  }
+  return stack[stack.length - 1]?.ctx
 }
 
 export function requireSubAgentDelegation(): SubAgentDelegationContext {

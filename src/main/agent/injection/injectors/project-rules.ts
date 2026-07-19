@@ -7,6 +7,9 @@ import {
 } from '@shared/agent/project-rules'
 import type { AgentInjector } from '../types'
 import { INJECTOR_ORDER } from './orders'
+import { createMtimeKeyedCache, pathMtimeKey } from '../injector-cache'
+
+const projectRulesCache = createMtimeKeyedCache<string>()
 
 export const projectRulesInjector: AgentInjector = {
   id: 'project-rules',
@@ -18,13 +21,21 @@ export const projectRulesInjector: AgentInjector = {
     const workspacePath = ctx.opts.conversationId
       ? loadConversationWorkspace(ctx.opts.conversationId)
       : null
-    const rules = loadProjectRules({
-      userRulesDir: getTeralexiRulesDir(),
-      workspaceRulesDir: workspacePath
-        ? join(workspacePath, '.teralexi', 'rules')
-        : null,
-    })
-    const block = formatProjectRulesBlock(rules)
-    return block || null
+    const userRulesDir = getTeralexiRulesDir()
+    const workspaceRulesDir = workspacePath
+      ? join(workspacePath, '.teralexi', 'rules')
+      : null
+    return (
+      projectRulesCache.getOrCompute(
+        [pathMtimeKey(userRulesDir), pathMtimeKey(workspaceRulesDir)],
+        () => {
+          const rules = loadProjectRules({
+            userRulesDir,
+            workspaceRulesDir,
+          })
+          return formatProjectRulesBlock(rules) || ''
+        },
+      ) || null
+    )
   },
 }

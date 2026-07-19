@@ -63,7 +63,10 @@ describe('sub-agent-run-registry integration', () => {
     expect(spawned.runId).toBe('child-run')
     const results = await parentRun.waitForChildRuns([spawned.runId])
     expect(results[0]?.status).toBe('completed')
+    expect(results[0]?.summary).toBe('Child report')
     expect(results[0]?.report).toBe('Child report')
+    expect(results[0]?.filesTouched).toEqual([])
+    expect(results[0]?.openQuestions).toEqual([])
     expect(results[0]?.result?.stepOutputs.report).toBe('Child report')
   })
 

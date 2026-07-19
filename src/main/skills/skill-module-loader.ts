@@ -404,6 +404,9 @@ let toolSetLoadPromise: Promise<SkillTool[]> | null = null
 export function resetToolSetCatalogCache(): void {
   cachedToolSetTools = null
   toolSetLoadPromise = null
+  // Inline require keeps this module free of a hard cycle with the registry.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('./executable-tool-registry-state').clearExecutableToolRegistry()
 }
 
 async function loadToolSetToolsUncached(): Promise<SkillTool[]> {
@@ -486,4 +489,11 @@ export function startToolSetCatalogLoad(): Promise<SkillTool[]> {
   return loadToolSetTools()
 }
 
-export { clearSkillModuleCache } from './skill-module-cache'
+import { clearSkillModuleCache as clearSkillModuleCacheDisk } from './skill-module-cache'
+import { clearExecutableToolRegistry } from './executable-tool-registry-state'
+
+/** Clears on-disk skill bundles and the hot executable tool registry. */
+export function clearSkillModuleCache(): void {
+  clearSkillModuleCacheDisk()
+  clearExecutableToolRegistry()
+}

@@ -2,8 +2,8 @@ import { createLogger } from '@main/logger'
 import type { SubAgentRunLifecycleEvent, SubAgentRunStatus } from '../types'
 import { AgentRun } from './agent-run'
 import { createSubAgentRunId } from './flow-scoped-ids'
+import { buildSubAgentBrief } from './sub-flow-output-text'
 import {
-  mergeSubFlowOutputText,
   resolveEngineAgent,
   subAgentReportPreview,
   type ResolveChildAgentParams,
@@ -83,6 +83,8 @@ export type SubAgentRunRecord = {
   worktreeBranch?: string
   /** Parent repo root used to create the worktree. */
   worktreeRepoRoot?: string
+  /** `git diff --stat` vs base branch when worktree finished. */
+  worktreeDiffStat?: string
 }
 
 /** Per-run wait payload for tools / parent LLM (never throws on sibling failure). */
@@ -91,7 +93,11 @@ export type SubAgentWaitResult = {
   agentId: string
   agentName: string
   status: SubAgentRunStatus
+  /** @deprecated Prefer {@link summary} / brief fields. */
   report?: string
+  summary?: string
+  filesTouched?: string[]
+  openQuestions?: string[]
   error?: string
   hitlPaused: boolean
   result?: AgentRunResult
@@ -360,6 +366,7 @@ export async function spawnSubAgentRun(
 
       if (result.hitlPaused) {
         finishRecord(record, 'awaiting_approval', { result })
+        record.worktreeDiffStat = worktreeDiffStat
         emitLifecycle(parent, {
           kind: 'finished',
           runId,
@@ -378,6 +385,7 @@ export async function spawnSubAgentRun(
       }
 
       finishRecord(record, 'completed', { result })
+      record.worktreeDiffStat = worktreeDiffStat
       emitLifecycle(parent, {
         kind: 'finished',
         runId,
@@ -436,22 +444,34 @@ export function getSubAgentRunRecord(
 }
 
 function toWaitResult(record: SubAgentRunRecord): SubAgentWaitResult {
-  return {
+  const brief = buildSubAgentBrief({
     runId: record.runId,
     agentId: record.agentId,
     agentName: record.agentName,
     status: record.status,
-    report: record.result
-      ? mergeSubFlowOutputText(record.result.stepOutputs, 'report')
-      : undefined,
+    stepOutputs: record.result?.stepOutputs,
     error: record.error,
+    worktreePath: record.worktreePath,
+    worktreeBranch: record.worktreeBranch,
+    worktreeDiffStat: record.worktreeDiffStat,
+  })
+  return {
+    runId: brief.runId,
+    agentId: brief.agentId,
+    agentName: brief.agentName,
+    status: brief.status,
+    report: brief.summary,
+    summary: brief.summary,
+    filesTouched: brief.filesTouched,
+    openQuestions: brief.openQuestions,
+    error: brief.error,
     hitlPaused:
       record.status === 'awaiting_approval' ||
       Boolean(record.result?.hitlPaused),
     result: record.result,
     childRun: record.childRun,
-    worktreePath: record.worktreePath,
-    worktreeBranch: record.worktreeBranch,
+    worktreePath: brief.worktreePath,
+    worktreeBranch: brief.worktreeBranch,
   }
 }
 
@@ -683,10 +703,17 @@ export function listAllSubAgentRuns(): SubAgentRunRecord[] {
 }
 
 export function subAgentRunReport(record: SubAgentRunRecord): string {
-  if (record.result) {
-    return mergeSubFlowOutputText(record.result.stepOutputs, 'report')
-  }
-  return record.error ?? 'Sub-agent run did not produce a report.'
+  return buildSubAgentBrief({
+    runId: record.runId,
+    agentId: record.agentId,
+    agentName: record.agentName,
+    status: record.status,
+    stepOutputs: record.result?.stepOutputs,
+    error: record.error,
+    worktreePath: record.worktreePath,
+    worktreeBranch: record.worktreeBranch,
+    worktreeDiffStat: record.worktreeDiffStat,
+  }).summary
 }
 
 /** @internal Test helper */

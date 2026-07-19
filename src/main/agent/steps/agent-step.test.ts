@@ -6,7 +6,6 @@ import { AgentFlowContext, AgentStepContext } from '@main/agent/context'
 import type { AgentResponseOpts } from '@main/agent/types'
 import { writeFile as writeFileTool } from '@toolSet/file-system'
 import { toolLoopFilesystemScopeFromStepKey } from '../run/flow-scoped-ids'
-import { runWithExclusiveSandboxGlobals } from '../sandbox/sandbox-globals-lock'
 import { AgentStep } from './agent-step'
 
 /** Records `toolLoopOutputScope` passed to each {@link callSkillToolDirect} invocation. */
@@ -28,24 +27,11 @@ vi.mock('./step-helpers', async (importOriginal) => {
         }
         const toolLoopScope =
           runCtx?.stepId === 'toolLoop' ? runCtx.stepInstanceKey : undefined
-        return runWithExclusiveSandboxGlobals(
-          () => {
-            runCtx?.syncSandboxForToolExecution(toolLoopScope)
-            const outputScope = toolLoopScope
-              ? toolLoopFilesystemScopeFromStepKey(toolLoopScope)
-              : undefined
-            return {
-              root: runCtx?.sandbox.getRoot(),
-              outputScope,
-            }
-          },
-          async () => {
-            if (toolName === 'write_file') {
-              return writeFileTool.execute(input as Record<string, unknown>)
-            }
-            return { ok: true }
-          },
-        )
+        runCtx?.syncSandboxForToolExecution(toolLoopScope)
+        if (toolName === 'write_file') {
+          return writeFileTool.execute(input as Record<string, unknown>)
+        }
+        return { ok: true }
       },
     ),
   }

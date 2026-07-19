@@ -1,7 +1,7 @@
 import { join } from 'node:path'
 import { getMcpServerManager } from '@main/services/mcp-server-manager'
 import { getConversationStore } from '@main/services/conversation-store'
-import { loadSkillActionsForSkillId, loadToolSetTools } from '@main/skills/skills'
+import { getExecutableTool } from '@main/skills/executable-tool-registry'
 import type { AgentStepContext } from '../context'
 import type { RuntimeToolMeta } from '../types'
 import { createLogger } from '@main/logger'
@@ -18,14 +18,10 @@ import { resolveEngineAgent } from '../run/resolve-child-agent'
 import { runUserHooks } from '../hooks/user-hooks'
 import { getCurrentAgentRunScope } from '../run/run-scope'
 import { getWorkspacePath } from '../workspace/conversation-workspace'
-import {
-  runWithExclusiveSandboxGlobals,
-  type SandboxGlobalsBindings,
-} from '../sandbox/sandbox-globals-lock'
+import type { SandboxGlobalsBindings } from '../sandbox/sandbox-globals-lock'
 import {
   bindSubAgentDelegation,
   clearSubAgentDelegation,
-  SUB_AGENT_TOOL_NAMES,
   type SubAgentDelegationContext,
 } from '@toolSet/sub-agents'
 import { isMandatoryTool } from '@shared/agent/mandatory-tools'
@@ -326,48 +322,27 @@ export async function callSkillToolDirect(
     },
     toolInput,
     async () => {
-      let tool: Awaited<ReturnType<typeof loadToolSetTools>>[number] | undefined
-
-      const skillTools = await loadSkillActionsForSkillId(skillId, [toolName])
-      tool = skillTools.find((t) => t.name === toolName)
-
-      if (!tool) {
-        const toolSetTools = await loadToolSetTools()
-        tool = toolSetTools.find((t) => t.name === toolName)
-      }
-
-      if (!tool) {
+      let tool
+      try {
+        tool = await getExecutableTool(skillId, toolName)
+      } catch {
         throw new Error(
           STEP_ERRORS.TOOL_NOT_FOUND.replace('{toolName}', toolName),
         )
       }
 
-      const runWithDelegation = async () => {
-        bindSubAgentDelegation(buildSubAgentDelegationFromRunCtx(runCtx))
-        try {
-          return await tool!.execute(toolInput)
-        } finally {
-          clearSubAgentDelegation()
-        }
+      if (runCtx) {
+        const scope =
+          runCtx.stepId === 'toolLoop' ? runCtx.stepInstanceKey : undefined
+        runCtx.syncSandboxForToolExecution(scope)
       }
 
-      // Sub-agent tools spawn a nested AgentRun that executes its own tool loop.
-      // Holding the exclusive sandbox lock here deadlocks the first child tool call.
-      if (SUB_AGENT_TOOL_NAMES.has(toolName)) {
-        return runWithDelegation()
+      bindSubAgentDelegation(buildSubAgentDelegationFromRunCtx(runCtx))
+      try {
+        return await tool.execute(toolInput)
+      } finally {
+        clearSubAgentDelegation()
       }
-
-      return runWithExclusiveSandboxGlobals(
-        () => {
-          if (runCtx) {
-            const scope =
-              runCtx.stepId === 'toolLoop' ? runCtx.stepInstanceKey : undefined
-            runCtx.syncSandboxForToolExecution(scope)
-          }
-          return resolveSandboxGlobalsBindings(runCtx)
-        },
-        runWithDelegation,
-      )
     },
   ).then(async (result) => {
     await runUserHooks({

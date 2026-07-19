@@ -28,6 +28,7 @@ import { deepThinkingAfterAnswerInjector } from './injectors/deep-thinking-after
 import { followUpSuggestionsInjector } from './injectors/follow-up-suggestions'
 import { diagramOutputInjector } from './injectors/diagram-output'
 import { userUploadsInjector } from './injectors/user-uploads'
+import { activeToolsTierInjector } from './injectors/active-tools-tier'
 
 const ALL_INJECTORS: AgentInjector[] = [
   deepThinkingBeforeAnswerInjector,
@@ -54,6 +55,7 @@ const ALL_INJECTORS: AgentInjector[] = [
   workspaceStructureInjector,
   languageInjector,
   planModeInjector,
+  activeToolsTierInjector,
   executorBaseInjector,
   stepGoalInjector,
   exploreManifestInjector,

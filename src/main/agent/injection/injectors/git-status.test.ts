@@ -22,6 +22,7 @@ vi.mock('@main/logger', () => ({
 
 import {
   buildGitStatusBlock,
+  clearGitStatusCacheForTests,
   isGitRepository,
   gitStatusInjector,
   MAX_GIT_STATUS_LINES,
@@ -31,6 +32,7 @@ const WS = '/repo'
 
 beforeEach(() => {
   vi.clearAllMocks()
+  clearGitStatusCacheForTests()
 })
 
 describe('isGitRepository', () => {

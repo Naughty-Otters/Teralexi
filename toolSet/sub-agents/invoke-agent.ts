@@ -7,13 +7,14 @@ import {
   resolveSubAgentTargetIdFromDelegation,
 } from './delegation-context'
 import { INVOKE_AGENT_TOOL_NAME, SUB_AGENT_TAG } from './constants'
-import { mergeSubFlowOutputText } from '@main/agent/run/sub-flow-output-text'
+import { buildSubAgentBrief } from '@main/agent/run/sub-flow-output-text'
 
 export const invokeAgent: SkillTool = {
   name: INVOKE_AGENT_TOOL_NAME,
   tags: [...SUB_AGENT_TAG],
   description:
-    'Delegate a sub-task to another configured agent. Returns the sub-agent report or summary. ' +
+    'Delegate a sub-task to another configured agent. Returns a short structured brief ' +
+    '(summary, filesTouched, status) — not a full tool transcript. ' +
     'Set wait=false to run in parallel and receive a runId; use wait_for_sub_agent_runs to collect results.',
   inputSchema: z.object({
     agentId: z.string().min(1).describe('Catalog agent id to run'),
@@ -91,6 +92,12 @@ export const invokeAgent: SkillTool = {
     if (result.hitlPaused) {
       throw new Error('Sub-agent paused for human approval')
     }
-    return mergeSubFlowOutputText(result.stepOutputs, 'report')
+    return buildSubAgentBrief({
+      runId: parentRun.meta?.runId ? `${parentRun.meta.runId}:child` : 'child',
+      agentId: resolvedId,
+      agentName: resolvedId,
+      status: 'completed',
+      stepOutputs: result.stepOutputs as never,
+    })
   },
 }

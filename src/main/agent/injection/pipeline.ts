@@ -1,5 +1,10 @@
 import type { ModelMessage, PrepareStepFunction } from 'ai'
 import type { AgentStepContext } from '../context'
+import {
+  applyMidLoopBudget,
+  getMidLoopBudgetState,
+  rememberPrepareStepMessages,
+} from '../expr/mid-loop-budget'
 import { filterToolsByAvailableSet } from '../steps/step-helpers'
 import { hasUnansweredToolCalls } from '../utils/message-sanitizer'
 import { resolveLatestUserMessageIdentity } from './message-timestamp'
@@ -158,7 +163,14 @@ function mergePrepareStepSlices(
   let mergedMessages: ModelMessage[] | undefined
 
   for (const slice of slices) {
-    if (slice.activeTools) activeTools = slice.activeTools
+    if (slice.activeTools && slice.activeTools.length > 0) {
+      if (!activeTools) {
+        activeTools = [...slice.activeTools]
+      } else {
+        const allow = new Set(slice.activeTools)
+        activeTools = activeTools.filter((name) => allow.has(name))
+      }
+    }
     if (slice.messages) mergedMessages = slice.messages
   }
 
@@ -166,26 +178,51 @@ function mergePrepareStepSlices(
   return { activeTools, messages: mergedMessages }
 }
 
+/** @internal Exported for unit tests. */
+export const mergePrepareStepSlicesForTests = mergePrepareStepSlices
+
+
 export function createPrepareStepFromInjectors(
   ctx: AgentStepContext,
   allToolNames: readonly string[],
+  stage: InjectionStage = 'toolLoop',
 ): PrepareStepFunction | undefined {
-  const profile = resolveInjectionProfile(ctx, 'toolLoop')
+  const profile = resolveInjectionProfile(ctx, stage)
   const injectors = prepareStepInjectors(profile)
-  if (injectors.length === 0) return undefined
 
   return async ({ stepNumber, messages }) => {
     const blockUserInjection = hasUnansweredToolCalls(messages)
+    let currentMessages = messages
+
+    // Mid-loop char budget: prune (and optionally LLM-compact) before injectors.
+    if (stepNumber > 0 && !blockUserInjection) {
+      const budgeted = await applyMidLoopBudget(currentMessages, {
+        stepNumber,
+        ctx,
+        state: getMidLoopBudgetState(ctx),
+        allowLlmCompact: true,
+      })
+      if (budgeted.messages !== currentMessages) {
+        currentMessages = budgeted.messages
+      }
+    }
+
+    if (!blockUserInjection) {
+      rememberPrepareStepMessages(ctx, currentMessages)
+    }
+
     const runCtx = buildRunContext(
       ctx,
       profile,
       stepNumber,
-      messages,
+      currentMessages,
       undefined,
       allToolNames,
     )
     const slices: PrepareStepSlice[] = []
-    let currentMessages = messages
+    if (currentMessages !== messages) {
+      slices.push({ messages: currentMessages })
+    }
 
     for (const injector of injectors) {
       if (!injector.applies(runCtx)) continue

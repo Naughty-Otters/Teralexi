@@ -6,7 +6,7 @@ import {
   FOREACH_SKILL_STEP_ID,
   FOREACH_SKILL_STEP_TITLE,
 } from '../constants/step-ids'
-import { mergeSubFlowOutputText, resolveEngineAgent } from '../run/resolve-child-agent'
+import { resolveSubAgentSummaryText, resolveEngineAgent } from '../run/resolve-child-agent'
 
 type ForEachSkillStepData = {
   tasks: SkillChainPlan['tasks']
@@ -79,7 +79,7 @@ export const forEachSkillStepDefinition: StepExpressionDefinition = {
         return
       }
 
-      const merged = mergeSubFlowOutputText(result.stepOutputs, 'report')
+      const merged = resolveSubAgentSummaryText(result.stepOutputs)
       parentCtx.skillChainResults.set(task.agentId, merged)
       parentCtx.appendAssistantTurn(`## ${title}\n\n${merged}`)
     }
