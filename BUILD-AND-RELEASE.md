@@ -141,7 +141,7 @@ Or set `TERALEXI_BUILD_ENV` (`dev` | `sit` | `prod`) before running a build scri
 | --- | --- |
 | **Pull request** | Unit tests + signed macOS/Windows **sit** builds → GitHub artifacts |
 | **Push** to any branch | Same as PR |
-| **Push** to `main` | Same as PR + README CI status update |
+| **Push** to `main` | Same as PR + README badges (CI status, coverage %) |
 | **Manual** | Actions → **CI** → Run workflow (full staging pipeline) |
 
 **Build env:** `TERALEXI_BUILD_ENV=sit` → loads `env/.sit.env` (staging `BASE_API` only — same update feed path as prod).
@@ -153,6 +153,7 @@ Or set `TERALEXI_BUILD_ENV` (`dev` | `sit` | `prod`) before running a build scri
 **Outputs:**
 
 - Artifacts: `teralexi-<platform>-sit-<run>-<sha>` (14-day retention)
+- On `main`: unit tests run with coverage; `.github/badges/coverage.json` is updated for the README coverage badge (Shields endpoint)
 
 ### Release — production (`env/.prod.env`)
 
@@ -166,7 +167,7 @@ Or set `TERALEXI_BUILD_ENV` (`dev` | `sit` | `prod`) before running a build scri
 
 **Signing:** Same `MAC_SIGN_*` / `WIN_SIGN_*` secrets as CI (platform-specific per runner).
 
-**Output:** Upload to `s3://…/desktop/releases/stable/` (production update feed)
+**Output:** Upload to `s3://…/desktop/releases/stable/` (production update feed), then create a GitHub Release (`v` + `package.json` version) for the README version badge
 
 **Publishing auth:** The S3 upload uses **GitHub OIDC** to assume an AWS IAM role — no long-lived access keys. See [AWS OIDC setup](#aws-oidc-setup-for-s3-publishing) below.
 

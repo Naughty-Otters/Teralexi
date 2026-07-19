@@ -2,6 +2,8 @@
 
 <!-- ci-status-start -->
 [![CI](https://github.com/Naughty-Otters/Teralexi/actions/workflows/ci.yml/badge.svg)](https://github.com/Naughty-Otters/Teralexi/actions/workflows/ci.yml)
+[![coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Naughty-Otters/Teralexi/main/.github/badges/coverage.json)](https://github.com/Naughty-Otters/Teralexi/actions/workflows/ci.yml)
+[![version](https://img.shields.io/github/v/release/Naughty-Otters/Teralexi?label=version)](https://github.com/Naughty-Otters/Teralexi/releases/latest)
 
 | | |
 | --- | --- |
