@@ -27,7 +27,8 @@ type ServerAuthResponse = {
   token_type?: string
 }
 
-let cachedServerToken: CachedServerToken | null = null
+/** In-memory JWTs keyed by normalized API base URL. */
+const cachedServerTokenByApiBase = new Map<string, CachedServerToken>()
 /** In-flight resolve promises keyed by normalized API base URL. */
 const inFlightServerTokenByApiBase = new Map<string, Promise<string | null>>()
 /** Last reason resolve returned null — for actionable UI / logs (not a server body). */
@@ -38,6 +39,10 @@ export const TERALEXI_AUTH_FETCH_TIMEOUT_MS = 30_000
 
 function authFetchSignal(timeoutMs = TERALEXI_AUTH_FETCH_TIMEOUT_MS): AbortSignal {
   return AbortSignal.timeout(timeoutMs)
+}
+
+function normalizeApiBase(url: string): string {
+  return url.trim().replace(/\/+$/, '')
 }
 
 export function getLastServerAccessTokenFailure(): string | null {
@@ -107,19 +112,23 @@ function cacheServerAccessToken(
   apiBaseUrl?: string,
 ): string {
   const { expiresAtMs, source } = resolveTokenExpiryMs(accessToken, expiresInSeconds)
-  cachedServerToken = {
-    accessToken,
-    expiresAtMs,
+  const key = apiBaseUrl?.trim() ? normalizeApiBase(apiBaseUrl) : ''
+  if (key) {
+    cachedServerTokenByApiBase.set(key, {
+      accessToken,
+      expiresAtMs,
+    })
   }
   log.info('Cached server JWT', {
     source,
+    apiBaseUrl: key || undefined,
     ...describeServerTokenExpiry(expiresAtMs),
     note:
       'expiresAtMs is stored as absolute expiry; refresh buffer is applied only when reading the cache',
   })
-  if (apiBaseUrl?.trim()) {
+  if (key) {
     savePersistedServerAuth({
-      apiBaseUrl,
+      apiBaseUrl: key,
       accessToken,
       expiresAtMs,
     })
@@ -151,22 +160,27 @@ export function isLikelyPresentedServerAccessToken(token: string): boolean {
   return payload != null
 }
 
-function getValidCachedServerAccessToken(): string | null {
-  if (!cachedServerToken) return null
+function getCachedServerTokenRecord(
+  apiBaseUrl: string,
+): CachedServerToken | null {
+  const key = normalizeApiBase(apiBaseUrl)
+  if (!key) return null
+  return cachedServerTokenByApiBase.get(key) ?? null
+}
+
+function getValidCachedServerAccessToken(apiBaseUrl: string): string | null {
+  const cached = getCachedServerTokenRecord(apiBaseUrl)
+  if (!cached) return null
   if (
     isServerTokenPastRefreshBuffer(
-      cachedServerToken.expiresAtMs,
-      'in-memory cache',
+      cached.expiresAtMs,
+      `in-memory cache (${normalizeApiBase(apiBaseUrl)})`,
     )
   ) {
     // Keep token in memory so resolveTeralexiServerAccessTokenImpl can refresh it.
     return null
   }
-  return cachedServerToken.accessToken
-}
-
-function normalizeApiBase(url: string): string {
-  return url.trim().replace(/\/+$/, '')
+  return cached.accessToken
 }
 
 /**
@@ -174,23 +188,24 @@ function normalizeApiBase(url: string): string {
  * buffer. Prefer in-memory, then persisted; keep the JWT until refresh fails.
  */
 function getServerAccessTokenForRefresh(apiBaseUrl: string): string | null {
-  if (cachedServerToken?.accessToken) {
-    return cachedServerToken.accessToken
+  const cached = getCachedServerTokenRecord(apiBaseUrl)
+  if (cached?.accessToken) {
+    return cached.accessToken
   }
   const record = loadPersistedServerAuth()
   if (!record?.accessToken) return null
   if (normalizeApiBase(record.apiBaseUrl) !== normalizeApiBase(apiBaseUrl)) {
     return null
   }
-  cachedServerToken = {
+  cachedServerTokenByApiBase.set(normalizeApiBase(apiBaseUrl), {
     accessToken: record.accessToken,
     expiresAtMs: record.expiresAtMs,
-  }
+  })
   return record.accessToken
 }
 
 export function clearTeralexiServerAuthCache(): void {
-  cachedServerToken = null
+  cachedServerTokenByApiBase.clear()
   inFlightServerTokenByApiBase.clear()
   lastResolveFailure = null
   clearPersistedServerAuth()
@@ -200,13 +215,13 @@ export function clearTeralexiServerAuthCache(): void {
 export function getPersistedServerAccessTokenForSessionCheck(
   apiBaseUrl: string,
 ): string | null {
-  const inMemory = getValidCachedServerAccessToken()
+  const inMemory = getValidCachedServerAccessToken(apiBaseUrl)
   if (inMemory) return inMemory
 
   const record = loadPersistedServerAuth()
   if (!record) return null
-  const normalized = apiBaseUrl.trim().replace(/\/+$/, '')
-  const recordBase = record.apiBaseUrl.trim().replace(/\/+$/, '')
+  const normalized = normalizeApiBase(apiBaseUrl)
+  const recordBase = normalizeApiBase(record.apiBaseUrl)
   if (recordBase !== normalized) return null
   if (
     isServerTokenPastRefreshBuffer(
@@ -217,10 +232,10 @@ export function getPersistedServerAccessTokenForSessionCheck(
     return null
   }
 
-  cachedServerToken = {
+  cachedServerTokenByApiBase.set(normalized, {
     accessToken: record.accessToken,
     expiresAtMs: record.expiresAtMs,
-  }
+  })
   return record.accessToken
 }
 
@@ -289,18 +304,19 @@ async function resolveTeralexiServerAccessTokenImpl(
   apiBaseUrl: string,
 ): Promise<string | null> {
   lastResolveFailure = null
+  const key = normalizeApiBase(apiBaseUrl)
 
-  const cached = getValidCachedServerAccessToken()
+  const cached = getValidCachedServerAccessToken(apiBaseUrl)
   if (cached) return cached
 
   const persisted = getPersistedServerAccessToken(apiBaseUrl)
   if (persisted) {
     const record = loadPersistedServerAuth()
     if (record) {
-      cachedServerToken = {
+      cachedServerTokenByApiBase.set(key, {
         accessToken: record.accessToken,
         expiresAtMs: record.expiresAtMs,
-      }
+      })
       return persisted
     }
   }
@@ -310,7 +326,7 @@ async function resolveTeralexiServerAccessTokenImpl(
   if (refreshCandidate) {
     try {
       log.info('Refreshing soft-expired server JWT', {
-        apiBaseUrl: normalizeApiBase(apiBaseUrl),
+        apiBaseUrl: key,
       })
       return await refreshServerAccessToken({
         apiBaseUrl,
@@ -318,7 +334,7 @@ async function resolveTeralexiServerAccessTokenImpl(
       })
     } catch (err) {
       log.warn('Server JWT refresh failed; re-exchanging Google id_token', { err })
-      cachedServerToken = null
+      cachedServerTokenByApiBase.delete(key)
       // Continue to exchange; keep refresh error if exchange also fails.
       lastResolveFailure =
         err instanceof Error
@@ -331,7 +347,7 @@ async function resolveTeralexiServerAccessTokenImpl(
   const presented = getStoredPresentedServerAccessToken()
   if (presented) {
     log.info('Using presented platform JWT from Google account store as server session', {
-      apiBaseUrl: normalizeApiBase(apiBaseUrl),
+      apiBaseUrl: key,
     })
     return cacheServerAccessToken(presented, undefined, apiBaseUrl)
   }
@@ -340,7 +356,7 @@ async function resolveTeralexiServerAccessTokenImpl(
   if (!idToken) {
     log.warn(
       'No local server JWT and no Google id_token to exchange; cannot obtain remote session',
-      { apiBaseUrl: normalizeApiBase(apiBaseUrl) },
+      { apiBaseUrl: key },
     )
     return setResolveFailure(
       'No platform session and no Google id_token to exchange. Sign in again from the app.',
@@ -349,7 +365,7 @@ async function resolveTeralexiServerAccessTokenImpl(
 
   try {
     log.info('Local server JWT missing; exchanging Google id_token remotely', {
-      apiBaseUrl: normalizeApiBase(apiBaseUrl),
+      apiBaseUrl: key,
     })
     return await exchangeGoogleIdTokenForServerAccessToken({
       apiBaseUrl,
@@ -372,7 +388,7 @@ export async function getTeralexiServerAccessToken(
     return setResolveFailure('Teralexi API base URL is not configured')
   }
 
-  const cached = getValidCachedServerAccessToken()
+  const cached = getValidCachedServerAccessToken(apiBaseUrl)
   if (cached) {
     lastResolveFailure = null
     return cached
