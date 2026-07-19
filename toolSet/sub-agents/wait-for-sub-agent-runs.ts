@@ -7,7 +7,8 @@ export const waitForSubAgentRunsTool: SkillTool = {
   name: WAIT_FOR_SUB_AGENT_RUNS_TOOL_NAME,
   tags: [...SUB_AGENT_TAG],
   description:
-    'Wait for one or more background sub-agent runs to finish. Returns per-run status, report, and errors — sibling failures do not abort the batch.',
+    'Wait for one or more background sub-agent runs to finish. Returns per-run briefs ' +
+    '(summary, filesTouched, status) — sibling failures do not abort the batch.',
   inputSchema: z.object({
     runIds: z.array(z.string().min(1)).min(1),
   }),
@@ -45,7 +46,9 @@ export const waitForSubAgentRunsTool: SkillTool = {
         agentId: r.agentId,
         agentName: r.agentName,
         status: r.status,
-        report: r.report,
+        summary: r.summary ?? r.report,
+        filesTouched: r.filesTouched ?? [],
+        openQuestions: r.openQuestions ?? [],
         error: r.error,
         hitlPaused: r.hitlPaused,
         worktreePath: r.worktreePath,

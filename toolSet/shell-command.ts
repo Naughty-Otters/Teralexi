@@ -5,6 +5,7 @@ import crypto from 'crypto'
 import path from 'path'
 import { z } from 'zod'
 import type { SkillTool } from '@main/skills/actions'
+import { agentRunEnvFromScope } from '@main/agent/run/run-scope'
 import {
   ensureToolLoopStepOutputDirs,
   getOutputResultsRelPrefix,
@@ -322,6 +323,7 @@ function buildScriptProcessEnv(options: {
   const stepBase = resolveToolLoopStepBaseDir(sandboxRoot)
   return {
     ...process.env,
+    ...agentRunEnvFromScope(),
     ...extra,
     TERALEXI_SANDBOX_ROOT: sandboxRoot,
     TERALEXI_STEP_CWD: cwd,

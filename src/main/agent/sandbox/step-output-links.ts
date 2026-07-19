@@ -15,6 +15,12 @@ import { createPaperOutputDir } from '../steps/create-paper/paths'
 import { webScrapeOutputDir } from '../steps/web-scrape/paths'
 import { isCaptureArtifactPath } from '@shared/agent/capture-artifact-path'
 import type { SandboxContext } from './context'
+import {
+  createMtimeKeyedCache,
+  pathMtimeKey,
+} from '../injection/injector-cache'
+
+const sandboxArtifactsCache = createMtimeKeyedCache<string>()
 
 export type StepOutputLink = {
   label: string
@@ -241,21 +247,32 @@ export function formatExistingSandboxArtifactsBlock(
   sandboxRoot: string,
   opts?: { conversationId?: string; threadTag?: ThreadTag },
 ): string {
-  const paths = collectSandboxOutputRelativePathsForThread(
-    sandboxRoot,
-    opts?.conversationId,
-    opts?.threadTag,
+  const outputDir = sandboxOutputDir(sandboxRoot)
+  return sandboxArtifactsCache.getOrCompute(
+    [
+      sandboxRoot,
+      opts?.conversationId ?? '',
+      opts?.threadTag ?? '',
+      pathMtimeKey(outputDir),
+    ],
+    () => {
+      const paths = collectSandboxOutputRelativePathsForThread(
+        sandboxRoot,
+        opts?.conversationId,
+        opts?.threadTag,
+      )
+      if (paths.length === 0) return ''
+      const threadNote =
+        opts?.threadTag && opts.threadTag !== 'general'
+          ? ` (thread: \`${opts.threadTag}\`)`
+          : ''
+      return [
+        `### Existing sandbox artifacts${threadNote}`,
+        'Reuse these files when the user continues or confirms a prior offer (e.g. "yes", "export the PDF"). Do **not** restart work when the deliverable already exists unless they ask to redo it.',
+        ...paths.map((p) => `- \`${p}\``),
+      ].join('\n')
+    },
   )
-  if (paths.length === 0) return ''
-  const threadNote =
-    opts?.threadTag && opts.threadTag !== 'general'
-      ? ` (thread: \`${opts.threadTag}\`)`
-      : ''
-  return [
-    `### Existing sandbox artifacts${threadNote}`,
-    'Reuse these files when the user continues or confirms a prior offer (e.g. "yes", "export the PDF"). Do **not** restart work when the deliverable already exists unless they ask to redo it.',
-    ...paths.map((p) => `- \`${p}\``),
-  ].join('\n')
 }
 
 export function collectOutputLinksForStep(

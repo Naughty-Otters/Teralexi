@@ -143,8 +143,20 @@ describe('sub-agent tools', () => {
     expect(waitForChildRuns).toHaveBeenCalledWith(['run-skill:a', 'run-skill:b'])
     expect(out).toMatchObject({
       results: [
-        { runId: 'run-skill:a', status: 'completed', report: 'a' },
-        { runId: 'run-skill:b', status: 'completed', report: 'b' },
+        {
+          runId: 'run-skill:a',
+          status: 'completed',
+          summary: 'a',
+          filesTouched: [],
+          openQuestions: [],
+        },
+        {
+          runId: 'run-skill:b',
+          status: 'completed',
+          summary: 'b',
+          filesTouched: [],
+          openQuestions: [],
+        },
       ],
     })
   })

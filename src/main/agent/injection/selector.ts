@@ -101,13 +101,17 @@ const TOOL_LOOP_CODING_CHILD_USER_MESSAGES = [
 ] as const
 
 const PROFILE_INJECTOR_IDS: Record<InjectionProfileKey, readonly string[]> = {
-  'toolLoop.default': TOOL_LOOP_DEFAULT_INSTRUCTIONS,
+  'toolLoop.default': [...TOOL_LOOP_DEFAULT_INSTRUCTIONS, 'active-tools-tier'],
   'toolLoop.coding.root': [
     ...TOOL_LOOP_CODING_INSTRUCTIONS,
     'plan-mode',
+    'active-tools-tier',
   ],
-  'toolLoop.coding.child': TOOL_LOOP_CODING_INSTRUCTIONS,
-  todoExecution: TODO_EXECUTION_INSTRUCTIONS,
+  'toolLoop.coding.child': [
+    ...TOOL_LOOP_CODING_INSTRUCTIONS,
+    'active-tools-tier',
+  ],
+  todoExecution: [...TODO_EXECUTION_INSTRUCTIONS, 'active-tools-tier'],
 }
 
 const PROFILE_USER_MESSAGE_INJECTOR_IDS: Partial<

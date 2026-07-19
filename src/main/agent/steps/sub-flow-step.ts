@@ -6,6 +6,7 @@ import { SUB_FLOW_STEP_ID } from '../constants/step-ids'
 import {
   formatSubFlowStepTitle,
   mergeSubFlowOutputText,
+  resolveSubAgentSummaryText,
   resolveEngineAgent,
 } from '../run/resolve-child-agent'
 import type { SubFlowConfig, SubFlowMergeOutputs } from './sub-flow-config'
@@ -74,7 +75,10 @@ export const subFlowFlowStepDefinition: StepExpressionDefinition = {
       return
     }
 
-    const mergedText = mergeSubFlowOutputText(result.stepOutputs, merge)
+    const mergedText =
+      merge === 'summary'
+        ? mergeSubFlowOutputText(result.stepOutputs, 'summary')
+        : resolveSubAgentSummaryText(result.stepOutputs)
     parentCtx.recordStepOutput(
       SUB_FLOW_STEP_ID,
       title,

@@ -77,6 +77,8 @@ function scopeFromMeta(
     depth: meta.depth,
     sandboxRoot,
     sandboxOutputScope,
+    conversationId: meta.conversationId?.trim() || undefined,
+    assistantMessageId: meta.assistantMessageId?.trim() || undefined,
   }
 }
 

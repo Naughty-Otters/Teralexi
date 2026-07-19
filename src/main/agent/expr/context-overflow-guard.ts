@@ -21,6 +21,7 @@
 import { createLogger } from '@main/logger'
 import type { ModelMessage } from '@teralexi-ai'
 import { scoreThreadTags } from './thread-tagger'
+import { SUB_AGENT_TOOL_NAMES } from '@toolSet/sub-agents'
 
 const log = createLogger('agent.expr.context-overflow-guard')
 
@@ -30,6 +31,9 @@ const log = createLogger('agent.expr.context-overflow-guard')
 
 /** Max chars for a single tool output.  ~3 K tokens at 4 chars/token. */
 export const DEFAULT_TOOL_OUTPUT_CHAR_CAP = 12_000
+
+/** Stricter cap for subagent tool results (briefs should already be short). */
+export const SUB_AGENT_TOOL_OUTPUT_CHAR_CAP = 4_000
 
 /** Total char budget across all initial messages before pruning triggers.
  *  ~37 K tokens — leaves headroom for system instructions and the live loop. */
@@ -65,11 +69,15 @@ export function applyToolOutputTruncation(
     const spec = toolSet[name] as Record<string, unknown> | null
     if (!spec || typeof spec['execute'] !== 'function') continue
 
+    const cap = SUB_AGENT_TOOL_NAMES.has(name)
+      ? Math.min(maxChars, SUB_AGENT_TOOL_OUTPUT_CHAR_CAP)
+      : maxChars
+
     const origExecute = (spec['execute'] as (...a: unknown[]) => Promise<unknown>).bind(spec)
     spec['execute'] = async (input: unknown): Promise<unknown> => {
       try {
         const result = await origExecute(input)
-        return truncateOutput(result, name, maxChars)
+        return truncateOutput(result, name, cap)
       } catch (err) {
         log.error('Tool execute failed before truncation', {
           toolName: name,

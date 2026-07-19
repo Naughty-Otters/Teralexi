@@ -10,6 +10,14 @@ import {
   registerShellTask,
   completeBackgroundTask,
 } from '@main/agent/background/background-task-manager'
+import { agentRunEnvFromScope } from '@main/agent/run/run-scope'
+
+function childProcessEnv(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    ...agentRunEnvFromScope(),
+  }
+}
 
 function requireWorkspace(): { ok: true; path: string } | { ok: false; error: string } {
   const p = getWorkspacePathFromEnv()
@@ -239,7 +247,7 @@ export const runWorkspaceCommand: SkillTool = {
       })
       const child = spawn(executable, args, {
         cwd,
-        env: process.env,
+        env: childProcessEnv(),
         shell: false,
         windowsHide: true,
       })
@@ -270,7 +278,7 @@ export const runWorkspaceCommand: SkillTool = {
       args,
       cwd,
       timeoutMs,
-      env: process.env,
+      env: childProcessEnv(),
     })
 
     const output = formatCommandOutput(result.stdout, result.stderr)

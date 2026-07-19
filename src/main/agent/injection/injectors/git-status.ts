@@ -6,11 +6,18 @@ import { resolveGitBinary } from '../../workspace/git-binary'
 import { loadConversationWorkspace } from '../../workspace/conversation-workspace'
 import type { AgentInjector } from '../types'
 import { INJECTOR_ORDER } from './orders'
+import { createMtimeKeyedCache, pathMtimeKey } from '../injector-cache'
 
 const log = createLogger('agent.injection.git-status')
+const gitStatusCache = createMtimeKeyedCache<string>()
 
 /** Cap changed-path lines so a large dirty tree doesn't flood the prompt. */
 export const MAX_GIT_STATUS_LINES = 40
+
+/** @internal Test helper — injector cache is process-local. */
+export function clearGitStatusCacheForTests(): void {
+  gitStatusCache.clear()
+}
 
 const GIT_TIMEOUT_MS = 4000
 
@@ -34,6 +41,18 @@ export function isGitRepository(workspacePath: string): boolean {
 }
 
 export function buildGitStatusBlock(workspacePath: string): string {
+  const gitDir = join(workspacePath, '.git')
+  return gitStatusCache.getOrCompute(
+    [
+      workspacePath,
+      pathMtimeKey(join(gitDir, 'HEAD')),
+      pathMtimeKey(join(gitDir, 'index')),
+    ],
+    () => buildGitStatusBlockUncached(workspacePath),
+  )
+}
+
+function buildGitStatusBlockUncached(workspacePath: string): string {
   const raw = runGit(workspacePath, ['status', '--short', '--branch'])
   if (raw == null) {
     log.warn('git status injector could not read status', { workspacePath })

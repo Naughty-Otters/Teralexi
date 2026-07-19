@@ -27,9 +27,13 @@ import {
 import { createSubAgentLlmDebugRunId } from '../llm/llm-debug-writer'
 import { resolveResponseLanguageForAgent } from '@main/i18n/resolve-response-language'
 import { StageModelRegistry } from '../providers/stage-model-registry'
-import { mergeSubFlowOutputText } from './sub-flow-output-text'
+import { mergeSubFlowOutputText, resolveSubAgentSummaryText } from './sub-flow-output-text'
 
-export { mergeSubFlowOutputText } from './sub-flow-output-text'
+export {
+  mergeSubFlowOutputText,
+  buildSubAgentBrief,
+  resolveSubAgentSummaryText,
+} from './sub-flow-output-text'
 
 export type { SubAgentContextEnvelope }
 
@@ -258,7 +262,7 @@ export function subAgentReportPreview(
   stepOutputs: StepOutputs,
   maxLen = 240,
 ): string {
-  const text = mergeSubFlowOutputText(stepOutputs, 'report')
+  const text = resolveSubAgentSummaryText(stepOutputs)
   const trimmed = text.trim()
   if (trimmed.length <= maxLen) return trimmed
   return `${trimmed.slice(0, maxLen)}…`
