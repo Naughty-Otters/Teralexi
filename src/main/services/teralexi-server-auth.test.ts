@@ -277,4 +277,35 @@ describe('teralexi-server-auth', () => {
     await expect(pB).resolves.toBe(jwtB)
     expect(fetch).toHaveBeenCalledTimes(2)
   })
+
+  it('scopes in-memory cache by apiBaseUrl so sequential bases do not reuse the wrong JWT', async () => {
+    const jwtA = makeTestJwt(Math.floor(Date.now() / 1000) + 3600)
+    const jwtB = makeTestJwt(Math.floor(Date.now() / 1000) + 7200)
+    getTeralexiAccountGoogleIdToken.mockReturnValue('google-id-token')
+
+    vi.mocked(fetch).mockImplementation(async (url) => {
+      const href = String(url)
+      const access_token = href.includes('a.example') ? jwtA : jwtB
+      return {
+        ok: true,
+        json: async () => ({ access_token, expires_in: 3600 }),
+      } as Response
+    })
+
+    await expect(
+      getTeralexiServerAccessToken('http://a.example:8000'),
+    ).resolves.toBe(jwtA)
+    await expect(
+      getTeralexiServerAccessToken('http://b.example:8000'),
+    ).resolves.toBe(jwtB)
+
+    // Cache hits must stay scoped to each base.
+    await expect(
+      getTeralexiServerAccessToken('http://a.example:8000'),
+    ).resolves.toBe(jwtA)
+    await expect(
+      getTeralexiServerAccessToken('http://b.example:8000'),
+    ).resolves.toBe(jwtB)
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
 })
