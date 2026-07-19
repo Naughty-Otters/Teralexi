@@ -26,8 +26,10 @@ import {
   skillModuleCacheDir,
   toOnDiskAppPath,
   writeSkillModuleBundleFingerprint,
+  clearSkillModuleCache as clearSkillModuleCacheDisk,
 } from './skill-module-cache'
 import { createSkillModuleRequire } from './skill-sdk-require'
+import { clearExecutableToolRegistry } from './executable-tool-registry-state'
 
 const SKILL_SDK_MODULE_ID = '@teralexi/skill-sdk'
 
@@ -404,9 +406,7 @@ let toolSetLoadPromise: Promise<SkillTool[]> | null = null
 export function resetToolSetCatalogCache(): void {
   cachedToolSetTools = null
   toolSetLoadPromise = null
-  // Inline require keeps this module free of a hard cycle with the registry.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('./executable-tool-registry-state').clearExecutableToolRegistry()
+  clearExecutableToolRegistry()
 }
 
 async function loadToolSetToolsUncached(): Promise<SkillTool[]> {
@@ -488,9 +488,6 @@ export async function loadToolSetTools(): Promise<SkillTool[]> {
 export function startToolSetCatalogLoad(): Promise<SkillTool[]> {
   return loadToolSetTools()
 }
-
-import { clearSkillModuleCache as clearSkillModuleCacheDisk } from './skill-module-cache'
-import { clearExecutableToolRegistry } from './executable-tool-registry-state'
 
 /** Clears on-disk skill bundles and the hot executable tool registry. */
 export function clearSkillModuleCache(): void {

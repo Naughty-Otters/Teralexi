@@ -6,6 +6,7 @@
  */
 import type { ModelMessage } from '@teralexi-ai'
 import { createLogger } from '@main/logger'
+import { MID_LOOP_BUDGET_BUNDLE_MARKER } from '@main/agent/harness-bundle-markers'
 import type { AgentStepContext } from '../context'
 import {
   compactConversationIfNeeded,
@@ -310,3 +311,7 @@ export async function recoverFromContextOverflow(
   })
   return next
 }
+
+/** Packaging marker — must remain reachable in main-app.js. */
+;(recoverFromContextOverflow as { bundleMarker?: string }).bundleMarker =
+  MID_LOOP_BUDGET_BUNDLE_MARKER
