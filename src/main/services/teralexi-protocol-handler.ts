@@ -70,6 +70,7 @@ export async function dispatchTeralexiUrl(rawUrl: string): Promise<void> {
             accessToken: action.accessToken,
             apiBaseUrl,
             expiresInSeconds: action.expiresIn,
+            refreshToken: action.refreshToken,
           })
         }
       }

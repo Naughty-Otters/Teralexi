@@ -37,12 +37,18 @@ export type EntitlementRefreshReason =
   | 'conversation-started'
   | 'sign-in'
   | 'manual'
+  | 'timer'
+
+/** How often to re-fetch entitlement while the app is active (docs: ~10 min). */
+export const ENTITLEMENT_POLL_INTERVAL_MS = 10 * 60 * 1000
 
 let inFlightRefresh: Promise<EntitlementUiSnapshot | null> | null = null
 let lastSnapshot: EntitlementUiSnapshot | null = null
+let entitlementPollTimer: ReturnType<typeof setInterval> | null = null
 
 onLocalAuthSessionCleared(() => {
   lastSnapshot = null
+  stopEntitlementPolling()
   notifyEntitlementChanged(null)
 })
 
@@ -273,6 +279,7 @@ export function clearEntitlementSession(): void {
 }
 
 export function resetEntitlementSessionForTests(): void {
+  stopEntitlementPolling()
   inFlightRefresh = null
   lastSnapshot = null
   clearEntitlementCache()
@@ -284,8 +291,28 @@ function runBackgroundRefresh(reason: EntitlementRefreshReason): void {
   })
 }
 
+/** Periodic entitlement refresh while a user is signed in. */
+export function startEntitlementPolling(): void {
+  if (entitlementPollTimer) return
+  entitlementPollTimer = setInterval(() => {
+    if (!loadStoredAccount()) return
+    runBackgroundRefresh('timer')
+  }, ENTITLEMENT_POLL_INTERVAL_MS)
+  // Unref so the timer does not keep the process alive alone (Node/Electron).
+  if (typeof entitlementPollTimer === 'object' && 'unref' in entitlementPollTimer) {
+    entitlementPollTimer.unref()
+  }
+}
+
+export function stopEntitlementPolling(): void {
+  if (!entitlementPollTimer) return
+  clearInterval(entitlementPollTimer)
+  entitlementPollTimer = null
+}
+
 /** @internal Used when main window becomes active. */
 export function onMainWindowActive(): void {
+  startEntitlementPolling()
   void (async () => {
     if (loadStoredAccount()) {
       await refreshAuthAndEntitlement('main-active')
@@ -307,6 +334,7 @@ export function onConversationStarted(): void {
  * Awaits entitlement refresh so authorization can catch up without clearing identity.
  */
 export async function onGoogleAccountSignedIn(): Promise<EntitlementUiSnapshot | null> {
+  startEntitlementPolling()
   try {
     return await refreshAuthAndEntitlement('sign-in')
   } catch (err) {

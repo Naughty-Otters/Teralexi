@@ -2,9 +2,11 @@
  * Teralexi Google Account OAuth – platform account linking via browser + teralexi://
  *
  * Separate from Google Workspace (Gmail/Calendar/Drive). The web app redirects
- * with `teralexi://open?token=<google_id_token>`; sign-in opens the Teralexi auth URL.
+ * with platform tokens (`teralexi://open?access_token=&refresh_token=`) or a
+ * Google `id_token` to exchange. Sign-in opens the Teralexi `/auth/login` URL.
  *
- * Tokens are persisted under ~/.teralexi/accounts/google-account.json.
+ * Identity is persisted under ~/.teralexi/accounts/google-account.json.
+ * Platform access + refresh tokens live in server-auth.json (see teralexi-server-auth).
  */
 
 import { shell } from 'electron'
@@ -19,7 +21,11 @@ import {
   GoogleAccountNotConfiguredError,
   isTeralexiGoogleAccountSignInConfigured,
 } from '@shared/google-account-settings'
-import { getTeralexiGoogleAuthLoginUrl as resolveConfiguredGoogleAuthLoginUrl } from '@main/services/teralexi-platform-config'
+import { getTeralexiGoogleAuthLoginUrl as resolveConfiguredGoogleAuthLoginUrl, getTeralexiBaseApiUrl } from '@main/services/teralexi-platform-config'
+import {
+  joinTeralexiPlatformUrl,
+  TERALEXI_PLATFORM_PATHS,
+} from '@shared/teralexi-platform-api'
 import { TERALEXI_CALLBACK_URL } from '@shared/teralexi-protocol'
 import {
   googleProfileFromIdToken,
@@ -180,6 +186,50 @@ function clearPendingGoogleSignIn(reason?: string): void {
   }
 }
 
+async function fetchPlatformUserProfile(
+  accessToken: string,
+): Promise<GoogleUserInfo | null> {
+  const apiBase = getTeralexiBaseApiUrl()
+  if (!apiBase) return null
+  try {
+    const url = joinTeralexiPlatformUrl(apiBase, TERALEXI_PLATFORM_PATHS.authMe)
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      signal: AbortSignal.timeout(15_000),
+    })
+    if (!response.ok) return null
+    const body = (await response.json()) as {
+      id?: number
+      sub_id?: string
+      email?: string
+      full_name?: string | null
+      avatar_url?: string | null
+    }
+    const email = typeof body.email === 'string' ? body.email.trim() : ''
+    const sub =
+      (typeof body.sub_id === 'string' && body.sub_id.trim()) ||
+      (body.id != null ? String(body.id) : '') ||
+      email
+    if (!sub) return null
+    return {
+      sub,
+      email,
+      name:
+        (typeof body.full_name === 'string' && body.full_name.trim()) ||
+        email ||
+        sub,
+      picture:
+        typeof body.avatar_url === 'string' ? body.avatar_url.trim() : '',
+    }
+  } catch (err) {
+    log.warn('Failed to load profile from /auth/me for avatar', { err })
+    return null
+  }
+}
+
 async function resolveGoogleUserInfo(
   bearerToken: string,
 ): Promise<GoogleUserInfo> {
@@ -196,16 +246,23 @@ async function resolveGoogleUserInfo(
     }
   }
 
-  // Platform JWT from website login — profile claims without calling Google.
+  // Platform JWT from website login — claims often omit `picture`; fill from /me.
   const jwtProfile = googleProfileFromIdToken(bearerToken)
   if (jwtProfile?.sub && (jwtProfile.email || jwtProfile.name)) {
+    const fromMe =
+      !jwtProfile.picture.trim()
+        ? await fetchPlatformUserProfile(bearerToken)
+        : null
     return {
-      sub: jwtProfile.sub,
-      email: jwtProfile.email,
-      name: jwtProfile.name || jwtProfile.email,
-      picture: jwtProfile.picture,
+      sub: fromMe?.sub || jwtProfile.sub,
+      email: fromMe?.email || jwtProfile.email,
+      name: fromMe?.name || jwtProfile.name || jwtProfile.email,
+      picture: fromMe?.picture || jwtProfile.picture,
     }
   }
+
+  const fromMe = await fetchPlatformUserProfile(bearerToken)
+  if (fromMe) return fromMe
 
   const userInfoRaw = await httpsGet(GOOGLE_USERINFO_URL, bearerToken)
   if (typeof userInfoRaw.error === 'string') {
@@ -368,4 +425,14 @@ export function getStoredPresentedServerAccessToken(): string | null {
   if (!token || isGoogleIdToken(token)) return null
   if (!decodeJwtPayload(token)) return null
   return token
+}
+
+/** Platform refresh token from the website handoff (`teralexi://open`). */
+export function getStoredPresentedServerRefreshToken(): string | null {
+  const account = loadStoredAccount()
+  if (!account) return null
+  // Only treat refresh as platform session when access is a platform JWT
+  // (not a Google id_token exchange pending).
+  if (!getStoredPresentedServerAccessToken()) return null
+  return account.tokens.refresh_token?.trim() || null
 }

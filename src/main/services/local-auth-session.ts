@@ -34,7 +34,8 @@ export function revokeLocalTeralexiAuthSession(
 ): void {
   log.warn('Signing out locally', { message, ...context })
   clearStoredAccount()
-  clearTeralexiServerAuthCache()
+  // Capture + POST /auth/logout with refresh_token before wiping local cache.
+  clearTeralexiServerAuthCache({ revokeRemote: true })
   clearEntitlementCache()
   notifyGoogleAccountChanged(null)
   for (const listener of clearedListeners) {

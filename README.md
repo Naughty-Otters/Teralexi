@@ -64,8 +64,8 @@ npm run dev
 Point at a local or staging API only when you need to:
 
 ```bash
-cp env/.dev.local.env.example env/.dev.local.env
-# edit BASE_API in env/.dev.local.env, then:
+cp env/.dev.local.env.example env/.env
+# edit BASE_API in env/.env, then:
 npm run dev
 ```
 
@@ -74,6 +74,8 @@ Or one-off:
 ```bash
 BASE_API=http://localhost:8000 npm run dev
 ```
+
+Local load order for `npm run dev`: `env/.dev.env` → `env/.env` (wins) → `env/.dev.local.env` (wins if present).
 
 ## Useful commands
 

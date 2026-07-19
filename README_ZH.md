@@ -53,8 +53,8 @@ npm run dev
 仅在需要时覆盖：
 
 ```bash
-cp env/.dev.local.env.example env/.dev.local.env
-# 编辑 env/.dev.local.env 中的 BASE_API，然后：
+cp env/.dev.local.env.example env/.env
+# 编辑 env/.env 中的 BASE_API，然后：
 npm run dev
 ```
 
@@ -63,6 +63,8 @@ npm run dev
 ```bash
 BASE_API=http://localhost:8000 npm run dev
 ```
+
+本地加载顺序：`env/.dev.env` → `env/.env`（覆盖）→ `env/.dev.local.env`（若存在则最高优先）。
 
 ## 常用命令
 
