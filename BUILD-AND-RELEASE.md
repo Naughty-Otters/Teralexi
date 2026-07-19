@@ -8,7 +8,7 @@ Teralexi uses three build environments. Each maps to a file under `env/`:
 
 | Mode | File | `TERALEXI_BUILD_ENV` | `NODE_ENV` | Purpose |
 | --- | --- | --- | --- | --- |
-| **Development** | `env/.dev.env` (+ optional `env/.dev.local.env`) | `dev` | `development` | Local `npm run dev` (production API by default) |
+| **Development** | `env/.dev.env` (+ `env/.env`, optional `env/.dev.local.env`) | `dev` | `development` | Local `npm run dev` (production API by default) |
 | **Staging (SIT)** | `env/.sit.env` | `sit` | `sit` | CI builds, internal QA |
 | **Production** | `env/.prod.env` | `prod` | `production` | Public releases |
 
@@ -25,7 +25,7 @@ Configure the Teralexi platform backend once with `BASE_API`. At runtime it maps
 | Support upload | `support/upload` |
 
 - **Build-time (main + renderer):** `BASE_API` is baked into both bundles from `env/.{mode}.env`. Packaged apps do not read env files at runtime — rebuild to change API targets.
-- **Dev override:** `npm run dev` loads `env/.dev.env` (production API). If `env/.dev.local.env` exists, it merges on top. Process env `BASE_API=...` also overrides.
+- **Dev override:** `npm run dev` loads `env/.dev.env` (production API), then merges `env/.env` if present (wins on conflict), then optional `env/.dev.local.env`. Process env `BASE_API=...` also overrides.
 - **Runtime (main process):** optional overrides such as `app.metrics.graphqlUrl` may be relative paths or legacy absolute URLs (via `config.properties` only).
 
 **Code signing:** builds are **unsigned by default** (macOS and Windows). Copy `env/.signing.env.example` → `env/.signing.env` for local signed builds (sit and prod). CI/Release uses GitHub Actions secrets — see [docs/CODE-SIGNING.md](./docs/CODE-SIGNING.md) (overview), [CODE-SIGNING-APPLE.md](./docs/CODE-SIGNING-APPLE.md), [CODE-SIGNING-WINDOWS.md](./docs/CODE-SIGNING-WINDOWS.md).
@@ -37,7 +37,7 @@ BASE_API = 'https://api.teralexi.com/'
 NODE_ENV = 'development'
 ```
 
-Example local override (`env/.dev.local.env`, gitignored):
+Example local override (`env/.env` or `env/.dev.local.env`, gitignored):
 
 ```properties
 BASE_API = 'http://localhost:8000'
@@ -48,9 +48,10 @@ NODE_ENV = 'development'
 
 ```text
 env/
-  .dev.env                 # npm run dev (production API by default)
+  .dev.env                 # npm run dev defaults (production API by default)
+  .env                     # optional local override (gitignored; wins over .dev.env)
   .dev.local.env.example   # template for local backend override
-  .dev.local.env           # optional override (gitignored)
+  .dev.local.env           # optional highest-priority override (gitignored)
   .sit.env                 # staging / CI app config
   .prod.env                # production app config
   .signing.env.example     # template (committed)
@@ -68,10 +69,16 @@ npm install
 npm run dev          # uses env/.dev.env (-m dev); production API by default
 ```
 
-`npm run dev` sets `TERALEXI_BUILD_ENV=dev` and loads `env/.dev.env` for both the build tooling and the running app. To use a local backend:
+`npm run dev` sets `TERALEXI_BUILD_ENV=dev` and loads env files for both the build tooling and the running app:
+
+1. `env/.dev.env` (committed defaults)
+2. `env/.env` (optional; wins on conflict)
+3. `env/.dev.local.env` (optional; wins over `.env`)
+
+To use a local backend:
 
 ```bash
-cp env/.dev.local.env.example env/.dev.local.env
+cp env/.dev.local.env.example env/.env
 # edit BASE_API, then npm run dev
 # or: BASE_API=http://localhost:8000 npm run dev
 ```
@@ -328,8 +335,8 @@ See [`docs/DESKTOP-RELEASES.md`](./docs/DESKTOP-RELEASES.md) and [`docs/RELEASE.
 
 | Goal | Command / workflow |
 | --- | --- |
-| Run locally | `npm run dev` → `.dev.env` (production API); optional `.dev.local.env` / `BASE_API=` override |
+| Run locally | `npm run dev` → `.dev.env`; optional `env/.env` / `.dev.local.env` / `BASE_API=` override |
 | PR / branch validation | **CI** workflow → `.sit.env`, signed sit artifacts |
 | Staging update feed | Same path as prod on staging API: `{BASE_API}/desktop/releases/stable/` (publish separately) |
 | Public production release | **Release** workflow → `.prod.env` → S3 `desktop/releases/stable/` |
-| Change API URLs | Edit the matching file in `env/` (dev: prefer `.dev.local.env` over editing `.dev.env`) |
+| Change API URLs | Edit the matching file in `env/` (dev: prefer `env/.env` or `.dev.local.env` over editing `.dev.env`) |

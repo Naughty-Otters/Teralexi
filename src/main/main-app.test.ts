@@ -24,6 +24,7 @@ const {
   dockSetIcon,
   loadStoredAccount,
   refreshAuthAndEntitlement,
+  startEntitlementPolling,
 } = vi.hoisted(() => ({
   initStaticPaths: vi.fn(),
   seedBundledDefaultRulesIfMissing: vi.fn(),
@@ -58,6 +59,7 @@ const {
   dockSetIcon: vi.fn(),
   loadStoredAccount: vi.fn(() => null),
   refreshAuthAndEntitlement: vi.fn(async () => null),
+  startEntitlementPolling: vi.fn(),
 }))
 
 vi.mock('./config/static-path', () => ({
@@ -158,6 +160,7 @@ vi.mock('./services/google-account-oauth', () => ({
 
 vi.mock('./services/entitlement-session', () => ({
   refreshAuthAndEntitlement,
+  startEntitlementPolling,
 }))
 
 vi.mock('./logger', () => ({

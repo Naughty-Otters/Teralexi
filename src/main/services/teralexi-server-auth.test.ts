@@ -1,19 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getTeralexiAccountGoogleIdToken, getStoredPresentedServerAccessToken } =
-  vi.hoisted(() => ({
-    getTeralexiAccountGoogleIdToken: vi.fn(),
-    getStoredPresentedServerAccessToken: vi.fn(() => null),
-  }))
+const {
+  getTeralexiAccountGoogleIdToken,
+  getStoredPresentedServerAccessToken,
+  getStoredPresentedServerRefreshToken,
+} = vi.hoisted(() => ({
+  getTeralexiAccountGoogleIdToken: vi.fn(),
+  getStoredPresentedServerAccessToken: vi.fn(() => null),
+  getStoredPresentedServerRefreshToken: vi.fn(() => null),
+}))
 
 vi.mock('@main/services/google-account-oauth', () => ({
   getTeralexiAccountGoogleIdToken,
   getStoredPresentedServerAccessToken,
+  getStoredPresentedServerRefreshToken,
 }))
 
 vi.mock('./server-auth-store', () => ({
   clearPersistedServerAuth: vi.fn(),
   getPersistedServerAccessToken: vi.fn(() => null),
+  getPersistedServerRefreshToken: vi.fn(() => null),
   loadPersistedServerAuth: vi.fn(() => null),
   savePersistedServerAuth: vi.fn(),
 }))
@@ -25,7 +31,11 @@ import {
   refreshServerAccessToken,
   resolveMetricsApiBaseUrl,
 } from './teralexi-server-auth'
-import { savePersistedServerAuth } from './server-auth-store'
+import {
+  getPersistedServerRefreshToken,
+  loadPersistedServerAuth,
+  savePersistedServerAuth,
+} from './server-auth-store'
 
 function makeTestJwt(expSeconds: number): string {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
@@ -40,7 +50,11 @@ describe('teralexi-server-auth', () => {
     clearTeralexiServerAuthCache()
     getTeralexiAccountGoogleIdToken.mockReset()
     getStoredPresentedServerAccessToken.mockReset()
+    getStoredPresentedServerRefreshToken.mockReset()
     getStoredPresentedServerAccessToken.mockReturnValue(null)
+    getStoredPresentedServerRefreshToken.mockReturnValue(null)
+    vi.mocked(getPersistedServerRefreshToken).mockReturnValue(null)
+    vi.mocked(loadPersistedServerAuth).mockReturnValue(null)
     vi.stubGlobal('fetch', vi.fn())
   })
 
@@ -50,11 +64,16 @@ describe('teralexi-server-auth', () => {
     )
   })
 
-  it('exchanges Google id_token for server access_token', async () => {
+  it('exchanges Google id_token for server access_token and refresh_token', async () => {
     const serverJwt = makeTestJwt(Math.floor(Date.now() / 1000) + 3600)
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
-      json: async () => ({ access_token: serverJwt, expires_in: 3600 }),
+      json: async () => ({
+        access_token: serverJwt,
+        refresh_token: 'refresh-1',
+        expires_in: 3600,
+        refresh_expires_in: 31536000,
+      }),
     } as Response)
 
     const token = await exchangeGoogleIdTokenForServerAccessToken({
@@ -67,6 +86,7 @@ describe('teralexi-server-auth', () => {
       expect.objectContaining({
         apiBaseUrl: 'http://127.0.0.1:8000',
         accessToken: serverJwt,
+        refreshToken: 'refresh-1',
       }),
     )
     expect(fetch).toHaveBeenCalledWith(
@@ -78,25 +98,34 @@ describe('teralexi-server-auth', () => {
     )
   })
 
-  it('refreshes server access_token', async () => {
+  it('refreshes server access_token via refresh_token rotation', async () => {
     const refreshedJwt = makeTestJwt(Math.floor(Date.now() / 1000) + 7200)
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
-      json: async () => ({ access_token: refreshedJwt }),
+      json: async () => ({
+        access_token: refreshedJwt,
+        refresh_token: 'refresh-2',
+        expires_in: 7200,
+      }),
     } as Response)
 
     const token = await refreshServerAccessToken({
       apiBaseUrl: 'http://127.0.0.1:8000',
-      accessToken: 'old-server-jwt',
+      refreshToken: 'refresh-1',
     })
 
     expect(token).toBe(refreshedJwt)
     expect(fetch).toHaveBeenCalledWith(
-      'http://127.0.0.1:8000/api/v1/auth/token',
+      'http://127.0.0.1:8000/api/v1/auth/refresh',
       expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: 'Bearer old-server-jwt',
-        }),
+        method: 'POST',
+        body: JSON.stringify({ refresh_token: 'refresh-1' }),
+      }),
+    )
+    expect(savePersistedServerAuth).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accessToken: refreshedJwt,
+        refreshToken: 'refresh-2',
       }),
     )
   })
@@ -106,7 +135,10 @@ describe('teralexi-server-auth', () => {
     getTeralexiAccountGoogleIdToken.mockReturnValue('google-id-token')
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
-      json: async () => ({ access_token: serverJwt }),
+      json: async () => ({
+        access_token: serverJwt,
+        refresh_token: 'refresh-1',
+      }),
     } as Response)
 
     await expect(
@@ -118,7 +150,7 @@ describe('teralexi-server-auth', () => {
     expect(fetch).toHaveBeenCalledTimes(1)
   })
 
-  it('refreshes soft-expired cache instead of signing out', async () => {
+  it('refreshes soft-expired cache via refresh_token instead of signing out', async () => {
     const soonExpiring = makeTestJwt(Math.floor(Date.now() / 1000) + 30)
     const renewed = makeTestJwt(Math.floor(Date.now() / 1000) + 7200)
     getTeralexiAccountGoogleIdToken.mockReturnValue(null)
@@ -126,14 +158,21 @@ describe('teralexi-server-auth', () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ access_token: soonExpiring, expires_in: 30 }),
+        json: async () => ({
+          access_token: soonExpiring,
+          refresh_token: 'refresh-1',
+          expires_in: 30,
+        }),
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ access_token: renewed, expires_in: 7200 }),
+        json: async () => ({
+          access_token: renewed,
+          refresh_token: 'refresh-2',
+          expires_in: 7200,
+        }),
       } as Response)
 
-    // Seed cache via exchange.
     getTeralexiAccountGoogleIdToken.mockReturnValueOnce('google-id-token')
     await exchangeGoogleIdTokenForServerAccessToken({
       apiBaseUrl: 'http://127.0.0.1:8000',
@@ -147,12 +186,10 @@ describe('teralexi-server-auth', () => {
 
     expect(fetch).toHaveBeenNthCalledWith(
       2,
-      'http://127.0.0.1:8000/api/v1/auth/token',
+      'http://127.0.0.1:8000/api/v1/auth/refresh',
       expect.objectContaining({
         method: 'POST',
-        headers: expect.objectContaining({
-          Authorization: `Bearer ${soonExpiring}`,
-        }),
+        body: JSON.stringify({ refresh_token: 'refresh-1' }),
       }),
     )
   })
@@ -162,7 +199,11 @@ describe('teralexi-server-auth', () => {
     getTeralexiAccountGoogleIdToken.mockReturnValue('google-id-token')
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
-      json: async () => ({ access_token: serverJwt, expires_in: 3600 }),
+      json: async () => ({
+        access_token: serverJwt,
+        refresh_token: 'refresh-1',
+        expires_in: 3600,
+      }),
     } as Response)
 
     await expect(
@@ -182,18 +223,29 @@ describe('teralexi-server-auth', () => {
     const platformJwt = makeTestJwt(Math.floor(Date.now() / 1000) + 3600)
     getTeralexiAccountGoogleIdToken.mockReturnValue(null)
     getStoredPresentedServerAccessToken.mockReturnValue(platformJwt)
+    getStoredPresentedServerRefreshToken.mockReturnValue('presented-refresh')
 
     await expect(
       getTeralexiServerAccessToken('http://127.0.0.1:8000'),
     ).resolves.toBe(platformJwt)
     expect(fetch).not.toHaveBeenCalled()
+    expect(savePersistedServerAuth).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accessToken: platformJwt,
+        refreshToken: 'presented-refresh',
+      }),
+    )
   })
 
   it('passes AbortSignal on auth exchange and refresh fetches', async () => {
     const serverJwt = makeTestJwt(Math.floor(Date.now() / 1000) + 3600)
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
-      json: async () => ({ access_token: serverJwt, expires_in: 3600 }),
+      json: async () => ({
+        access_token: serverJwt,
+        refresh_token: 'refresh-1',
+        expires_in: 3600,
+      }),
     } as Response)
 
     await exchangeGoogleIdTokenForServerAccessToken({
@@ -209,10 +261,10 @@ describe('teralexi-server-auth', () => {
 
     await refreshServerAccessToken({
       apiBaseUrl: 'http://127.0.0.1:8000',
-      accessToken: serverJwt,
+      refreshToken: 'refresh-1',
     })
     expect(fetch).toHaveBeenLastCalledWith(
-      'http://127.0.0.1:8000/api/v1/auth/token',
+      'http://127.0.0.1:8000/api/v1/auth/refresh',
       expect.objectContaining({
         signal: expect.any(AbortSignal),
       }),
@@ -266,11 +318,19 @@ describe('teralexi-server-auth', () => {
 
     pending.get('http://a.example:8000/api/v1/auth/google')!({
       ok: true,
-      json: async () => ({ access_token: jwtA, expires_in: 3600 }),
+      json: async () => ({
+        access_token: jwtA,
+        refresh_token: 'ra',
+        expires_in: 3600,
+      }),
     } as Response)
     pending.get('http://b.example:8000/api/v1/auth/google')!({
       ok: true,
-      json: async () => ({ access_token: jwtB, expires_in: 7200 }),
+      json: async () => ({
+        access_token: jwtB,
+        refresh_token: 'rb',
+        expires_in: 7200,
+      }),
     } as Response)
 
     await expect(pA).resolves.toBe(jwtA)
@@ -288,7 +348,11 @@ describe('teralexi-server-auth', () => {
       const access_token = href.includes('a.example') ? jwtA : jwtB
       return {
         ok: true,
-        json: async () => ({ access_token, expires_in: 3600 }),
+        json: async () => ({
+          access_token,
+          refresh_token: 'r',
+          expires_in: 3600,
+        }),
       } as Response
     })
 
@@ -299,7 +363,6 @@ describe('teralexi-server-auth', () => {
       getTeralexiServerAccessToken('http://b.example:8000'),
     ).resolves.toBe(jwtB)
 
-    // Cache hits must stay scoped to each base.
     await expect(
       getTeralexiServerAccessToken('http://a.example:8000'),
     ).resolves.toBe(jwtA)

@@ -1,10 +1,14 @@
-import { joinTeralexiPlatformUrl } from '@shared/teralexi-platform-api'
+import { joinTeralexiPlatformUrl, TERALEXI_PLATFORM_PATHS } from '@shared/teralexi-platform-api'
 import type {
   EntitlementApiResponse,
   EntitlementCache,
 } from '@shared/subscription/entitlement-types'
 import { getTeralexiBaseApiUrl } from './teralexi-platform-config'
-import { getTeralexiServerAccessToken, getLastServerAccessTokenFailure } from './teralexi-server-auth'
+import {
+  forceRefreshTeralexiServerAccessToken,
+  getLastServerAccessTokenFailure,
+  getTeralexiServerAccessToken,
+} from './teralexi-server-auth'
 import { verifyEntitlementToken } from './entitlement-verifier'
 import {
   buildEntitlementCache,
@@ -16,6 +20,8 @@ export type TeralexiMeResponse = {
   id: number
   sub_id: string
   email: string
+  full_name?: string | null
+  avatar_url?: string | null
 }
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
@@ -39,7 +45,7 @@ export async function fetchTeralexiCurrentUser(
   apiBaseUrl: string,
   accessToken: string,
 ): Promise<TeralexiMeResponse> {
-  const url = joinTeralexiPlatformUrl(apiBaseUrl, 'api/v1/auth/me')
+  const url = joinTeralexiPlatformUrl(apiBaseUrl, TERALEXI_PLATFORM_PATHS.authMe)
   const response = await fetch(url, {
     headers: {
       Accept: 'application/json',
@@ -90,6 +96,17 @@ export async function checkTeralexiServerSession(
     return { ok: true }
   } catch (err) {
     const status = (err as { status?: number }).status
+    if (status === 401) {
+      try {
+        const renewed = await forceRefreshTeralexiServerAccessToken(apiBaseUrl)
+        if (renewed) {
+          await fetchTeralexiCurrentUser(apiBaseUrl, renewed)
+          return { ok: true }
+        }
+      } catch (refreshErr) {
+        return { ok: null, transientError: refreshErr }
+      }
+    }
     const message =
       err instanceof Error ? err.message : 'Teralexi server session check failed'
     if (status === 401 || status === 403) {
@@ -106,7 +123,7 @@ export async function fetchEntitlementFromServer(args: {
 }): Promise<EntitlementApiResponse> {
   const url = joinTeralexiPlatformUrl(
     args.apiBaseUrl,
-    'api/v1/subscription/entitlement',
+    TERALEXI_PLATFORM_PATHS.subscriptionEntitlement,
   )
   const response = await fetch(url, {
     headers: {
@@ -158,7 +175,7 @@ export async function fetchAndVerifyEntitlementFromNetwork(): Promise<{
     throw new Error('Teralexi API base URL is not configured')
   }
 
-  const accessToken = await getTeralexiServerAccessToken(apiBaseUrl)
+  let accessToken = await getTeralexiServerAccessToken(apiBaseUrl)
   if (!accessToken) {
     const detail =
       getLastServerAccessTokenFailure() ||
@@ -169,33 +186,46 @@ export async function fetchAndVerifyEntitlementFromNetwork(): Promise<{
     throw error
   }
 
-  const me = await fetchTeralexiCurrentUser(apiBaseUrl, accessToken)
-  const teralexiUserId = String(me.id)
-  const requestId = crypto.randomUUID()
-  const body = await fetchEntitlementFromServer({
-    apiBaseUrl,
-    accessToken,
-    requestId,
-  })
+  const run = async (token: string) => {
+    const me = await fetchTeralexiCurrentUser(apiBaseUrl, token)
+    const teralexiUserId = String(me.id)
+    const requestId = crypto.randomUUID()
+    const body = await fetchEntitlementFromServer({
+      apiBaseUrl,
+      accessToken: token,
+      requestId,
+    })
 
-  const token = body.entitlement_token?.trim()
-  if (!token) {
-    throw new Error('Entitlement response missing entitlement_token')
+    const entitlementToken = body.entitlement_token?.trim()
+    if (!entitlementToken) {
+      throw new Error('Entitlement response missing entitlement_token')
+    }
+
+    const claims = await verifyEntitlementToken({
+      entitlementToken,
+      apiBaseUrl,
+      teralexiUserId,
+      requestId,
+    })
+
+    const cache = buildEntitlementCache({
+      entitlementToken,
+      teralexiUserId,
+      claims,
+      serverTime: body.payload?.server_time,
+    })
+    saveEntitlementCache(cache)
+    return { cache, verifyState: 'verified' as const }
   }
 
-  const claims = await verifyEntitlementToken({
-    entitlementToken: token,
-    apiBaseUrl,
-    teralexiUserId,
-    requestId,
-  })
-
-  const cache = buildEntitlementCache({
-    entitlementToken: token,
-    teralexiUserId,
-    claims,
-    serverTime: body.payload?.server_time,
-  })
-  saveEntitlementCache(cache)
-  return { cache, verifyState: 'verified' }
+  try {
+    return await run(accessToken)
+  } catch (err) {
+    const status = (err as { status?: number }).status
+    if (status !== 401) throw err
+    const renewed = await forceRefreshTeralexiServerAccessToken(apiBaseUrl)
+    if (!renewed) throw err
+    accessToken = renewed
+    return await run(accessToken)
+  }
 }
