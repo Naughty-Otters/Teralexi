@@ -338,6 +338,8 @@ function guessLanguageFromPath(path: string): string {
 .conv-tool-response--diff,
 .conv-tool-response--patch {
   border-color: color-mix(in srgb, var(--color-warning-500, #f59e0b) 28%, var(--ui-border));
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .conv-tool-response--file,
@@ -465,15 +467,11 @@ function guessLanguageFromPath(path: string): string {
 }
 
 .conv-tool-response__body--diff {
-  padding: 8px;
+  padding: 0;
 }
 
-.conv-tool-response__body--diff :deep(.fc) {
-  border-radius: 6px;
-}
-
-.conv-tool-response__body--diff :deep(.fc__head) {
-  padding: 4px 8px;
+.conv-tool-response__body--diff :deep(.fcs > .fc:last-child) {
+  border-bottom: none;
 }
 
 .conv-tool-response__body--diff :deep(.shiki-surface) {

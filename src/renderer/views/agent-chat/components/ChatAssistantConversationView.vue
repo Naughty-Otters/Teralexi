@@ -1047,10 +1047,21 @@ function bubblePresentation(
   gap: 4px;
 }
 
+.conversation-bubble:has(.conversation-bubble__file-changes) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  overflow: hidden;
+}
+
 .conversation-bubble__file-changes {
-  margin: 6px 0 0;
-  width: 100%;
+  margin: 6px -12px -10px;
+  width: calc(100% + 24px);
   min-width: 0;
+  box-sizing: border-box;
+}
+
+.conversation-bubble__file-changes :deep(.fcs > .fc:last-child) {
+  border-bottom: none;
 }
 
 .conversation-bubble__file-item {
