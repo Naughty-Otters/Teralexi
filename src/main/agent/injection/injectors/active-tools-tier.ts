@@ -4,6 +4,7 @@ import {
   toolNamesMatchingTags,
 } from '@shared/agent/skill-workspace-tool-defaults'
 import { MANDATORY_TOOL_NAMES } from '@shared/agent/mandatory-tools'
+import { ACTIVE_TOOLS_TIER_BUNDLE_MARKER } from '@main/agent/harness-bundle-markers'
 import { resolveDefaultActiveToolNames } from '../../coding/default-active-tools'
 import { isPlanModeActive } from '../../coding/plan-mode-state'
 import type { AgentInjector } from '../types'
@@ -71,6 +72,9 @@ export const activeToolsTierInjector: AgentInjector = {
     return { activeTools }
   },
 }
+
+;(activeToolsTierInjector as { bundleMarker?: string }).bundleMarker =
+  ACTIVE_TOOLS_TIER_BUNDLE_MARKER
 
 export {
   resolveDefaultActiveToolNames,
