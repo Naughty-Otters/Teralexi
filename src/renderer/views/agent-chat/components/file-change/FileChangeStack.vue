@@ -47,10 +47,13 @@ withDefaults(
 .fcs {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
 }
 .fcs__label {
   margin: 0;
+  padding: 8px 12px 6px;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -59,12 +62,14 @@ withDefaults(
 }
 .fcs__error {
   margin: 0;
+  padding: 8px 12px;
   font-size: 12px;
   color: var(--color-error-600, #dc2626);
 }
 .fcs__loading,
 .fcs__empty {
   margin: 0;
+  padding: 8px 12px;
   font-size: 12px;
   color: var(--ui-text-muted);
 }
