@@ -34,9 +34,16 @@
       v-if="canExpandDiff"
       type="button"
       class="fc__expand"
+      :aria-expanded="diffExpanded"
+      :aria-label="diffExpanded ? 'Show less' : 'Show full diff'"
+      :title="diffExpanded ? 'Show less' : 'Show full diff'"
       @click="diffExpanded = !diffExpanded"
     >
-      {{ diffExpanded ? 'Show less' : 'Show full diff' }}
+      <UIcon
+        :name="diffExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+        class="fc__expand-icon"
+        aria-hidden="true"
+      />
     </button>
   </article>
 </template>
@@ -213,19 +220,22 @@ function onOpenPath() {
 }
 
 .fc__expand {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   margin: 0;
-  padding: 5px 10px;
+  padding: 4px 10px;
   border: none;
   border-top: 1px solid var(--ui-border);
   background: color-mix(in srgb, var(--ui-text) 3%, transparent);
   color: var(--ui-text-muted);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  text-align: center;
   cursor: pointer;
+}
+
+.fc__expand-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .fc__expand:hover {
