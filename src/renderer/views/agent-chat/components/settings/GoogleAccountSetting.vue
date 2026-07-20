@@ -12,7 +12,7 @@
             referrerpolicy="no-referrer"
           />
           <div v-else class="acct-avatar acct-avatar--placeholder">
-            {{ account.name?.charAt(0)?.toUpperCase() ?? 'G' }}
+            {{ accountInitial }}
           </div>
           <div class="acct-info">
             <span class="acct-name">{{ account.name }}</span>
@@ -34,6 +34,19 @@
         >
           {{ p.actions.signOut }}
         </button>
+
+        <div class="acct-danger-zone">
+          <p class="acct-hint">{{ p.accounts.google.deleteAccountHint }}</p>
+          <div v-if="deleteError" class="acct-error">{{ deleteError }}</div>
+          <div v-if="deleteNotice" class="acct-notice">{{ deleteNotice }}</div>
+          <button
+            class="acct-action-btn acct-action-btn--danger"
+            :disabled="loading"
+            @click="deleteAccount"
+          >
+            {{ loading ? p.status.deletingAccount : p.actions.deleteAccount }}
+          </button>
+        </div>
       </template>
 
       <template v-else>
@@ -47,25 +60,7 @@
         <div v-if="error" class="acct-error">{{ error }}</div>
 
         <button class="acct-action-btn" :disabled="loading" @click="signIn">
-          <svg class="acct-provider-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              fill="#4285F4"
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
-            />
-            <path
-              fill="#EA4335"
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-            />
-          </svg>
-          {{ loading ? p.status.signingIn : p.accounts.google.signInWithGoogle }}
+          {{ loading ? p.status.signingIn : p.accounts.google.signIn }}
         </button>
       </template>
     </div>
@@ -81,9 +76,20 @@ import './sp-shared.css'
 const { t } = useI18n()
 const p = computed(() => t.value.settings.panels)
 
-const { account, signIn: signInAccount, signOut: signOutAccount } = useGoogleAccount()
+const {
+  account,
+  signIn: signInAccount,
+  signOut: signOutAccount,
+  deleteAccount: deleteAccountRequest,
+} = useGoogleAccount()
 const loading = ref(false)
 const error = ref<string | null>(null)
+const deleteError = ref<string | null>(null)
+const deleteNotice = ref<string | null>(null)
+
+const accountInitial = computed(
+  () => account.value?.name?.charAt(0)?.toUpperCase() || 'T',
+)
 
 async function signIn() {
   loading.value = true
@@ -104,6 +110,42 @@ async function signOut() {
   loading.value = true
   try {
     await signOutAccount()
+  } finally {
+    loading.value = false
+  }
+}
+
+async function deleteAccount() {
+  if (!window.confirm(p.value.accounts.google.deleteAccountConfirm)) return
+  loading.value = true
+  deleteError.value = null
+  deleteNotice.value = null
+  try {
+    const result = await deleteAccountRequest()
+    if (!result) {
+      deleteError.value = p.value.accounts.google.deleteAccountFailed
+      return
+    }
+    if (result.serverDeleted) {
+      deleteNotice.value = p.value.accounts.google.deleteAccountSuccess
+      return
+    }
+    if (result.errorCode === 'retryable') {
+      deleteError.value =
+        result.serverMessage || p.value.accounts.google.deleteAccountRetryable
+      return
+    }
+    if (result.localCleared) {
+      deleteNotice.value = p.value.accounts.google.deleteAccountSignedOut
+      if (result.serverMessage) {
+        deleteError.value = result.serverMessage
+      }
+      return
+    }
+    deleteError.value =
+      result.serverMessage || p.value.accounts.google.deleteAccountFailed
+  } catch (e: unknown) {
+    deleteError.value = e instanceof Error ? e.message : String(e)
   } finally {
     loading.value = false
   }

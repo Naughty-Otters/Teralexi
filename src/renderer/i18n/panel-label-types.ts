@@ -47,6 +47,7 @@ export type SettingsPanelLabels = {
     disconnectBot: string
     signIn: string
     signOut: string
+    deleteAccount: string
     exportBundle: string
     submitReport: string
     checkForUpdates: string
@@ -73,6 +74,7 @@ export type SettingsPanelLabels = {
     signedIn: string
     notSignedIn: string
     signingIn: string
+    deletingAccount: string
     processing: string
     notConfigured: string
     latestVersion: string
@@ -150,6 +152,12 @@ export type SettingsPanelLabels = {
   about: {
     intro: string
     sourceHint: string
+    legalTitle: string
+    legalIntro: string
+    privacyPolicy: string
+    termsOfService: string
+    helpSupport: string
+    contactSupport: string
   }
   support: {
     intro: string
@@ -168,7 +176,16 @@ export type SettingsPanelLabels = {
     google: {
       signedInHint: string
       signInHint: string
+      /** Provider-neutral primary CTA (same meaning as auth.signIn). */
+      signIn: string
+      /** @deprecated Prefer {@link signIn}. */
       signInWithGoogle: string
+      deleteAccountHint: string
+      deleteAccountConfirm: string
+      deleteAccountSuccess: string
+      deleteAccountRetryable: string
+      deleteAccountSignedOut: string
+      deleteAccountFailed: string
     }
     github: {
       signedInHint: string

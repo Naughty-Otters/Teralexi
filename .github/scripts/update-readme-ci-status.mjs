@@ -18,8 +18,13 @@ const readme = readFileSync(readmePath, 'utf8')
 const shortSha = GITHUB_SHA.slice(0, 7)
 const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
 
+const coverageBadgeUrl = `https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/.github/badges/coverage.json`
+const versionBadgeUrl = `https://img.shields.io/github/v/release/${GITHUB_REPOSITORY}?label=version`
+
 const block = `<!-- ci-status-start -->
 [![CI](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/badge.svg)](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/ci.yml)
+[![coverage](${coverageBadgeUrl})](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/ci.yml)
+[![version](${versionBadgeUrl})](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/latest)
 
 | | |
 | --- | --- |

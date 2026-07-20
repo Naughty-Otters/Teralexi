@@ -97,7 +97,7 @@ export const lang: AppLocaleBundle = {
       wechat: '企业微信频道',
       slack: 'Slack 机器人频道',
       githubAccount: 'GitHub 账户',
-      googleAccount: 'Google 账户',
+      googleAccount: 'Teralexi 账户',
       googleWorkspace: 'Google Workspace',
       reportProblem: '报告问题',
     },
@@ -303,7 +303,8 @@ export const lang: AppLocaleBundle = {
     openAbout: '打开 设置 → 关于 以更新',
   },
   auth: {
-    signInWithGoogle: '使用 Google 登录',
+    signIn: '登录',
+    signInWithGoogle: '登录',
     signingIn: '正在登录…',
     signInFailed: '登录已取消或失败，请重试。',
     signInRequiredTitle: '登录后继续',

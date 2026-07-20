@@ -20,6 +20,11 @@ export function resetLocalAuthSessionListenersForTests(): void {
 export type RevokeLocalAuthContext = {
   /** Required — forces callers to declare why identity is cleared. */
   cause: AuthIdentityRevokeCause
+  /**
+   * When true (default), best-effort `POST /auth/logout` before wiping tokens.
+   * Set false after account deletion — the refresh family is already gone.
+   */
+  revokeRemote?: boolean
 } & Record<string, unknown>
 
 /**
@@ -32,10 +37,11 @@ export function revokeLocalTeralexiAuthSession(
   message: string,
   context: RevokeLocalAuthContext,
 ): void {
-  log.warn('Signing out locally', { message, ...context })
+  const { cause, revokeRemote = true, ...rest } = context
+  log.warn('Signing out locally', { message, cause, revokeRemote, ...rest })
   clearStoredAccount()
   // Capture + POST /auth/logout with refresh_token before wiping local cache.
-  clearTeralexiServerAuthCache({ revokeRemote: true })
+  clearTeralexiServerAuthCache({ revokeRemote })
   clearEntitlementCache()
   notifyGoogleAccountChanged(null)
   for (const listener of clearedListeners) {

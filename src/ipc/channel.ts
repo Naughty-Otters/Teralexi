@@ -924,6 +924,25 @@ export class IpcChannelMainClass {
    */
   GoogleSignOut: IpcMainEventListener<void, void> = null!
   /**
+   * Permanently delete the Teralexi platform account (remote) and clear local identity.
+   * App Store Guideline 5.1.1(v).
+   */
+  DeleteTeralexiAccount: IpcMainEventListener<
+    void,
+    {
+      serverDeleted: boolean
+      localCleared: boolean
+      errorCode?:
+        | 'confirm_required'
+        | 'auth_required'
+        | 'retryable'
+        | 'unavailable'
+        | 'no_session'
+        | 'request_failed'
+      serverMessage: string
+    }
+  > = null!
+  /**
    * Return the currently stored Teralexi Google account info, or null if not signed in
    */
   GetGoogleAccount: IpcMainEventListener<
