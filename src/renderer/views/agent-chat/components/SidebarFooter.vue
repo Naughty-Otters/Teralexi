@@ -70,7 +70,7 @@
             @click="onSignIn"
           >
             <UIcon name="i-lucide-log-in" class="footer-profile-menu__option-icon" />
-            {{ authLoading ? t.auth.signingIn : t.auth.signInWithGoogle }}
+            {{ authLoading ? t.auth.signingIn : t.auth.signIn }}
           </button>
         </div>
       </div>
@@ -206,13 +206,13 @@ const authLoading = ref(false)
 const authError = ref<string | null>(null)
 
 const accountInitial = computed(
-  () => account.value?.name?.charAt(0)?.toUpperCase() || 'G',
+  () => account.value?.name?.charAt(0)?.toUpperCase() || 'T',
 )
 
 const profileButtonTitle = computed(() =>
   account.value
     ? `${account.value.name}\n${account.value.email}`
-    : t.value.auth.signInWithGoogle,
+    : t.value.auth.signIn,
 )
 
 const profileButtonAriaLabel = computed(() =>

@@ -176,6 +176,9 @@ export type SettingsPanelLabels = {
     google: {
       signedInHint: string
       signInHint: string
+      /** Provider-neutral primary CTA (same meaning as auth.signIn). */
+      signIn: string
+      /** @deprecated Prefer {@link signIn}. */
       signInWithGoogle: string
       deleteAccountHint: string
       deleteAccountConfirm: string

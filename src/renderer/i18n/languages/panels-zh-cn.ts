@@ -216,10 +216,11 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     tabs: { google: 'Google', github: 'GitHub' },
     google: {
       signedInHint:
-        '您的 Teralexi Google 账户已关联。这与 Google Workspace（Gmail、Calendar、Drive）是分开的。',
+        '您已登录 Teralexi 账户。这与 Agents 中的 Google Workspace（Gmail、Calendar、Drive）是分开的。',
       signInHint:
-        '关联 Teralexi Google 账户。将在系统浏览器中完成认证，并通过 teralexi:// 返回应用。',
-      signInWithGoogle: '使用 Google 登录',
+        '登录您的 Teralexi 账户。将在系统浏览器中完成认证，并通过 teralexi:// 返回应用。',
+      signIn: '登录',
+      signInWithGoogle: '登录',
       deleteAccountHint:
         '永久删除您的 Teralexi 账户、订阅以及已发布的站点。本机会话与工作区文件不会自动删除。',
       deleteAccountConfirm:
