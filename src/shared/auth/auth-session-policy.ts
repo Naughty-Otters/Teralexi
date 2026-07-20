@@ -20,8 +20,6 @@
 export type AuthIdentityRevokeCause =
   | 'user-sign-out'
   | 'web-logout'
-  /** User requested permanent account deletion (Guideline 5.1.1(v)). */
-  | 'user-account-deletion'
   /** `/api/v1/auth/me` returned 401/403 for a JWT we actually presented. */
   | 'server-session-rejected'
 
@@ -39,7 +37,7 @@ export type AuthIdentityDecision =
 
 /** Explicit logout paths — always clear identity. */
 export function decideExplicitSignOut(
-  cause: 'user-sign-out' | 'web-logout' | 'user-account-deletion',
+  cause: 'user-sign-out' | 'web-logout',
   message: string,
 ): AuthIdentityDecision {
   return { action: 'revoke-identity', cause, message }

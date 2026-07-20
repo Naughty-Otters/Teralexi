@@ -106,7 +106,6 @@ import {
 } from './google-workspace-oauth'
 import { notifyGoogleWorkspaceAccountChanged } from './google-workspace-account-notify'
 import { revokeLocalTeralexiAuthSession } from './local-auth-session'
-import { deleteTeralexiAccount } from './account-deletion'
 import {
   clearEntitlementSession,
   getEntitlementUiSnapshot,
@@ -1434,21 +1433,6 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       cause: 'user-sign-out',
     })
     clearEntitlementSession()
-  }
-
-  DeleteTeralexiAccount: (_event: Electron.IpcMainInvokeEvent) => Promise<{
-    serverDeleted: boolean
-    localCleared: boolean
-    errorCode?:
-      | 'confirm_required'
-      | 'auth_required'
-      | 'retryable'
-      | 'unavailable'
-      | 'no_session'
-      | 'request_failed'
-    serverMessage: string
-  }> = async () => {
-    return deleteTeralexiAccount()
   }
 
   GetGoogleAccount: (_event: Electron.IpcMainInvokeEvent) => {

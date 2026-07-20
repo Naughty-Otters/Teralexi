@@ -11,7 +11,7 @@ Teralexi today ships via **Developer ID + notarization** (direct download). MAS 
 | Guideline | Requirement | Status |
 | --- | --- | --- |
 | **5.1.1(i)** Privacy policy | Link in App Store Connect **and** easily accessible in-app | **In-app:** Settings → About → Privacy Policy / Terms. **Web:** `privacy.html` / `terms.html` on the marketing site (OpenFDEPage — deploy to teralexi.com). |
-| **5.1.1(v)** Account deletion | In-app deletion if account creation/sign-in is supported | **In-app:** Settings → Accounts → Delete account. Calls `DELETE /api/v1/auth/account` with `{ "confirm": true }` per server contract, then clears local identity on success. |
+| **5.1.1(v)** Account deletion | In-app deletion if account creation/sign-in is supported | **Not in the desktop app.** Deletion is out-of-band (support email / web). Revisit before MAS if Apple requires in-app deletion. |
 | **1.5** Developer / support contact | Easy contact path | Settings → About → Help & Support / Email support (`info@teralexi.com`); website support page. |
 
 Deploy the marketing site so these URLs resolve publicly before submission:
@@ -24,14 +24,12 @@ Paste the privacy URL into App Store Connect → App Privacy / Privacy Policy UR
 
 ---
 
-## Backend work still required
+## Backend / product follow-ups
 
 | Item | Notes |
 | --- | --- |
-| `DELETE /api/v1/auth/account` | Server contract: `OpenFDEServer/docs/subscription-integration/account-deletion.md` (`{ "confirm": true }` + Bearer). Client is aligned; ensure production API is deployed. |
+| Account deletion | Desktop app intentionally has **no** delete-account UI. Platform API may still expose `DELETE /api/v1/auth/account` (see OpenFDEServer docs); users delete via support (`info@teralexi.com`) or a future web flow. MAS Guideline **5.1.1(v)** may require bringing deletion back in-app. |
 | Demo account for review | Guideline **2.1**: provide App Review a signed-in demo account (or demo mode) + live backends. |
-
-Client path: `TERALEXI_PLATFORM_PATHS.authDeleteAccount` → `api/v1/auth/account`.
 
 ---
 
@@ -78,8 +76,7 @@ Privacy Policy: https://www.teralexi.com/privacy.html
 Terms: https://www.teralexi.com/terms.html
 Support: https://www.teralexi.com/support.html / info@teralexi.com
 
-Account deletion: Settings → Accounts → Delete account
-  → DELETE /api/v1/auth/account with Authorization Bearer + {"confirm": true}.
+Account deletion: not offered in the desktop app; email info@teralexi.com (or use a web flow if published).
 
 Core data stays on-device under ~/.teralexi/. Optional support upload and website publish are user-initiated and entitlement-gated.
 Agents may call LLM providers the user configures; tool runs require user approval in normal flows.
@@ -89,8 +86,7 @@ Agents may call LLM providers the user configures; tool runs require user approv
 
 ## Recommended next work order
 
-1. Confirm production `DELETE /api/v1/auth/account` matches
-   `OpenFDEServer/docs/subscription-integration/account-deletion.md`.
+1. Confirm how account deletion will be offered for MAS (**5.1.1(v)**) — support email alone is often insufficient.
 2. Deploy OpenFDEPage legal pages + verify URLs in a browser / App Store Connect fields.
 3. Add **Sign in with Apple** (4.8) alongside Google.
 4. Decide monetization model for MAS (StoreKit subscriptions vs free companion).

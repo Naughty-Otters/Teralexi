@@ -47,7 +47,6 @@ export type SettingsPanelLabels = {
     disconnectBot: string
     signIn: string
     signOut: string
-    deleteAccount: string
     exportBundle: string
     submitReport: string
     checkForUpdates: string
@@ -74,7 +73,6 @@ export type SettingsPanelLabels = {
     signedIn: string
     notSignedIn: string
     signingIn: string
-    deletingAccount: string
     processing: string
     notConfigured: string
     latestVersion: string
@@ -180,12 +178,6 @@ export type SettingsPanelLabels = {
       signIn: string
       /** @deprecated Prefer {@link signIn}. */
       signInWithGoogle: string
-      deleteAccountHint: string
-      deleteAccountConfirm: string
-      deleteAccountSuccess: string
-      deleteAccountRetryable: string
-      deleteAccountSignedOut: string
-      deleteAccountFailed: string
     }
     github: {
       signedInHint: string

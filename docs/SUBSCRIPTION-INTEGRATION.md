@@ -51,7 +51,6 @@ sequenceDiagram
 | `POST` | `/api/v1/auth/google` | Exchange Google `id_token` → platform tokens |
 | `POST` | `/api/v1/auth/refresh` | Rotate session with opaque `refresh_token` |
 | `POST` | `/api/v1/auth/logout` | Sign-out: revoke refresh family (best-effort) |
-| `DELETE` | `/api/v1/auth/account` | Permanently delete platform account (App Store 5.1.1(v)) |
 | `POST` | `/api/v1/auth/token` | Optional Google re-bind (not silent renew) |
 | `GET` | `/api/v1/auth/me` | Session probe / user id for entitlement binding |
 | `GET` | `/api/v1/subscription/entitlement` | Signed entitlement snapshot |
@@ -100,17 +99,10 @@ Local sign-out and `teralexi://logout` clear Google identity, server tokens, and
 entitlement cache, and call `POST /api/v1/auth/logout` with the last refresh
 token when available.
 
-**Account deletion** (Settings → Accounts → Delete account) follows
-`OpenFDEServer/docs/subscription-integration/account-deletion.md`:
-
-1. UI confirmation in Settings.
-2. `DELETE /api/v1/auth/account` with `Authorization: Bearer <access_token>` and
-   body `{ "confirm": true }`.
-3. On `200` → clear local identity/tokens (skip remote logout; account is gone).
-4. On `401` → `POST /api/v1/auth/refresh` once and retry; if refresh fails → sign out.
-5. On `400` / `503` → keep the session so the user can fix/retry.
-
-See [MAC-APP-STORE-READY.md](./MAC-APP-STORE-READY.md).
+**Account deletion** is **not** offered in the desktop Settings UI. Platform
+deletion (if needed) is handled out-of-band via support or a web flow; see
+OpenFDEServer `docs/subscription-integration/account-deletion.md` and
+[MAC-APP-STORE-READY.md](./MAC-APP-STORE-READY.md).
 
 
 ---

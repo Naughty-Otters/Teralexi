@@ -48,7 +48,6 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     disconnectBot: 'Disconnect Bot',
     signIn: 'Sign in',
     signOut: 'Sign out',
-    deleteAccount: 'Delete account',
     exportBundle: 'Export bundle',
     submitReport: 'Submit report',
     checkForUpdates: 'Check for updates',
@@ -75,7 +74,6 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     signedIn: 'Signed in',
     notSignedIn: 'Not signed in',
     signingIn: 'Signing in…',
-    deletingAccount: 'Deleting account…',
     processing: 'Processing…',
     notConfigured: 'Not configured',
     latestVersion: "You're on the latest version.",
@@ -233,16 +231,6 @@ export const settingsPanelsEn: SettingsPanelLabels = {
         'Sign in to your Teralexi account. Your browser will open for authentication and return to the app via teralexi://.',
       signIn: 'Sign in',
       signInWithGoogle: 'Sign in',
-      deleteAccountHint:
-        'Permanently deletes your Teralexi account, subscription, and any published site. Local conversations and workspace files on this device are not erased automatically.',
-      deleteAccountConfirm:
-        'Permanently delete your Teralexi account and published site? This cannot be undone. Local conversations and workspace files on this Mac will remain unless you remove them yourself.',
-      deleteAccountSuccess: 'Your Teralexi account was deleted.',
-      deleteAccountRetryable:
-        'Account cleanup hit a temporary error. Your account may still exist — please try again.',
-      deleteAccountSignedOut:
-        'Your session expired and you were signed out. Sign in again if you still need to delete your account.',
-      deleteAccountFailed: 'Could not delete the account. Try again or contact support.',
     },
     github: {
       signedInHint:

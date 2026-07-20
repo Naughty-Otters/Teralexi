@@ -34,19 +34,6 @@
         >
           {{ p.actions.signOut }}
         </button>
-
-        <div class="acct-danger-zone">
-          <p class="acct-hint">{{ p.accounts.google.deleteAccountHint }}</p>
-          <div v-if="deleteError" class="acct-error">{{ deleteError }}</div>
-          <div v-if="deleteNotice" class="acct-notice">{{ deleteNotice }}</div>
-          <button
-            class="acct-action-btn acct-action-btn--danger"
-            :disabled="loading"
-            @click="deleteAccount"
-          >
-            {{ loading ? p.status.deletingAccount : p.actions.deleteAccount }}
-          </button>
-        </div>
       </template>
 
       <template v-else>
@@ -80,12 +67,9 @@ const {
   account,
   signIn: signInAccount,
   signOut: signOutAccount,
-  deleteAccount: deleteAccountRequest,
 } = useGoogleAccount()
 const loading = ref(false)
 const error = ref<string | null>(null)
-const deleteError = ref<string | null>(null)
-const deleteNotice = ref<string | null>(null)
 
 const accountInitial = computed(
   () => account.value?.name?.charAt(0)?.toUpperCase() || 'T',
@@ -110,42 +94,6 @@ async function signOut() {
   loading.value = true
   try {
     await signOutAccount()
-  } finally {
-    loading.value = false
-  }
-}
-
-async function deleteAccount() {
-  if (!window.confirm(p.value.accounts.google.deleteAccountConfirm)) return
-  loading.value = true
-  deleteError.value = null
-  deleteNotice.value = null
-  try {
-    const result = await deleteAccountRequest()
-    if (!result) {
-      deleteError.value = p.value.accounts.google.deleteAccountFailed
-      return
-    }
-    if (result.serverDeleted) {
-      deleteNotice.value = p.value.accounts.google.deleteAccountSuccess
-      return
-    }
-    if (result.errorCode === 'retryable') {
-      deleteError.value =
-        result.serverMessage || p.value.accounts.google.deleteAccountRetryable
-      return
-    }
-    if (result.localCleared) {
-      deleteNotice.value = p.value.accounts.google.deleteAccountSignedOut
-      if (result.serverMessage) {
-        deleteError.value = result.serverMessage
-      }
-      return
-    }
-    deleteError.value =
-      result.serverMessage || p.value.accounts.google.deleteAccountFailed
-  } catch (e: unknown) {
-    deleteError.value = e instanceof Error ? e.message : String(e)
   } finally {
     loading.value = false
   }
