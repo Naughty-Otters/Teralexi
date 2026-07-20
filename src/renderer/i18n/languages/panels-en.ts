@@ -228,10 +228,11 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     tabs: { google: 'Google', github: 'GitHub' },
     google: {
       signedInHint:
-        'Your Teralexi Google account is linked. This is separate from Google Workspace (Gmail, Calendar, Drive).',
+        'You are signed in to your Teralexi account. This is separate from Google Workspace (Gmail, Calendar, Drive) under Agents.',
       signInHint:
-        'Link your Teralexi Google account. Your browser will open for authentication and return to the app via teralexi://.',
-      signInWithGoogle: 'Sign in with Google',
+        'Sign in to your Teralexi account. Your browser will open for authentication and return to the app via teralexi://.',
+      signIn: 'Sign in',
+      signInWithGoogle: 'Sign in',
       deleteAccountHint:
         'Permanently deletes your Teralexi account, subscription, and any published site. Local conversations and workspace files on this device are not erased automatically.',
       deleteAccountConfirm:

@@ -97,7 +97,7 @@ export const lang: AppLocaleBundle = {
       wechat: 'WeChat Work Channel',
       slack: 'Slack Bot Channel',
       githubAccount: 'GitHub Account',
-      googleAccount: 'Google Account',
+      googleAccount: 'Teralexi Account',
       googleWorkspace: 'Google Workspace',
       reportProblem: 'Report a problem',
     },
@@ -310,7 +310,8 @@ export const lang: AppLocaleBundle = {
     openAbout: 'Open Settings → About to update',
   },
   auth: {
-    signInWithGoogle: 'Sign in with Google',
+    signIn: 'Sign in',
+    signInWithGoogle: 'Sign in',
     signingIn: 'Signing in…',
     signInFailed: 'Sign in was cancelled or failed. Please try again.',
     signInRequiredTitle: 'Sign in to continue',

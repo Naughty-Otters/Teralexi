@@ -285,6 +285,9 @@ export type AppLabels = {
     openAbout: string
   }
   auth: {
+    /** Primary account CTA — provider-neutral (Google may still be used under the hood). */
+    signIn: string
+    /** @deprecated Prefer {@link signIn}; kept for transitional call sites. */
     signInWithGoogle: string
     signingIn: string
     signInFailed: string
