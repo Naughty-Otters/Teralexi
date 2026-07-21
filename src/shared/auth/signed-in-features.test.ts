@@ -4,29 +4,17 @@ import {
   SIGNED_IN_ONLY_SKILL_IDS,
   isSignedInOnlySettingsTab,
   isSignedInOnlySkillId,
+  isAgentLockedWithoutSignIn,
 } from './signed-in-features'
 
 describe('signed-in-features', () => {
-  it('lists settings tabs that require sign-in', () => {
-    expect(SIGNED_IN_ONLY_SETTINGS_TABS).toEqual([
-      'skills',
-      'agents',
-      'channels',
-      'scheduler',
-      'memory',
-      'chat',
-      'mcp',
-      'developer',
-    ])
+  it('has no settings tabs that require sign-in', () => {
+    expect(SIGNED_IN_ONLY_SETTINGS_TABS).toEqual([])
   })
 
-  it('recognizes signed-in-only tabs', () => {
-    for (const tab of SIGNED_IN_ONLY_SETTINGS_TABS) {
-      expect(isSignedInOnlySettingsTab(tab)).toBe(true)
-    }
-  })
-
-  it('rejects tabs that are available without sign-in', () => {
+  it('rejects all settings tabs', () => {
+    expect(isSignedInOnlySettingsTab('skills')).toBe(false)
+    expect(isSignedInOnlySettingsTab('agents')).toBe(false)
     expect(isSignedInOnlySettingsTab('general')).toBe(false)
     expect(isSignedInOnlySettingsTab('about')).toBe(false)
     expect(isSignedInOnlySettingsTab('')).toBe(false)
@@ -41,5 +29,17 @@ describe('signed-in-features', () => {
     expect(isSignedInOnlySkillId(' coding ')).toBe(false)
     expect(isSignedInOnlySkillId(null)).toBe(false)
     expect(isSignedInOnlySkillId(undefined)).toBe(false)
+  })
+
+  it('locks website agents when signed out', () => {
+    expect(
+      isAgentLockedWithoutSignIn({ skillId: 'website', id: 'skill:website' }, false),
+    ).toBe(true)
+    expect(
+      isAgentLockedWithoutSignIn({ skillId: 'website', id: 'skill:website' }, true),
+    ).toBe(false)
+    expect(
+      isAgentLockedWithoutSignIn({ skillId: 'coding', id: 'skill:coding' }, false),
+    ).toBe(false)
   })
 })

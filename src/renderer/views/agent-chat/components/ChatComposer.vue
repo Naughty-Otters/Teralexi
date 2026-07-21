@@ -66,10 +66,13 @@
         :llm-override="llmOverride"
         :agent-provider="agentProvider"
         :agent-model="agentModel"
+        :signed-in="signedIn"
+        :locked-agent-title="lockedAgentTitle"
         placeholder="Message…"
         @update:model-value="emit('update:modelValue', $event)"
         @update:llm-override="emit('update:llmOverride', $event)"
         @select-agent="emit('select-agent', $event)"
+        @sign-in-required="emit('sign-in-required')"
         @pick-attachments="emit('pick-attachments')"
         @remove-attachment="emit('remove-attachment', $event)"
         @add-attachment-paths="emit('add-attachment-paths', $event)"
@@ -177,6 +180,8 @@ const props = defineProps<{
   llmOverride?: ConversationLlmOverride | null
   agentProvider?: ProviderType
   agentModel?: string
+  signedIn?: boolean
+  lockedAgentTitle?: string
 }>()
 
 const emit = defineEmits<{
@@ -184,6 +189,7 @@ const emit = defineEmits<{
   'update:codingMode': [mode: CodingMode]
   'update:llmOverride': [value: ConversationLlmOverride | null]
   'select-agent': [agentId: string]
+  'sign-in-required': []
   'cancel-background-task': [taskId: string]
   'pick-attachments': []
   'remove-attachment': [id: string]
@@ -201,6 +207,10 @@ const canAddAttachments = computed(() => props.canAddAttachments !== false)
 const llmOverride = computed(() => props.llmOverride ?? null)
 const agentProvider = computed((): ProviderType => props.agentProvider ?? 'ollama')
 const agentModel = computed(() => props.agentModel ?? '')
+const signedIn = computed(() => props.signedIn !== false)
+const lockedAgentTitle = computed(
+  () => props.lockedAgentTitle ?? 'Sign in to use this agent',
+)
 const agentBusy = computed(() => props.agentBusy === true)
 const planDisplayStatus = computed(
   () => props.planDisplayStatus ?? 'tool_execute',

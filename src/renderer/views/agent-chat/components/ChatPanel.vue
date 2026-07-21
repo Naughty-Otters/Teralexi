@@ -52,6 +52,7 @@
               :selected-agent-id="agentStore.selectedAgentId"
               :signed-in="isTeralexiSignedIn"
               @select-agent="onSelectAgent"
+              @sign-in-required="notifyWebsiteSkillRequiresSignIn"
             />
             <div
               v-if="hasHiddenAbove || isLoadingOlderMessages"
@@ -178,7 +179,10 @@
           :llm-override="llmOverride"
           :agent-provider="composerAgentProvider"
           :agent-model="composerAgentModel"
+          :signed-in="isTeralexiSignedIn"
+          :locked-agent-title="t.signInGate.websiteSkill"
           @select-agent="onSelectAgent"
+          @sign-in-required="notifyWebsiteSkillRequiresSignIn"
           @update:coding-mode="onCodingModeChange"
           @update:llm-override="onLlmOverrideChange"
           @cancel-background-task="onCancelBackgroundTask"
@@ -267,7 +271,7 @@ import { useGoogleWorkspaceAccount } from '@renderer/composables/useGoogleWorksp
 import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { useSkillSystemProperties } from '@renderer/composables/useSkillSystemProperties'
 import { useI18n } from '@renderer/composables/useI18n'
-import { isSignedInOnlySkillId } from '@shared/auth/signed-in-features'
+import { isSignedInOnlySkillId, isAgentLockedWithoutSignIn } from '@shared/auth/signed-in-features'
 import { DEFAULT_USER_ID } from '@store/agent/config'
 import { setTitleBarChatControls } from '@renderer/composables/useTitleBarChatControls'
 import { useChatAttachments } from '@renderer/composables/useChatAttachments'
@@ -421,7 +425,7 @@ const toast = useToast()
 function agentRequiresTeralexiSignIn(agentId: string): boolean {
   const agent = agentStore.chatSelectableAgents.find((entry) => entry.id === agentId)
   if (!agent) return false
-  return isSignedInOnlySkillId(resolveAgentSkillId(agent))
+  return isAgentLockedWithoutSignIn(agent, false)
 }
 
 function notifyWebsiteSkillRequiresSignIn(): void {

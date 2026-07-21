@@ -49,7 +49,13 @@
           </div>
           <button
             v-else
-            :ref="(el) => setItemRef(el, row.selectableIdx)"
+            :ref="
+              (el) => {
+                if (!row.locked && row.selectableIdx >= 0) {
+                  setItemRef(el, row.selectableIdx)
+                }
+              }
+            "
             type="button"
             class="agent-picker-option"
             :class="{
@@ -57,11 +63,14 @@
               'agent-picker-option--grouped': row.underHeader,
               'agent-picker-option--first': row.first,
               'agent-picker-option--last': row.last,
+              'agent-picker-option--locked': row.locked,
             }"
             :style="{ '--agent-accent': row.accent }"
             role="option"
             :aria-selected="row.option.id === selectedAgentId"
-            :title="rowTitle(row.option)"
+            :aria-disabled="row.locked || undefined"
+            :disabled="row.locked"
+            :title="row.locked ? lockedAgentTitle : rowTitle(row.option)"
             @mousedown.prevent
             @pointerdown.stop
             @mouseenter="setHighlightIndex(row.selectableIdx)"
@@ -77,7 +86,13 @@
             <span class="agent-picker-option__dot" aria-hidden="true" />
             <span class="agent-picker-option__name">{{ row.label }}</span>
             <UIcon
-              v-if="row.option.id === selectedAgentId"
+              v-if="row.locked"
+              class="agent-picker-option__lock"
+              name="i-lucide-lock"
+              aria-hidden="true"
+            />
+            <UIcon
+              v-else-if="row.option.id === selectedAgentId"
               class="agent-picker-option__check"
               name="i-lucide-check"
               aria-hidden="true"
@@ -102,6 +117,7 @@ import {
   type AgentPickerEntry,
   type SkillGroupAgentRef,
 } from '@shared/agent/skill-groups'
+import { isAgentLockedWithoutSignIn } from '@shared/auth/signed-in-features'
 import {
   computed,
   nextTick,
@@ -112,20 +128,31 @@ import {
   type CSSProperties,
 } from 'vue'
 
-const props = defineProps<{
-  selectedAgentId: string | null
-  /** Flat agent list (legacy) — converted to grouped entries when pickerEntries is omitted. */
-  agentOptions?: Array<{ id: string; name: string }>
-  /** Pre-built grouped picker rows (preferred). */
-  pickerEntries?: AgentPickerEntry[]
-  /** Full agent refs for building grouped entries when pickerEntries is omitted. */
-  agents?: SkillGroupAgentRef[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    selectedAgentId: string | null
+    /** Flat agent list (legacy) — converted to grouped entries when pickerEntries is omitted. */
+    agentOptions?: Array<{ id: string; name: string }>
+    /** Pre-built grouped picker rows (preferred). */
+    pickerEntries?: AgentPickerEntry[]
+    /** Full agent refs for building grouped entries when pickerEntries is omitted. */
+    agents?: SkillGroupAgentRef[]
+    /** When false, signed-in-only skill agents are shown as locked. */
+    signedIn?: boolean
+    /** Tooltip for locked agents (e.g. website skill sign-in prompt). */
+    lockedAgentTitle?: string
+  }>(),
+  {
+    signedIn: true,
+    lockedAgentTitle: 'Sign in to use this agent',
+  },
+)
 
 const highlightIndex = defineModel<number>('highlightIndex', { default: 0 })
 
 const emit = defineEmits<{
   'select-agent': [agentId: string]
+  'sign-in-required': []
   'menu-open-change': [open: boolean]
 }>()
 
@@ -151,7 +178,9 @@ const pickerEntries = computed((): AgentPickerEntry[] => {
 })
 
 const selectableAgents = computed(() =>
-  listSelectableAgentPickerOptions(pickerEntries.value),
+  listSelectableAgentPickerOptions(pickerEntries.value).filter(
+    (option) => !isOptionLocked(option),
+  ),
 )
 
 type SectionRow = {
@@ -173,11 +202,17 @@ type AgentRow = {
   accent: string
   first: boolean
   last: boolean
+  locked: boolean
 }
 
 type RenderRow = SectionRow | AgentRow
 
 const DEFAULT_ACCENT = 'var(--ui-text-muted)'
+
+function isOptionLocked(option: AgentPickerAgentOption): boolean {
+  const agent = props.agents?.find((entry) => entry.id === option.id)
+  return isAgentLockedWithoutSignIn(agent ?? { id: option.id }, props.signedIn)
+}
 
 /** Map an agent color token to a concrete accent color for dots and rails. */
 function accentFor(color?: string | null): string {
@@ -233,6 +268,7 @@ const renderRows = computed((): RenderRow[] => {
     }
 
     const option = entry.option
+    const locked = isOptionLocked(option)
     const underHeader =
       currentGroupId != null && option.skillGroup === currentGroupId
     if (!underHeader) currentGroupId = null
@@ -252,11 +288,12 @@ const renderRows = computed((): RenderRow[] => {
       key: option.id,
       option,
       label: agentPickerRowLabel(option, underHeader),
-      selectableIdx: selectable++,
+      selectableIdx: locked ? -1 : selectable++,
       underHeader,
       accent: underHeader ? currentAccent : accentFor(option.color),
       first: false,
       last: false,
+      locked,
     })
   })
 
@@ -324,6 +361,7 @@ function setItemRef(el: unknown, index: number) {
 }
 
 function setHighlightIndex(index: number) {
+  if (index < 0) return
   highlightIndex.value = index
 }
 
@@ -440,6 +478,14 @@ function closeMenu() {
 
 function selectAgent(agentId: string) {
   if (!agentId) return
+  const option = selectableAgents.value.find((agent) => agent.id === agentId)
+    ?? listSelectableAgentPickerOptions(pickerEntries.value).find(
+      (agent) => agent.id === agentId,
+    )
+  if (option && isOptionLocked(option)) {
+    emit('sign-in-required')
+    return
+  }
   emit('select-agent', agentId)
   closeMenu()
 }
@@ -656,7 +702,26 @@ defineExpose({
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--agent-accent, var(--ui-text-muted)) 14%, transparent);
 }
 
-.agent-picker-option:hover:not(.agent-picker-option--active) {
+.agent-picker-option--locked {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.agent-picker-option--locked:hover,
+.agent-picker-option--locked.agent-picker-option--active,
+.agent-picker-option--locked.agent-picker-option--active:hover {
+  background: transparent;
+  box-shadow: none;
+}
+
+.agent-picker-option__lock {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--ui-text-muted);
+}
+
+.agent-picker-option:hover:not(.agent-picker-option--active):not(.agent-picker-option--locked) {
   background: color-mix(in srgb, var(--ui-text) 8%, transparent);
 }
 

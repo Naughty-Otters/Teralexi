@@ -22,7 +22,8 @@
               'agent-guide__tile--locked': tile.locked,
             }"
             :title="tile.locked ? t.signInGate.websiteSkill : undefined"
-            @click="emit('select-agent', tile.id)"
+            :disabled="tile.locked"
+            @click="onTileClick(tile)"
           >
             <UAvatar :alt="tile.displayName" :color="tile.color" size="md" />
             <span class="agent-guide__tile-name">
@@ -59,7 +60,7 @@ import {
   formatAgentGroupDisplayName,
   type SkillGroupAgentRef,
 } from '@shared/agent/skill-groups'
-import { isSignedInOnlySkillId } from '@shared/auth/signed-in-features'
+import { isAgentLockedWithoutSignIn } from '@shared/auth/signed-in-features'
 import { resolveAgentSkillId } from '@shared/agent/workspace-required-skills'
 import type { Agent } from '@store/agent'
 
@@ -77,9 +78,18 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   'select-agent': [agentId: string]
+  'sign-in-required': []
 }>()
 
 const { t } = useI18n()
+
+function onTileClick(tile: GuideTile) {
+  if (tile.locked) {
+    emit('sign-in-required')
+    return
+  }
+  emit('select-agent', tile.id)
+}
 
 type GuideTile = {
   id: string
@@ -145,7 +155,10 @@ const guideRows = computed((): GuideDisplayRow[] => {
       description: agent.description,
       displayName: formatAgentGroupDisplayName(agent),
       tileLabel: agentPickerRowLabel(entry.option, groupedUnderHeader),
-      locked: !props.signedIn && isSignedInOnlySkillId(skillId),
+      locked: isAgentLockedWithoutSignIn(
+        { id: agent.id, skillId },
+        props.signedIn ?? true,
+      ),
     })
   }
 
@@ -244,6 +257,13 @@ const guideRows = computed((): GuideDisplayRow[] => {
 
 .agent-guide__tile--locked {
   opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.agent-guide__tile--locked:hover {
+  border-color: var(--ui-border);
+  box-shadow: none;
+  transform: none;
 }
 
 .agent-guide__tile-name {

@@ -16,7 +16,10 @@
           :selected-agent-id="selectedAgentId"
           :agents="chatAgents"
           :agent-options="agentOptions"
+          :signed-in="signedIn"
+          :locked-agent-title="lockedAgentTitle"
           @select-agent="emit('select-agent', $event)"
+          @sign-in-required="emit('sign-in-required')"
           @menu-open-change="agentPickerOpen = $event"
         />
         <ComposerLlmOverrideControl
@@ -170,6 +173,7 @@ import { useWorkspaceStore } from '@store/workspace'
 import type { ComposerSlashCommand } from './composer-slash-command-types'
 import type { QueueDeliveryMode } from '../conversation-chat-session'
 import type { StagedChatAttachment } from '@renderer/composables/useChatAttachments'
+import { isAgentLockedWithoutSignIn } from '@shared/auth/signed-in-features'
 
 const ComposerSlashCommandMenu = defineAsyncComponent(
   () => import('./ComposerSlashCommandMenu.vue'),
@@ -200,6 +204,8 @@ const props = withDefaults(
     llmOverride?: ConversationLlmOverride | null
     agentProvider?: ProviderType
     agentModel?: string
+    signedIn?: boolean
+    lockedAgentTitle?: string
   }>(),
   {
     placeholder: 'Message…',
@@ -217,6 +223,8 @@ const props = withDefaults(
     llmOverride: null,
     agentProvider: 'ollama',
     agentModel: '',
+    signedIn: true,
+    lockedAgentTitle: 'Sign in to use this agent',
   },
 )
 
@@ -224,6 +232,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
   'update:llmOverride': [value: ConversationLlmOverride | null]
   'select-agent': [agentId: string]
+  'sign-in-required': []
   submit: []
   'pick-attachments': []
   'remove-attachment': [id: string]
@@ -328,7 +337,11 @@ const agentPickerHighlightIndex = ref(0)
 const selectableAgentCount = computed(() => {
   if (props.chatAgents.length > 0) {
     return listSelectableAgentPickerOptions(
-      buildAgentPickerEntries(props.chatAgents),
+      buildAgentPickerEntries(
+        props.chatAgents.filter(
+          (agent) => !isAgentLockedWithoutSignIn(agent, props.signedIn),
+        ),
+      ),
     ).length
   }
   return props.agentOptions.length
@@ -337,7 +350,11 @@ const selectableAgentCount = computed(() => {
 function selectableAgentAt(index: number): { id: string } | undefined {
   if (props.chatAgents.length > 0) {
     return listSelectableAgentPickerOptions(
-      buildAgentPickerEntries(props.chatAgents),
+      buildAgentPickerEntries(
+        props.chatAgents.filter(
+          (agent) => !isAgentLockedWithoutSignIn(agent, props.signedIn),
+        ),
+      ),
     )[index]
   }
   return props.agentOptions[index]
