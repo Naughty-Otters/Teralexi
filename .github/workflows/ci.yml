@@ -115,12 +115,54 @@ jobs:
       contents: read
 
     steps:
+      # Secrets often store the .pem as one line with "\n", or as base64.
+      - name: Normalize GitHub App private key
+        id: app-key
+        env:
+          RAW_KEY: ${{ secrets.GIT_CI_BUILD_BOT_APP_PRIVATE_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RAW_KEY}" ]; then
+            echo "::error::CI-build secret GIT_CI_BUILD_BOT_APP_PRIVATE_ID is empty."
+            echo "::error::Paste the full GitHub App private key .pem (including BEGIN/END lines)."
+            exit 1
+          fi
+
+          key="$RAW_KEY"
+          if [[ "$key" == \"*\" && "$key" == *\" ]]; then
+            key="${key:1:-1}"
+          fi
+          key="${key//\\n/$'\n'}"
+          key="${key//$'\r'/}"
+
+          if ! printf '%s' "$key" | grep -q 'BEGIN.*PRIVATE KEY'; then
+            decoded="$(printf '%s' "$key" | base64 -d 2>/dev/null || true)"
+            if printf '%s' "$decoded" | grep -q 'BEGIN.*PRIVATE KEY'; then
+              key="$decoded"
+              key="${key//$'\r'/}"
+            fi
+          fi
+
+          if ! printf '%s' "$key" | grep -q 'BEGIN.*PRIVATE KEY'; then
+            echo "::error::GIT_CI_BUILD_BOT_APP_PRIVATE_ID is not a PEM private key."
+            echo "::error::Use the .pem from GitHub App → Generate a private key."
+            exit 1
+          fi
+
+          {
+            echo "private-key<<PRIVATE_KEY_EOF"
+            printf '%s\n' "$key"
+            echo "PRIVATE_KEY_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Generate GitHub App token
         id: app-token
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.GIT_CI_BUILD_BOT_APP_ID }}
-          private-key: ${{ secrets.GIT_CI_BUILD_BOT_APP_PRIVATE_ID }}
+          private-key: ${{ steps.app-key.outputs.private-key }}
+          permission-contents: write
+          permission-metadata: read
 
       - name: Check out repository
         uses: actions/checkout@v5
@@ -128,6 +170,22 @@ jobs:
           ref: ${{ github.ref }}
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
+
+      - name: Verify app token can push
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          echo "Installation id: ${{ steps.app-token.outputs.installation-id }}"
+          echo "App slug: ${{ steps.app-token.outputs.app-slug }}"
+          perms="$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.permissions')"
+          echo "Token permissions on ${GITHUB_REPOSITORY}: ${perms}"
+          if ! echo "${perms}" | jq -e '.push == true' >/dev/null; then
+            echo "::error::teralexi-ci-bot token cannot push (permissions.push != true)."
+            echo "::error::App Permissions → Contents → Read and write, then Accept on the org installation."
+            exit 1
+          fi
 
       - name: Download coverage summary
         uses: actions/download-artifact@v5
@@ -150,7 +208,9 @@ jobs:
       - name: Commit and push README
         env:
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
+          set -euo pipefail
           git config user.name "${APP_SLUG}[bot]"
           git config user.email "${APP_SLUG}[bot]@users.noreply.github.com"
           git add README.md .github/badges/coverage.json
@@ -159,4 +219,4 @@ jobs:
             exit 0
           fi
           git commit -m "docs: update README CI status and coverage badge [skip ci]"
-          git push
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"

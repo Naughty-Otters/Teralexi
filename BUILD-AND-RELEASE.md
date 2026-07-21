@@ -159,11 +159,16 @@ Or set `TERALEXI_BUILD_ENV` (`dev` | `sit` | `prod`) before running a build scri
 
 | Secret | Purpose |
 | --- | --- |
-| `GIT_CI_BUILD_BOT_APP_ID` | GitHub App ID |
-| `GIT_CI_BUILD_BOT_APP_PRIVATE_ID` | GitHub App private key |
+| `GIT_CI_BUILD_BOT_APP_ID` | GitHub App **ID** (numeric) |
+| `GIT_CI_BUILD_BOT_APP_PRIVATE_ID` | Full private key **`.pem`** (`-----BEGIN … PRIVATE KEY-----`), not the SHA256 fingerprint |
 
-That token is used for checkout/push so the bot can update README stats when branch protection blocks the default `GITHUB_TOKEN`. The app must be installed on the repo with **Contents: Read and write**, and allowed to bypass (or satisfy) `main` protection rules.
+Configure **`teralexi-ci-bot`**:
 
+1. App → Permissions → **Contents: Read and write** → Save → **Accept** on the org installation.
+2. Install on `Naughty-Otters/Teralexi`.
+3. On `main` rules: add the app to the **bypass** list; if **Restrict who can push** is on, add it there too.
+
+The job step **Verify app token can push** prints `permissions.push` (`true`/`false`) before pushing.
 ### Release — production (`env/.prod.env`)
 
 **Workflow:** [`.github/workflows/release.yml`](./.github/workflows/release.yml)
