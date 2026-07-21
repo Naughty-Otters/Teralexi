@@ -1,17 +1,16 @@
 <template>
   <div class="first-time-onboarding">
     <SignInRequiredPanel
-      v-if="ready && !isSignedIn && !continuingLocal"
-      :description="t.signInGate.wizard"
-      :hint="t.auth.localLlmHint"
-      :secondary-action-label="t.auth.openLocalLlmSettings"
+      v-if="ready && !isSignedIn && !continuingWithoutAccount"
+      :description="t.auth.signInOptionalDesc"
+      :hint="t.auth.continueWithoutAccountHint"
+      :secondary-action-label="t.auth.continueWithoutAccount"
       @signed-in="onSignedIn"
-      @secondary-action="continueWithLocal"
+      @secondary-action="continueWithoutAccount"
     />
     <ProviderSetupWizard
       v-else-if="ready"
       :open="showWizard"
-      :local-only="!isSignedIn"
       first-run
       @finished="onFinished"
     />
@@ -38,10 +37,10 @@ const agentStore = useAgentStore()
 
 const ready = ref(false)
 const showWizard = ref(true)
-const continuingLocal = ref(false)
+const continuingWithoutAccount = ref(false)
 
 /**
- * First-run path: auth (unless local escape) → LLM/agents wizard → /landing summary.
+ * First-run path: optional auth → LLM/agents wizard (local + cloud) → /landing summary.
  * Only auto-skip when already signed in and fully configured.
  */
 async function maybeSkipIfAlreadyConfigured(): Promise<boolean> {
@@ -63,18 +62,18 @@ onMounted(async () => {
 
 watch(isSignedIn, async (signedIn) => {
   if (!signedIn || !ready.value) return
-  continuingLocal.value = false
+  continuingWithoutAccount.value = false
   if (await maybeSkipIfAlreadyConfigured()) return
   showWizard.value = true
 })
 
 function onSignedIn() {
-  continuingLocal.value = false
+  continuingWithoutAccount.value = false
   showWizard.value = true
 }
 
-function continueWithLocal() {
-  continuingLocal.value = true
+function continueWithoutAccount() {
+  continuingWithoutAccount.value = true
   showWizard.value = true
 }
 

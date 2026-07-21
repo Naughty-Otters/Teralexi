@@ -86,38 +86,10 @@
     <StartupStatusBar :message="startupStatus" />
 
     <ProviderSetupWizard
-      v-if="isSignedIn"
       :open="providerSetupOpen"
       @close="providerSetupOpen = false"
       @finished="onProviderSetupFinished"
     />
-
-    <div
-      v-if="signInGateOpen"
-      class="sign-in-gate-overlay"
-      role="dialog"
-      aria-modal="true"
-      @click.self="signInGateOpen = false"
-    >
-      <div class="sign-in-gate-modal">
-        <button
-          type="button"
-          class="sign-in-gate-close"
-          title="Close"
-          aria-label="Close"
-          @click="signInGateOpen = false"
-        >
-          ✕
-        </button>
-        <SignInRequiredPanel
-          :description="signInGateDescription"
-          :hint="t.auth.localLlmHint"
-          :secondary-action-label="t.auth.openLocalLlmSettings"
-          @signed-in="onSignInGateSuccess"
-          @secondary-action="onOpenLocalLlmFromGate"
-        />
-      </div>
-    </div>
   </div>
 </template>
 
@@ -159,9 +131,6 @@ const WorkflowPanel = defineAsyncComponent(
 )
 const ProviderSetupWizard = defineAsyncComponent(
   () => import('./components/ProviderSetupWizard.vue'),
-)
-const SignInRequiredPanel = defineAsyncComponent(
-  () => import('./components/SignInRequiredPanel.vue'),
 )
 import {
   registerAppUpdateAboutHandler,
@@ -214,31 +183,13 @@ const sidebarProfileMenuOpen = ref(false)
 const layoutEl = ref<HTMLElement | null>(null)
 const providerSetupOpen = ref(false)
 const chatPanelMounted = ref(true)
-const signInGateOpen = ref(false)
-
-const signInGateDescription = computed(() => t.value.signInGate.wizard)
 
 function onOpenSetupWizard() {
-  if (!isSignedIn.value) {
-    signInGateOpen.value = true
-    return
-  }
   providerSetupOpen.value = true
 }
 
 function onOpenMonitor() {
   rightPanelView.value = 'monitor'
-}
-
-function onSignInGateSuccess() {
-  signInGateOpen.value = false
-  providerSetupOpen.value = true
-}
-
-function onOpenLocalLlmFromGate() {
-  signInGateOpen.value = false
-  sessionStorage.setItem('teralexi.settingsTab', 'llm')
-  rightPanelView.value = 'settings'
 }
 
 function onProviderSetupFinished() {
@@ -253,10 +204,8 @@ function openProviderSetupWizardIfNeeded() {
   }
   if (sessionStorage.getItem(PROVIDER_SETUP_SESSION_KEY) === '1') {
     sessionStorage.removeItem(PROVIDER_SETUP_SESSION_KEY)
-    if (isSignedIn.value) {
-      providerSetupOpen.value = true
-    }
-  } else if (agentStore.shouldShowProviderSetupWizard && isSignedIn.value) {
+    providerSetupOpen.value = true
+  } else if (agentStore.shouldShowProviderSetupWizard) {
     providerSetupOpen.value = true
   }
 }
@@ -706,42 +655,5 @@ onUnmounted(() => {
   to {
     transform: rotate(360deg);
   }
-}
-
-.sign-in-gate-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 2100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgb(0 0 0 / 0.45);
-  backdrop-filter: blur(4px);
-}
-
-.sign-in-gate-modal {
-  position: relative;
-  width: min(480px, 100%);
-}
-
-.sign-in-gate-close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 1;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--ui-text-muted);
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.sign-in-gate-close:hover {
-  background: var(--ui-bg-accented);
-  color: var(--ui-text);
 }
 </style>

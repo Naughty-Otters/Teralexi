@@ -293,6 +293,10 @@ export type AppLabels = {
     signInFailed: string
     signInRequiredTitle: string
     signInRequiredDesc: string
+    /** Optional first-run sign-in panel copy. */
+    signInOptionalDesc: string
+    continueWithoutAccount: string
+    continueWithoutAccountHint: string
     localLlmHint: string
     openLocalLlmSettings: string
     authorizationBlockedTitle: string
@@ -311,7 +315,7 @@ export type AppLabels = {
     settings: string
     monitor: string
     wizard: string
-    llmCloud: string
+    websiteSkill: string
   }
   providerSetup: ProviderSetupLabels
 }

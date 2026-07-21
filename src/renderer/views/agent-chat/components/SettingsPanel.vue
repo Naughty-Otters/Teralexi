@@ -57,7 +57,6 @@
         <EditorSetting />
       </div>
       <section v-else-if="settingsTab === 'llm'" class="sp-llm-section sp-panel-view">
-        <p v-if="!isSignedIn" class="sp-sign-in-hint">{{ t.signInGate.llmCloud }}</p>
         <div class="sp-llm-layout">
           <aside class="sp-llm-sidebar" aria-label="LLM providers">
             <template
@@ -310,31 +309,23 @@ type LlmSidebarEntry =
   | { kind: 'provider'; id: ProviderType; label: string }
 
 const llmSidebarEntries = computed((): LlmSidebarEntry[] => {
-  const groups = isSignedIn.value
-    ? [
-        {
-          id: 'local',
-          label: t.value.settings.llmGroups.local,
-          ids: LOCAL_LLM_PROVIDER_IDS,
-        },
-        {
-          id: 'vendor',
-          label: t.value.settings.llmGroups.vendor,
-          ids: VENDOR_LLM_PROVIDER_IDS,
-        },
-        {
-          id: 'wholesale',
-          label: t.value.settings.llmGroups.wholesale,
-          ids: WHOLESALE_LLM_PROVIDER_IDS,
-        },
-      ]
-    : [
-        {
-          id: 'local',
-          label: t.value.settings.llmGroups.local,
-          ids: LOCAL_LLM_PROVIDER_IDS,
-        },
-      ]
+  const groups = [
+    {
+      id: 'local' as const,
+      label: t.value.settings.llmGroups.local,
+      ids: LOCAL_LLM_PROVIDER_IDS,
+    },
+    {
+      id: 'vendor' as const,
+      label: t.value.settings.llmGroups.vendor,
+      ids: VENDOR_LLM_PROVIDER_IDS,
+    },
+    {
+      id: 'wholesale' as const,
+      label: t.value.settings.llmGroups.wholesale,
+      ids: WHOLESALE_LLM_PROVIDER_IDS,
+    },
+  ]
 
   const entries: LlmSidebarEntry[] = []
   for (const group of groups) {

@@ -50,6 +50,7 @@
               v-if="showAgentGuide"
               :agents="agentStore.chatSelectableAgents"
               :selected-agent-id="agentStore.selectedAgentId"
+              :signed-in="isTeralexiSignedIn"
               @select-agent="onSelectAgent"
             />
             <div
@@ -263,8 +264,10 @@ import { agentRequiresWorkspace, resolveAgentSkillId } from '@shared/agent/works
 import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
 import { collectConversationWorkspaceAttachments } from '@shared/agent/conversation-workspace-attachments'
 import { useGoogleWorkspaceAccount } from '@renderer/composables/useGoogleWorkspaceAccount'
+import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { useSkillSystemProperties } from '@renderer/composables/useSkillSystemProperties'
 import { useI18n } from '@renderer/composables/useI18n'
+import { isSignedInOnlySkillId } from '@shared/auth/signed-in-features'
 import { DEFAULT_USER_ID } from '@store/agent/config'
 import { setTitleBarChatControls } from '@renderer/composables/useTitleBarChatControls'
 import { useChatAttachments } from '@renderer/composables/useChatAttachments'
@@ -412,7 +415,30 @@ const {
   hasWorkspaceAccess: googleWorkspaceHasAccess,
   refresh: refreshGoogleWorkspaceAccount,
 } = useGoogleWorkspaceAccount()
+const { isSignedIn: isTeralexiSignedIn } = useGoogleAccount()
 const toast = useToast()
+
+function agentRequiresTeralexiSignIn(agentId: string): boolean {
+  const agent = agentStore.chatSelectableAgents.find((entry) => entry.id === agentId)
+  if (!agent) return false
+  return isSignedInOnlySkillId(resolveAgentSkillId(agent))
+}
+
+function notifyWebsiteSkillRequiresSignIn(): void {
+  toast.add({
+    title: t.value.auth.signInRequiredTitle,
+    description: t.value.signInGate.websiteSkill,
+    color: 'warning',
+  })
+}
+
+/** Returns false when the agent is blocked for signed-out users. */
+function ensureAgentAllowedWithoutSignIn(agentId: string): boolean {
+  if (isTeralexiSignedIn.value) return true
+  if (!agentRequiresTeralexiSignIn(agentId)) return true
+  notifyWebsiteSkillRequiresSignIn()
+  return false
+}
 
 const COMPACT_CMD_RE = /^\/compact(?:\s+([\s\S]*))?$/i
 const MODE_CMD_RE = /^\/(yolo|auto)\b/i
@@ -1029,6 +1055,21 @@ const composerSkillSetup = computed(() => {
 watch(selectedAgentIsGoogleWorkspace, (active) => {
   if (active) void refreshGoogleWorkspaceAccount()
 })
+
+watch(
+  [isTeralexiSignedIn, () => agentStore.selectedAgentId],
+  () => {
+    if (isTeralexiSignedIn.value) return
+    const agentId = agentStore.selectedAgentId
+    if (!agentId || !agentRequiresTeralexiSignIn(agentId)) return
+    const fallback = agentStore.chatSelectableAgents.find(
+      (entry) =>
+        entry.id !== agentId &&
+        !isSignedInOnlySkillId(resolveAgentSkillId(entry)),
+    )
+    if (fallback) void agentStore.selectAgent(fallback.id)
+  },
+)
 
 const canSend = computed(() => {
   const text = draft.value.trim()
@@ -2028,6 +2069,8 @@ async function runAgentCommand(action: AgentSlashAction) {
     return
   }
 
+  if (!ensureAgentAllowedWithoutSignIn(agentId)) return
+
   const agent = agentStore.chatSelectableAgents.find(
     (entry) => entry.id === agentId,
   )
@@ -2061,6 +2104,8 @@ async function runSkillSwitchCommand(target: string) {
     })
     return
   }
+
+  if (!ensureAgentAllowedWithoutSignIn(agentId)) return
 
   const agent = agentStore.chatSelectableAgents.find((a) => a.id === agentId)
   if (agentId === agentStore.selectedAgentId) {
@@ -2492,6 +2537,7 @@ async function onSubmit() {
 
 function onSelectAgent(agentId: string) {
   if (!agentId || agentId === agentStore.selectedAgentId) return
+  if (!ensureAgentAllowedWithoutSignIn(agentId)) return
   const conversationId = agentStore.currentConversationId?.trim()
   void agentStore.selectAgent(agentId)
   if (conversationId) void clearLlmOverrideForConversation(conversationId)

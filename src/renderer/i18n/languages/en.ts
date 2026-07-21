@@ -316,10 +316,15 @@ export const lang: AppLocaleBundle = {
     signInFailed: 'Sign in was cancelled or failed. Please try again.',
     signInRequiredTitle: 'Sign in to continue',
     signInRequiredDesc:
-      'Create a free Teralexi account to unlock cloud LLMs, agents, skills, channels, memory, and more.',
+      'Sign in with your Teralexi account to use the website skill, channels, support upload, and other platform features.',
+    signInOptionalDesc:
+      'Sign in for platform features (website hosting, channels, support). You can skip this and still configure local or cloud LLM providers.',
+    continueWithoutAccount: 'Continue without signing in',
+    continueWithoutAccountHint:
+      'You can configure Ollama, llama.cpp, or your own cloud API keys without an account.',
     localLlmHint:
-      'Without an account you can still configure local models (Ollama or llama.cpp) under Settings → LLM.',
-    openLocalLlmSettings: 'Configure local LLM instead',
+      'Without an account you can still configure local and cloud model providers under Settings → LLM.',
+    openLocalLlmSettings: 'Open LLM settings',
     authorizationBlockedTitle: 'Authorization required',
     authorizationBlockedDesc:
       'Teralexi could not verify your account or subscription. The app is paused until authorization succeeds.',
@@ -338,9 +343,9 @@ export const lang: AppLocaleBundle = {
       'This settings section is available after you sign in with your Teralexi account.',
     monitor: 'Token usage tracking is available for signed-in users.',
     wizard:
-      'The full setup wizard is available after sign-in. You can still configure Ollama or llama.cpp locally in Settings → LLM.',
-    llmCloud:
-      'Cloud LLM providers require an Teralexi account. Local providers (Ollama, llama.cpp) are available below.',
+      'Sign in is optional. You can configure local or cloud LLM providers without an account.',
+    websiteSkill:
+      'The website skill requires a Teralexi account (includes hosting and publish tools).',
   },
   providerSetup: providerSetupEn,
 }
