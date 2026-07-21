@@ -177,54 +177,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           INSTALLATION_ID: ${{ steps.app-token.outputs.installation-id }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
-        run: |
-          set -euo pipefail
-          echo "Installation id: ${INSTALLATION_ID}"
-          echo "App slug: ${APP_SLUG}"
-          echo "Target repository: ${GITHUB_REPOSITORY}"
-
-          echo ""
-          echo "Repositories accessible to this installation token:"
-          installation_json="$(gh api "/installation/repositories?per_page=100" --paginate)"
-          repo_count="$(printf '%s' "${installation_json}" | jq '[.[].repositories[]] | length')"
-          if [ "${repo_count}" -eq 0 ]; then
-            echo "  (none — the app installation has no repository access)"
-          else
-            printf '%s' "${installation_json}" | jq -r '.[].repositories[] | "  - \(.full_name)  pull=\(.permissions.pull) push=\(.permissions.push)"'
-          fi
-
-          target_repo="$(printf '%s' "${installation_json}" | jq --arg repo "${GITHUB_REPOSITORY}" '[.[].repositories[] | select(.full_name == $repo)] | first')"
-          if [ -z "${target_repo}" ] || [ "${target_repo}" = "null" ]; then
-            echo ""
-            echo "::error::${APP_SLUG} is not installed on ${GITHUB_REPOSITORY}."
-            echo "::error::Org → Settings → GitHub Apps → ${APP_SLUG} → Configure → Repository access → add ${GITHUB_REPOSITORY##*/} (or All repositories)."
-            exit 1
-          fi
-
-          install_push="$(printf '%s' "${target_repo}" | jq -r '.permissions.push')"
-          echo ""
-          echo "Installation listing permissions.push for ${GITHUB_REPOSITORY}: ${install_push}"
-          echo "(GET /repos/.../permissions is often all-false for app tokens and is not used here.)"
-
-          echo ""
-          echo "Dry-run push to ${GITHUB_REF_NAME}..."
-          git config user.name "${APP_SLUG}[bot]"
-          git config user.email "${APP_SLUG}[bot]@users.noreply.github.com"
-          if git push --dry-run "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"; then
-            echo "Push access verified."
-            exit 0
-          fi
-
-          echo ""
-          echo "::error::${APP_SLUG} cannot push to ${GITHUB_REPOSITORY} (git push --dry-run failed)."
-          if [ "${install_push}" != "true" ]; then
-            echo "::error::Installation still reports push=false. Fix app permissions, then accept on the org installation."
-          fi
-          echo "::error::1) App → Permissions → Contents → Read and write → Save"
-          echo "::error::2) Org installation → Review and accept new permissions"
-          echo "::error::3) main branch protection → add ${APP_SLUG}[bot] to bypass / allowed push actors"
-          echo "::error::4) If org uses SAML SSO → https://github.com/settings/applications → Authorize for Naughty-Otters"
-          exit 1
+        run: bash .github/scripts/verify-app-push.sh
 
       - name: Download coverage summary
         uses: actions/download-artifact@v5
