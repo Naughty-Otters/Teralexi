@@ -155,6 +155,15 @@ Or set `TERALEXI_BUILD_ENV` (`dev` | `sit` | `prod`) before running a build scri
 - Artifacts: `teralexi-<platform>-sit-<run>-<sha>` (14-day retention)
 - On `main`: unit tests run with coverage; `.github/badges/coverage.json` is updated for the README coverage badge (Shields endpoint)
 
+**README updates on protected `main`:** The `update-readme` job uses the GitHub Actions environment **`CI-build`**. It mints an installation token with `actions/create-github-app-token` from:
+
+| Secret | Purpose |
+| --- | --- |
+| `GIT_CI_BUILD_BOT_APP_ID` | GitHub App ID |
+| `GIT_CI_BUILD_BOT_APP_PRIVATE_ID` | GitHub App private key |
+
+That token is used for checkout/push so the bot can update README stats when branch protection blocks the default `GITHUB_TOKEN`. The app must be installed on the repo with **Contents: Read and write**, and allowed to bypass (or satisfy) `main` protection rules.
+
 ### Release — production (`env/.prod.env`)
 
 **Workflow:** [`.github/workflows/release.yml`](./.github/workflows/release.yml)

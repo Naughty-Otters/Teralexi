@@ -109,15 +109,25 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # App token from this environment can push to protected main.
+    environment: CI-build
     permissions:
-      contents: write
+      contents: read
 
     steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.GIT_CI_BUILD_BOT_APP_ID }}
+          private-key: ${{ secrets.GIT_CI_BUILD_BOT_APP_PRIVATE_ID }}
+
       - name: Check out repository
         uses: actions/checkout@v5
         with:
           ref: ${{ github.ref }}
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Download coverage summary
         uses: actions/download-artifact@v5
@@ -138,9 +148,11 @@ jobs:
         run: node .github/scripts/update-readme-ci-status.mjs
 
       - name: Commit and push README
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${APP_SLUG}[bot]@users.noreply.github.com"
           git add README.md .github/badges/coverage.json
           if git diff --staged --quiet; then
             echo "README.md and coverage badge already up to date."
