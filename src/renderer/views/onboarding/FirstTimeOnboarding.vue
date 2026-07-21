@@ -1,16 +1,17 @@
 <template>
   <div class="first-time-onboarding">
     <SignInRequiredPanel
-      v-if="ready && !isSignedIn && !continuingWithoutAccount"
+      v-if="ready && !isSignedIn && !leavingWithoutLogin"
+      :title="t.auth.signInOptionalTitle"
       :description="t.auth.signInOptionalDesc"
       :hint="t.auth.continueWithoutAccountHint"
       :secondary-action-label="t.auth.continueWithoutAccount"
       @signed-in="onSignedIn"
-      @secondary-action="continueWithoutAccount"
+      @secondary-action="continueWithoutLogin"
     />
     <ProviderSetupWizard
-      v-else-if="ready"
-      :open="showWizard"
+      v-else-if="ready && showProviderSetup"
+      :open="showProviderSetup"
       first-run
       @finished="onFinished"
     />
@@ -36,12 +37,13 @@ const { isSignedIn, refresh } = useGoogleAccount()
 const agentStore = useAgentStore()
 
 const ready = ref(false)
-const showWizard = ref(true)
-const continuingWithoutAccount = ref(false)
+const showProviderSetup = ref(false)
+const leavingWithoutLogin = ref(false)
 
 /**
- * First-run path: optional auth → LLM/agents wizard (local + cloud) → /landing summary.
- * Only auto-skip when already signed in and fully configured.
+ * First-run path: optional sign-in → provider setup (after sign-in) → /landing.
+ * Continue without login skips provider setup and enters the app.
+ * Auto-skip only when already signed in and fully configured.
  */
 async function maybeSkipIfAlreadyConfigured(): Promise<boolean> {
   if (!isSignedIn.value) return false
@@ -57,28 +59,33 @@ async function maybeSkipIfAlreadyConfigured(): Promise<boolean> {
 onMounted(async () => {
   await Promise.all([agentStore.initializeSettingsFromConfig(), refresh()])
   if (await maybeSkipIfAlreadyConfigured()) return
+  if (isSignedIn.value) {
+    showProviderSetup.value = true
+  }
   ready.value = true
 })
 
 watch(isSignedIn, async (signedIn) => {
-  if (!signedIn || !ready.value) return
-  continuingWithoutAccount.value = false
+  if (!signedIn || !ready.value || leavingWithoutLogin.value) return
   if (await maybeSkipIfAlreadyConfigured()) return
-  showWizard.value = true
+  showProviderSetup.value = true
 })
 
 function onSignedIn() {
-  continuingWithoutAccount.value = false
-  showWizard.value = true
+  leavingWithoutLogin.value = false
+  showProviderSetup.value = true
 }
 
-function continueWithoutAccount() {
-  continuingWithoutAccount.value = true
-  showWizard.value = true
+async function continueWithoutLogin() {
+  leavingWithoutLogin.value = true
+  showProviderSetup.value = false
+  await agentStore.completeOnboarding()
+  markOnboardingCompleteInRouteCache()
+  void router.replace('/landing')
 }
 
 function onFinished() {
-  showWizard.value = false
+  showProviderSetup.value = false
   markOnboardingCompleteInRouteCache()
 }
 </script>

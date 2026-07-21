@@ -317,11 +317,12 @@ export const lang: AppLocaleBundle = {
     signInRequiredTitle: 'Sign in to continue',
     signInRequiredDesc:
       'Sign in with your Teralexi account to use the website skill, channels, support upload, and other platform features.',
+    signInOptionalTitle: 'Sign in (optional)',
     signInOptionalDesc:
-      'Sign in for platform features (website hosting, channels, support). You can skip this and still configure local or cloud LLM providers.',
-    continueWithoutAccount: 'Continue without signing in',
+      'Sign in for platform features such as website hosting, channels, and support. You can also continue without an account.',
+    continueWithoutAccount: 'Continue without login',
     continueWithoutAccountHint:
-      'You can configure Ollama, llama.cpp, or your own cloud API keys without an account.',
+      'You can sign in later anytime from Settings.',
     localLlmHint:
       'Without an account you can still configure local and cloud model providers under Settings → LLM.',
     openLocalLlmSettings: 'Open LLM settings',
@@ -343,7 +344,7 @@ export const lang: AppLocaleBundle = {
       'This settings section is available after you sign in with your Teralexi account.',
     monitor: 'Token usage tracking is available for signed-in users.',
     wizard:
-      'Sign in is optional. You can configure local or cloud LLM providers without an account.',
+      'Sign in is optional. You can continue without login and sign in later from Settings.',
     websiteSkill:
       'The website skill requires a Teralexi account (includes hosting and publish tools).',
   },

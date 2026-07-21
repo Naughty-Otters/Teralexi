@@ -294,6 +294,7 @@ export type AppLabels = {
     signInRequiredTitle: string
     signInRequiredDesc: string
     /** Optional first-run sign-in panel copy. */
+    signInOptionalTitle: string
     signInOptionalDesc: string
     continueWithoutAccount: string
     continueWithoutAccountHint: string

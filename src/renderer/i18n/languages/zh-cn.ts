@@ -310,11 +310,11 @@ export const lang: AppLocaleBundle = {
     signInRequiredTitle: '登录后继续',
     signInRequiredDesc:
       '登录 Teralexi 账户后可使用网站技能、频道、支持上传等平台功能。',
+    signInOptionalTitle: '登录（可选）',
     signInOptionalDesc:
-      '登录后可使用平台功能（网站托管、频道、支持等）。也可跳过，直接配置本地或云端 LLM。',
+      '登录后可使用平台功能（网站托管、频道、支持等）。也可以不登录，直接继续使用。',
     continueWithoutAccount: '不登录，继续',
-    continueWithoutAccountHint:
-      '未登录也可配置 Ollama、llama.cpp 或自有云端 API Key。',
+    continueWithoutAccountHint: '之后可随时在设置中登录。',
     localLlmHint:
       '未登录时仍可在 设置 → LLM 中配置本地与云端模型提供商。',
     openLocalLlmSettings: '打开 LLM 设置',
@@ -334,7 +334,7 @@ export const lang: AppLocaleBundle = {
   signInGate: {
     settings: '此设置项需要登录 Teralexi 账户后使用。',
     monitor: 'Token 用量统计仅对登录用户开放。',
-    wizard: '登录是可选的。未登录也可配置本地或云端 LLM 提供商。',
+    wizard: '登录是可选的。可以不登录继续使用，之后再在设置中登录。',
     websiteSkill: '网站技能需要 Teralexi 账户（含托管与发布工具）。',
   },
   providerSetup: providerSetupZhCn,
