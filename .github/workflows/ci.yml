@@ -161,8 +161,8 @@ jobs:
         with:
           app-id: ${{ secrets.GIT_CI_BUILD_BOT_APP_ID }}
           private-key: ${{ steps.app-key.outputs.private-key }}
-          permission-contents: write
-          permission-metadata: read
+          # Inherit all permissions granted on the installation (explicit
+          # permission-* inputs can produce tokens that fail protected-branch push).
 
       - name: Check out repository
         uses: actions/checkout@v5
@@ -185,42 +185,45 @@ jobs:
 
           echo ""
           echo "Repositories accessible to this installation token:"
-          repo_list="$(gh api "/installation/repositories?per_page=100" --paginate --jq '.repositories[].full_name' || true)"
-          if [ -z "${repo_list}" ]; then
+          installation_json="$(gh api "/installation/repositories?per_page=100" --paginate)"
+          repo_count="$(printf '%s' "${installation_json}" | jq '[.[].repositories[]] | length')"
+          if [ "${repo_count}" -eq 0 ]; then
             echo "  (none — the app installation has no repository access)"
           else
-            printf '%s\n' "${repo_list}" | sed 's/^/  - /'
+            printf '%s' "${installation_json}" | jq -r '.[].repositories[] | "  - \(.full_name)  pull=\(.permissions.pull) push=\(.permissions.push)"'
           fi
 
-          if ! printf '%s\n' "${repo_list}" | grep -Fxq "${GITHUB_REPOSITORY}"; then
+          target_repo="$(printf '%s' "${installation_json}" | jq --arg repo "${GITHUB_REPOSITORY}" '[.[].repositories[] | select(.full_name == $repo)] | first')"
+          if [ -z "${target_repo}" ] || [ "${target_repo}" = "null" ]; then
             echo ""
             echo "::error::${APP_SLUG} is not installed on ${GITHUB_REPOSITORY}."
             echo "::error::Org → Settings → GitHub Apps → ${APP_SLUG} → Configure → Repository access → add ${GITHUB_REPOSITORY##*/} (or All repositories)."
             exit 1
           fi
 
+          install_push="$(printf '%s' "${target_repo}" | jq -r '.permissions.push')"
           echo ""
-          echo "Checking token permissions on ${GITHUB_REPOSITORY}..."
-          repo_json="$(gh api "repos/${GITHUB_REPOSITORY}" 2>/dev/null || true)"
-          if [ -z "${repo_json}" ]; then
-            echo "::error::Token cannot read ${GITHUB_REPOSITORY} (API returned no data)."
-            echo "::error::If the org uses SAML SSO, authorize ${APP_SLUG} at https://github.com/settings/applications"
-            exit 1
-          fi
+          echo "Installation listing permissions.push for ${GITHUB_REPOSITORY}: ${install_push}"
+          echo "(GET /repos/.../permissions is often all-false for app tokens and is not used here.)"
 
-          perms="$(printf '%s' "${repo_json}" | jq '.permissions')"
-          echo "Token permissions: ${perms}"
-
-          if printf '%s' "${perms}" | jq -e '.push == true' >/dev/null; then
+          echo ""
+          echo "Dry-run push to ${GITHUB_REF_NAME}..."
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${APP_SLUG}[bot]@users.noreply.github.com"
+          if git push --dry-run "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"; then
             echo "Push access verified."
             exit 0
           fi
 
           echo ""
-          echo "::error::${APP_SLUG} token cannot push to ${GITHUB_REPOSITORY} (permissions.push != true)."
+          echo "::error::${APP_SLUG} cannot push to ${GITHUB_REPOSITORY} (git push --dry-run failed)."
+          if [ "${install_push}" != "true" ]; then
+            echo "::error::Installation still reports push=false. Fix app permissions, then accept on the org installation."
+          fi
           echo "::error::1) App → Permissions → Contents → Read and write → Save"
           echo "::error::2) Org installation → Review and accept new permissions"
-          echo "::error::3) If org uses SAML SSO → https://github.com/settings/applications → Authorize for the org"
+          echo "::error::3) main branch protection → add ${APP_SLUG}[bot] to bypass / allowed push actors"
+          echo "::error::4) If org uses SAML SSO → https://github.com/settings/applications → Authorize for Naughty-Otters"
           exit 1
 
       - name: Download coverage summary
