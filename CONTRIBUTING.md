@@ -49,6 +49,14 @@ CI runs unit tests and coverage checks on pull requests. Prefer focused tests ne
 3. Do **not** commit secrets (`env/.signing.env`, `.p12`, `.pfx`, private keys, OAuth client secrets).
 4. Open a PR against `main` and ensure CI is green.
 
+Use a PR template when creating the pull request (GitHub → **New pull request** → choose template):
+
+| Template | Use for |
+| --- | --- |
+| `bugfix` | Bug fixes |
+| `feature` | New capabilities / enhancements |
+| `release` | Version bumps and ship checklists |
+
 ## Code of conduct
 
 By participating, you agree to follow our [Code of Conduct](./CODE_OF_CONDUCT.md).
