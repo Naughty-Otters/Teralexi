@@ -175,17 +175,53 @@ jobs:
       - name: Verify app token can push
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          INSTALLATION_ID: ${{ steps.app-token.outputs.installation-id }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
           set -euo pipefail
-          echo "Installation id: ${{ steps.app-token.outputs.installation-id }}"
-          echo "App slug: ${{ steps.app-token.outputs.app-slug }}"
-          perms="$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.permissions')"
-          echo "Token permissions on ${GITHUB_REPOSITORY}: ${perms}"
-          if ! echo "${perms}" | jq -e '.push == true' >/dev/null; then
-            echo "::error::teralexi-ci-bot token cannot push (permissions.push != true)."
-            echo "::error::App Permissions → Contents → Read and write, then Accept on the org installation."
+          echo "Installation id: ${INSTALLATION_ID}"
+          echo "App slug: ${APP_SLUG}"
+          echo "Target repository: ${GITHUB_REPOSITORY}"
+
+          echo ""
+          echo "Repositories accessible to this installation token:"
+          repo_list="$(gh api "/installation/repositories?per_page=100" --paginate --jq '.repositories[].full_name' || true)"
+          if [ -z "${repo_list}" ]; then
+            echo "  (none — the app installation has no repository access)"
+          else
+            printf '%s\n' "${repo_list}" | sed 's/^/  - /'
+          fi
+
+          if ! printf '%s\n' "${repo_list}" | grep -Fxq "${GITHUB_REPOSITORY}"; then
+            echo ""
+            echo "::error::${APP_SLUG} is not installed on ${GITHUB_REPOSITORY}."
+            echo "::error::Org → Settings → GitHub Apps → ${APP_SLUG} → Configure → Repository access → add ${GITHUB_REPOSITORY##*/} (or All repositories)."
             exit 1
           fi
+
+          echo ""
+          echo "Checking token permissions on ${GITHUB_REPOSITORY}..."
+          repo_json="$(gh api "repos/${GITHUB_REPOSITORY}" 2>/dev/null || true)"
+          if [ -z "${repo_json}" ]; then
+            echo "::error::Token cannot read ${GITHUB_REPOSITORY} (API returned no data)."
+            echo "::error::If the org uses SAML SSO, authorize ${APP_SLUG} at https://github.com/settings/applications"
+            exit 1
+          fi
+
+          perms="$(printf '%s' "${repo_json}" | jq '.permissions')"
+          echo "Token permissions: ${perms}"
+
+          if printf '%s' "${perms}" | jq -e '.push == true' >/dev/null; then
+            echo "Push access verified."
+            exit 0
+          fi
+
+          echo ""
+          echo "::error::${APP_SLUG} token cannot push to ${GITHUB_REPOSITORY} (permissions.push != true)."
+          echo "::error::1) App → Permissions → Contents → Read and write → Save"
+          echo "::error::2) Org installation → Review and accept new permissions"
+          echo "::error::3) If org uses SAML SSO → https://github.com/settings/applications → Authorize for the org"
+          exit 1
 
       - name: Download coverage summary
         uses: actions/download-artifact@v5
