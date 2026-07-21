@@ -216,7 +216,7 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
       signedInHint:
         '您已登录 Teralexi 账户。这与 Agents 中的 Google Workspace（Gmail、Calendar、Drive）是分开的。',
       signInHint:
-        '登录您的 Teralexi 账户。将在系统浏览器中完成认证，并通过 teralexi:// 返回应用。',
+        '登录您的 Teralexi 账户。将打开登录窗口完成认证并返回应用（正式安装版通过系统浏览器与 teralexi:// 回调）。',
       signIn: '登录',
       signInWithGoogle: '登录',
     },

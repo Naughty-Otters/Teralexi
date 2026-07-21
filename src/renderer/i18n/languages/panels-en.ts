@@ -228,7 +228,7 @@ export const settingsPanelsEn: SettingsPanelLabels = {
       signedInHint:
         'You are signed in to your Teralexi account. This is separate from Google Workspace (Gmail, Calendar, Drive) under Agents.',
       signInHint:
-        'Sign in to your Teralexi account. Your browser will open for authentication and return to the app via teralexi://.',
+        'Sign in to your Teralexi account. A sign-in window opens for authentication and returns to the app (packaged builds use your system browser via teralexi://).',
       signIn: 'Sign in',
       signInWithGoogle: 'Sign in',
     },

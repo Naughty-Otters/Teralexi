@@ -35,9 +35,11 @@ const { mockWindows, BrowserWindow } = vi.hoisted(() => {
     isDestroyed: () => boolean
     isMinimized: () => boolean
     isAlwaysOnTop: () => boolean
+    getTitle: () => string
     restore: ReturnType<typeof vi.fn>
     show: ReturnType<typeof vi.fn>
     focus: ReturnType<typeof vi.fn>
+    close: ReturnType<typeof vi.fn>
   }> = []
   return {
     mockWindows,
@@ -51,7 +53,13 @@ vi.mock('electron', () => ({
   app: {
     on: vi.fn(),
     setAsDefaultProtocolClient: vi.fn(),
+    removeAsDefaultProtocolClient: vi.fn(() => true),
     requestSingleInstanceLock: vi.fn(() => true),
+    isPackaged: false,
+  },
+  protocol: {
+    registerSchemesAsPrivileged: vi.fn(),
+    handle: vi.fn(),
   },
   BrowserWindow,
 }))
@@ -86,6 +94,50 @@ describe('teralexi-protocol-handler', () => {
     expect(mockSyncStored).toHaveBeenCalled()
   })
 
+  it('clears OS protocol binding for unpackaged apps instead of registering Electron', async () => {
+    const { app } = await import('electron')
+    vi.mocked(app.removeAsDefaultProtocolClient).mockClear()
+    vi.mocked(app.setAsDefaultProtocolClient).mockClear()
+    Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
+
+    const mod = await import('./teralexi-protocol-handler')
+    mod.registerTeralexiProtocolClient()
+
+    expect(app.removeAsDefaultProtocolClient).toHaveBeenCalledWith('teralexi')
+    expect(app.removeAsDefaultProtocolClient).toHaveBeenCalledWith(
+      'teralexi',
+      process.execPath,
+    )
+    expect(app.setAsDefaultProtocolClient).not.toHaveBeenCalled()
+  })
+
+  it('registers packaged protocol client for OS deep links', async () => {
+    const { app } = await import('electron')
+    vi.mocked(app.setAsDefaultProtocolClient).mockClear()
+    Object.defineProperty(app, 'isPackaged', { value: true, configurable: true })
+
+    const mod = await import('./teralexi-protocol-handler')
+    mod.registerTeralexiProtocolClient()
+
+    expect(app.setAsDefaultProtocolClient).toHaveBeenCalledWith('teralexi')
+    Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
+  })
+
+  it('registers privileged scheme and in-process handler when unpackaged', async () => {
+    const { app, protocol } = await import('electron')
+    Object.defineProperty(app, 'isPackaged', { value: false, configurable: true })
+    vi.mocked(protocol.registerSchemesAsPrivileged).mockClear()
+    vi.mocked(protocol.handle).mockClear()
+
+    const mod = await import('./teralexi-protocol-handler')
+    mod.registerTeralexiProtocolScheme()
+    mod.registerInternalTeralexiProtocolHandler()
+
+    expect(protocol.registerSchemesAsPrivileged).toHaveBeenCalledWith([
+      expect.objectContaining({ scheme: 'teralexi' }),
+    ])
+    expect(protocol.handle).toHaveBeenCalledWith('teralexi', expect.any(Function))
+  })
   it('uses the dispatch function registered by main-app bundle', async () => {
     const mod = await import('./teralexi-protocol-handler')
     const customDispatch = vi.fn(async () => {})
@@ -115,17 +167,21 @@ describe('teralexi-protocol-handler', () => {
       isDestroyed: () => false,
       isMinimized: () => false,
       isAlwaysOnTop: () => true,
+      getTitle: () => 'Splash',
       restore: vi.fn(),
       show: vi.fn(),
       focus: vi.fn(),
+      close: vi.fn(),
     }
     const main = {
       isDestroyed: () => false,
       isMinimized: () => false,
       isAlwaysOnTop: () => false,
+      getTitle: () => 'Teralexi',
       restore: vi.fn(),
       show: vi.fn(),
       focus: vi.fn(),
+      close: vi.fn(),
     }
     mockWindows.push(splash, main)
 

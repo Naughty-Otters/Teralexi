@@ -11,6 +11,22 @@ vi.mock('fs', () => ({
 const electronMock = vi.hoisted(() => ({
   shell: { openExternal: vi.fn(async () => undefined) },
   app: { isPackaged: false },
+  BrowserWindow: vi.fn(function BrowserWindowMock(this: {
+    webContents: {
+      on: ReturnType<typeof vi.fn>
+      setWindowOpenHandler: ReturnType<typeof vi.fn>
+    }
+    on: ReturnType<typeof vi.fn>
+    loadURL: ReturnType<typeof vi.fn>
+    close: ReturnType<typeof vi.fn>
+    isDestroyed: ReturnType<typeof vi.fn>
+  }) {
+    this.webContents = { on: vi.fn(), setWindowOpenHandler: vi.fn() }
+    this.on = vi.fn()
+    this.loadURL = vi.fn(async () => undefined)
+    this.close = vi.fn()
+    this.isDestroyed = vi.fn(() => false)
+  }),
 }))
 
 vi.mock('electron', () => electronMock)
@@ -53,11 +69,19 @@ vi.mock('@main/services/teralexi-platform-config', async (importOriginal) => {
   }
 })
 
+const devAuthMock = vi.hoisted(() => ({
+  shouldUseDevAuthLoopback: vi.fn(() => false),
+  startDevAuthLoopback: vi.fn(),
+  openDevAuthLoginInBrowser: vi.fn(async () => undefined),
+}))
+
+vi.mock('@main/services/google-account-dev-auth', () => devAuthMock)
 import { isPackagedRuntime } from '@config/env-overrides'
 import {
   applyGoogleAccountOAuthCallback,
   clearStoredAccount,
   googleAccountSignInIsConfigured,
+  handleGoogleAccountOAuthDeepLink,
   loadStoredAccount,
   resolveTeralexiGoogleAuthLoginUrl,
   startGoogleAccountSignIn,
@@ -80,12 +104,34 @@ describe('google-account-oauth', () => {
     )
   })
 
-  it('resolveTeralexiGoogleAuthLoginUrl uses dev fallback when env unset', () => {
+  it('resolveTeralexiGoogleAuthLoginUrl uses BASE_API when env unset', () => {
     vi.stubEnv('NODE_ENV', 'development')
+    expect(resolveTeralexiGoogleAuthLoginUrl()).toBe(
+      'http://127.0.0.1:8000/auth/login',
+    )
+    vi.unstubAllEnvs()
+  })
+
+  it('resolveTeralexiGoogleAuthLoginUrl follows checkout BASE_API from .dev.env style host', async () => {
+    const { getTeralexiBaseApiUrl } = await import(
+      '@main/services/teralexi-platform-config'
+    )
+    vi.mocked(getTeralexiBaseApiUrl).mockReturnValue('https://api.teralexi.com')
     expect(resolveTeralexiGoogleAuthLoginUrl()).toBe(
       'https://api.teralexi.com/auth/login',
     )
-    vi.unstubAllEnvs()
+    vi.mocked(getTeralexiBaseApiUrl).mockReturnValue('http://127.0.0.1:8000')
+  })
+
+  it('resolveTeralexiGoogleAuthLoginUrl follows checkout BASE_API from .env style localhost', async () => {
+    const { getTeralexiBaseApiUrl } = await import(
+      '@main/services/teralexi-platform-config'
+    )
+    vi.mocked(getTeralexiBaseApiUrl).mockReturnValue('http://localhost:8000')
+    expect(resolveTeralexiGoogleAuthLoginUrl()).toBe(
+      'http://localhost:8000/auth/login',
+    )
+    vi.mocked(getTeralexiBaseApiUrl).mockReturnValue('http://127.0.0.1:8000')
   })
 
   it('resolveTeralexiGoogleAuthLoginUrl prefers env override', () => {
@@ -174,5 +220,89 @@ describe('google-account-oauth', () => {
 
   it('clearStoredAccount is safe when missing', () => {
     expect(() => clearStoredAccount()).not.toThrow()
+  })
+
+  it('startGoogleAccountSignIn uses system browser + loopback when unpackaged', async () => {
+    devAuthMock.shouldUseDevAuthLoopback.mockReturnValue(true)
+    const idToken = makeTestJwt({
+      sub: 'google-sub',
+      email: 'user@gmail.com',
+      name: 'Test User',
+      picture: '',
+      iss: 'https://accounts.google.com',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    })
+
+    let deliverCb: ((params: {
+      accessToken: string
+      refreshToken?: string
+      expiresIn?: number
+    }) => void) | undefined
+
+    const loopbackPromise = new Promise<{
+      accessToken: string
+      refreshToken?: string
+      expiresIn?: number
+    }>((resolve) => {
+      // Resolved when openExternal has been called, via the HTTP callback path.
+      deliverCb = resolve
+    })
+
+    devAuthMock.startDevAuthLoopback.mockResolvedValue({
+      callbackUrl: 'http://127.0.0.1:5555/callback',
+      promise: loopbackPromise,
+      close: vi.fn(),
+      deliver: vi.fn((params) => deliverCb?.(params)),
+    })
+
+    const signInPromise = startGoogleAccountSignIn()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(devAuthMock.openDevAuthLoginInBrowser).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /^http:\/\/127\.0\.0\.1:8000\/auth\/login\?.*redirect_uri=http%3A%2F%2F127\.0\.0\.1%3A5555%2Fcallback/,
+      ),
+    )
+    expect(electronMock.shell.openExternal).not.toHaveBeenCalled()
+
+    deliverCb?.({
+      accessToken: idToken,
+      refreshToken: 'r1',
+      expiresIn: 3600,
+    })
+
+    const account = await signInPromise
+    expect(account.userInfo.email).toBe('user@gmail.com')
+    devAuthMock.shouldUseDevAuthLoopback.mockReturnValue(false)
+  })
+
+  it('startGoogleAccountSignIn uses the system browser when packaged', async () => {
+    devAuthMock.shouldUseDevAuthLoopback.mockReturnValue(false)
+    const idToken = makeTestJwt({
+      sub: 'google-sub',
+      email: 'user@gmail.com',
+      name: 'Test User',
+      picture: '',
+      iss: 'https://accounts.google.com',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    })
+
+    const signInPromise = startGoogleAccountSignIn()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(electronMock.shell.openExternal).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/login'),
+    )
+    expect(devAuthMock.openDevAuthLoginInBrowser).not.toHaveBeenCalled()
+
+    await handleGoogleAccountOAuthDeepLink({
+      accessToken: idToken,
+      expiresIn: 3600,
+      scope: 'openid email profile',
+    })
+    const account = await signInPromise
+    expect(account.userInfo.email).toBe('user@gmail.com')
   })
 })

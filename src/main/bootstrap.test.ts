@@ -121,6 +121,8 @@ vi.mock('./services/scheduler-manager', () => ({
 vi.mock('./services/teralexi-protocol-handler', () => ({
   registerTeralexiProtocolClient: vi.fn(),
   registerTeralexiProtocolHandlers: vi.fn(),
+  registerTeralexiProtocolScheme: vi.fn(),
+  registerInternalTeralexiProtocolHandler: vi.fn(),
   requestTeralexiSingleInstanceLock: vi.fn(() => true),
   setTeralexiProtocolHandlerReady: vi.fn(),
 }))

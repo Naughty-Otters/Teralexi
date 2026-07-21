@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, protocol } from 'electron'
 import { createLogger } from '@main/logger'
 import {
   TERALEXI_PROTOCOL,
@@ -26,6 +26,15 @@ function focusMainWindow(): void {
   if (main.isMinimized()) main.restore()
   main.show()
   main.focus()
+}
+
+function closeDevAuthLoginWindows(): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (win.isDestroyed()) continue
+    if (win.getTitle() === 'Sign in to Teralexi') {
+      win.close()
+    }
+  }
 }
 
 function extractProtocolUrlFromArgv(argv: string[]): string | undefined {
@@ -83,6 +92,7 @@ export async function dispatchTeralexiUrl(rawUrl: string): Promise<void> {
       // stale signed-in state after a failed deep-link exchange.
       syncStoredGoogleAccountToRenderers()
     }
+    closeDevAuthLoginWindows()
     focusMainWindow()
   }
 }
@@ -128,18 +138,81 @@ export function setTeralexiProtocolHandlerReady(
   })()
 }
 
-export function registerTeralexiProtocolClient(): void {
-  if (process.defaultApp) {
-    if (process.argv.length >= 2) {
-      app.setAsDefaultProtocolClient(
-        TERALEXI_PROTOCOL,
-        process.execPath,
-        [process.argv[1]!],
+/**
+ * Must run before `app.whenReady()` so BrowserWindow can navigate to teralexi://
+ * in unpackaged/dev without handing the URL to the OS.
+ */
+export function registerTeralexiProtocolScheme(): void {
+  if (app.isPackaged) return
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: TERALEXI_PROTOCOL,
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+        bypassCSP: true,
+      },
+    },
+  ])
+  log.info('Registered privileged teralexi:// scheme for unpackaged/dev login')
+}
+
+/**
+ * After `app.whenReady()`: handle teralexi:// inside this process (dev only).
+ * Prevents macOS from launching a blank Electron.app shell.
+ */
+export function registerInternalTeralexiProtocolHandler(): void {
+  if (app.isPackaged) return
+  try {
+    protocol.handle(TERALEXI_PROTOCOL, (request) => {
+      handleTeralexiProtocolUrl(request.url)
+      closeDevAuthLoginWindows()
+      return new Response(
+        '<!doctype html><html><body style="font-family:system-ui;padding:24px">Signed in. You can close this window and return to Teralexi.</body></html>',
+        { headers: { 'content-type': 'text/html; charset=utf-8' } },
       )
-    }
-  } else {
-    app.setAsDefaultProtocolClient(TERALEXI_PROTOCOL)
+    })
+    log.info('Registered in-process teralexi:// handler for unpackaged/dev login')
+  } catch (err) {
+    log.warn('Failed to register in-process teralexi:// handler', { err })
   }
+}
+
+export function registerTeralexiProtocolClient(): void {
+  // Packaged builds: register the app bundle for OS-level teralexi:// deep links.
+  if (app.isPackaged) {
+    app.setAsDefaultProtocolClient(TERALEXI_PROTOCOL)
+    return
+  }
+
+  // Unpackaged (npm run dev): never register bare Electron.app as the OS handler.
+  // That produces the blank window with "Electron path-to-app".
+  //
+  // Important: older builds registered with
+  //   setAsDefaultProtocolClient(scheme, process.execPath, [process.argv[1]])
+  // removeAsDefaultProtocolClient(scheme) alone does NOT clear that binding
+  // (returns false). Clear every known registration shape.
+  const entry = process.argv[1]
+  const cleared = {
+    plain: app.removeAsDefaultProtocolClient(TERALEXI_PROTOCOL),
+    withExecPath: app.removeAsDefaultProtocolClient(
+      TERALEXI_PROTOCOL,
+      process.execPath,
+    ),
+    withExecPathAndEntry: entry
+      ? app.removeAsDefaultProtocolClient(TERALEXI_PROTOCOL, process.execPath, [
+          entry,
+        ])
+      : false,
+  }
+  log.info('Cleared OS teralexi:// binding for unpackaged/dev', {
+    cleared,
+    execPath: process.execPath,
+    entry,
+    defaultApp: Boolean(process.defaultApp),
+  })
 }
 
 export function registerTeralexiProtocolHandlers(): void {

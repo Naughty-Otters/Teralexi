@@ -35,6 +35,11 @@ import {
 import { createLogger, traceFunction } from '@main/logger'
 import { notifyGoogleAccountChanged } from '@main/services/google-account-notify'
 import { onGoogleAccountSignedIn } from '@main/services/entitlement-session'
+import {
+  openDevAuthLoginInBrowser,
+  shouldUseDevAuthLoopback,
+  startDevAuthLoopback,
+} from '@main/services/google-account-dev-auth'
 
 export interface GoogleAccountTokens {
   access_token: string
@@ -75,9 +80,15 @@ const SIGN_IN_TIMEOUT_MS = 5 * 60 * 1000
 const log = createLogger('services.google-account-oauth')
 
 export function resolveTeralexiGoogleAuthLoginUrl(): string {
+  // Checkout/dev: BASE_API from env/.dev.env → env/.env → env/.dev.local.env
+  // (see config/env-overrides.ts). Packaged builds use baked BASE_API.
   const resolved = resolveConfiguredGoogleAuthLoginUrl()
   if (resolved) return resolved
   if (isPackagedRuntime()) return ''
+  const baseApi = getTeralexiBaseApiUrl()
+  if (baseApi) {
+    return joinTeralexiPlatformUrl(baseApi, TERALEXI_PLATFORM_PATHS.googleAuthLogin)
+  }
   return DEFAULT_TERALEXI_GOOGLE_AUTH_LOGIN_URL_DEV
 }
 
@@ -99,10 +110,10 @@ export function googleAccountInfoForUi(account: GoogleAccount): GoogleAccountUiI
   }
 }
 
-function buildAuthLoginUrl(): string {
+function buildAuthLoginUrl(redirectUri: string = TERALEXI_CALLBACK_URL): string {
   const base = resolveTeralexiGoogleAuthLoginUrl()
   const url = new URL(base)
-  url.searchParams.set('redirect_uri', TERALEXI_CALLBACK_URL)
+  url.searchParams.set('redirect_uri', redirectUri)
   return url.toString()
 }
 
@@ -348,8 +359,12 @@ async function startGoogleAccountSignInImpl(): Promise<GoogleAccount> {
 
 async function runGoogleAccountSignInFlow(): Promise<GoogleAccount> {
   assertGoogleAccountSignInConfigured()
-  log.info('Starting Teralexi Google account sign-in via browser')
 
+  if (shouldUseDevAuthLoopback()) {
+    return runDevLoopbackSignInFlow()
+  }
+
+  log.info('Starting Teralexi Google account sign-in via system browser')
   const loginUrl = buildAuthLoginUrl()
   const tokenPromise = new Promise<GoogleAccount>((resolve, reject) => {
     pendingGoogleSignIn = {
@@ -372,6 +387,67 @@ async function runGoogleAccountSignInFlow(): Promise<GoogleAccount> {
   try {
     return await tokenPromise
   } finally {
+    if (pendingGoogleSignIn?.resolve) {
+      clearPendingGoogleSignIn()
+    }
+  }
+}
+
+/**
+ * Dev / unpackaged checkout:
+ * - Login page = `{BASE_API}/auth/login` from env/.dev.env + env/.env
+ * - Opens the system browser (full size) — no small Electron window
+ * - Callback = `http://127.0.0.1:<port>/callback` (login.html must honor redirect_uri)
+ * - teralexi:// deep links still complete sign-in if the page falls back to them
+ */
+async function runDevLoopbackSignInFlow(): Promise<GoogleAccount> {
+  const loopback = await startDevAuthLoopback()
+  if (!loopback.callbackUrl) {
+    await loopback.promise.catch(() => {})
+    throw new Error('Failed to start local sign-in callback server.')
+  }
+
+  const loginUrl = buildAuthLoginUrl(loopback.callbackUrl)
+  log.info('Starting Teralexi Google account sign-in via system browser + loopback', {
+    loginUrl,
+    callbackUrl: loopback.callbackUrl,
+    baseApi: getTeralexiBaseApiUrl(),
+  })
+
+  const tokenPromise = new Promise<GoogleAccount>((resolve, reject) => {
+    pendingGoogleSignIn = {
+      resolve,
+      reject,
+      timeoutId: setTimeout(() => {
+        if (pendingGoogleSignIn?.resolve !== resolve) return
+        clearPendingGoogleSignIn()
+        reject(
+          new Error(
+            'Sign-in timed out. Complete authentication in your browser, then return to Teralexi.',
+          ),
+        )
+      }, SIGN_IN_TIMEOUT_MS),
+    }
+  })
+
+  // HTTP loopback from redirect_uri (preferred — never opens teralexi://).
+  void loopback.promise
+    .then((callback) => handleGoogleAccountOAuthDeepLink(callback))
+    .catch((err) => {
+      if (
+        pendingGoogleSignIn &&
+        err instanceof Error &&
+        !/cancelled|Sign-in cancelled/i.test(err.message)
+      ) {
+        clearPendingGoogleSignIn(err.message)
+      }
+    })
+
+  try {
+    await openDevAuthLoginInBrowser(loginUrl)
+    return await tokenPromise
+  } finally {
+    loopback.close()
     if (pendingGoogleSignIn?.resolve) {
       clearPendingGoogleSignIn()
     }

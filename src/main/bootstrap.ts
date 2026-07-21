@@ -12,8 +12,10 @@ import { ensureClientId } from '@main/services/client-identity'
 import { createBootstrapSplash } from './bootstrap-splash'
 import { createLogger } from './logger'
 import {
+  registerInternalTeralexiProtocolHandler,
   registerTeralexiProtocolClient,
   registerTeralexiProtocolHandlers,
+  registerTeralexiProtocolScheme,
   requestTeralexiSingleInstanceLock,
 } from './services/teralexi-protocol-handler'
 
@@ -21,6 +23,9 @@ const log = createLogger('app.bootstrap')
 
 initializeTeralexiHome(app)
 ensureClientId()
+
+// Before ready: claim teralexi:// inside Chromium for unpackaged/dev login windows.
+registerTeralexiProtocolScheme()
 
 if (!requestTeralexiSingleInstanceLock()) {
   app.quit()
@@ -36,6 +41,7 @@ function yieldToEventLoop(): Promise<void> {
 async function onBootstrapReady(): Promise<void> {
   try {
     log.info('Bootstrap ready')
+    registerInternalTeralexiProtocolHandler()
 
     const useSplash = config.UseStartupChart && !isTeralexiTestMode()
     const splashWindow = useSplash ? createBootstrapSplash() : undefined
