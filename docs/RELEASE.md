@@ -30,13 +30,17 @@ Then edit `CHANGELOG.md` under a new `## [x.y.z] - YYYY-MM-DD` section.
 
 ### 1. Prepare the release commit
 
+Open a PR using the [release pull request template](../.github/PULL_REQUEST_TEMPLATE/release.md) (GitHub → New pull request → choose the **release** template).
+
 ```bash
 npm run version:patch   # or minor/major
 # Edit CHANGELOG.md
 git add package.json package-lock.json CHANGELOG.md
 git commit -m "chore(release): v0.0.2"
-git push origin main
+git push origin HEAD
 ```
+
+Then open the PR against `main` and complete the template checklist before merging.
 
 ### 2. Configure GitHub secrets (one-time)
 
