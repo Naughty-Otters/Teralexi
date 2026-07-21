@@ -36,7 +36,7 @@ export const bestOfN: SkillTool = {
   tags: [...SUB_AGENT_TAG],
   description:
     'Run the same task with N parallel isolated sub-agent candidates (best-of-N). ' +
-    'Each mutating run gets its own git worktree/branch. Compare reports and pick one to merge or open a PR.',
+    'Each mutating run gets its own git worktree/branch; successful file changes are auto-merged into the workspace.',
   inputSchema: bestOfNSchema,
   needsApproval: false,
   async execute(input) {
@@ -153,6 +153,7 @@ export const bestOfN: SkillTool = {
         hitlPaused: r.hitlPaused,
         worktreePath: r.worktreePath,
         worktreeBranch: r.worktreeBranch,
+        worktreeOutcome: r.worktreeOutcome,
       })),
     }
   },

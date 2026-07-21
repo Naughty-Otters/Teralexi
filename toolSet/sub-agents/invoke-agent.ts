@@ -13,8 +13,11 @@ export const invokeAgent: SkillTool = {
   name: INVOKE_AGENT_TOOL_NAME,
   tags: [...SUB_AGENT_TAG],
   description:
-    'Delegate a sub-task to another configured agent. Returns a short structured brief ' +
-    '(summary, filesTouched, status) — not a full tool transcript. ' +
+    'Delegate a sub-task to another configured agent. Returns a structured brief ' +
+    '(summary, filesTouched, status, worktreeOutcome). ' +
+    'File changes are auto-merged into the workspace when present. ' +
+    'Do not re-invoke just because the summary looks long or ends with a cap notice — ' +
+    'the full report is in the sub-agent chat bubble. ' +
     'Set wait=false to run in parallel and receive a runId; use wait_for_sub_agent_runs to collect results.',
   inputSchema: z.object({
     agentId: z.string().min(1).describe('Catalog agent id to run'),
@@ -88,16 +91,35 @@ export const invokeAgent: SkillTool = {
       }
     }
 
-    const result = await parentRun.executeChildAndMerge(childParams)
-    if (result.hitlPaused) {
+    if (!parentRun.spawnChildRun) {
+      throw new Error('invoke_agent requires spawnChildRun')
+    }
+
+    const spawned = await parentRun.spawnChildRun(childParams, {
+      waitMode: 'blocking',
+    })
+    const record = await spawned.promise
+
+    if (record.result?.hitlPaused && record.childRun) {
+      parentRun.mergeChildHitlPause?.(record.childRun, record.result)
       throw new Error('Sub-agent paused for human approval')
     }
+
+    if (record.status === 'failed' || record.status === 'cancelled') {
+      throw new Error(record.error ?? `Sub-agent run ${record.runId} ${record.status}`)
+    }
+
     return buildSubAgentBrief({
-      runId: parentRun.meta?.runId ? `${parentRun.meta.runId}:child` : 'child',
-      agentId: resolvedId,
-      agentName: resolvedId,
-      status: 'completed',
-      stepOutputs: result.stepOutputs as never,
+      runId: record.runId,
+      agentId: record.agentId,
+      agentName: record.agentName,
+      status: (record.status as 'completed') || 'completed',
+      stepOutputs: record.result?.stepOutputs as never,
+      error: record.error,
+      worktreePath: record.worktreePath,
+      worktreeBranch: record.worktreeBranch,
+      worktreeDiffStat: record.worktreeDiffStat,
+      worktreeOutcome: record.worktreeOutcome,
     })
   },
 }

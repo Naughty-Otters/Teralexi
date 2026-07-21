@@ -1,8 +1,14 @@
 import type { StepOutputs } from '../types'
 import type { SubAgentRunStatus } from '../types'
 
-/** Cap parent-facing subagent summaries so tool results stay brief. */
-export const SUB_AGENT_BRIEF_SUMMARY_MAX_CHARS = 2000
+/**
+ * Cap parent-facing subagent summaries. Kept large enough for research reports
+ * so the parent does not re-invoke thinking the answer was truncated mid-stream.
+ */
+export const SUB_AGENT_BRIEF_SUMMARY_MAX_CHARS = 32_000
+
+const SUMMARY_TRUNCATION_NOTICE =
+  '\n\n[Summary capped for the parent tool result. The full report is in the sub-agent bubble — do not re-invoke to get more text.]'
 
 export type SubAgentBrief = {
   status: SubAgentRunStatus
@@ -15,6 +21,8 @@ export type SubAgentBrief = {
   error?: string
   worktreePath?: string
   worktreeBranch?: string
+  /** How the isolated worktree was resolved after the run. */
+  worktreeOutcome?: 'merged' | 'discarded'
 }
 
 export function mergeSubFlowOutputText(
@@ -39,7 +47,8 @@ export function mergeSubFlowOutputText(
 function truncateSummary(text: string): string {
   const trimmed = text.trim()
   if (trimmed.length <= SUB_AGENT_BRIEF_SUMMARY_MAX_CHARS) return trimmed
-  return `${trimmed.slice(0, SUB_AGENT_BRIEF_SUMMARY_MAX_CHARS - 1)}…`
+  const budget = SUB_AGENT_BRIEF_SUMMARY_MAX_CHARS - SUMMARY_TRUNCATION_NOTICE.length
+  return `${trimmed.slice(0, Math.max(0, budget))}${SUMMARY_TRUNCATION_NOTICE}`
 }
 
 /** Prefer report/summary stages; fall back to truncated toolLoop assistant text. */
@@ -83,6 +92,7 @@ export function buildSubAgentBrief(args: {
   worktreePath?: string
   worktreeBranch?: string
   worktreeDiffStat?: string
+  worktreeOutcome?: 'merged' | 'discarded'
 }): SubAgentBrief {
   return {
     status: args.status,
@@ -97,5 +107,6 @@ export function buildSubAgentBrief(args: {
     error: args.error,
     worktreePath: args.worktreePath,
     worktreeBranch: args.worktreeBranch,
+    worktreeOutcome: args.worktreeOutcome,
   }
 }

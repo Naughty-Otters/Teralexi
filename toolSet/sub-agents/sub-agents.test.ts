@@ -35,12 +35,25 @@ describe('sub-agent tools', () => {
   })
 
   it('invoke_agent enforces subAgentIds allow-list and forwards child params', async () => {
-    const executeChildAndMerge = vi.fn().mockResolvedValue({
-      hitlPaused: false,
-      stepOutputs: { report: 'done' },
-    })
+    const spawnChildRun = vi.fn(async (params: { agentId: string; task: string }) => ({
+      runId: `run-${params.agentId}`,
+      agentId: params.agentId,
+      agentName: params.agentId,
+      promise: Promise.resolve({
+        runId: `run-${params.agentId}`,
+        agentId: params.agentId,
+        agentName: params.agentId,
+        status: 'completed',
+        result: { hitlPaused: false, stepOutputs: { report: 'done' } },
+        worktreeOutcome: 'discarded' as const,
+      }),
+    }))
     bindSubAgentDelegation({
-      parentRun: { meta: { depth: 0 }, executeChildAndMerge },
+      parentRun: {
+        meta: { depth: 0 },
+        executeChildAndMerge: vi.fn(),
+        spawnChildRun,
+      },
       allowSubAgents: true,
       subAgentIds: ['skill:allowed'],
       opts: { userId: 'user-1', conversationId: 'conv-1' },
@@ -52,24 +65,47 @@ describe('sub-agent tools', () => {
       invokeAgent.execute({ agentId: 'skill:blocked', task: 'nope' }),
     ).rejects.toThrow(/not enabled for invoke_agent/)
 
-    await invokeAgent.execute({ agentId: 'skill:allowed', task: 'go' })
-    expect(executeChildAndMerge).toHaveBeenCalledWith({
+    const brief = await invokeAgent.execute({
       agentId: 'skill:allowed',
-      parentOpts: { userId: 'user-1', conversationId: 'conv-1' },
       task: 'go',
     })
-    expect(executeChildAndMerge.mock.calls[0]?.[0]).not.toHaveProperty(
+    expect(spawnChildRun).toHaveBeenCalledWith(
+      {
+        agentId: 'skill:allowed',
+        parentOpts: { userId: 'user-1', conversationId: 'conv-1' },
+        task: 'go',
+      },
+      { waitMode: 'blocking' },
+    )
+    expect(spawnChildRun.mock.calls[0]?.[0]).not.toHaveProperty(
       'contextMessages',
     )
+    expect(brief).toMatchObject({
+      runId: 'run-skill:allowed',
+      summary: 'done',
+      worktreeOutcome: 'discarded',
+    })
   })
 
   it('invoke_agent resolves short agent ids before allow-list and child spawn', async () => {
-    const executeChildAndMerge = vi.fn().mockResolvedValue({
-      hitlPaused: false,
-      stepOutputs: { report: 'done' },
-    })
+    const spawnChildRun = vi.fn(async (params: { agentId: string; task: string }) => ({
+      runId: `run-${params.agentId}`,
+      agentId: params.agentId,
+      agentName: params.agentId,
+      promise: Promise.resolve({
+        runId: `run-${params.agentId}`,
+        agentId: params.agentId,
+        agentName: params.agentId,
+        status: 'completed',
+        result: { hitlPaused: false, stepOutputs: { report: 'done' } },
+      }),
+    }))
     bindSubAgentDelegation({
-      parentRun: { meta: { depth: 0 }, executeChildAndMerge },
+      parentRun: {
+        meta: { depth: 0 },
+        executeChildAndMerge: vi.fn(),
+        spawnChildRun,
+      },
       allowSubAgents: true,
       subAgentIds: ['skill:coding'],
       opts: { userId: 'user-1' },
@@ -79,8 +115,9 @@ describe('sub-agent tools', () => {
     })
 
     await invokeAgent.execute({ agentId: 'coding', task: 'Implement X' })
-    expect(executeChildAndMerge).toHaveBeenCalledWith(
+    expect(spawnChildRun).toHaveBeenCalledWith(
       expect.objectContaining({ agentId: 'skill:coding', task: 'Implement X' }),
+      { waitMode: 'blocking' },
     )
   })
 

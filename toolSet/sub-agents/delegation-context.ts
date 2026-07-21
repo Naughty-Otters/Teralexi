@@ -6,6 +6,8 @@ export type SubAgentChildParams = {
   task: string
   contextMessages?: unknown[]
   allowedToolNames?: string[] | 'all'
+  /** When false, keep worktree for manual Merge/PR (e.g. best-of-N). */
+  autoMergeWorktree?: boolean
 }
 
 export type SubAgentParentRun = {
@@ -17,7 +19,28 @@ export type SubAgentParentRun = {
   spawnChildRun?: (
     params: SubAgentChildParams,
     opts?: { waitMode?: 'blocking' | 'background'; detached?: boolean },
-  ) => Promise<{ runId: string; agentId: string; agentName: string }>
+  ) => Promise<{
+    runId: string
+    agentId: string
+    agentName: string
+    promise: Promise<{
+      runId: string
+      agentId: string
+      agentName: string
+      status: string
+      error?: string
+      result?: {
+        hitlPaused: boolean
+        stepOutputs: Record<string, unknown>
+        pausedStageId?: string
+      }
+      childRun?: unknown
+      worktreePath?: string
+      worktreeBranch?: string
+      worktreeDiffStat?: string
+      worktreeOutcome?: 'merged' | 'discarded'
+    }>
+  }>
   cancelChildRun?: (runId: string) => boolean
   waitForChildRuns?: (runIds: string[]) => Promise<
     Array<{
@@ -35,6 +58,7 @@ export type SubAgentParentRun = {
       childRun?: unknown
       worktreePath?: string
       worktreeBranch?: string
+      worktreeOutcome?: 'merged' | 'discarded'
     }>
   >
   remainingParallelSlots?: () => number
@@ -168,6 +192,7 @@ export function buildSubAgentChildParams(
     agentId: string
     task: string
     allowedToolNames?: string[] | 'all'
+    autoMergeWorktree?: boolean
   },
 ): SubAgentChildParams {
   const agentId = input.agentId.trim()
@@ -181,6 +206,7 @@ export function buildSubAgentChildParams(
     parentOpts: delegation.opts ?? {},
     task,
     allowedToolNames: input.allowedToolNames,
+    autoMergeWorktree: input.autoMergeWorktree,
   }
 }
 

@@ -63,6 +63,12 @@ export type ResolveChildAgentParams = {
    * isolated git worktree for file-mutating parallel agents.
    */
   isolateGitWorktree?: boolean
+  /**
+   * When true (default), auto-merge the worktree into the parent checkout after
+   * a successful run that touched files. Set false for best-of-N (user picks).
+   * Empty worktrees are always discarded automatically.
+   */
+  autoMergeWorktree?: boolean
   /** Parent pipeline stage to record when the child pauses for HITL. */
   parentHitlPauseStageId?: FlowStageId
   onChunk?: AgentResponseOpts['onChunk']

@@ -32,8 +32,11 @@ const log = createLogger('agent.expr.context-overflow-guard')
 /** Max chars for a single tool output.  ~3 K tokens at 4 chars/token. */
 export const DEFAULT_TOOL_OUTPUT_CHAR_CAP = 12_000
 
-/** Stricter cap for subagent tool results (briefs should already be short). */
-export const SUB_AGENT_TOOL_OUTPUT_CHAR_CAP = 4_000
+/**
+ * Cap for subagent tool results. Must stay ≥ {@link SUB_AGENT_BRIEF_SUMMARY_MAX_CHARS}
+ * so research briefs are not double-truncated after the brief builder.
+ */
+export const SUB_AGENT_TOOL_OUTPUT_CHAR_CAP = 32_000
 
 /** Total char budget across all initial messages before pruning triggers.
  *  ~37 K tokens — leaves headroom for system instructions and the live loop. */

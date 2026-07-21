@@ -2,7 +2,7 @@ import { createLogger } from '@main/logger'
 import type { SubAgentRunLifecycleEvent, SubAgentRunStatus } from '../types'
 import { AgentRun } from './agent-run'
 import { createSubAgentRunId } from './flow-scoped-ids'
-import { buildSubAgentBrief } from './sub-flow-output-text'
+import { buildSubAgentBrief, parseFilesTouchedFromDiffStat } from './sub-flow-output-text'
 import {
   resolveEngineAgent,
   subAgentReportPreview,
@@ -85,6 +85,8 @@ export type SubAgentRunRecord = {
   worktreeRepoRoot?: string
   /** `git diff --stat` vs base branch when worktree finished. */
   worktreeDiffStat?: string
+  /** How the worktree was resolved after completion (auto or manual). */
+  worktreeOutcome?: 'merged' | 'discarded'
 }
 
 /** Per-run wait payload for tools / parent LLM (never throws on sibling failure). */
@@ -104,6 +106,7 @@ export type SubAgentWaitResult = {
   childRun?: AgentRun
   worktreePath?: string
   worktreeBranch?: string
+  worktreeOutcome?: 'merged' | 'discarded'
 }
 
 type ActiveEntry = {
@@ -386,6 +389,7 @@ export async function spawnSubAgentRun(
 
       finishRecord(record, 'completed', { result })
       record.worktreeDiffStat = worktreeDiffStat
+      await resolveWorktreeAfterSuccess(record)
       emitLifecycle(parent, {
         kind: 'finished',
         runId,
@@ -395,9 +399,9 @@ export async function spawnSubAgentRun(
         agentName,
         status: 'completed',
         reportPreview: subAgentReportPreview(result.stepOutputs),
-        worktreePath,
-        worktreeBranch,
-        worktreeDiffStat,
+        worktreePath: record.worktreePath,
+        worktreeBranch: record.worktreeBranch,
+        worktreeDiffStat: record.worktreeDiffStat,
         detached: detached || undefined,
       })
       return record
@@ -454,6 +458,7 @@ function toWaitResult(record: SubAgentRunRecord): SubAgentWaitResult {
     worktreePath: record.worktreePath,
     worktreeBranch: record.worktreeBranch,
     worktreeDiffStat: record.worktreeDiffStat,
+    worktreeOutcome: record.worktreeOutcome,
   })
   return {
     runId: brief.runId,
@@ -472,6 +477,7 @@ function toWaitResult(record: SubAgentRunRecord): SubAgentWaitResult {
     childRun: record.childRun,
     worktreePath: brief.worktreePath,
     worktreeBranch: brief.worktreeBranch,
+    worktreeOutcome: brief.worktreeOutcome,
   }
 }
 
@@ -525,6 +531,62 @@ function clearWorktreeFields(record: SubAgentRunRecord): void {
   record.worktreePath = undefined
   record.worktreeBranch = undefined
   record.worktreeRepoRoot = undefined
+}
+
+/**
+ * After a successful sub-agent run: auto-merge file changes into the parent
+ * checkout, or discard an empty worktree (research-only). No manual approval.
+ */
+async function resolveWorktreeAfterSuccess(
+  record: SubAgentRunRecord,
+): Promise<'merged' | 'discarded' | undefined> {
+  if (!record.worktreeRepoRoot || !record.worktreeBranch) return undefined
+
+  const files = parseFilesTouchedFromDiffStat(record.worktreeDiffStat)
+  if (files.length === 0) {
+    if (record.worktreePath) {
+      await gitWorktreeRemove({
+        repoRoot: record.worktreeRepoRoot,
+        worktreePath: record.worktreePath,
+        force: true,
+      })
+    }
+    await gitDeleteBranch(record.worktreeRepoRoot, record.worktreeBranch, true)
+    clearWorktreeFields(record)
+    record.worktreeOutcome = 'discarded'
+    return 'discarded'
+  }
+
+  const merged = await mergeSubAgentWorktree(record.runId)
+  if (merged.ok) {
+    record.worktreeOutcome = 'merged'
+    return 'merged'
+  }
+
+  log.warn('Auto-merge of sub-agent worktree failed; discarding worktree', {
+    runId: record.runId,
+    error: merged.error,
+  })
+  // No manual Merge/PR/Discard UI — clean up so the workspace is not left dirty.
+  if (record.worktreePath) {
+    await gitWorktreeRemove({
+      repoRoot: record.worktreeRepoRoot,
+      worktreePath: record.worktreePath,
+      force: true,
+    })
+  }
+  if (record.worktreeBranch) {
+    await gitDeleteBranch(record.worktreeRepoRoot, record.worktreeBranch, true)
+  }
+  clearWorktreeFields(record)
+  record.worktreeOutcome = 'discarded'
+  record.error = [
+    record.error,
+    `Auto-merge failed: ${merged.error}`,
+  ]
+    .filter(Boolean)
+    .join(' — ')
+  return 'discarded'
 }
 
 /** Update UI + registry when the user accepts/discards a paused or finished run. */

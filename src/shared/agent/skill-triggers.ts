@@ -167,9 +167,11 @@ export function formatSkillRoutingInstructionsBlock(
     lines.push(
       '- Single specialist → `invoke_agent` with exact `agentId` from the list',
       '- Parallel specialists → `invoke_agents` with `wait=false`, then `wait_for_sub_agent_runs`',
-      '- Same task, multiple tries → `best_of_n` then pick a worktree to merge or open a PR',
+      '- Same task, multiple tries → `best_of_n` (candidates run in parallel; file changes auto-merge)',
       '- Detachable background → `invoke_agents` / `best_of_n` with `detach=true`',
-      '- Sub-agent tools return a short **brief** (`summary`, `filesTouched`, `status`) — not a full tool transcript',
+      '- Sub-agent tools return a **brief** (`summary`, `filesTouched`, `status`, `worktreeOutcome`)',
+      '- File changes are **auto-merged** into the workspace — do not ask the user to merge/PR/discard',
+      '- Do **not** re-invoke a sub-agent just because the summary has a length cap notice — read the sub-agent bubble for the full report',
     )
   }
 

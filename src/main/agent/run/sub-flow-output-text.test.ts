@@ -42,6 +42,9 @@ describe('buildSubAgentBrief', () => {
     expect(brief.summary.length).toBeLessThanOrEqual(
       SUB_AGENT_BRIEF_SUMMARY_MAX_CHARS,
     )
+    expect(brief.summary).toContain(
+      'do not re-invoke to get more text',
+    )
     expect(brief.filesTouched).toEqual(['src/a.ts', 'src/b.ts'])
     expect(brief.openQuestions).toEqual([])
     expect(brief.status).toBe('completed')

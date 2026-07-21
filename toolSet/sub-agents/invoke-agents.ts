@@ -162,6 +162,7 @@ export const invokeAgents: SkillTool = {
         hitlPaused: r.hitlPaused,
         worktreePath: r.worktreePath,
         worktreeBranch: r.worktreeBranch,
+        worktreeOutcome: r.worktreeOutcome,
       })),
     }
   },
