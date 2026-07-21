@@ -29,7 +29,7 @@ Website agent walkthrough — pick an agent, plan, generate files, and preview t
 
 [![Watch demo video](./media/web_4.png)](./media/howto_website_2.mp4)
 
-https://github.com/Naughty-Otters/Teralexi/raw/open_source_b/media/howto_website_2.mp4
+https://github.com/Naughty-Otters/Teralexi/raw/main/media/howto_website_2.mp4
 
 ![Pick an agent and start a prompt](./media/web_1.png)
 
@@ -59,15 +59,15 @@ npm install
 npm run dev
 ```
 
-`npm run dev` uses Electron hot reload and connects to the **production** platform API (`https://api.teralexi.com/`) by default.
+`npm run dev` uses Electron hot reload. By default it loads `env/.dev.env`, which sets `BASE_API` to the **public Teralexi platform** (`https://api.teralexi.com/`). That enables optional cloud features (sign-in, entitlements, usage metrics when signed in, support upload, website publish, auto-update checks).
 
-### Use your own backend
+You can use **local LLMs without an account** (Settings → LLM → Ollama / llama.cpp).
 
-Point at a local or staging API only when you need to:
+### Use your own backend or local-only mode
 
 ```bash
 cp env/.dev.local.env.example env/.env
-# edit BASE_API in env/.env, then:
+# edit BASE_API in env/.env (e.g. http://localhost:8000), then:
 npm run dev
 ```
 
@@ -77,12 +77,25 @@ Or one-off:
 BASE_API=http://localhost:8000 npm run dev
 ```
 
+To explore the UI without a platform API, set `BASE_API=` in your override env file. Cloud sign-in, metrics, support upload, website publish, and in-app updates will be unavailable.
+
 Local load order for `npm run dev`: `env/.dev.env` → `env/.env` (wins) → `env/.dev.local.env` (wins if present).
+
+The platform API server is **not** included in this repository. Client contracts: [docs/SUBSCRIPTION-INTEGRATION.md](./docs/SUBSCRIPTION-INTEGRATION.md).
+
+## Privacy & telemetry
+
+- Most agent data stays under `~/.teralexi/` on your machine (local-first).
+- When signed in to a platform API, the app may send **provider usage metrics** (model/token counters) if your plan includes `metrics.write`.
+- **Support upload** and **website publish** only run when you trigger them and your entitlement allows it.
+- Packaged builds check `{BASE_API}/desktop/releases/stable/` for updates (no account required). Forks should change `BASE_API` / `build.json` publish URL so they do not auto-update from Teralexi’s feed.
+
+See [Privacy Policy](https://www.teralexi.com/privacy.html).
 
 ## Useful commands
 
 ```bash
-npm run dev          # desktop app (production API by default)
+npm run dev          # desktop app (public platform API by default)
 npm run build        # production desktop build
 npm run build:web    # renderer/main/preload build (CI validation)
 npm run test:unit    # unit tests
@@ -92,13 +105,16 @@ npm run test:unit    # unit tests
 
 | Doc | Purpose |
 | --- | --- |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | How to contribute |
+| [SECURITY.md](./SECURITY.md) | Vulnerability reporting |
 | [BUILD-AND-RELEASE.md](./BUILD-AND-RELEASE.md) | Env modes, local builds, CI & release |
 | [CODING.md](./CODING.md) | Contributor UI / IPC notes |
 | [skills/SKILL-DEVELOPMENT.md](./skills/SKILL-DEVELOPMENT.md) | Authoring agent skills |
-| [docs/](./docs/) | Releases, code signing, support upload |
+| [docs/](./docs/) | Releases, code signing, support upload, App Store notes |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |
+| [NOTICE](./NOTICE) | Third-party / trademark notes |
 | [teralexi.com](https://www.teralexi.com/) | Download & product overview |
 
 ## License
 
-Teralexi is licensed under the [Apache License 2.0](./LICENSE).
+Teralexi is licensed under the [Apache License 2.0](./LICENSE). See [NOTICE](./NOTICE) for trademark and third-party notes.

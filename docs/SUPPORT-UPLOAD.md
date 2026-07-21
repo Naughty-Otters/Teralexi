@@ -72,7 +72,7 @@ Channel auth under `~/.teralexi/channels/` is never included.
 1. Validate JWT
 2. Receive multipart upload
 3. Validate size
-4. Store zip privately or attach via GitHub App to a private repo/issue
+4. Store the zip privately (object storage, ticket attachment, etc.)
 5. Return `{ "ok": true, "reportId": "…" }`
 
 ## Local export

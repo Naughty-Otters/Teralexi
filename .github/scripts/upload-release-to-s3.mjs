@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Upload electron-builder release artifacts to a private S3 prefix.
- * Intended for GitHub Actions — credentials via AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY.
+ * Upload electron-builder release artifacts to an S3 prefix.
+ * Intended for GitHub Actions — write credentials via OIDC or AWS keys (never shipped to end users).
  */
 
 import { execFileSync } from 'node:child_process'

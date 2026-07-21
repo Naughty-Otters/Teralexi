@@ -4,6 +4,8 @@ Screenshots and recordings used by the root README. Prefer the same product stor
 
 Assets currently live in the repo-root [`media/`](../../media/) folder (not this directory).
 
+**License / trademark:** Media in `media/` documents Teralexi and remains copyright of Naughty Otters LLC; “Teralexi” branding is a trademark. See the root [NOTICE](../../NOTICE).
+
 ## Current files
 
 | File | Content |

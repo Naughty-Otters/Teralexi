@@ -4,7 +4,7 @@
   "productName": "Teralexi",
   "main": "./dist/electron/main/bootstrap.js",
   "author": "Naughty-Otters",
-  "description": "Teralexi project",
+  "description": "Local-first AI agent desktop — research, code, channels, skills & MCP, any LLM",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

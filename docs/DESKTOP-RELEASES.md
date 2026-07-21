@@ -1,6 +1,6 @@
 # Desktop releases (S3 + public update feed)
 
-Production desktop updates use a **private S3 bucket** for CI uploads and a **public HTTP feed** on your platform API (`BASE_API`). The GitHub repository stays private; end users never receive publish credentials. **Updates do not require sign-in** (unlike support upload).
+Production desktop updates use an **S3 bucket** for CI uploads (write credentials stay in GitHub Actions secrets) and a **public HTTP feed** on your platform API (`BASE_API`). End users never receive publish credentials. **Updates do not require sign-in** (unlike support upload).
 
 ## Architecture
 
@@ -52,8 +52,8 @@ Maps to `app.base.apiUrl` at runtime.
 
 | Environment | Example in repo |
 | --- | --- |
-| Development | `BASE_API = 'http://localhost:8000'` in `env/.dev.env` |
-| Staging | `BASE_API = 'https://stage_api.teralexi.com/'` in `env/.sit.env` |
+| Development | `BASE_API = 'https://api.teralexi.com/'` in `env/.dev.env` (override with `env/.env` / `env/.dev.local.env` for local APIs) |
+| Staging | `BASE_API = 'https://staging.teralexi.com/'` in `env/.sit.env` |
 | Production | `BASE_API = 'https://api.teralexi.com/'` in `env/.prod.env` |
 
 **Update feed URL** (default, no override):
@@ -80,7 +80,7 @@ Override the feed path (relative to `BASE_API` or absolute URL) in `env/*.env` o
 app.desktop.releasesUrl=desktop/releases/stable
 ```
 
-**Staging vs production:** use the same default path (`desktop/releases/stable/`). The only difference between `env/.sit.env` and `env/.prod.env` is **`BASE_API`** — staging apps check `https://stage_api.teralexi.com/desktop/releases/stable/`, production apps check `https://api.teralexi.com/desktop/releases/stable/`. Do not set a separate `app.desktop.releasesUrl` for sit.
+**Staging vs production:** use the same default path (`desktop/releases/stable/`). The only difference between `env/.sit.env` and `env/.prod.env` is **`BASE_API`** — staging apps check `https://staging.teralexi.com/desktop/releases/stable/`, production apps check `https://api.teralexi.com/desktop/releases/stable/`. Do not set a separate `app.desktop.releasesUrl` for sit.
 
 ---
 
@@ -198,7 +198,7 @@ Actions → Release → confirm "release" → platform (all / mac / win)
 | Setting | Value |
 | --- | --- |
 | Build env | `TERALEXI_BUILD_ENV=sit` → `env/.sit.env` |
-| Staging API | `BASE_API` in `.sit.env` (e.g. `https://stage_api.teralexi.com/`) |
+| Staging API | `BASE_API` in `.sit.env` (e.g. `https://staging.teralexi.com/`) |
 | Update feed | Same path as prod: `{BASE_API}/desktop/releases/stable/` (no path override in `.sit.env`) |
 | macOS script | `npm run build:mac:sit` |
 | Windows script | `npm run build:win64:sit` |
@@ -266,7 +266,7 @@ If signing secrets are missing, workflows still produce **unsigned** installers 
 
 The `desktop/releases/stable/` prefix must be **publicly readable** (CloudFront, API static proxy, or bucket policy on that prefix only). Keep the rest of the bucket private.
 
-Staging and production use the **same key layout** under their respective API hosts (`stage_api.teralexi.com` vs `api.teralexi.com`). CI does not publish to S3; upload staging builds to your staging bucket/API separately when you need a live staging update feed.
+Staging and production use the **same key layout** under their respective API hosts (`staging.teralexi.com` vs `api.teralexi.com`). CI does not publish to S3; upload staging builds to your staging bucket/API separately when you need a live staging update feed.
 
 ---
 

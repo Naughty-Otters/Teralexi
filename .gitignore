@@ -48,3 +48,4 @@ dist/**
 coverage/
 storage/
 skill-module-cache/*
+tmp/

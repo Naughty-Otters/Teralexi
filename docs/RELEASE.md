@@ -3,7 +3,7 @@
 > **See also:** [BUILD-AND-RELEASE.md](../BUILD-AND-RELEASE.md) — environment files, local builds, and GitHub Actions (CI vs Release).  
 > **Desktop updates:** [DESKTOP-RELEASES.md](./DESKTOP-RELEASES.md) — S3 publish + public update feed.
 
-Teralexi uses [Semantic Versioning](https://semver.org/). Installers are built from a **private GitHub repo** and published to **private S3**. Installed apps check for updates via `electron-updater` against `{BASE_API}/desktop/releases/stable/` (no sign-in required).
+Teralexi uses [Semantic Versioning](https://semver.org/). Maintainers build installers in GitHub Actions and publish artifacts to an **S3 bucket** (write access via CI credentials only). Installed apps check for updates via `electron-updater` against `{BASE_API}/desktop/releases/stable/` (no sign-in required). End users never receive publish credentials.
 
 ## Version source of truth
 

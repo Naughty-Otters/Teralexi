@@ -1,8 +1,10 @@
 # Client subscription & auth integration
 
-How the Teralexi desktop client authenticates against the platform API, renews
-sessions, and fetches signed subscription entitlement. Canonical server contract:
-`OpenFDEServer/docs/subscription-integration/README.md`.
+How the Teralexi desktop client authenticates against an optional **platform API**
+(`BASE_API`), renews sessions, and fetches signed subscription entitlement.
+
+The platform backend is a **separate** service (not part of this repository). This
+document is the **client contract** for implementers of a compatible API.
 
 **Current phase:** every authenticated user is on the `base` plan with
 `metrics.write` and `support.upload`.
@@ -100,9 +102,8 @@ entitlement cache, and call `POST /api/v1/auth/logout` with the last refresh
 token when available.
 
 **Account deletion** is **not** offered in the desktop Settings UI. Platform
-deletion (if needed) is handled out-of-band via support or a web flow; see
-OpenFDEServer `docs/subscription-integration/account-deletion.md` and
-[MAC-APP-STORE-READY.md](./MAC-APP-STORE-READY.md).
+deletion (if needed) is handled out-of-band via support (`info@teralexi.com`)
+or a web flow on the platform API. See [MAC-APP-STORE-READY.md](./MAC-APP-STORE-READY.md).
 
 
 ---
@@ -115,5 +116,6 @@ OpenFDEServer `docs/subscription-integration/account-deletion.md` and
 | `ENTITLEMENT_SIGNING_PUBLIC_KEY_PEM` | Public key to verify `entitlement_token` |
 | `app.teralexi.googleAuthLoginUrl` | Override path/URL for `/auth/login` |
 
-Environments: local `http://localhost:8000`, staging / production hosts from
-server docs — `expectedIssuer` must match the API base for that build.
+Environments: local `http://localhost:8000`, staging (`https://staging.teralexi.com/`),
+production (`https://api.teralexi.com/`) — `expectedIssuer` must match the API
+base for that build.

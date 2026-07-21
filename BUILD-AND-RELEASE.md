@@ -213,11 +213,11 @@ aws iam add-client-id-to-open-id-connect-provider \
 
 Create a role (name it e.g. `teralexi-release`) whose **trust policy** allows the GitHub OIDC provider to assume it. Replace `<ACCOUNT_ID>` with your 12-digit AWS account ID.
 
-**Important:** GitHub may put **owner/repo numeric IDs** into the OIDC `sub` claim (especially after org settings that uniquify subjects). Do **not** guess — run the Release workflow’s **Debug OIDC claims** step and copy `oidcClaims.sub` exactly. For this repo it looks like:
+**Important:** GitHub may put **owner/repo numeric IDs** into the OIDC `sub` claim (especially after org settings that uniquify subjects). Do **not** guess — run the Release workflow’s **Debug OIDC claims** step and copy `oidcClaims.sub` exactly. It often looks like:
 
-`repo:Naughty-Otters@295407917/Teralexi@1275396040:environment:release`
+`repo:<ORG>@<ORG_ID>/<REPO>@<REPO_ID>:environment:release`
 
-(not `repo:Naughty-Otters/Teralexi:…`).
+(not `repo:<ORG>/<REPO>:…`).
 
 ```json
 {
@@ -237,7 +237,7 @@ Create a role (name it e.g. `teralexi-release`) whose **trust policy** allows th
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:Naughty-Otters@295407917/Teralexi@1275396040:*"
+          "token.actions.githubusercontent.com:sub": "repo:<ORG>@<ORG_ID>/<REPO>@<REPO_ID>:*"
         }
       }
     }
@@ -247,7 +247,7 @@ Create a role (name it e.g. `teralexi-release`) whose **trust policy** allows th
 
 `sts:TagSession` is required when `aws-actions/configure-aws-credentials@v5` sends session tags (its default). The Release workflow also sets `role-skip-session-tagging: true` so assumption still works if the trust policy only has `sts:AssumeRoleWithWebIdentity`.
 
-Because the release job uses `environment: release`, the exact `sub` is `repo:Naughty-Otters@295407917/Teralexi@1275396040:environment:release`. The `…:*` wildcard above covers it; you can tighten `StringLike` / use `StringEquals` on that exact value if you prefer.
+Because the release job uses `environment: release`, the exact `sub` is typically `repo:<ORG>@<ORG_ID>/<REPO>@<REPO_ID>:environment:release`. The `…:*` wildcard above covers it; you can tighten `StringLike` / use `StringEquals` on that exact value if you prefer.
 
 ### 3. Attach an S3 write permission policy to the role
 
@@ -324,7 +324,7 @@ These scripts use `-m prod` and `env/.prod.env`. See [`docs/DESKTOP-RELEASES.md`
 
 ## Auto-update
 
-Packaged apps check `{BASE_API}/desktop/releases/stable/` via `electron-updater` (generic provider). CI uploads installers to private S3; the update feed is served publicly (no sign-in).
+Packaged apps check `{BASE_API}/desktop/releases/stable/` via `electron-updater` (generic provider). CI uploads installers to S3 (credentials in Actions secrets only); the update feed is served publicly (no sign-in).
 
 **macOS in-app install** requires signed + notarized release builds. See [CODE-SIGNING-APPLE.md](./docs/CODE-SIGNING-APPLE.md).
 
