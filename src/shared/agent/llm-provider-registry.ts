@@ -54,7 +54,7 @@ export const WHOLESALE_LLM_PROVIDER_IDS = [
   'custom',
 ] as const satisfies readonly ProviderType[]
 
-/** Signed-in users can configure vendor + wholesale APIs. */
+/** Vendor + wholesale cloud APIs (available without a Teralexi account). */
 export const CLOUD_LLM_PROVIDER_IDS = [
   ...VENDOR_LLM_PROVIDER_IDS,
   ...WHOLESALE_LLM_PROVIDER_IDS,

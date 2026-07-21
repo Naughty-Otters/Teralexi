@@ -309,10 +309,15 @@ export const lang: AppLocaleBundle = {
     signInFailed: '登录已取消或失败，请重试。',
     signInRequiredTitle: '登录后继续',
     signInRequiredDesc:
-      '注册免费的 Teralexi 账户即可使用云端 LLM、Agent、技能、频道、记忆等功能。',
+      '登录 Teralexi 账户后可使用网站技能、频道、支持上传等平台功能。',
+    signInOptionalDesc:
+      '登录后可使用平台功能（网站托管、频道、支持等）。也可跳过，直接配置本地或云端 LLM。',
+    continueWithoutAccount: '不登录，继续',
+    continueWithoutAccountHint:
+      '未登录也可配置 Ollama、llama.cpp 或自有云端 API Key。',
     localLlmHint:
-      '未登录时仍可在 设置 → LLM 中配置本地模型（Ollama 或 llama.cpp）。',
-    openLocalLlmSettings: '改为配置本地 LLM',
+      '未登录时仍可在 设置 → LLM 中配置本地与云端模型提供商。',
+    openLocalLlmSettings: '打开 LLM 设置',
     authorizationBlockedTitle: '需要授权验证',
     authorizationBlockedDesc:
       'Teralexi 无法验证您的账户或订阅。在授权成功前，应用将暂停使用。',
@@ -329,9 +334,8 @@ export const lang: AppLocaleBundle = {
   signInGate: {
     settings: '此设置项需要登录 Teralexi 账户后使用。',
     monitor: 'Token 用量统计仅对登录用户开放。',
-    wizard:
-      '完整设置向导需要登录。未登录时可在 设置 → LLM 中配置 Ollama 或 llama.cpp。',
-    llmCloud: '云端 LLM 提供商需要 Teralexi 账户。下方仍可使用本地提供商（Ollama、llama.cpp）。',
+    wizard: '登录是可选的。未登录也可配置本地或云端 LLM 提供商。',
+    websiteSkill: '网站技能需要 Teralexi 账户（含托管与发布工具）。',
   },
   providerSetup: providerSetupZhCn,
 }

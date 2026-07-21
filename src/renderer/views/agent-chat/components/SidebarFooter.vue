@@ -93,12 +93,6 @@
             @click="emit('open-setup-wizard')"
           >
             <UIcon name="i-lucide-wand-sparkles" class="footer-btn-icon" />
-            <UIcon
-              v-if="!isSignedIn"
-              name="i-lucide-lock"
-              class="footer-btn-lock"
-              aria-hidden="true"
-            />
           </button>
         </AppIconTooltip>
         <AppIconTooltip

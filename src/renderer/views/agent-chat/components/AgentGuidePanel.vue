@@ -17,11 +17,23 @@
             :key="tile.id"
             type="button"
             class="agent-guide__tile"
-            :class="{ 'agent-guide__tile--selected': tile.id === selectedAgentId }"
+            :class="{
+              'agent-guide__tile--selected': tile.id === selectedAgentId,
+              'agent-guide__tile--locked': tile.locked,
+            }"
+            :title="tile.locked ? t.signInGate.websiteSkill : undefined"
             @click="emit('select-agent', tile.id)"
           >
             <UAvatar :alt="tile.displayName" :color="tile.color" size="md" />
-            <span class="agent-guide__tile-name">{{ tile.tileLabel }}</span>
+            <span class="agent-guide__tile-name">
+              <UIcon
+                v-if="tile.locked"
+                class="agent-guide__tile-lock"
+                name="i-lucide-lock"
+                aria-hidden="true"
+              />
+              {{ tile.tileLabel }}
+            </span>
             <span v-if="tile.description" class="agent-guide__tile-desc">
               {{ tile.description }}
             </span>
@@ -47,12 +59,21 @@ import {
   formatAgentGroupDisplayName,
   type SkillGroupAgentRef,
 } from '@shared/agent/skill-groups'
+import { isSignedInOnlySkillId } from '@shared/auth/signed-in-features'
+import { resolveAgentSkillId } from '@shared/agent/workspace-required-skills'
 import type { Agent } from '@store/agent'
 
-const props = defineProps<{
-  agents: Agent[]
-  selectedAgentId: string | null
-}>()
+const props = withDefaults(
+  defineProps<{
+    agents: Agent[]
+    selectedAgentId: string | null
+    /** When false, website skill tiles show as locked. */
+    signedIn?: boolean
+  }>(),
+  {
+    signedIn: true,
+  },
+)
 
 const emit = defineEmits<{
   'select-agent': [agentId: string]
@@ -66,6 +87,7 @@ type GuideTile = {
   description: string
   displayName: string
   tileLabel: string
+  locked: boolean
 }
 
 type GuideDisplayRow =
@@ -116,12 +138,14 @@ const guideRows = computed((): GuideDisplayRow[] => {
     if (!agent) continue
 
     const groupedUnderHeader = entries[index - 1]?.kind === 'header'
+    const skillId = resolveAgentSkillId(agent)
     pendingTiles.push({
       id: agent.id,
       color: agent.color,
       description: agent.description,
       displayName: formatAgentGroupDisplayName(agent),
       tileLabel: agentPickerRowLabel(entry.option, groupedUnderHeader),
+      locked: !props.signedIn && isSignedInOnlySkillId(skillId),
     })
   }
 
@@ -218,10 +242,23 @@ const guideRows = computed((): GuideDisplayRow[] => {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary-500, #6366f1) 40%, transparent);
 }
 
+.agent-guide__tile--locked {
+  opacity: 0.72;
+}
+
 .agent-guide__tile-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
   font-weight: 600;
   color: var(--ui-text);
+}
+
+.agent-guide__tile-lock {
+  width: 14px;
+  height: 14px;
+  color: var(--ui-text-muted);
 }
 
 .agent-guide__tile-desc {
