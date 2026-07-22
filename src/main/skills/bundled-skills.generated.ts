@@ -47,7 +47,7 @@ See [refs/plan-modes.md](refs/plan-modes.md). For long-running commands, pass \`
 
 Procedural details: [refs/procedural-contracts.md](refs/procedural-contracts.md). Sub-agents: [refs/sub-agents.md](refs/sub-agents.md).
 
-**Priority sub-agents (Cursor built-ins):** when work would flood context, call \`invoke_agents\` with \`profile\` before doing it inline — \`explore\` (search), \`bash\` (command series via the \`shell\` tool — there is no \`bash\`/\`run_script\` tool), \`browser\` (web/DOM). Use a one-element \`runs\` array for a single child. Then optional \`architect\`/\`plan\` → \`coder\`. Consume the brief; do not re-run the same loop in the parent.
+**Priority sub-agents (Cursor built-ins):** when work would flood context, call \`invoke_agents\` with \`profile\` before doing it inline — \`explore\` (search), \`bash\` (\`shell\` / \`run_script\` / \`run_script_file\` / small \`edit_files\` — there is no tool named \`bash\`), \`browser\` (web/DOM). Use a one-element \`runs\` array for a single child. Then optional \`architect\`/\`plan\` → \`coder\`. Consume the brief; do not re-run the same loop in the parent.
 
 ---
 
@@ -150,7 +150,7 @@ variant_label: Implement
 group_order: 1
 variant_order: 1
 group_primary: true
-allowed_tools: read_file, edit_files, lsp, shell, web_search, web_scrape, update_todos, read_todos, invoke_agents, enter_plan_mode, exit_plan_mode, promote_artifact
+allowed_tools: read_file, edit_files, lsp, shell, run_script, run_script_file, web_search, web_scrape, update_todos, read_todos, invoke_agents, enter_plan_mode, exit_plan_mode, promote_artifact
 `,
     attachments: {
       "refs/plan-modes.md": {
@@ -215,13 +215,13 @@ One child = one-element \`runs\` array. Multiple = parallel. Always waits for re
 
 | Profile | Cursor analogue | Tools | When |
 | --- | --- | --- | --- |
-| \`explore\` | Explore | \`read_file\`, \`lsp\`, read-only shell | Find/where/how; map before edits |
-| \`bash\` | Bash | **\`shell\`** (not a \`bash\`/\`run_script\` tool), \`read_file\` | Tests, builds, rg/find, git |
+| \`explore\` | Explore | \`read_file\`, \`lsp\`, read-only shell | Find/where/how; map before edits. Fans out parallel reads/rg in one turn. |
+| \`bash\` | Bash | \`shell\`, \`run_script\`, \`run_script_file\`, \`edit_files\`, \`read_file\` | Tests, builds, scripts, rg/find, git, small fixes |
 | \`browser\` | Browser | \`web_search\` / \`web_scrape\` + browser MCP | Pages, DOM, screenshots |
 
 Omit \`agentId\` when using a profile — defaults to \`skill:coding\`.
 
-**Important:** \`bash\` / \`explore\` / \`browser\` are **profiles** for \`invoke_agents\`. The command tool is always \`shell\`. Never call tools named \`bash\` or \`run_script\` — they do not exist.
+**Important:** \`bash\` / \`explore\` / \`browser\` are **profiles** for \`invoke_agents\`. There is no tool named \`bash\` — use \`shell\` / \`run_script\` / \`run_script_file\` under the \`bash\` profile.
 
 ## Orchestration profiles
 
@@ -244,6 +244,10 @@ invoke_agents({ runs: [
 ## Parent rules
 
 - Prefer built-in profiles **before** doing the same loop in the parent.
+- Parent only consumes the returned brief (summary / filesTouched / openQuestions).
+- In the chat UI, Explore activity appears as a nested **Explore** accordion with
+  compact Read/Grep/Shell rows (scoped by sub-agent \`runId\`), not mixed into the
+  root Exploring panel.
 - Consume the **brief**; do not re-run after a successful brief.
 - File changes from coder runs are **auto-merged**.
 `,

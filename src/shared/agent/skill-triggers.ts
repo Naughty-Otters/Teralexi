@@ -167,7 +167,7 @@ export function formatSkillRoutingInstructionsBlock(
     lines.push(
       '- **Priority** Cursor built-in profiles — prefer these before doing the same work in the parent:',
       '  - `explore` — codebase search (isolates noisy grep/read intermediate output)',
-      '  - `bash` — series of commands via the `shell` tool only (no `bash`/`run_script` tools)',
+      '  - `bash` — commands/scripts via `shell` / `run_script` / `run_script_file` (+ small `edit_files`; no tool named `bash`)',
       '  - `browser` — web scrape / browser MCP (isolates DOM/screenshot noise)',
       '- Orchestration after built-ins → `architect`/`plan` (plan only) → `coder` (implement; auto-merge)',
       '- Delegate via `invoke_agents` only (one-element `runs` for a single child; multiple for parallel)',

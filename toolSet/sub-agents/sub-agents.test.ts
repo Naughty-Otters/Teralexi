@@ -196,7 +196,9 @@ describe('sub-agent tools', () => {
     )
     const allowed = spawnChildRun.mock.calls[0]?.[0]?.allowedToolNames
     expect(allowed).toContain('shell')
-    expect(allowed).not.toContain('edit_files')
+    expect(allowed).toContain('edit_files')
+    expect(allowed).toContain('run_script')
+    expect(allowed).toContain('run_script_file')
   })
 
   it('invoke_agents forwards child params for each run', async () => {

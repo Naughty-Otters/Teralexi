@@ -1,4 +1,10 @@
 import { createLogger } from '@main/logger'
+import {
+  buildToolRunScopeChunk,
+  extractToolCallId,
+  isToolUiChunkType,
+  stampToolUiChunkWithRunScope,
+} from '@shared/agent/tool-run-scope'
 import { AgentFlow } from '../flow/agent-flow'
 import { AgentFlowBuilder } from '../flow/agent-flow-builder'
 import type { FlowStageId } from '../constants/step-ids'
@@ -161,6 +167,36 @@ export class AgentRun {
               : payload.stepKey,
         }
         params.onStepProgress?.(wrapped)
+      },
+      // Stamp child tool UI chunks with run scope so the renderer can nest
+      // them under the sub-agent card instead of the root Exploring panel.
+      onUIMessageChunk: (chunk) => {
+        const sink =
+          params.onUIMessageChunk ?? parent.context.opts.onUIMessageChunk
+        if (!sink) return
+        const scope = getCurrentAgentRunScope()
+        const runId = scope?.runId?.trim()
+        if (!runId) {
+          sink(chunk)
+          return
+        }
+        const parentRunId = parent.meta.runId
+        const type = typeof chunk.type === 'string' ? chunk.type : ''
+        if (!isToolUiChunkType(type)) {
+          sink(chunk)
+          return
+        }
+        sink(stampToolUiChunkWithRunScope(chunk, { runId, parentRunId }))
+        const toolCallId = extractToolCallId(chunk)
+        if (toolCallId) {
+          sink(
+            buildToolRunScopeChunk({
+              toolCallId,
+              runId,
+              parentRunId,
+            }),
+          )
+        }
       },
     })
 

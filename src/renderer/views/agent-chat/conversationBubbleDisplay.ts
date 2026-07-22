@@ -130,6 +130,7 @@ export function filterVisibleConversationBubbles<
       AGENTIC_RUN_CONVERSATION_SECTION_IDS,
     )
   }
+  // compact / all: keep agentic-run sections (Exploring panel uses them as anchors)
 
   // Never hide every bubble — fall back to deliverable-filtered sections only.
   if (result.length === 0 && sections.length > 0) {

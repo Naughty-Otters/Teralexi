@@ -76,6 +76,8 @@ export type ResolveChildAgentParams = {
   slimContext?: boolean
   /** Restrict MCP tools for Cursor-style Explore/Bash/Browser profiles. */
   mcpAccess?: 'none' | 'browser' | 'all'
+  /** Cursor-style profile id (`explore` | `bash` | …) for UI labeling. */
+  profile?: string
   /** Parent pipeline stage to record when the child pauses for HITL. */
   parentHitlPauseStageId?: FlowStageId
   onChunk?: AgentResponseOpts['onChunk']
@@ -263,12 +265,18 @@ export async function buildChildAgentResponseOpts(
     mcpTools = filterMcpToolsForSubagentAccess(mcpTools, params.mcpAccess)
   }
   let enabledSkillTools = resolveEnabledSkillToolNames(agent)
+  let availableSetTouched = !!agent.availableSetTouched
   if (
     params.allowedToolNames &&
     params.allowedToolNames !== 'all'
   ) {
     const allowed = new Set(params.allowedToolNames)
-    enabledSkillTools = enabledSkillTools.filter((name) => allowed.has(name))
+    // Profile allowlists apply even when the parent skill has an untouched
+    // availableSet (undefined = full catalog). Restrict to the profile tools.
+    enabledSkillTools = Array.isArray(enabledSkillTools)
+      ? enabledSkillTools.filter((name) => allowed.has(name))
+      : [...params.allowedToolNames]
+    availableSetTouched = true
   }
 
   const messages: AgentMessage[] = seedHistory
@@ -303,7 +311,7 @@ export async function buildChildAgentResponseOpts(
     compiledArtifact: agent.compiledArtifact,
     agentId: agent.id,
     availableSet: enabledSkillTools,
-    availableSetTouched: !!agent.availableSetTouched,
+    availableSetTouched,
     toolNeedsApprovalOverrides: agent.toolNeedsApprovalOverrides ?? {},
     mcpTools,
     userId: parentOpts.userId,

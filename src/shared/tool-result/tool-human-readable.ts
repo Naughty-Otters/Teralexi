@@ -149,9 +149,21 @@ export function formatToolHumanReadableAction(
         : typeof record?.command === 'string'
           ? record.command.trim()
           : ''
-      return command
-        ? `Run command ${quote(command)}`
-        : 'Run a workspace command'
+      if (!command) return 'Run a workspace command'
+      // Cursor-like labels for common explore searches
+      if (/\b(?:rg|ripgrep|git\s+grep|grep)\b/i.test(command)) {
+        const pattern =
+          /(?:rg|ripgrep|grep)\s+(?:-[^\s]+\s+)*['"]?([^'"\s]+)/i.exec(
+            command,
+          )?.[1]
+        return pattern
+          ? `Grep ${quote(pattern)}`
+          : `Grep ${quote(command.slice(0, 64))}`
+      }
+      if (/\bfind\b/i.test(command)) {
+        return `Glob ${quote(command.slice(0, 72))}`
+      }
+      return `Run command ${quote(command)}`
     }
     case 'run_script':
       return 'Run an inline script'

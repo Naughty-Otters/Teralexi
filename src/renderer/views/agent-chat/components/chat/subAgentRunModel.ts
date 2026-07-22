@@ -19,6 +19,7 @@ export type SubAgentRunLifecyclePart = {
   task?: string
   waitMode?: 'blocking' | 'background'
   status?: SubAgentRunStatus
+  profile?: string
   reportPreview?: string
   error?: string
   worktreePath?: string
@@ -35,6 +36,7 @@ export type SubAgentRunNode = {
   agentName: string
   task: string
   status: SubAgentRunStatus
+  profile?: string
   reportPreview: string
   error?: string
   depth: number
@@ -80,6 +82,7 @@ export function extractSubAgentLifecycleParts(
           data.waitMode === 'background' || data.waitMode === 'blocking'
             ? data.waitMode
             : undefined,
+        profile: typeof data.profile === 'string' ? data.profile : undefined,
         worktreePath:
           typeof data.worktreePath === 'string' ? data.worktreePath : undefined,
         worktreeBranch:
@@ -99,6 +102,7 @@ export function extractSubAgentLifecycleParts(
         agentId,
         agentName,
         status: typeof data.status === 'string' ? (data.status as SubAgentRunStatus) : 'completed',
+        profile: typeof data.profile === 'string' ? data.profile : undefined,
         reportPreview:
           typeof data.reportPreview === 'string' ? data.reportPreview : undefined,
         error: typeof data.error === 'string' ? data.error : undefined,
@@ -135,6 +139,7 @@ export function buildSubAgentRunTree(
         agentName: event.agentName,
         task: event.task ?? '',
         status: 'running',
+        profile: event.profile,
         reportPreview: '',
         depth: 0,
         children: [],
@@ -151,11 +156,13 @@ export function buildSubAgentRunTree(
         agentName: event.agentName,
         task: '',
         status: 'completed' as SubAgentRunStatus,
+        profile: event.profile,
         reportPreview: '',
         depth: 0,
         children: [],
       }
       node.status = event.status ?? 'completed'
+      if (event.profile) node.profile = event.profile
       if (event.reportPreview) node.reportPreview = event.reportPreview
       if (event.error) node.error = event.error
       if (event.worktreePath) node.worktreePath = event.worktreePath

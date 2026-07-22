@@ -28,6 +28,21 @@ function stepRetryContext(ctx: AgentStepContext): LlmRetryContext {
   }
 }
 
+/** Silent LLM helpers must not spam the chat with retry / error progress. */
+function stepRetryContextSilent(ctx: AgentStepContext): LlmRetryContext {
+  return {
+    opts: { abortSignal: ctx.opts.abortSignal },
+    logMeta: {
+      stepId: ctx.stepId,
+      provider: ctx.opts.provider,
+      model: ctx.opts.model,
+      conversationId: ctx.opts.conversationId,
+      agentId: ctx.opts.agentId,
+      silent: true,
+    },
+  }
+}
+
 function llmValidationContext(
   ctx: AgentStepContext,
   label: string,
@@ -137,7 +152,7 @@ export async function runLlmTextSilent(
   ctx: AgentStepContext,
   params: StreamTextParams,
 ): Promise<{ text: string }> {
-  return withLlmRetry(stepRetryContext(ctx), 'streamText:silent', async () => {
+  return withLlmRetry(stepRetryContextSilent(ctx), 'streamText:silent', async () => {
     const { text, response } = await runLlmStream({
       streamParams: {
         ...params,
@@ -220,7 +235,7 @@ export async function runLlmObjectSilent<T>(params: {
   usageSource?: string
 }): Promise<{ output: T }> {
   const { ctx, streamParams, usageSource = 'streamObjectSilent' } = params
-  return withLlmRetry(stepRetryContext(ctx), 'streamObject:silent', async () => {
+  return withLlmRetry(stepRetryContextSilent(ctx), 'streamObject:silent', async () => {
     const { output, response } = await runLlmStream({
       streamParams: {
         ...streamParams,

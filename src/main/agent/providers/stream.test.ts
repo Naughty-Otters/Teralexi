@@ -96,6 +96,24 @@ describe('runLlmObjectSilent', () => {
 
     expect(result.output).toEqual({ valid: true, summary: 'ok' })
   })
+
+  it('does not surface retries or final errors to step progress', async () => {
+    runLlmStream.mockRejectedValue(
+      new Error('No object generated: could not parse the response.'),
+    )
+    const emitStepProgress = vi.fn()
+
+    await expect(
+      runLlmObjectSilent({
+        ctx: makeCtx({ emitStepProgress }),
+        streamParams: { model: 'test' } as never,
+      }),
+    ).rejects.toThrow(/No object generated/)
+
+    expect(emitStepProgress).not.toHaveBeenCalled()
+    // Parse failures are non-retryable — one attempt only.
+    expect(runLlmStream).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('runLlmTextSilent', () => {

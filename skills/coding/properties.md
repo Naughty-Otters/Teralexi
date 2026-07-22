@@ -12,4 +12,4 @@ variant_label: Implement
 group_order: 1
 variant_order: 1
 group_primary: true
-allowed_tools: read_file, edit_files, lsp, shell, web_search, web_scrape, update_todos, read_todos, invoke_agents, enter_plan_mode, exit_plan_mode, promote_artifact
+allowed_tools: read_file, edit_files, lsp, shell, run_script, run_script_file, web_search, web_scrape, update_todos, read_todos, invoke_agents, enter_plan_mode, exit_plan_mode, promote_artifact

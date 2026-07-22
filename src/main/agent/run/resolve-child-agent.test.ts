@@ -313,6 +313,72 @@ describe('buildChildAgentResponseOpts', () => {
     expect(envelope.pipelineMessages).toHaveLength(1)
     expect(envelope.delegationTask).toBe('Delegated sub-task')
   })
+
+  it('applies profile allowedToolNames when parent skill has untouched availableSet', async () => {
+    loadEngineAgents.mockResolvedValue([
+      {
+        id: 'skill:coding',
+        name: 'Coding',
+        skillId: 'coding',
+        provider: 'ollama',
+        model: 'gemma4',
+        allowAsSubAgent: true,
+        systemPrompt: 'child',
+        toolNeedsApprovalOverrides: {},
+        availableSetTouched: false,
+      },
+    ])
+
+    const { opts } = await buildChildAgentResponseOpts({
+      agentId: 'skill:coding',
+      parentOpts: {
+        provider: 'openai',
+        model: 'gpt-4.1',
+        systemPrompt: 'parent',
+        messages: [],
+        userId: 'user-1',
+        conversationId: 'conv-1',
+      },
+      task: 'Map auth',
+      allowedToolNames: ['read_file', 'lsp', 'shell'],
+    })
+
+    expect(opts.availableSet).toEqual(['read_file', 'lsp', 'shell'])
+    expect(opts.availableSetTouched).toBe(true)
+  })
+
+  it('leaves availableSet unrestricted when profile allows all tools', async () => {
+    loadEngineAgents.mockResolvedValue([
+      {
+        id: 'skill:coding',
+        name: 'Coding',
+        skillId: 'coding',
+        provider: 'ollama',
+        model: 'gemma4',
+        allowAsSubAgent: true,
+        systemPrompt: 'child',
+        toolNeedsApprovalOverrides: {},
+        availableSetTouched: false,
+      },
+    ])
+
+    const { opts } = await buildChildAgentResponseOpts({
+      agentId: 'skill:coding',
+      parentOpts: {
+        provider: 'openai',
+        model: 'gpt-4.1',
+        systemPrompt: 'parent',
+        messages: [],
+        userId: 'user-1',
+        conversationId: 'conv-1',
+      },
+      task: 'Implement',
+      allowedToolNames: 'all',
+    })
+
+    expect(opts.availableSet).toBeUndefined()
+    expect(opts.availableSetTouched).toBe(false)
+  })
 })
 
 describe('resolveChildAgentLlmConfig', () => {

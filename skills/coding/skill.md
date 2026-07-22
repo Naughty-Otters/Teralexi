@@ -30,7 +30,7 @@ See [refs/plan-modes.md](refs/plan-modes.md). For long-running commands, pass `b
 
 Procedural details: [refs/procedural-contracts.md](refs/procedural-contracts.md). Sub-agents: [refs/sub-agents.md](refs/sub-agents.md).
 
-**Priority sub-agents (Cursor built-ins):** when work would flood context, call `invoke_agents` with `profile` before doing it inline — `explore` (search), `bash` (command series via the `shell` tool — there is no `bash`/`run_script` tool), `browser` (web/DOM). Use a one-element `runs` array for a single child. Then optional `architect`/`plan` → `coder`. Consume the brief; do not re-run the same loop in the parent.
+**Priority sub-agents (Cursor built-ins):** when work would flood context, call `invoke_agents` with `profile` before doing it inline — `explore` (search), `bash` (`shell` / `run_script` / `run_script_file` / small `edit_files` — there is no tool named `bash`), `browser` (web/DOM). Use a one-element `runs` array for a single child. Then optional `architect`/`plan` → `coder`. Consume the brief; do not re-run the same loop in the parent.
 
 ---
 

@@ -237,6 +237,7 @@
         :markdown="markdown"
         :is-streaming="isStreaming"
         :message-id="props.message.id"
+        :message="props.message"
       />
     </div>
   </div>
@@ -253,6 +254,7 @@
         :markdown="markdown"
         :is-streaming="isStreaming"
         :message-id="props.message.id"
+        :message="props.message"
       />
   </div>
   <template v-else-if="showExploringPanel && standaloneToolLoopPanelSlots.length">
@@ -486,7 +488,7 @@ const useToolLoopPanel = computed(
 )
 
 const showExploringPanel = computed(
-  () => useToolLoopPanel.value && !messageFinalTextStarted(props.message),
+  () => useToolLoopPanel.value,
 )
 
 const frozenToolLoopPanelItemsByMessageId = ref(

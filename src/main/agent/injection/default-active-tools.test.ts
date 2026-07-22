@@ -26,7 +26,7 @@ describe('resolveDefaultActiveToolNames', () => {
     expect(active).not.toContain('web_search')
   })
 
-  it('coding skill uses mandatory tools only (no tag expansion)', () => {
+  it('coding skill advertises its full allowlist (no empty-tag shrink)', () => {
     const catalog = [
       { name: 'read_file', tags: ['file-system'] },
       { name: 'apply_patch', tags: ['file-system'] },
@@ -36,17 +36,36 @@ describe('resolveDefaultActiveToolNames', () => {
       { name: 'web_search', tags: ['web'] },
       { name: 'invoke_agents', tags: ['sub-agents'] },
     ]
+    const allToolNames = [
+      'read_file',
+      'shell',
+      'lsp',
+      'update_todos',
+      'invoke_agents',
+    ]
     const active = resolveDefaultActiveToolNames({
       skillId: 'coding',
-      allToolNames: catalog.map((t) => t.name),
+      allToolNames,
       catalogTools: catalog,
     })
-    expect(active).toContain('update_todos')
-    expect(active).toContain('enter_plan_mode')
-    expect(active).toContain('invoke_agents')
-    expect(active).not.toContain('read_file')
+    expect(active.sort()).toEqual([...allToolNames].sort())
+    expect(active).toContain('read_file')
+    expect(active).toContain('shell')
     expect(active).not.toContain('web_search')
-    expect(active).not.toContain('shell')
+  })
+
+  it('explore-sized allToolNames stay available for coding children', () => {
+    const active = resolveDefaultActiveToolNames({
+      skillId: 'coding',
+      allToolNames: ['read_file', 'lsp', 'shell', 'update_todos'],
+      catalogTools: [
+        { name: 'read_file', tags: ['file-system'] },
+        { name: 'lsp', tags: ['code-intelligence'] },
+        { name: 'shell', tags: ['file-system', 'workspace'] },
+        { name: 'update_todos', tags: ['task-tracking'] },
+      ],
+    })
+    expect(active).toEqual(['read_file', 'lsp', 'shell', 'update_todos'])
   })
 })
 

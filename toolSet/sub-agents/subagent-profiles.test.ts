@@ -37,14 +37,17 @@ describe('subagent-profiles', () => {
     }
   })
 
-  it('restricts bash profile to command tools without file edits', () => {
+  it('bash profile includes shell, scripts, and edit_files', () => {
     const tools = SUBAGENT_PROFILES.bash.allowedTools
     expect(Array.isArray(tools)).toBe(true)
     if (Array.isArray(tools)) {
       expect(tools).toContain('shell')
-      expect(tools).not.toContain('run_script')
-      expect(tools).not.toContain('edit_files')
+      expect(tools).toContain('read_file')
+      expect(tools).toContain('edit_files')
+      expect(tools).toContain('run_script')
+      expect(tools).toContain('run_script_file')
       expect(tools).not.toContain('edit_file')
+      expect(tools).not.toContain('lsp')
     }
     expect(SUBAGENT_PROFILES.bash.mcpAccess).toBe('none')
   })

@@ -14,8 +14,12 @@
         :aria-expanded="expanded"
         @click="expanded = !expanded"
       >
-        <UIcon name="i-lucide-bot" class="sub-agent-bubble__icon" aria-hidden="true" />
-        <span class="sub-agent-bubble__name">{{ node.agentName }}</span>
+        <UIcon
+          :name="displayIcon"
+          class="sub-agent-bubble__icon"
+          aria-hidden="true"
+        />
+        <span class="sub-agent-bubble__name">{{ displayName }}</span>
         <UIcon
           :name="expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
           class="sub-agent-bubble__chevron"
@@ -32,7 +36,9 @@
         {{ statusLabel }}
       </span>
     </header>
-    <p v-if="node.task" class="sub-agent-bubble__task">{{ node.task }}</p>
+    <p v-if="node.task && !isExploreProfile" class="sub-agent-bubble__task">
+      {{ node.task }}
+    </p>
     <p v-if="node.worktreeBranch" class="sub-agent-bubble__worktree">
       <UIcon name="i-lucide-git-branch" class="sub-agent-bubble__worktree-icon" />
       <code>{{ node.worktreeBranch }}</code>
@@ -46,6 +52,20 @@
       {{ previewText }}
     </p>
     <p v-if="node.error" class="sub-agent-bubble__error">{{ node.error }}</p>
+
+    <div
+      v-if="exploreToolItems.length > 0"
+      class="sub-agent-bubble__explore-panel"
+    >
+      <ChatToolLoopPanel
+        :items="exploreToolItems"
+        :active="node.status === 'running'"
+        list-display="compact"
+        :title="explorePanelTitle"
+        :default-expanded="node.status === 'running'"
+      />
+    </div>
+
     <div v-if="expanded && runSections.length" class="sub-agent-bubble__body">
       <article
         v-for="section in runSections"
@@ -85,6 +105,7 @@
         :markdown="markdown"
         :is-streaming="isStreaming"
         :message-id="messageId"
+        :message="message"
       />
     </div>
   </article>
@@ -92,7 +113,12 @@
 
 <script setup lang="ts">
 import type MarkdownIt from 'markdown-it'
+import type { UIMessage } from '@teralexi-ai'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
+import {
+  countExploreActivity,
+  formatExploreActivityStatus,
+} from '@shared/agent/explore-activity-summary'
 import {
   buildStructuredDebugViewFromStepProgress,
   type StepProgressPartInput,
@@ -102,11 +128,19 @@ import {
   SUB_AGENT_UI_MAX_DEPTH,
   type SubAgentRunNode,
 } from './chat/subAgentRunModel'
+import type { AssistantBubbleDescriptor } from './chat/assistantBubbleFramework'
+import {
+  getToolPartInput,
+  isTerminalCommandToolPart,
+  toolPartDisplayName,
+} from './chat/chatToolPartHelpers'
 import {
   chatUiBubbleTextKeepChars,
   limitBubbleTextForDisplay,
 } from '../chatUiSettings'
+import { toolPartsForRun } from '../toolRunScope'
 import { useI18n } from '@renderer/composables/useI18n'
+import ChatToolLoopPanel from './ChatToolLoopPanel.vue'
 
 const ChatBubblePdfExportButton = defineAsyncComponent(
   () => import('./ChatBubblePdfExportButton.vue'),
@@ -118,12 +152,20 @@ const props = defineProps<{
   markdown: MarkdownIt
   isStreaming?: boolean
   messageId: string
+  message?: UIMessage
 }>()
 
-const expanded = ref(false)
+const expanded = ref(props.node.status === 'running')
 const showPdfExportButtons = ref(false)
 const { t } = useI18n()
 const toast = useToast()
+
+watch(
+  () => props.node.status,
+  (status) => {
+    if (status === 'running') expanded.value = true
+  },
+)
 
 watch(expanded, (isExpanded) => {
   if (!isExpanded) {
@@ -154,9 +196,62 @@ function onPdfExportFailed(error: string): void {
   })
 }
 
+const isExploreProfile = computed(() => {
+  const profile = props.node.profile?.trim().toLowerCase()
+  if (profile === 'explore') return true
+  const task = props.node.task?.trim() ?? ''
+  return task.startsWith('[Explore]')
+})
+
+const displayName = computed(() => {
+  if (isExploreProfile.value) return 'Explore'
+  const profile = props.node.profile?.trim()
+  if (profile) {
+    return profile.charAt(0).toUpperCase() + profile.slice(1)
+  }
+  return props.node.agentName
+})
+
+const displayIcon = computed(() =>
+  isExploreProfile.value ? 'i-lucide-compass' : 'i-lucide-bot',
+)
+
 const displayStatus = computed(() => props.node.status)
 
+const exploreToolParts = computed(() => {
+  if (!props.message) return []
+  return toolPartsForRun(props.message, props.node.runId)
+})
+
+const exploreToolItems = computed((): AssistantBubbleDescriptor[] =>
+  exploreToolParts.value.map((part, index) => ({
+    key: `${props.node.runId}-tool-${index}`,
+    kind: isTerminalCommandToolPart(part) ? 'terminal' : 'tool',
+    part,
+  })),
+)
+
+const exploreActivity = computed(() =>
+  countExploreActivity(
+    exploreToolParts.value.map((part) => ({
+      toolName: toolPartDisplayName(part),
+      input: getToolPartInput(part),
+    })),
+  ),
+)
+
+const explorePanelTitle = computed(() =>
+  isExploreProfile.value ? 'Explore' : 'Tools',
+)
+
 const statusLabel = computed(() => {
+  if (isExploreProfile.value && exploreToolParts.value.length > 0) {
+    return formatExploreActivityStatus({
+      live: displayStatus.value === 'running',
+      toolCount: exploreActivity.value.toolCount,
+      fileCount: exploreActivity.value.fileCount,
+    })
+  }
   switch (displayStatus.value) {
     case 'queued':
       return 'Queued'
@@ -201,10 +296,16 @@ const statusIcon = computed(() => {
 
 const previewText = computed(() => {
   void chatUiBubbleTextKeepChars.value
+  if (isExploreProfile.value && exploreActivity.value.fileCount > 0) {
+    return formatExploreActivityStatus({
+      live: false,
+      toolCount: exploreActivity.value.toolCount,
+      fileCount: exploreActivity.value.fileCount,
+    })
+  }
   const report = props.node.reportPreview?.trim() || ''
   if (!report) return ''
   const task = props.node.task?.trim() || ''
-  // Task is already shown above — don't repeat it as the collapsed preview.
   if (task && (report === task || report.startsWith(task))) return ''
   if (props.isStreaming && props.node.status === 'running') {
     return limitBubbleTextForDisplay(report)
@@ -232,6 +333,7 @@ export default {
 </script>
 
 <style scoped>
+
 .sub-agent-bubble {
   border: 1px solid color-mix(in srgb, var(--ui-primary) 22%, var(--ui-border));
   border-radius: 8px;
@@ -340,6 +442,10 @@ export default {
   margin: 6px 0 0;
   font-size: 11px;
   color: var(--color-error-600, #dc2626);
+}
+
+.sub-agent-bubble__explore-panel {
+  margin-top: 8px;
 }
 
 .sub-agent-bubble__body {

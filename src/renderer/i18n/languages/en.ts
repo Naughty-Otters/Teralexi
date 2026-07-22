@@ -156,8 +156,9 @@ export const lang: AppLocaleBundle = {
       'While the model is reasoning, keep at most this many recent characters visible per reasoning block. Older reasoning is omitted from the UI and is not saved.',
     showAgenticRunTitle: 'Tool call bubbles',
     showAgenticRunDesc:
-      'Controls tool call bubbles during agent runs. “Show all” lists every tool invocation; “Show latest only” keeps the most recent call visible. Form and approval steps are always shown.',
+      'Controls Exploring / tool activity during agent runs. “Compact” (default) shows a Cursor-like collapsed accordion with slim Read/Grep/Shell rows. “Show all” expands full tool cards. Form and approval steps are always shown.',
     toolCallListNone: 'Hide tool calls',
+    toolCallListCompact: 'Compact exploring accordion',
     toolCallListAll: 'Show all tool calls',
     toolCallListLatest: 'Show latest tool call only',
     thinkingBubbleTitle: 'Thinking bubbles',
@@ -167,7 +168,7 @@ export const lang: AppLocaleBundle = {
     thinkingBubbleAll: 'Show all thinking bubbles',
     thinkingBubbleLatest: 'Show latest thinking bubble only',
     defaultsFootnote:
-      'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars, latest thinking bubble only, tool calls hidden.',
+      'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars, latest thinking bubble only, compact exploring accordion.',
   },
   chat: {
     thoughtBubbleTitle: 'Thought briefly',

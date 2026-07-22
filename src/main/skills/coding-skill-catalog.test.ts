@@ -30,6 +30,8 @@ describe('coding skill catalog', () => {
       'edit_files',
       'lsp',
       'shell',
+      'run_script',
+      'run_script_file',
       'web_search',
       'web_scrape',
       'update_todos',

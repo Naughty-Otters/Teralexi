@@ -146,6 +146,7 @@ export const invokeAgents: SkillTool = {
             systemPromptAddendum: run.systemPromptAddendum,
             slimContext: run.slimContext,
             mcpAccess: run.mcpAccess,
+            profile: run.profile,
           }),
           { waitMode: 'background' },
         )

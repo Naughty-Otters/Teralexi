@@ -24,6 +24,10 @@ import {
   isLlmErrorProgressText,
   LLM_ERROR_PROGRESS_MARKER,
 } from '@shared/agent/llm-error-ui'
+import {
+  buildToolRunScopeIndex,
+  isSubAgentToolPart,
+} from '../../toolRunScope'
 
 export type AssistantBubbleKind =
   | 'markdown'
@@ -385,6 +389,7 @@ export function resolveAssistantBubbles(
   options: AssistantBubbleResolveOptions,
 ): AssistantBubbleDescriptor[] {
   const out: AssistantBubbleDescriptor[] = []
+  const scopeIndex = buildToolRunScopeIndex(message)
 
   for (const [index, part] of message.parts.entries()) {
     const key = `${message.id}-p-${index}`
@@ -432,6 +437,11 @@ export function resolveAssistantBubbles(
 
     if (toolPartNeedsApproval(part)) {
       out.push({ key, kind: 'approval', part })
+      continue
+    }
+
+    // Nested explore/bash tools nest under ChatSubAgentBubble.
+    if (isSubAgentToolPart(part, scopeIndex)) {
       continue
     }
 

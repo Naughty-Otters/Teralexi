@@ -13,6 +13,11 @@ describe('tool-call-list-display', () => {
     expect(parseChatUiToolCallListDisplay('latest')).toBe('latest')
   })
 
+  it('parses compact mode and defaults', () => {
+    expect(parseChatUiToolCallListDisplay(undefined)).toBe('compact')
+    expect(parseChatUiToolCallListDisplay('compact')).toBe('compact')
+  })
+
   it('keeps only the last tool-group bubble in latest mode', () => {
     const bubbles = [
       { kind: 'step-progress', key: 'a' },

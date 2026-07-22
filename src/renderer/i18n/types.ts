@@ -145,6 +145,7 @@ export type AppLabels = {
     showAgenticRunTitle: string
     showAgenticRunDesc: string
     toolCallListNone: string
+    toolCallListCompact: string
     toolCallListAll: string
     toolCallListLatest: string
     thinkingBubbleTitle: string

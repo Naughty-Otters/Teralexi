@@ -52,6 +52,9 @@ const ARCHITECT_TOOLS = [...EXPLORE_TOOLS, 'read_todos', 'update_todos']
 const BASH_TOOLS = [
   'shell',
   'read_file',
+  'edit_files',
+  'run_script',
+  'run_script_file',
 ]
 
 const BROWSER_TOOLS = [
@@ -68,7 +71,7 @@ Rules:
 - There is **no** \`bash\` or \`run_script\` tool — commands go through \`shell\` only.
 - Prefer lsp over blanket directory walks; use rg/find via shell when needed.
 - Do not re-read paths already listed in the session read ledger unless the file changed or you need a new offset.
-- Batch independent searches/reads in parallel when useful.
+- **Fan out:** for mapping questions, issue multiple independent tool calls in the same turn (parallel reads + rg/find). Avoid a single huge dump command; prefer several focused searches/reads.
 - Return a concise structured brief for the parent — not a full tool transcript:
   - What you searched
   - Key files/symbols (path + why)
@@ -76,19 +79,20 @@ Rules:
   - Open questions / next steps for a coder
 - Keep intermediate search noise out of the final answer; the parent only needs the summary.`
 
-const BASH_SYSTEM = `You are a Bash sub-agent (Cursor built-in profile name: \`bash\`). You isolate verbose command output so the parent stays focused on decisions.
+const BASH_SYSTEM = `You are a Bash sub-agent (Cursor built-in profile name: \`bash\`). You isolate verbose command/script output so the parent stays focused on decisions.
 
 Rules:
-- Your only command tool is \`shell\` — there is **no** \`bash\` tool and **no** \`run_script\` tool.
-- Use shell with argv arrays for project commands (tests, builds, linters, scripts, rg/find, git).
+- Prefer \`shell\` with argv arrays for project commands (tests, builds, linters, rg/find, git).
+- Use \`run_script\` / \`run_script_file\` for sandbox scripts when that fits better than a one-off shell argv.
+- There is **no** tool named \`bash\` — the profile id is \`bash\`; commands go through \`shell\` / run_script tools.
 - Prefer git via shell (status/diff) over inventing structured git tools.
+- You may use \`edit_files\` for small fixes needed to unblock commands (config tweaks, script fixes). Prefer reporting larger design changes for the Coder/parent.
 - Run a focused series of commands; do not explore the whole codebase (hand off to Explore if needed).
 - Capture failures with enough stdout/stderr to diagnose; then summarize for the parent:
-  - Commands run (and cwd if relevant)
+  - Commands/scripts run (and cwd if relevant)
   - Exit status
   - Key output lines / failure cause
-  - Suggested next step
-- Do not edit source files; if a fix is needed, report it for the Coder/parent.`
+  - Files changed (if any) and suggested next step`
 
 const BROWSER_SYSTEM = `You are a Browser sub-agent (Cursor built-in). You isolate noisy DOM snapshots, screenshots, and page scrapes.
 
@@ -143,7 +147,7 @@ export const SUBAGENT_PROFILES: Record<SubagentProfileType, SubagentProfile> = {
     type: 'bash',
     label: 'Bash',
     description:
-      'Priority: run a series of shell commands via the `shell` tool (profile id `bash`; there is no bash/run_script tool).',
+      'Priority: run commands/scripts (`shell`, `run_script`, `run_script_file`) and small `edit_files` fixes (profile id `bash`).',
     agentId: 'skill:coding',
     allowedTools: BASH_TOOLS,
     taskPrefix: '[Bash] ',
@@ -263,7 +267,7 @@ export function formatBuiltinSubagentPriorityInstructions(): string {
   }
   lines.push(
     '- When the task is noisy search, a long command series, or browser/DOM work: call `invoke_agents` with that `profile` and consume the brief — do not re-run the same loop in the parent.',
-    '- Profile `bash` uses the `shell` tool only — there is no `bash` or `run_script` tool.',
+    '- Profile `bash` uses `shell`, `run_script`, `run_script_file`, and `edit_files` — there is no tool named `bash`.',
     '- Orchestration after built-ins: `architect`/`plan` (plan only) → `coder` (implement).',
   )
   return lines.join('\n')

@@ -16,6 +16,8 @@ export type SubAgentChildParams = {
   slimContext?: boolean
   /** MCP exposure for profiled children (`none` | `browser` | `all`). */
   mcpAccess?: 'none' | 'browser' | 'all'
+  /** Cursor-style profile id for lifecycle UI (`explore` | `bash` | …). */
+  profile?: string
 }
 
 export type SubAgentParentRun = {
@@ -205,6 +207,7 @@ export function buildSubAgentChildParams(
     systemPromptAddendum?: string
     slimContext?: boolean
     mcpAccess?: 'none' | 'browser' | 'all'
+    profile?: string
   },
 ): SubAgentChildParams {
   const agentId = input.agentId.trim()
@@ -223,6 +226,7 @@ export function buildSubAgentChildParams(
     systemPromptAddendum: input.systemPromptAddendum,
     slimContext: input.slimContext,
     mcpAccess: input.mcpAccess,
+    profile: input.profile,
   }
 }
 

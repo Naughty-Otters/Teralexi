@@ -82,6 +82,8 @@ export type SubAgentRunRecord = {
   worktreeDiffStat?: string
   /** How the worktree was resolved after completion (auto or manual). */
   worktreeOutcome?: 'merged' | 'discarded'
+  /** Cursor-style profile id when delegated via `invoke_agents` profile. */
+  profile?: string
 }
 
 /** Per-run wait payload for tools / parent LLM (never throws on sibling failure). */
@@ -308,6 +310,7 @@ export async function spawnSubAgentRun(
     worktreePath,
     worktreeBranch,
     worktreeRepoRoot,
+    profile: params.profile?.trim() || undefined,
   }
 
   emitLifecycle(parent, {
@@ -319,6 +322,7 @@ export async function spawnSubAgentRun(
     agentName,
     task: params.task,
     waitMode,
+    profile: record.profile,
     worktreePath,
     worktreeBranch,
     detached: detached || undefined,
@@ -340,6 +344,7 @@ export async function spawnSubAgentRun(
           agentId: params.agentId,
           agentName,
           status: 'cancelled',
+          profile: record.profile,
           error: record.error,
           worktreePath,
           worktreeBranch,
@@ -373,6 +378,7 @@ export async function spawnSubAgentRun(
           agentId: params.agentId,
           agentName,
           status: 'awaiting_approval',
+          profile: record.profile,
           reportPreview: subAgentReportPreview(result.stepOutputs),
           worktreePath,
           worktreeBranch,
@@ -394,6 +400,7 @@ export async function spawnSubAgentRun(
         agentName,
         status: 'completed',
         reportPreview: subAgentReportPreview(result.stepOutputs),
+        profile: record.profile,
         worktreePath: record.worktreePath,
         worktreeBranch: record.worktreeBranch,
         worktreeDiffStat: record.worktreeDiffStat,
@@ -418,6 +425,7 @@ export async function spawnSubAgentRun(
         agentName,
         status,
         error: message,
+        profile: record.profile,
         worktreePath,
         worktreeBranch,
         detached: detached || undefined,
@@ -607,6 +615,7 @@ function settleRecordAfterWorktreeAction(
     agentId: record.agentId,
     agentName: record.agentName,
     status,
+    profile: record.profile,
     reportPreview: record.result
       ? subAgentReportPreview(record.result.stepOutputs)
       : undefined,
