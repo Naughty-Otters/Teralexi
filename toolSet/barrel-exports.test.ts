@@ -5,9 +5,11 @@ import * as sandboxPaths from './sandbox-paths.ts'
 describe('toolSet barrel exports', () => {
   it('exposes file-system APIs through top-level barrel', () => {
     expect(typeof fileSystemBarrel.readFile?.execute).toBe('function')
+    expect(typeof fileSystemBarrel.editFiles?.execute).toBe('function')
+    expect(typeof fileSystemBarrel.shell?.execute).toBe('function')
+    expect(typeof fileSystemBarrel.promoteArtifact?.execute).toBe('function')
     expect(typeof fileSystemBarrel.writeFile?.execute).toBe('function')
     expect(typeof fileSystemBarrel.applyPatch?.execute).toBe('function')
-    expect(typeof fileSystemBarrel.promoteArtifact?.execute).toBe('function')
   })
 
   it('re-exports sandbox path helpers', () => {

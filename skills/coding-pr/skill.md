@@ -17,10 +17,10 @@ For feature implementation, suggest **Coding** first, then return here to publis
 
 ### Workflow
 
-1. **Inspect** — `git_status`, `git_diff`, `git_log -5` (via `git_log`).
-2. **Verify** (when code changed) — remind user tests should pass; run `run_workspace_command` only if user asked to verify before PR.
-3. **Commit** — `git_add` selective paths; `git_commit` with clear **why** message (1–2 sentences).
-4. **Publish** — `git_push`, then `git_create_pr` when requested.
+1. **Inspect** — via `shell`: `git status`, `git diff`, `git log -5`.
+2. **Verify** (when code changed) — remind user tests should pass; run `shell` only if user asked to verify before PR.
+3. **Commit** — via `shell`: `git add` selective paths; `git commit` with clear **why** message (1–2 sentences).
+4. **Publish** — via `shell`: `git push`, then `gh pr create` when requested.
 
 See [../coding/refs/procedural-contracts.md](../coding/refs/procedural-contracts.md) for git contracts.
 
@@ -37,15 +37,14 @@ See [../coding/refs/procedural-contracts.md](../coding/refs/procedural-contracts
 
 ## Tools
 
-- `read_file`, `grep_files` — context for commit/PR description
-- `git_status`, `git_diff`, `git_log`, `git_show`, `git_add`, `git_reset`, `git_commit`, `git_branch`, `git_checkout`, `git_push`, `git_fetch`, `git_create_pr`
-- `invoke_agent` — optional delegation
+- `read_file`, `shell` — inspect files and run git/`gh` commands
+- `invoke_agents` — optional delegation
 
 ---
 
 ## Validation
 
-- Always `git_status` + `git_diff` before commit or PR.
+- Always `git status` + `git diff` (via `shell`) before commit or PR.
 - Confirm nothing sensitive (`.env`, keys) is staged before commit.
 
 ---
@@ -58,7 +57,7 @@ Commit my changes with a good message and push.
 
 ### Assistant
 
-1. `git_status`, `git_diff`.
+1. `shell` → `git status`, `git diff`.
 2. Draft message from diff intent; confirm with user if ambiguous.
-3. `git_add`, `git_commit`, `git_push`.
+3. `shell` → `git add`, `git commit`, `git push`.
 4. Report commit hash and remote branch.

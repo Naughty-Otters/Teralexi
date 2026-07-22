@@ -156,12 +156,9 @@ export class AgentFlowContext {
   public stepOutputs: StepOutputs = {}
   public readonly outputStore = new StepOutputStore()
   /** Per user-turn cache for successful `read_file` results (invalidated on mtime change). */
-  public readonly toolReadCache = new ToolReadCache()
+  public toolReadCache: ToolReadCache
   /** Shared in-flight / succeeded dedupe keys across tool-loop streams in one turn. */
-  public readonly toolInputDedupeState: ToolInputDedupeState = {
-    inflightByKey: new Map(),
-    succeededKeys: new Set(),
-  }
+  public toolInputDedupeState: ToolInputDedupeState
   public stepContexts: AgentStepContextMap = {}
   public stepHistory: AgentStepContextHistory = []
   private readonly stepProgressTextByKey = new Map<string, string>()
@@ -249,12 +246,26 @@ export class AgentFlowContext {
     stageModels?: StageModelRegistry,
   ) {
     this.currentMessages = [...opts.messages]
+    this.toolReadCache = new ToolReadCache()
+    this.toolInputDedupeState = {
+      inflightByKey: new Map(),
+      succeededKeys: new Set(),
+    }
     this.config = new ConfigContext(() => opts.responseLanguage)
     this.stageModels = stageModels ?? StageModelRegistry.fromOpts(opts)
     this.providers = new ProviderContext(opts, model)
     this.references = new ReferenceContext()
     this.sandbox = new SandboxContext(this.references)
     this.form = new FormContext(this as AgentFlowContext & FormFlowHost)
+  }
+
+  /**
+   * Reuse the parent's read ledger / tool-input dedupe for this child run so
+   * sub-agents do not re-read the same path+offset windows.
+   */
+  adoptToolSessionFrom(parent: AgentFlowContext): void {
+    this.toolReadCache = parent.toolReadCache
+    this.toolInputDedupeState = parent.toolInputDedupeState
   }
 
   get model() {

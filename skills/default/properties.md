@@ -4,4 +4,4 @@ model: gemma4
 provider: ollama
 color: primary
 enabled: true
-allowed_tools: run_script, run_script_file, web_scrape, web_search, deep_research
+allowed_tools: run_script, run_script_file, shell, web_scrape, web_search

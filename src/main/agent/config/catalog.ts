@@ -63,11 +63,11 @@ export type EngineAgent = {
   toolLoopMaxIterations?: number
   todoMaxRetries?: number
   executionSteps?: AgentExecutionSteps
-  /** When false, other agents cannot delegate to this agent via sub-flow / invoke_agent. */
+  /** When false, other agents cannot delegate to this agent via sub-flow / invoke_agents. */
   allowAsSubAgent?: boolean
-  /** When true, tool loop exposes gated `invoke_agent`. */
+  /** When true, tool loop exposes gated `invoke_agents`. */
   allowSubAgents?: boolean
-  /** Allow-list for `invoke_agent`; null = any eligible sub-agent. */
+  /** Allow-list for `invoke_agents`; null = any eligible sub-agent. */
   subAgentIds?: string[] | null
   compiledArtifact?: SkillCompiledArtifact
   compilationStatus?: 'pending' | 'ready' | 'failed' | 'missing'

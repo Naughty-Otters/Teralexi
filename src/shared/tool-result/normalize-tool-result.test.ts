@@ -19,7 +19,7 @@ describe('normalizeToolResult', () => {
   })
 
   it('stamps terminal results with resultContent', () => {
-    const out = normalizeToolResult('run_workspace_command', {
+    const out = normalizeToolResult('shell', {
       exitCode: 0,
       stdout: 'ok',
       stderr: '',

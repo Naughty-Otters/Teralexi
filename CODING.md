@@ -16,7 +16,7 @@ Use **one diff presentation layer**, not separate UIs per tool:
 | `delete_file` | Yes | Full-file deletion preview |
 | `move_file` | Yes | Rename card (`moveFrom` → `path`) |
 | `copy_file` | Yes | Create-at-destination preview |
-| `run_workspace_command` | No | stdout/stderr only; requires workspace |
+| `shell` | No | stdout/stderr only; requires workspace |
 | `git_diff` | Same renderer | Read-only; no preview IPC |
 
 Chat shows **unified diff** (green/red lines). Side-by-side editors belong in the sandbox/report panel, not in the approval bubble.
@@ -50,7 +50,7 @@ Tool execute results and preview IPC both return:
 
 **Result type:** Every object-shaped tool execute result is stamped with `resultType` in the tool loop (`src/shared/tool-result/normalize-tool-result.ts` via `applyToolResultPresentation`). The renderer maps `file_change` → diff cards, `terminal` → terminal bubble, `todo` → checklist, `raw` / `error` → generic tool row. File-change tools also get a normalized `files[]` when only legacy `diff` fields are present.
 
-**Agentic Run / step progress:** Tool outputs in the live stream and step digests use `formatToolResultForDisplay` (`src/shared/tool-result/format-tool-result-for-display.ts`) via `serializeForAgentCollect` — not raw JSON — so `run_script` shows uptime text instead of `captureAbsolutePath` / `resultContent` blobs.
+**Agentic Run / step progress:** Tool outputs in the live stream and step digests use `formatToolResultForDisplay` (`src/shared/tool-result/format-tool-result-for-display.ts`) via `serializeForAgentCollect` — not raw JSON — so `shell` shows command output instead of metadata blobs.
 
 **Builder:** `toolSet/file-system/file-io-utils.ts` — `buildFileChangePreview(sandboxRoot, absolutePath, old, new, extras?)` creates rows from content; used by tools and preview.
 
@@ -160,13 +160,15 @@ Path resolution is centralized in [`src/main/agent/sandbox/paths.ts`](src/main/a
 
 | Tool family | Focus |
 |-------------|--------|
-| `read_file`, `edit_file`, `write_file`, `apply_patch`, `delete_file`, `grep_files`, `glob_files`, `lsp`, git | User project |
-| `run_workspace_command` | User project (requires selected folder) |
-| `run_script`, `run_script_file` | Sandbox (`output/scripts/`, captures) |
+| `read_file`, `edit_files`, `lsp` | User project |
+| `shell` | User project commands (git/`rg`/tests); OS shell via `use_shell` |
+| `run_script`, `run_script_file` | Sandbox scripts (`output/scripts/`, captures) |
+| `web_search`, `web_scrape` | Research |
+| `invoke_agents` | Sub-agents (`profile`: explore / bash / browser; command tool is `shell`) |
 
 **Composer UX:** Coding and Code review agents require a selected workspace before send ([`src/shared/agent/workspace-required-skills.ts`](src/shared/agent/workspace-required-skills.ts)).
 
-**Hints in toolSet:** [`WORKSPACE_PATH_HINT`](toolSet/file-system/constants.ts) on project I/O tools; sandbox tools document `output/` in [`toolSet/shell-command.ts`](toolSet/shell-command.ts).
+**Hints in toolSet:** [`WORKSPACE_PATH_HINT`](toolSet/file-system/constants.ts) on project I/O tools; shell in [`toolSet/file-system/run-workspace-command.ts`](toolSet/file-system/run-workspace-command.ts); sandbox scripts in [`toolSet/shell-command.ts`](toolSet/shell-command.ts).
 
 ---
 
@@ -174,7 +176,7 @@ Path resolution is centralized in [`src/main/agent/sandbox/paths.ts`](src/main/a
 
 | Skill | Path | Use |
 |-------|------|-----|
-| Coding | `skills/coding/` | Edit → `run_workspace_command` verify → `git_diff` |
+| Coding | `skills/coding/` | Edit → `shell` verify → `git_diff` |
 | Default | `skills/default/` | Sandbox scripts; no repo edits unless workspace + user asks |
 | Documents | `skills/documents/` | Deliverables under `output/results/` |
 

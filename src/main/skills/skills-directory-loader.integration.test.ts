@@ -35,8 +35,11 @@ describe('bundled skills (integration)', () => {
 
     expect(defaultSkill).toBeDefined()
     expect(defaultSkill?.tools.some((t) => t.name === 'run_script')).toBe(true)
+    expect(defaultSkill?.tools.some((t) => t.name === 'run_script_file')).toBe(true)
+    expect(defaultSkill?.tools.some((t) => t.name === 'shell')).toBe(true)
     expect(defaultSkill?.tools.some((t) => t.name === 'web_search')).toBe(true)
     expect(defaultSkill?.tools.some((t) => t.name === 'read_file')).toBe(false)
+    expect(defaultSkill?.tools.some((t) => t.name === 'edit_files')).toBe(false)
     expect(defaultSkill?.tools.some((t) => t.name === 'git_status')).toBe(false)
   })
 
@@ -49,7 +52,9 @@ describe('bundled skills (integration)', () => {
     const names = new Set(documents!.tools.map((t) => t.name))
     expect(names.has('read_file')).toBe(true)
     expect(names.has('web_search')).toBe(true)
-    expect(names.has('git_status')).toBe(true)
+    expect(names.has('edit_files')).toBe(true)
+    expect(names.has('shell')).toBe(true)
+    expect(names.has('git_status')).toBe(false)
     if (documents!.actionToolNames.includes('create_spreadsheet')) {
       expect(names.has('create_spreadsheet')).toBe(true)
     }

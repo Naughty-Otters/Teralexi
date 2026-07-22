@@ -34,7 +34,7 @@ function makeRunCtx(overrides: Partial<InjectionRunContext> = {}): InjectionRunC
       opts: { userId: 'user-1', conversationId: 'conv-1' },
     } as AgentStepContext,
     loopStep: 0,
-    tools: [{ name: 'invoke_agent', source: 'skill' as const, description: '' }],
+    tools: [{ name: 'invoke_agents', source: 'skill' as const, description: '' }],
     ...overrides,
   }
 }

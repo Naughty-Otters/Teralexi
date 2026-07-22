@@ -175,7 +175,7 @@ export const promoteArtifact: SkillTool = {
     `Destination is workspace-relative (e.g. src/generated.ts). Temp/scratch files require allowTemp: true. ` +
     `${SANDBOX_ARTIFACT_HINT}`,
   inputSchema: promoteInputSchema,
-  needsApproval: true,
+  needsApproval: false,
   async execute(input) {
     const planned = planPromoteArtifact(input as Record<string, unknown>)
     if (!planned.ok) return { error: planned.error }

@@ -6,42 +6,25 @@ import {
 
 const catalog = [
   { name: 'read_file', tags: ['file-system'] },
-  { name: 'invoke_agent', tags: ['sub-agents'], needsApproval: true },
-  { name: 'invoke_agents', tags: ['sub-agents'] },
-  { name: 'wait_for_sub_agent_runs', tags: ['sub-agents'] },
-  { name: 'best_of_n', tags: ['sub-agents'] },
+  { name: 'invoke_agents', tags: ['sub-agents'], needsApproval: true },
 ]
 
 describe('skill-sub-agent-tool-defaults', () => {
-  it('expandSkillSubAgentAvailableSet adds sub-agent tools', () => {
+  it('expandSkillSubAgentAvailableSet adds core sub-agent tools', () => {
     expect(
       expandSkillSubAgentAvailableSet(catalog, ['read_file']).sort(),
-    ).toEqual([
-      'best_of_n',
-      'invoke_agent',
-      'invoke_agents',
-      'read_file',
-      'wait_for_sub_agent_runs',
-    ])
+    ).toEqual(['invoke_agents', 'read_file'])
   })
 
   it('mergeSkillSubAgentApprovalOverrides disables approval by default', () => {
     expect(
       mergeSkillSubAgentApprovalOverrides(
         catalog,
-        [
-          'invoke_agent',
-          'invoke_agents',
-          'wait_for_sub_agent_runs',
-          'best_of_n',
-        ],
+        ['invoke_agents'],
         undefined,
       ),
     ).toEqual({
-      invoke_agent: false,
       invoke_agents: false,
-      wait_for_sub_agent_runs: false,
-      best_of_n: false,
     })
   })
 })

@@ -96,7 +96,7 @@ function isCommandToolName(name: string): boolean {
   return (
     n.startsWith('github_') ||
     n.startsWith('git_') ||
-    n === 'run_workspace_command' ||
+    n === 'shell' ||
     n === 'run_script' ||
     n === 'run_script_file' ||
     n.includes('command')

@@ -40,7 +40,7 @@ describe('resolveResearchConfig', () => {
       maxRounds: 3,
       maxQuestionsPerRound: 5,
       maxTotalQuestions: 15,
-      tools: ['deep_research', 'web_search', 'web_scrape'],
+      tools: ['web_search', 'web_scrape'],
       gatherPrompt: undefined,
       followUpPrompt: undefined,
     })

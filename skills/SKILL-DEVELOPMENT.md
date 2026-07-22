@@ -79,7 +79,7 @@ enabled: true
 | `refs_dir` | no | Comma-separated reference doc folders (default `refs`; entries may be nested, e.g. `assets/refs`) |
 | `scripts_dir` | no | Comma-separated script folders (default `scripts`) |
 | `form_dir` | no | Comma-separated HITL form folders (default `form`) |
-| `allowed_tools` | no | Comma-separated **shared toolSet** tool names for this skill's catalog and default AvailableSet (e.g. `read_file, git_status`). Other skills do not see tools listed here. Tools from this skill's `actions/` folder (including nested `actions/<subdir>/`) are tagged `skill:<id>`, belong only to this skill, and are **always** enabled by default with `allowed_tools` |
+| `allowed_tools` | no | Comma-separated **shared toolSet** tool names for this skill's catalog and default AvailableSet (e.g. `read_file, shell`). Other skills do not see tools listed here. Tools from this skill's `actions/` folder (including nested `actions/<subdir>/`) are tagged `skill:<id>`, belong only to this skill, and are **always** enabled by default with `allowed_tools` |
 | `group` | no | Skill family id for grouped UI (e.g. `coding`) |
 | `group_label` | no | Display label for the family (e.g. `Coding`) |
 | `variant` | no | Variant key within the group (e.g. `review`) |
@@ -129,7 +129,7 @@ enabled: true
 refs_dir: refs, docs, shared/refs
 scripts_dir: scripts, bin
 form_dir: form, hitl
-allowed_tools: read_file, write_file, git_status
+allowed_tools: read_file, edit_files, shell
 ```
 
 Planner `reference_url` values must still be **paths under the skill folder**, e.g. `docs/report-format.md`, `bin/run.py`, `hitl/search.form.md`. The settings UI lists files from **all** configured folders for each category.
@@ -138,10 +138,10 @@ Planner `reference_url` values must still be **paths under the skill folder**, e
 
 | Skill type | `allowed_tools` | `skill.md` tone |
 |------------|-----------------|-----------------|
-| **Coding** | Core file tools + `lsp`, `invoke_agent`; tag expansion adds git, workspace, planning, todos | Project paths; see `skills/coding/refs/` |
+| **Coding** | Core file tools + `lsp`, `invoke_agents`; lean allow-list (no tag expansion) | Project paths; see `skills/coding/refs/` |
 | **Coding Review / PR** | Explicit read-only or git-only lists; **no** tag expansion | Sub-skills for review vs PR workflows |
-| **Default** | `run_script`, web only; **no** file/git/workspace expansion | Sandbox-first; suggest Coding for repo edits |
-| **Documents** | Doc tools + `run_script`; `read_file` for user data | Deliverables → `output/results/`; do not edit user repo |
+| **Default** | `shell`, web only; **no** file/workspace expansion | Sandbox-first; suggest Coding for repo edits |
+| **Documents** | Doc tools + `shell`; `read_file` for user data | Deliverables → `output/results/`; do not edit user repo |
 
 Shared path rules live in the toolSet (`WORKSPACE_PATH_HINT` / shell descriptions). See [`CODING.md`](../CODING.md#workspace-vs-sandbox).
 
@@ -177,9 +177,11 @@ Describe ordered steps or link to a table below.
 ## Tools
 
 - read_file
-- write_file
-- runScript
-- runScriptFile
+- edit_files
+- shell
+- run_script
+- run_script_file
+- web_search
 
 ## Examples
 
@@ -214,17 +216,20 @@ List tool names under `## Tools` in `skill.md` (bullets or comma-separated). Nam
 | Tool | Typical use |
 |------|-------------|
 | `read_file` | Line-numbered read with `offset`/`limit`; lists directories |
-| `write_file` | Full-file write (returns unified diff metadata) |
-| `edit_file` | Search/replace partial edits (preferred for small changes) |
-| `apply_patch` | Multi-file OpenCode-style patch (`*** Begin Patch`) |
-| `grep_files` | Regex content search (ripgrep + Node fallback) |
-| `glob_files` | Filename glob discovery |
-| `list_files`, `search_files`, `file_status`, … | Legacy/auxiliary sandbox file I/O |
-| `runScript` | Run inline script body; writes under `output/scripts/` |
-| `runScriptFile` | Run a file already under sandbox `scripts/` |
-| `git_*`, `github_*` | GitHub skill `actions/` only (not global toolSet); structured git/gh via `execFile` |
+| `edit_files` | Unified create/update/delete (`mode`: `replace` \| `write` \| `delete` \| `patch`) |
+| `shell` | Workspace / OS shell (`rg`, `find`, `git`, tests, host metrics) |
+| `run_script` | Inline sandbox script (`scriptType` + `scriptContent`) |
+| `run_script_file` | Run an existing file under sandbox `scripts/` |
+| `lsp` | Code intelligence (definitions, references, diagnostics) |
+| `web_search`, `web_scrape` | Web research and page extraction |
+| `read_todos`, `update_todos` | Task tracking |
+| `enter_plan_mode`, `exit_plan_mode` | Explore / plan mode |
+| `invoke_agents` | Delegate to sub-agents |
+| `promote_artifact` | Copy sandbox deliverables into the workspace |
+| `generate_follow_up` | Follow-up suggestion chips |
+| `github_*` | GitHub skill `actions/` only (not global toolSet) |
 
-**Script discipline:** Prefer `runScriptFile` / `runScript` over ad-hoc shell. Pass sandbox-relative paths in `scriptArgs`.
+**Shell / script discipline:** Prefer `shell` argv for project commands (git/`rg`/tests). Prefer `run_script` / `run_script_file` for sandbox transforms and host metrics. There are no separate `git_*` / `grep_files` catalog tools.
 
 Custom tools: add TypeScript modules under `actions/` (advanced; see `src/main/skills/skill-module-loader.ts`).
 

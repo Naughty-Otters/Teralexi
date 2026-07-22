@@ -20,7 +20,7 @@ export type SkillRoutingEntry = {
   trigger: string | null
   /** User or model can switch with `/skill:{skillId}`. */
   canSwitch: boolean
-  /** Delegatable via `invoke_agent` / `invoke_agents`. */
+  /** Delegatable via `invoke_agents`. */
   canInvoke: boolean
 }
 
@@ -134,7 +134,7 @@ function formatEntryRouting(entry: SkillRoutingEntry, hasInvokeAgent: boolean): 
     routes.push(`switch: \`/skill:${entry.skillId}\``)
   }
   if (entry.canInvoke && hasInvokeAgent) {
-    routes.push(`delegate: \`invoke_agent\` with \`${entry.agentId}\``)
+    routes.push(`delegate: \`invoke_agents\` with \`${entry.agentId}\``)
   }
   if (routes.length === 0) return ''
   return ` (${routes.join('; ')})`
@@ -165,13 +165,16 @@ export function formatSkillRoutingInstructionsBlock(
 
   if (options.hasInvokeAgent) {
     lines.push(
-      '- Single specialist → `invoke_agent` with exact `agentId` from the list',
-      '- Parallel specialists → `invoke_agents` with `wait=false`, then `wait_for_sub_agent_runs`',
-      '- Same task, multiple tries → `best_of_n` (candidates run in parallel; file changes auto-merge)',
-      '- Detachable background → `invoke_agents` / `best_of_n` with `detach=true`',
-      '- Sub-agent tools return a **brief** (`summary`, `filesTouched`, `status`, `worktreeOutcome`)',
+      '- **Priority** Cursor built-in profiles — prefer these before doing the same work in the parent:',
+      '  - `explore` — codebase search (isolates noisy grep/read intermediate output)',
+      '  - `bash` — series of commands via the `shell` tool only (no `bash`/`run_script` tools)',
+      '  - `browser` — web scrape / browser MCP (isolates DOM/screenshot noise)',
+      '- Orchestration after built-ins → `architect`/`plan` (plan only) → `coder` (implement; auto-merge)',
+      '- Delegate via `invoke_agents` only (one-element `runs` for a single child; multiple for parallel)',
+      '- Always waits for results — consume the per-run **brief** (`summary`, `filesTouched`, `status`, `worktreeOutcome`)',
       '- File changes are **auto-merged** into the workspace — do not ask the user to merge/PR/discard',
-      '- Do **not** re-invoke a sub-agent just because the summary has a length cap notice — read the sub-agent bubble for the full report',
+      '- Do **not** re-invoke just because a summary has a length cap notice — read the sub-agent bubble',
+      '- Do **not** re-run explore/bash/browser loops in the parent after a successful brief — consume the summary',
     )
   }
 

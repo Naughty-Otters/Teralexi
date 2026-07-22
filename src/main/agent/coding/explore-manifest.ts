@@ -32,10 +32,13 @@ export const MAX_MANIFEST_INSTRUCTION_CHARS = 8_000
 
 const MANIFEST_TOOLS = new Set([
   'read_file',
-  'grep_files',
-  'glob_files',
+  'lsp',
+  'shell',
   'web_search',
   'web_scrape',
+  // Legacy explore tools (kept for reading older manifests / transcripts)
+  'grep_files',
+  'glob_files',
   'deep_research',
 ])
 
@@ -368,8 +371,8 @@ export function formatExploreManifestForInstructions(
     '',
     'Workspace files and remote resources below were researched during explore mode.',
     'Do not `read_file` listed paths again unless you need a new line range (`offset` from the prior `note`), the file was edited (`reason`), or the manifest snippet is insufficient.',
-    'Do not re-run `web_scrape` / `web_search` / `deep_research` for the same URLs or queries unless you need fresher data.',
-    'Prefer editing listed paths; use `grep_files` / `lsp` for symbols not covered below.',
+    'Do not re-run `web_scrape` / `web_search` for the same URLs or queries unless you need fresher data.',
+    'Prefer editing listed paths; use `lsp` and read-only `shell` (`rg`/`find`) for symbols not covered below.',
     '',
   ]
 

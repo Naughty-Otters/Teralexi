@@ -9,6 +9,7 @@ import {
   recordDatetimeInjection,
 } from './conversation-injection-state'
 import { clearDeepThinkingInjectionState } from './deep-thinking-injection-state'
+import { clearOncePerTurnInjectionState } from './once-per-turn-injection-state'
 
 vi.mock('../coding/plan-mode-state', () => ({
   isPlanModeActive: vi.fn(() => false),
@@ -109,6 +110,7 @@ describe('injector pipeline', () => {
   beforeEach(() => {
     clearDatetimeInjectionState()
     clearDeepThinkingInjectionState()
+    clearOncePerTurnInjectionState()
     vi.mocked(appCache.getAgents).mockReturnValue(null)
   })
 

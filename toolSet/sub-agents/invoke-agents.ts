@@ -7,27 +7,34 @@ import {
   resolveSubAgentTargetIdFromDelegation,
 } from './delegation-context'
 import { INVOKE_AGENTS_TOOL_NAME, SUB_AGENT_TAG } from './constants'
+import {
+  applySubagentProfileToTask,
+  resolveSubagentProfile,
+} from './subagent-profiles'
+
+const runSchema = z.object({
+  agentId: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'Catalog agent id. Optional when profile is set (defaults to the profile agent).',
+    ),
+  profile: z
+    .enum(['explore', 'bash', 'browser', 'architect', 'coder', 'plan'])
+    .optional()
+    .describe(
+      'Priority Cursor built-ins: explore | bash | browser. Orchestration: architect/plan | coder.',
+    ),
+  task: z.string().min(1),
+})
 
 const invokeAgentsSchema = z.object({
   runs: z
-    .array(
-      z.object({
-        agentId: z.string().min(1),
-        task: z.string().min(1),
-      }),
-    )
-    .min(1),
-  wait: z
-    .boolean()
-    .optional()
+    .array(runSchema)
+    .min(1)
     .describe(
-      'When false, return runIds immediately (background). When true (default), wait for all runs and return per-run results.',
-    ),
-  detach: z
-    .boolean()
-    .optional()
-    .describe(
-      'When true, force wait=false so the parent can finish while children keep running (detachable background).',
+      'One or more sub-agent runs. Use a single-item array for one child.',
     ),
 })
 
@@ -35,9 +42,10 @@ export const invokeAgents: SkillTool = {
   name: INVOKE_AGENTS_TOOL_NAME,
   tags: [...SUB_AGENT_TAG],
   description:
-    'Delegate multiple sub-tasks to configured agents in parallel. ' +
-    'Spawn is always background; use wait=true (default) to collect per-run results, ' +
-    'or wait=false and later wait_for_sub_agent_runs. Sibling failures do not abort the batch.',
+    'Delegate one or more sub-tasks (parallel when multiple). Prefer Cursor built-in `profile`s ' +
+    '(explore / bash / browser) for noisy work; use architect/coder for plan→implement. ' +
+    'Always waits for all runs and returns per-run briefs (summary, filesTouched, status, worktreeOutcome). ' +
+    'Use a one-element `runs` array for a single sub-agent. Sibling failures do not abort the batch.',
   inputSchema: invokeAgentsSchema,
   needsApproval: false,
   async execute(input) {
@@ -56,20 +64,31 @@ export const invokeAgents: SkillTool = {
       throw new Error('invoke_agents requires an active AgentRun')
     }
 
-    const { runs, wait: waitInput = true, detach = false } = parsed.data
-    const wait = detach ? false : waitInput
+    const { runs } = parsed.data
 
     // Preflight: resolve + validate all targets before any spawn (no orphans).
     const prepared: Array<{
       requestedId: string
       resolvedId: string
       task: string
+      allowedToolNames?: string[] | 'all'
+      isolateGitWorktree?: boolean
+      systemPromptAddendum?: string
+      slimContext?: boolean
+      mcpAccess?: 'none' | 'browser' | 'all'
+      profile?: string
     }> = []
     for (const run of runs) {
-      const requestedId = run.agentId.trim()
+      const profile = run.profile ? resolveSubagentProfile(run.profile) : null
+      if (run.profile && !profile) {
+        return { error: `Unknown profile "${run.profile}"` }
+      }
+      const requestedId = (run.agentId?.trim() || profile?.agentId || '').trim()
       const task = run.task.trim()
       if (!requestedId) {
-        return { error: 'invoke_agents requires a non-empty agentId for every run' }
+        return {
+          error: 'invoke_agents requires agentId or profile for every run',
+        }
       }
       if (!task) {
         return { error: 'invoke_agents requires a non-empty task for every run' }
@@ -85,7 +104,20 @@ export const invokeAgents: SkillTool = {
           error: `Agent "${requestedId}" is not enabled for invoke_agents`,
         }
       }
-      prepared.push({ requestedId, resolvedId, task })
+      const profileFields = profile
+        ? applySubagentProfileToTask(profile, task)
+        : null
+      prepared.push({
+        requestedId,
+        resolvedId,
+        task: profileFields?.task ?? task,
+        allowedToolNames: profileFields?.allowedToolNames,
+        isolateGitWorktree: profileFields?.isolateGitWorktree,
+        systemPromptAddendum: profileFields?.systemPromptAddendum,
+        slimContext: profileFields?.slimContext,
+        mcpAccess: profileFields?.mcpAccess,
+        profile: profileFields?.profile,
+      })
     }
 
     const parentRunId = parentRun.meta?.runId?.trim()
@@ -109,8 +141,13 @@ export const invokeAgents: SkillTool = {
           buildSubAgentChildParams(delegation, {
             agentId: run.resolvedId,
             task: run.task,
+            allowedToolNames: run.allowedToolNames,
+            isolateGitWorktree: run.isolateGitWorktree,
+            systemPromptAddendum: run.systemPromptAddendum,
+            slimContext: run.slimContext,
+            mcpAccess: run.mcpAccess,
           }),
-          { waitMode: 'background', detached: detach || undefined },
+          { waitMode: 'background' },
         )
         spawned.push(entry)
       }
@@ -121,16 +158,8 @@ export const invokeAgents: SkillTool = {
       throw err
     }
 
-    if (!wait) {
-      return {
-        runIds: spawned.map((s) => s.runId),
-        runs: spawned,
-        detached: detach || undefined,
-      }
-    }
-
     if (!parentRun.waitForChildRuns) {
-      throw new Error('invoke_agents wait mode requires waitForChildRuns')
+      throw new Error('invoke_agents requires waitForChildRuns')
     }
 
     const waitResults = await parentRun.waitForChildRuns(
@@ -163,6 +192,7 @@ export const invokeAgents: SkillTool = {
         worktreePath: r.worktreePath,
         worktreeBranch: r.worktreeBranch,
         worktreeOutcome: r.worktreeOutcome,
+        profile: prepared.find((p) => p.resolvedId === r.agentId)?.profile,
       })),
     }
   },

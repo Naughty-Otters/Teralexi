@@ -5,14 +5,18 @@ import { serializeNeedsApproval } from './tool-ipc-meta'
 import { extractZodParams } from '@main/utils/zod-introspection'
 
 describe('toolSet IPC metadata', () => {
-  it('loadToolSetTools includes shared git tools but excludes skill-owned github/google_* tools', async () => {
+  it('loadToolSetTools includes lean shared tools and excludes skill-owned tools', async () => {
     const tools = await loadToolSetTools()
-    expect(tools.length).toBeGreaterThan(10)
+    expect(tools.length).toBeGreaterThan(8)
     expect(tools.some((t) => t.name === 'read_file')).toBe(true)
-    // Git tools are shared so the coding/code-review skills (which have no
-    // actions/ folder) can use them via allowed_tools. The github skill still
-    // overrides these with its own actions/git.ts in its own catalog.
-    expect(tools.some((t) => t.name === 'git_status')).toBe(true)
+    expect(tools.some((t) => t.name === 'edit_files')).toBe(true)
+    expect(tools.some((t) => t.name === 'shell')).toBe(true)
+    expect(tools.some((t) => t.name === 'generate_follow_up')).toBe(true)
+    expect(tools.some((t) => t.name === 'git_status')).toBe(false)
+    expect(tools.some((t) => t.name === 'best_of_n')).toBe(false)
+    expect(tools.some((t) => t.name === 'run_script')).toBe(true)
+    expect(tools.some((t) => t.name === 'run_script_file')).toBe(true)
+    expect(tools.some((t) => t.name === 'shell')).toBe(true)
     // GitHub and Google tools remain skill-owned (live under skills/*/actions).
     expect(tools.some((t) => t.name === 'github_auth_status')).toBe(false)
     expect(tools.some((t) => t.name === 'google_workspace_auth_status')).toBe(

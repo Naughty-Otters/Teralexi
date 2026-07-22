@@ -82,7 +82,7 @@ The sandbox **persists across turns** in the same conversation.
 
 **Before starting the canonical workflow on every turn:**
 
-1. Check **Existing sandbox artifacts** in the SANDBOX block and/or `list_files` on `output/results/`.
+1. Check **Existing sandbox artifacts** in the SANDBOX block and/or `read_file` / `shell` (`ls`) on `output/results/`.
 2. Decide: **new site** vs **update existing**.
 
 | Situation | Action |
@@ -186,11 +186,8 @@ Follow [refs/design-system.md](refs/design-system.md):
 - validate_website: **Step 4.** Check HTML structure, required files, and relative links.
 - publish_website: **Publish.** Zip a site directory (root `index.html` required) and upload to Teralexi hosting; return `absoluteUrl` for the user.
 - read_file: Read user content files or prior site.json.
-- write_file: Write intermediate site.json in step 2.
-- list_files: Inspect output directory after generation.
-- glob_files: Find input files by pattern.
-- file_status: Check if a path exists before reading.
-- run_script_file: Run `scripts/validate-site.mjs` for deeper checks when needed.
+- edit_files: Write intermediate site.json in step 2 (mode `write`).
+- shell: Optional checks (e.g. `ls`, validate scripts under `scripts/`).
 - promote_artifact: Copy finished site folder into the user's workspace.
 
 ---

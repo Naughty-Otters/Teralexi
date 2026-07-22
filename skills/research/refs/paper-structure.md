@@ -41,7 +41,7 @@ Plus **References** â€” numbered list matching inline citations `[1]`, `[2]`, â€
 ### Methodology
 For agent-conducted research (no primary experiment), describe:
 - Query variants generated (rephrases, translations).
-- Search tools used (`web_search`, `deep_research` / Google Scholar).
+- Search tools used (`web_search` / scholarly queries).
 - URL selection criteria and scraping approach.
 - How evidence was coded, deduplicated, and synthesized.
 

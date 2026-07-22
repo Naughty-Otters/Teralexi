@@ -4,10 +4,7 @@ export const MANDATORY_TOOL_NAMES = new Set<string>([
   'update_todos',
   'enter_plan_mode',
   'exit_plan_mode',
-  'invoke_agent',
   'invoke_agents',
-  'wait_for_sub_agent_runs',
-  'best_of_n',
   'promote_artifact',
   'generate_follow_up',
 ])

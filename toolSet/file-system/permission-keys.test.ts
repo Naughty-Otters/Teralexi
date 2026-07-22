@@ -11,12 +11,12 @@ describe('permission-keys', () => {
       key: 'read',
       defaultAction: 'allow',
     })
-    expect(resolveFileToolPermissionKey('copy_file')).toEqual({
+    expect(resolveFileToolPermissionKey('edit_files')).toEqual({
       key: 'edit',
       defaultAction: 'ask',
     })
-    expect(resolveFileToolPermissionKey('delete_file')).toEqual({
-      key: 'edit',
+    expect(resolveFileToolPermissionKey('shell')).toEqual({
+      key: 'external_path',
       defaultAction: 'ask',
     })
     expect(resolveFileToolPermissionKey('unknown')).toBeUndefined()
@@ -26,31 +26,33 @@ describe('permission-keys', () => {
     expect(extractFileToolPaths('read_file', { path: 'a.txt' })).toEqual([
       'a.txt',
     ])
-    expect(extractFileToolPaths('delete_file', { path: 'gone.txt' })).toEqual([
-      'gone.txt',
-    ])
     expect(
-      extractFileToolPaths('copy_file', { source: 'a', destination: 'b' }),
+      extractFileToolPaths('edit_files', { mode: 'replace', path: 'gone.txt' }),
+    ).toEqual(['gone.txt'])
+    expect(
+      extractFileToolPaths('promote_artifact', { from: 'a', to: 'b' }),
     ).toEqual(['a', 'b'])
     expect(
-      extractFileToolPaths('move_file', { source: 'a', destination: 'b' }),
-    ).toEqual(['a', 'b'])
-    expect(extractFileToolPaths('apply_patch', { path: 'ignored' })).toEqual([])
+      extractFileToolPaths('edit_files', { mode: 'patch', path: 'ignored' }),
+    ).toEqual([])
   })
 
   it('ignores empty and non-string path values', () => {
-    expect(extractFileToolPaths('write_file', { path: '' })).toEqual([])
-    expect(extractFileToolPaths('edit_file', { path: 123 })).toEqual([])
-    expect(extractFileToolPaths('glob_files', { path: '   ' })).toEqual([])
+    expect(extractFileToolPaths('edit_files', { mode: 'write', path: '' })).toEqual(
+      [],
+    )
+    expect(extractFileToolPaths('edit_files', { mode: 'replace', path: 123 })).toEqual(
+      [],
+    )
   })
 
   it('keeps registry stable for critical tools', () => {
-    expect(FILE_TOOL_PERMISSION_KEYS['grep_files']).toMatchObject({
-      key: 'grep',
-      defaultAction: 'allow',
-    })
-    expect(FILE_TOOL_PERMISSION_KEYS['apply_patch']).toMatchObject({
+    expect(FILE_TOOL_PERMISSION_KEYS['edit_files']).toMatchObject({
       key: 'edit',
+      defaultAction: 'ask',
+    })
+    expect(FILE_TOOL_PERMISSION_KEYS['shell']).toMatchObject({
+      key: 'external_path',
       defaultAction: 'ask',
     })
   })

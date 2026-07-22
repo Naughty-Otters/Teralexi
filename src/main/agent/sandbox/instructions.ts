@@ -4,26 +4,26 @@ export const SANDBOX_LLM = {
   HEADER: '=== SANDBOX ===',
   FOOTER: '=== END SANDBOX ===',
   ROOT_LABEL:
-    'SANDBOX ROOT (📦) — tool paths resolve from here; run_script_* cwd is the active step folder when scoped:',
+    'SANDBOX ROOT (📦) — tool paths resolve from here; shell cwd is the workspace (or OS shell when use_shell is set):',
   OUTPUT_DIR: 'Output directory (artifacts):',
-  CAPTURES: '  run_script_* captures   →',
-  SCRIPTS: '  run_script files →',
+  CAPTURES: '  Captures / results →',
+  SCRIPTS: '  Scripts / references →',
   REFS: 'Reference documents:',
   REF_SCRIPTS: 'Reference scripts (copies):',
   SKILLS_READONLY: 'Skill copies (read-only):',
   TERMINAL_WORKFLOW: 'Terminal workflow (mandatory):',
   RULE_EXEC_FILE:
-    '- Use `run_script` or `run_script_file` only: execFile(interpreter, script file path, …args) — never raw shell one-liners or pipes via tools.',
+    '- Use `shell` for commands (argv or string). Prefer workspace shell; set `use_shell: true` only when an OS login shell is required.',
   RULE_NEW_SCRIPT:
-    '- New work: use `run_script` with `scriptContent` (+ `scriptType` bash/python/javascript) so the tool writes under the **active tool-loop step** scripts dir shown below (or `output/scripts/` when no step scope) and runs that file in one step. Even one-line commands (e.g. `uptime`) go inside `scriptContent` as a bash script.',
+    '- Prefer writing a short script under the sandbox/workspace with `edit_files`, then run it via `shell` (node / python3 / bash).',
   RULE_REFERENCED_SCRIPTS:
-    '- If your new script depends on existing reference scripts from `<sandbox>/scripts`, pass them via `referencedScriptFiles`; the tool reads those files and prepends their contents before your `scriptContent` in the internal generated file.',
+    '- Reference scripts under `<sandbox>/scripts` can be invoked with `shell` using absolute or sandbox-relative paths.',
   RULE_EXISTING_SCRIPT:
-    '- Run a pre-existing script: `run_script_file` with `scripts/foo.sh` (planning copies under `<sandbox>/scripts`) or a path under the step `scripts/` dir. The interpreter still receives an absolute script path; cwd is the step folder when scoped.',
+    '- Run an existing script with `shell` (e.g. `bash scripts/foo.sh` or `node scripts/foo.mjs`).',
   RULE_CAPTURES:
-    '- Captures live under the step `results/` dir. Set `resultFileRelativePath` for the main deliverable; the tool scans the whole step folder (except `scripts/`) for new/changed files and returns `artifacts[]`. Scripts are syntax-checked before execution (preflight).',
+    '- Prefer writing outputs under the sandbox `output/` / step `results/` dirs; use `promote_artifact` for intentional workspace deliverables.',
   RULE_CWD:
-    '- When a tool-loop step is active, `run_script` / `run_script_file` cwd is that step dir (`output/toolLoop/<step>/`). Write generated outputs under `./results/` or `results/scratch/`; only `scripts/` is excluded from deliverable discovery. Read workspace files via `TERALEXI_WORKSPACE_PATH` or workspace paths in `scriptArgs`. Use `promote_artifact` for intentional workspace deliverables. Env: `TERALEXI_SANDBOX_ROOT`, `TERALEXI_STEP_CWD`, `TERALEXI_RESULTS_DIR`, `TERALEXI_REFERENCE_SCRIPTS_DIR`, `TERALEXI_WORKSPACE_PATH` (when workspace set).',
+    '- `shell` defaults to the user workspace when set. Read workspace files via paths or `TERALEXI_WORKSPACE_PATH`. Env may include `TERALEXI_SANDBOX_ROOT`, `TERALEXI_STEP_CWD`, `TERALEXI_RESULTS_DIR`, `TERALEXI_REFERENCE_SCRIPTS_DIR`, `TERALEXI_WORKSPACE_PATH`.',
   RULE_READONLY:
     '- Treat skills/, refs/, and reference scripts/ as read-only unless copying out.',
 } as const
@@ -32,7 +32,7 @@ export type SandboxStructureLayout = {
   root: string
   outputDir: string
   resultsDir: string
-  /** Where `run_script` writes new files (scoped per tool-loop step when active). */
+  /** Script / reference materialization directory (scoped per tool-loop step when active). */
   scriptsDir: string
   /** Planning copies of reference scripts (`<sandbox>/scripts`); defaults to {@link scriptsDir}. */
   referenceScriptsDir?: string
@@ -49,7 +49,7 @@ export function buildSandboxStructureBlock(layout: SandboxStructureLayout): stri
       ? [
           `Active tool-loop step scope: ${layout.toolLoopScope}`,
           `Write this step's artifacts only under: ${layout.toolLoopOutputRelDir}/`,
-          `run_script cwd: ${layout.toolLoopOutputRelDir}/ (deliverables in ./results/; reference scripts still under ${referenceScriptsDir})`,
+          `Step artifact dir: ${layout.toolLoopOutputRelDir}/ (deliverables in ./results/; reference scripts still under ${referenceScriptsDir})`,
         ]
       : []
 
@@ -85,16 +85,15 @@ export function buildWorkspaceStructureBlock(
       '=== USER WORKSPACE ===',
       '- File tools: default target = project folder below; only paths starting with output/, scripts/, refs/, or skills/ use the sandbox root above.',
       `Project folder: ${workspacePath.trim()}`,
-      '- Edit the user project with read_file, edit_file, write_file, apply_patch, delete_file.',
+      '- Edit the user project with read_file and edit_files (modes: replace | write | delete | patch).',
       '- Relative paths like src/index.ts or . resolve here by default.',
       '- Absolute paths under this project folder also work (call read_file — do not claim you lack filesystem access).',
       '- If the user pastes a full path under this folder, use read_file on that path or the equivalent relative path.',
       '- Use output/, scripts/, refs/, or skills/ only for sandbox artifacts — not the user repo.',
-      '- Do NOT write agent runtime artifacts (captures, tool output, script temp files) into this folder — scripts run in the sandbox step and may only read from here.',
-      '- Scripts: read project data via TERALEXI_WORKSPACE_PATH or path-like scriptArgs; write outputs in sandbox results/ then promote_artifact when needed.',
+      '- Do NOT write agent runtime artifacts into this folder unless the user asked — prefer sandbox results/ then promote_artifact.',
       '- Use lsp for symbol navigation (definition, references, hover) in project files.',
-      '- After edits, verify with run_workspace_command (e.g. npm test) when appropriate.',
-      '- Git: git_status / git_diff / git_log / git_add / git_commit / git_push / git_create_pr (not run_script for git).',
+      '- After edits, verify with shell (e.g. npm test) when appropriate.',
+      '- Git / search: use shell (git status|diff|log, rg, find) — there are no dedicated git_* or grep_files tools.',
       '=== END USER WORKSPACE ===',
     ].join('\n')
   }

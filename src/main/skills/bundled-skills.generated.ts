@@ -34,18 +34,20 @@ Use **Coding Review** for read-only review. Use **Coding PR** for branch/PR-only
 
 ### Interaction modes
 
-See [refs/plan-modes.md](refs/plan-modes.md). For long-running commands, pass \`background: true\` to \`run_workspace_command\`.
+See [refs/plan-modes.md](refs/plan-modes.md). For long-running commands, pass \`background: true\` to \`shell\`.
 
 ---
 
 ### Workflow
 
-1. **Explore** — Before changing anything, understand the code. Search and read **source files** first (see **Source scope**). Use \`grep_files\` / \`glob_files\` to locate files and \`read_file\` to read them. Prefer \`lsp\` (definition, references, hover, document_symbols, workspace_symbols) over text search. Batch independent reads. Do not re-read a file whose content already appears in tool results this turn unless it was edited or you need a new line range (\`offset\`).
-2. **Edit** — \`edit_file\` or \`apply_patch\` for partial changes; \`write_file\` only for new files or full rewrites; \`delete_file\` to remove. Match existing style and patterns.
-3. **Verify** — Run project checks with \`run_workspace_command\` (argv arrays). Read output; fix failures and re-run until pass.
-4. **Review** — \`git_status\`, then \`git_diff\` before summarizing.
+1. **Explore** — Prefer \`lsp\` (definition, references, hover, document_symbols, workspace_symbols). Read with \`read_file\`. For text search / globs, use \`shell\` (e.g. \`rg\`, \`find\`) — or delegate \`profile: "explore"\` / \`"bash"\`. Do not re-read a file already in the session read ledger unless it was edited or you need a new offset.
+2. **Edit** — One tool: \`edit_files\` with \`mode\`: \`replace\` (partial), \`write\` (new/full), \`delete\`, or \`patch\` (multi-file). Match existing style.
+3. **Verify** — \`shell\` (argv arrays). Read output; fix failures and re-run until pass.
+4. **Review** — \`shell\` with \`["git","status"]\` and \`["git","diff"]\` before summarizing (or \`profile: "bash"\`).
 
 Procedural details: [refs/procedural-contracts.md](refs/procedural-contracts.md). Sub-agents: [refs/sub-agents.md](refs/sub-agents.md).
+
+**Priority sub-agents (Cursor built-ins):** when work would flood context, call \`invoke_agents\` with \`profile\` before doing it inline — \`explore\` (search), \`bash\` (command series via the \`shell\` tool — there is no \`bash\`/\`run_script\` tool), \`browser\` (web/DOM). Use a one-element \`runs\` array for a single child. Then optional \`architect\`/\`plan\` → \`coder\`. Consume the brief; do not re-run the same loop in the parent.
 
 ---
 
@@ -55,7 +57,7 @@ Procedural details: [refs/procedural-contracts.md](refs/procedural-contracts.md)
 
 **Out of scope** unless explicitly requested: binaries/media, \`node_modules/\`, lockfiles, \`dist/\`/\`build/\`, generated output, secrets (\`.env\`, keys).
 
-Prefer \`grep_files\` / \`glob_files\` with source globs (e.g. \`**/*.{ts,tsx,js,py}\`) over blind repo-wide scans.
+Prefer scoped \`rg\`/\`find\` via shell (source globs) over blind repo-wide scans.
 
 ---
 
@@ -75,7 +77,7 @@ Prefer \`grep_files\` / \`glob_files\` with source globs (e.g. \`**/*.{ts,tsx,js
 ### Where files live
 
 - **Project code:** workspace-relative paths (\`src/…\`, \`package.json\`). Absolute paths under the workspace root are OK.
-- **Sandbox (\`output/\`, \`scripts/\`):** agent artifacts only — rare. Use \`run_workspace_command\` for tests, not \`run_script\`.
+- **Sandbox (\`output/\`, \`scripts/\`):** agent artifacts only — rare. Use \`shell\` for tests.
 - **Promote sandbox deliverables** with \`promote_artifact\` when copying from \`output/toolLoop/.../results/\` into the workspace.
 
 ---
@@ -83,7 +85,7 @@ Prefer \`grep_files\` / \`glob_files\` with source globs (e.g. \`**/*.{ts,tsx,js
 ### Rules
 
 - Do not delete or overwrite without clear reason.
-- Do not commit or push unless the user asks.
+- Do not commit or push unless the user asks (use **Coding PR** for structured commit/PR tools).
 - If no workspace is set, ask the user to pick a folder before editing.
 - Communicate concisely: what changed, why, verification result.
 
@@ -91,9 +93,14 @@ Prefer \`grep_files\` / \`glob_files\` with source globs (e.g. \`**/*.{ts,tsx,js
 
 ## Tools
 
-Core (explicit): \`read_file\`, \`edit_file\`, \`write_file\`, \`apply_patch\`, \`delete_file\`, \`move_file\`, \`copy_file\`, \`promote_artifact\`, \`grep_files\`, \`glob_files\`, \`lsp\`, \`update_todos\`, \`read_todos\`, \`invoke_agent\`.
+Cursor-like lean set (explicit only — no tag expansion):
 
-Also enabled via skill defaults: \`list_files\`, \`run_workspace_command\`, git tools, \`enter_plan_mode\`, \`exit_plan_mode\`, \`invoke_agents\`.
+- Read / symbols: \`read_file\`, \`lsp\`
+- Edit: \`edit_files\` (\`replace\` | \`write\` | \`delete\` | \`patch\`)
+- Shell (tests, grep/glob, git): \`shell\`
+- Web: \`web_search\`, \`web_scrape\`
+- Todos / plan / promote: \`update_todos\`, \`read_todos\`, \`enter_plan_mode\`, \`exit_plan_mode\`, \`promote_artifact\`
+- Sub-agents: \`invoke_agents\` (one-element \`runs\` for a single child)
 
 ---
 
@@ -101,8 +108,8 @@ Also enabled via skill defaults: \`list_files\`, \`run_workspace_command\`, git 
 
 - Never edit a file you have not read in this task (unless applying a user-provided patch).
 - After edits, run the project's test/lint/typecheck command when one exists.
-- Confirm intended diff with \`git_diff\` before claiming completion.
-- Do not use \`run_script\` for project tests — use \`run_workspace_command\`.
+- Confirm intended diff with \`git diff\` via \`shell\` before claiming completion.
+- Prefer \`shell\` for project tests and git/\`rg\` commands.
 
 ---
 
@@ -114,10 +121,10 @@ Add input validation to \`createUser\` in \`src/auth/user.ts\`.
 
 ### Assistant
 
-1. \`grep_files\` for \`createUser\`, then \`read_file\` on \`src/auth/user.ts\`.
-2. \`edit_file\` with minimal validation matching nearby patterns.
-3. \`run_workspace_command\` with \`["npm","test","--","auth"]\` (or project equivalent).
-4. \`git_diff\` and summarize changes + test result.
+1. \`lsp\` / shell \`rg\` for \`createUser\`, then \`read_file\` on \`src/auth/user.ts\`.
+2. \`edit_files\` mode \`replace\` with minimal validation matching nearby patterns.
+3. \`shell\` with \`["npm","test","--","auth"]\` (or project equivalent).
+4. \`shell\` \`["git","diff"]\` and summarize.
 
 ---
 
@@ -127,10 +134,10 @@ Where is \`SkillDefinition\` defined?
 
 ### Assistant
 
-Use \`lsp\` with \`workspace_symbols\` or \`grep_files\` on \`SkillDefinition\`, then \`read_file\` the defining file — do not guess the path.
+Use \`lsp\` with \`workspace_symbols\` (or shell \`rg\`), then \`read_file\` the defining file — do not guess the path.
 `,
     propertiesMd: `name: Coding
-description: Edits, tests, and verifies code in the user's workspace. Use when fixing bugs, implementing features, refactoring, running tests or lint, or working with git — not for general Q&A or document generation.
+description: Edits, tests, and verifies code in the user's project workspace. Use when fixing bugs, implementing features, refactoring, running tests or lint, or working with git — not for general Q&A or document generation.
 model: gemma4
 provider: ollama
 color: success
@@ -143,7 +150,7 @@ variant_label: Implement
 group_order: 1
 variant_order: 1
 group_primary: true
-allowed_tools: read_file, edit_file, write_file, apply_patch, delete_file, move_file, copy_file, promote_artifact, grep_files, glob_files, lsp, update_todos, read_todos, invoke_agent
+allowed_tools: read_file, edit_files, lsp, shell, web_search, web_scrape, update_todos, read_todos, invoke_agents, enter_plan_mode, exit_plan_mode, promote_artifact
 `,
     attachments: {
       "refs/plan-modes.md": {
@@ -161,7 +168,7 @@ Runtime injects mode hints; this ref summarizes behavior for the agent.
 | **YOLO** | Tools run without per-call approval — work carefully. |
 | **Plan mode** | Active after \`enter_plan_mode\`. File writes go to the plan manifest until \`exit_plan_mode\`. Reuse \`plans/manifest.json\` — do not re-scan listed files. |
 
-When explore or plan mode is active, prefer \`grep_files\`, \`glob_files\`, \`lsp\`, and \`read_file\` before any edit.
+When explore or plan mode is active, prefer \`lsp\`, \`read_file\`, and read-only \`shell\` (\`rg\`/\`find\`/\`git status|diff\`) before any edit.
 `,
       },
       "refs/procedural-contracts.md": {
@@ -169,48 +176,76 @@ When explore or plan mode is active, prefer \`grep_files\`, \`glob_files\`, \`ls
         encoding: "utf8",
         content: `# Procedural contracts
 
-## run_workspace_command
+## shell
 
-- Pass **argv arrays** only — e.g. \`["npm","test"]\`, \`["npm","run","lint"]\`. No shell strings.
+- Pass **argv arrays** only — e.g. \`["npm","test"]\`, \`["rg","-n","pattern","src"]\`, \`["git","diff"]\`. No shell strings.
 - Long-running commands (\`npm test --watch\`, dev servers): \`background: true\`.
 - Read stdout/stderr; if checks fail, fix and re-run until pass or report blocker.
+- Use for project tests, grep/glob search, and git inspection (\`status\` / \`diff\` / \`log\`).
 
 ## Git
 
-- Prefer structured git tools (\`git_status\`, \`git_diff\`, \`git_add\`, \`git_commit\`, \`git_push\`, \`git_create_pr\`) over raw git in \`run_workspace_command\`.
+- On **Coding**, inspect with shell: \`["git","status"]\`, \`["git","diff"]\`.
+- Structured commit/push/PR tools live on the **Coding PR** skill.
 - Do not commit or push unless the user asks.
 - Commit message: 1–2 sentences focused on **why**, not a file list.
 
-## promote_artifact vs write_file
+## promote_artifact vs edit_files
 
 - Sandbox deliverables under \`output/toolLoop/.../results/\` → \`promote_artifact\` (with approval).
-- Project source → workspace-relative paths with \`edit_file\` / \`write_file\`.
+- Project source → \`edit_files\` (\`replace\` / \`write\` / \`delete\` / \`patch\`).
 
-## invoke_agent
+## invoke_agents
 
 - See [sub-agents.md](sub-agents.md) for review and delegation patterns.
+- One child: \`runs: [{ profile | agentId, task }]\`. Multiple runs run in parallel and wait together.
 `,
       },
       "refs/sub-agents.md": {
         category: "ref",
         encoding: "utf8",
-        content: `# Sub-agent recipes (invoke_agent)
+        content: `# Sub-agent recipes (Cursor-style profiles)
 
-Use \`invoke_agent\` for specialized review work instead of improvising.
+Use \`invoke_agents\` with a \`profile\`. **Prefer Cursor built-ins first** when the
+workload matches — isolate noisy work; parent only sees the brief.
 
-## Code review (read-only)
+One child = one-element \`runs\` array. Multiple = parallel. Always waits for results.
 
-- Delegate to a review-focused sub-agent when the user asks for a bug review or PR review.
-- Sub-agent should use read-only tools: \`read_file\`, \`grep_files\`, \`glob_files\`, \`lsp\`, \`git_diff\`, \`git_status\`.
-- Output: compact findings table — Severity | Location (file:line) | Finding.
+## Priority built-ins (use these first)
 
-## Before creating a PR
+| Profile | Cursor analogue | Tools | When |
+| --- | --- | --- | --- |
+| \`explore\` | Explore | \`read_file\`, \`lsp\`, read-only shell | Find/where/how; map before edits |
+| \`bash\` | Bash | **\`shell\`** (not a \`bash\`/\`run_script\` tool), \`read_file\` | Tests, builds, rg/find, git |
+| \`browser\` | Browser | \`web_search\` / \`web_scrape\` + browser MCP | Pages, DOM, screenshots |
 
-- Confirm changes with \`git_status\` and \`git_diff\`.
-- Run verification (\`run_workspace_command\`) if tests exist.
-- Use \`git_create_pr\` only when the user asked to open a PR.
+Omit \`agentId\` when using a profile — defaults to \`skill:coding\`.
 
-For PR-only workflows, suggest the **Coding PR** skill when the user only wants branch/PR operations without feature work.
+**Important:** \`bash\` / \`explore\` / \`browser\` are **profiles** for \`invoke_agents\`. The command tool is always \`shell\`. Never call tools named \`bash\` or \`run_script\` — they do not exist.
+
+## Orchestration profiles
+
+| Profile | Role |
+| --- | --- |
+| \`architect\` / \`plan\` | Read-only implementation plan (+ todos) |
+| \`coder\` | Implement via \`edit_files\`; may use a worktree; auto-merge |
+
+## Examples
+
+\`\`\`text
+invoke_agents({ runs: [{ profile: "explore", task: "Where is auth middleware?" }] })
+
+invoke_agents({ runs: [
+  { profile: "explore", task: "…" },
+  { profile: "bash", task: "Run npm test and summarize" },
+] })
+\`\`\`
+
+## Parent rules
+
+- Prefer built-in profiles **before** doing the same loop in the parent.
+- Consume the **brief**; do not re-run after a successful brief.
+- File changes from coder runs are **auto-merged**.
 `,
       },
     },
@@ -235,10 +270,10 @@ For feature implementation, suggest **Coding** first, then return here to publis
 
 ### Workflow
 
-1. **Inspect** — \`git_status\`, \`git_diff\`, \`git_log -5\` (via \`git_log\`).
-2. **Verify** (when code changed) — remind user tests should pass; run \`run_workspace_command\` only if user asked to verify before PR.
-3. **Commit** — \`git_add\` selective paths; \`git_commit\` with clear **why** message (1–2 sentences).
-4. **Publish** — \`git_push\`, then \`git_create_pr\` when requested.
+1. **Inspect** — via \`shell\`: \`git status\`, \`git diff\`, \`git log -5\`.
+2. **Verify** (when code changed) — remind user tests should pass; run \`shell\` only if user asked to verify before PR.
+3. **Commit** — via \`shell\`: \`git add\` selective paths; \`git commit\` with clear **why** message (1–2 sentences).
+4. **Publish** — via \`shell\`: \`git push\`, then \`gh pr create\` when requested.
 
 See [../coding/refs/procedural-contracts.md](../coding/refs/procedural-contracts.md) for git contracts.
 
@@ -255,15 +290,14 @@ See [../coding/refs/procedural-contracts.md](../coding/refs/procedural-contracts
 
 ## Tools
 
-- \`read_file\`, \`grep_files\` — context for commit/PR description
-- \`git_status\`, \`git_diff\`, \`git_log\`, \`git_show\`, \`git_add\`, \`git_reset\`, \`git_commit\`, \`git_branch\`, \`git_checkout\`, \`git_push\`, \`git_fetch\`, \`git_create_pr\`
-- \`invoke_agent\` — optional delegation
+- \`read_file\`, \`shell\` — inspect files and run git/\`gh\` commands
+- \`invoke_agents\` — optional delegation
 
 ---
 
 ## Validation
 
-- Always \`git_status\` + \`git_diff\` before commit or PR.
+- Always \`git status\` + \`git diff\` (via \`shell\`) before commit or PR.
 - Confirm nothing sensitive (\`.env\`, keys) is staged before commit.
 
 ---
@@ -276,9 +310,9 @@ Commit my changes with a good message and push.
 
 ### Assistant
 
-1. \`git_status\`, \`git_diff\`.
+1. \`shell\` → \`git status\`, \`git diff\`.
 2. Draft message from diff intent; confirm with user if ambiguous.
-3. \`git_add\`, \`git_commit\`, \`git_push\`.
+3. \`shell\` → \`git add\`, \`git commit\`, \`git push\`.
 4. Report commit hash and remote branch.
 `,
     propertiesMd: `name: Coding PR
@@ -294,7 +328,7 @@ variant: pr
 variant_label: PR
 group_order: 1
 variant_order: 3
-allowed_tools: read_file, grep_files, git_status, git_diff, git_log, git_show, git_add, git_reset, git_commit, git_branch, git_checkout, git_push, git_fetch, git_create_pr, invoke_agent
+allowed_tools: read_file, shell, invoke_agents
 `,
     attachments: {
     },
@@ -318,7 +352,7 @@ For implementing fixes, suggest the **Coding** skill.
 
 ### Workflow
 
-1. **Scope** — \`git_status\` / \`git_diff\` (or \`read_file\` for named paths). Use \`grep_files\`, \`glob_files\`, \`lsp\` to gather context.
+1. **Scope** — via \`shell\`: \`git status\` / \`git diff\` (or \`read_file\` for named paths). Use \`lsp\` and read-only \`shell\` (\`rg\`/\`find\`) to gather context.
 2. **Analyze** — Check correctness, edge cases, security, tests, conventions.
 3. **Report** — Structured findings (see below). No file edits.
 
@@ -339,7 +373,7 @@ Sort by severity (Critical → Suggestion → Nice-to-have). One row per finding
 
 ### Rules
 
-- Read-only: no \`edit_file\`, \`write_file\`, \`apply_patch\`, or \`run_workspace_command\` that mutates state.
+- Read-only: no \`edit_files\` or \`shell\` that mutates state.
 - Cite file:line when possible.
 - Be direct and technical; prioritize real bugs over style nitpicks.
 
@@ -347,9 +381,8 @@ Sort by severity (Critical → Suggestion → Nice-to-have). One row per finding
 
 ## Tools
 
-- \`read_file\`, \`grep_files\`, \`glob_files\`, \`list_files\`, \`lsp\`
-- \`git_status\`, \`git_diff\`, \`git_log\`, \`git_show\`
-- \`invoke_agent\` — delegate deep review per [../coding/refs/sub-agents.md](../coding/refs/sub-agents.md)
+- \`read_file\`, \`lsp\`, \`shell\` (read-only: \`rg\`, \`find\`, \`git status|diff|log|show\`)
+- \`invoke_agents\` — delegate deep review per [../coding/refs/sub-agents.md](../coding/refs/sub-agents.md)
 
 ---
 
@@ -368,7 +401,7 @@ Review my uncommitted changes.
 
 ### Assistant
 
-1. \`git_status\`, then \`git_diff\`.
+1. \`shell\` → \`git status\`, then \`git diff\`.
 2. Read changed files for context.
 3. Return findings table with severity, location, and finding.
 `,
@@ -385,7 +418,7 @@ variant: review
 variant_label: Review
 group_order: 1
 variant_order: 2
-allowed_tools: read_file, grep_files, glob_files, list_files, lsp, git_status, git_diff, git_log, git_show, invoke_agent
+allowed_tools: read_file, lsp, shell, invoke_agents
 `,
     attachments: {
     },
@@ -434,29 +467,30 @@ Rules for deep thinking:
 
 ### Where files live
 
-- **Default:** agent **sandbox** — \`run_script\` writes under \`output/scripts/\`; captures and results under \`output/\`.
+- **Default:** agent **sandbox** — use \`run_script\` / \`run_script_file\` for sandbox execution; captures and results under \`output/\`. Use \`shell\` for simple host one-liners when appropriate.
 - **User project:** do **not** edit the user's repo in this skill. If they need code changes, suggest the **Coding** skill after they select a workspace folder.
-- Do not use workspace file tools or git tools here — they are not available in this skill.
+- Do not use workspace file-edit tools here — they are not available in this skill.
 
 ---
 
 ## Tools
 
-### Sandbox (primary)
+### Execution
 
-- \`run_script\`: Inline script via execFile. Pass \`scriptContent\` + \`scriptType\`; writes under \`output/scripts/\` and runs in one step.
-- \`run_script_file\`: Run a file already under \`<sandbox>/scripts/\`.
+- \`run_script\`: Inline sandbox script (\`scriptType\` + \`scriptContent\`). Prefer Python for new scripts unless bash/Node is clearly better.
+- \`run_script_file\`: Run an existing file under \`<sandbox>/scripts/\`.
+- \`shell\`: Host/workspace commands when a short argv command is enough (metrics, simple checks).
 
 ### Web
 
-- \`web_search\`, \`web_scrape\`, \`deep_research\`: as needed for facts, pages, or scholarly sources.
+- \`web_search\`, \`web_scrape\`: as needed for facts and page content.
 
 ---
 
 ## Validation
 
-- Use \`run_script\` for host metrics (uptime, memory, disk) instead of refusing or answering from memory.
-- Prefer sandbox script tools over guessing when the answer requires live data.
+- Use \`run_script\` or \`shell\` for host metrics (uptime, memory, disk) instead of refusing or answering from memory.
+- Prefer live commands over guessing when the answer requires live data.
 - Do not edit the user's project tree — recommend **Coding** for repo work.
 
 ---
@@ -469,9 +503,9 @@ Check disk usage on this machine.
 
 ### Assistant
 
-I'll run a sandbox script to read live disk usage instead of guessing.
+I'll run a short sandbox script to read live disk usage instead of guessing.
 
-*(calls \`run_script\` with a short shell script, reports stdout)*
+*(calls \`run_script\` with a bash \`df -h\` script, reports stdout)*
 
 ---
 
@@ -482,16 +516,6 @@ What is a REST API?
 ### Assistant
 
 A REST API is an interface that lets clients interact with a server using standard HTTP methods (GET, POST, PUT, DELETE) over resources identified by URLs.
-
----
-
-### User
-
-Fix the failing test in \`src/auth/login.test.ts\`.
-
-### Assistant
-
-That needs edits and test runs in your project workspace. Please switch to the **Coding** skill (and select your project folder if prompted). I can then explore the test file, fix the failure, and verify with \`npm test\`.
 `,
     propertiesMd: `name: Default
 description: Answers everyday questions using sandbox scripts and web search. Use for general Q&A, quick calculations, host metrics, research summaries, and one-off scripts — not for editing the user's codebase (switch to Coding skill for that).
@@ -499,7 +523,7 @@ model: gemma4
 provider: ollama
 color: primary
 enabled: true
-allowed_tools: run_script, run_script_file, web_scrape, web_search, deep_research
+allowed_tools: run_script, run_script_file, shell, web_scrape, web_search
 `,
     attachments: {
     },
@@ -515,7 +539,7 @@ You are a document-generation specialist. You create professional Excel spreadsh
 - **Workspace promotion:** when the user wants a generated file in their project, use \`promote_artifact\` (sandbox \`from\` → workspace \`to\`). Do not write deliverables directly into the user repo via scripts.
 - **Templates:** bundled under \`templates/\` (manifest, schemas, styles, HTML). Selected via \`template_id\` in step 1.
 - **User data files:** when the user gives a path to CSV/JSON/TXT in their project, use \`read_file\` on that workspace path — read only; do not edit their repo for document generation.
-- **Scratch / transforms:** \`run_script\` when a dedicated doc tool is not enough. Scripts run in the sandbox step folder — read user data via \`TERALEXI_WORKSPACE_PATH\` or workspace paths in \`scriptArgs\`; write temp/output under \`./results/\` or \`results/scratch/\`; use \`promote_artifact\` for final workspace deliverables.
+- **Scratch / transforms:** \`shell\` when a dedicated doc tool is not enough. Prefer sandbox-scoped commands; use \`promote_artifact\` for final workspace deliverables.
 - Prefer \`render_document\` in step 3 over calling \`create_*\` tools directly.
 
 ### Trigger
@@ -649,10 +673,9 @@ You cannot open and surgically edit binary Office formats — always read curren
 - create_presentation: Low-level PowerPoint builder (updates/edge cases).
 - create_word_doc: Low-level Word builder (updates/edge cases).
 - read_file: Read source data files (CSV, JSON, TXT) when data_source = file.
-- write_file: Write intermediate data.json artifacts for step 2.
-- list_files: Inspect output directory after generation.
-- glob_files: Find input files by pattern.
-- file_status: Check if a path exists before reading.
+- edit_files: Write intermediate data.json artifacts for step 2 (mode \`write\`).
+- shell: Optional transforms when dedicated doc tools are not enough.
+- promote_artifact: Copy finished deliverables into the user's workspace.
 
 ---
 
@@ -689,7 +712,7 @@ provider: ollama
 color: success
 enabled: true
 refs_dir: refs, templates
-allowed_tools: read_file, edit_file, write_file, apply_patch, delete_file, move_file, copy_file, promote_artifact, list_files, grep_files, glob_files, search_files, file_status, storage_check, run_workspace_command, run_script, run_script_file, web_search, web_scrape, deep_research, git_status, git_diff, git_log, git_show, git_add, git_reset, git_commit, git_branch, git_checkout, git_merge, git_rebase, git_cherry_pick, git_revert, git_stash, git_pull, git_push, git_fetch, git_clone, git_remote, git_tag, git_clean, git_init, git_config, git_create_pr
+allowed_tools: read_file, edit_files, promote_artifact, shell, run_script, run_script_file, web_search, web_scrape
 `,
     attachments: {
       "form/doc-request.form.md": {
@@ -1838,8 +1861,8 @@ You are a **Google Workspace assistant**. Help users read and manage **Gmail**, 
 
 ### Files (sandbox)
 
-- read_file, write_file, list_files, search_files, copy_file, move_file: Local sandbox files (e.g. after Drive download).
-- run_script, run_script_file: Only when API tools are insufficient.
+- read_file, edit_files: Local sandbox files (e.g. after Drive download).
+- shell: Only when API tools are insufficient.
 
 ## Constraints
 
@@ -1988,7 +2011,7 @@ Use this skill when the user asks to:
 
 ### Where files live
 
-- **Deliverables:** \`output/results/<slug>-research-paper.md\` and \`output/results/<slug>-research-paper.pdf\` (sandbox). Use \`write_file\` for markdown; use \`export_research_pdf\` for the PDF. Offer \`promote_artifact\` if the user wants either file in their workspace.
+- **Deliverables:** \`output/results/<slug>-research-paper.md\` and \`output/results/<slug>-research-paper.pdf\` (sandbox). Use \`edit_files\` (mode \`write\`) for markdown; use \`export_research_pdf\` for the PDF. Offer \`promote_artifact\` if the user wants either file in their workspace.
 - **Working notes:** \`output/toolLoop/.../results/\` — query log, source ledger, scrape notes (optional but recommended for long runs).
 - **Reference:** \`refs/paper-structure.md\` — section definitions and citation rules.
 - Do **not** edit the user's project repo unless they explicitly ask.
@@ -2001,7 +2024,7 @@ The sandbox **persists across turns** in the same conversation. Prior deliverabl
 
 **Before starting the canonical workflow on every turn:**
 
-1. Check **Existing sandbox artifacts** in the SANDBOX instructions block (if present), and/or run **\`list_files\`** on \`output/results/\`.
+1. Check **Existing sandbox artifacts** in the SANDBOX instructions block (if present), and/or inspect \`output/results/\` via \`read_file\` / \`shell\` (\`ls\`).
 2. Decide whether this is a **new research request** or a **continuation** of prior work.
 
 | Situation | Action |
@@ -2012,7 +2035,7 @@ The sandbox **persists across turns** in the same conversation. Prior deliverabl
 | User asks to redo / expand topic | Full workflow from Phase 0; reuse or replace prior files as appropriate |
 | No prior markdown, user only said "yes" | Infer the task from chat/plan context **and** any existing artifacts — never assume files are missing without checking |
 
-**Never claim** that no research paper exists until you have checked \`output/results/\` (via the artifacts list or \`list_files\`).
+**Never claim** that no research paper exists until you have checked \`output/results/\` (via the artifacts list or \`shell\`/\`read_file\`).
 
 ---
 
@@ -2020,11 +2043,10 @@ The sandbox **persists across turns** in the same conversation. Prior deliverabl
 
 | Tool | Role |
 |------|------|
-| \`web_search\` | General web: news, reports, tutorials, products, government pages |
-| \`deep_research\` | Scholarly deep search (Google Scholar, with OpenAlex API fallback): journal articles, citations, patents, US case law |
+| \`web_search\` | General and scholarly web: news, reports, journal pages, patents, government sources |
 | \`web_scrape\` | Full page content for URLs returned by search — primary evidence |
 
-There is no separate \`deep_search\` tool — use **\`deep_research\`** for academic/scholarly queries.
+Prefer academic/scholarly query phrasing for literature (author/year/journal keywords).
 
 ---
 
@@ -2039,7 +2061,7 @@ Unless the user specifies otherwise:
 | **maxResults** | **8** per search call | Top hits per query per engine |
 | **scrape budget** | **25–40** unique URLs | Prioritize high-signal pages; skip duplicates and thin aggregators |
 
-User overrides: "use 10 queries", "one round only", "focus on case law" → adjust N, R, or \`deep_research\` category.
+User overrides: "use 10 queries", "one round only", "focus on case law" → adjust N, R, or query phrasing.
 
 ---
 
@@ -2053,7 +2075,7 @@ Track progress with \`update_todos\` / \`read_todos\`. Do not draft the paper un
 
 1. Restate the user's topic as a **single focused research question** (one sentence).
 2. List 3–5 **sub-questions** the paper must answer.
-3. Note domain: STEM / policy / humanities / legal → steers \`deep_research\` category (\`article\` vs \`case_law*\`).
+3. Note domain: STEM / policy / humanities / legal → steers scholarly query phrasing.
 4. If the topic is non-English or the user asked for multilingual coverage, plan **translated query variants** (same meaning, target language keywords).
 
 **Output (mental or written):** research question + sub-questions + domain.
@@ -2072,7 +2094,7 @@ Generate **N distinct query strings** (default N = 6). Each variant must differ 
 | Narrow | One sub-question or facet |
 | Broad | Context + topic for background |
 | Translated | Same query in another language (when relevant) |
-| Scholarly | Author/year/journal-style keywords for \`deep_research\` |
+| Scholarly | Author/year/journal-style keywords for \`web_search\` |
 
 Write variants to \`output/toolLoop/step-1/results/queries.json\`:
 
@@ -2088,20 +2110,18 @@ Write variants to \`output/toolLoop/step-1/results/queries.json\`:
 
 ---
 
-#### Phase 2 — Search (R rounds × N variants × 2 tools)
+#### Phase 2 — Search (R rounds × N variants)
 
 For **each round** r = 1 … R:
 
 For **each query variant** q1 … qN:
 
 1. **\`web_search\`** — \`{ "query": "<variant text>", "maxResults": 8 }\`
-2. **\`deep_research\`** — \`{ "query": "<variant text>", "category": "article", "maxResults": 8 }\`  
-   - Use \`case_law\` / \`case_law_federal\` / \`case_law_state\` when the topic is legal.
-   - Use \`includePatents: true\` only when patents matter.
+2. For scholarly/legal topics, run a second \`web_search\` with academic or case-law phrasing for the same variant.
 
-**Round 1:** execute all N × 2 searches (batch independent calls in parallel when possible).
+**Round 1:** execute all N searches (batch independent calls in parallel when possible).
 
-**Round 2+:** add new variants only for **identified gaps** (missing statistics, outdated data, conflicting claims, uncovered sub-questions). Re-run web_search + deep_research for those gap-targeted variants only, plus re-search any variant that returned zero useful results.
+**Round 2+:** add new variants only for **identified gaps** (missing statistics, outdated data, conflicting claims, uncovered sub-questions). Re-run \`web_search\` for those gap-targeted variants only, plus re-search any variant that returned zero useful results.
 
 **Log every search** in \`output/toolLoop/step-2/results/search-log.json\`:
 
@@ -2249,7 +2269,7 @@ After Phase 5 passes, export the final paper as a print-ready PDF:
 - **Be precise** — quote numbers exactly as in the source; cite the source that states them.
 - **Stay scoped** — do not wander into adjacent topics not tied to the research question.
 - **No fabrication** — if evidence is insufficient, say so in Discussion; do not invent citations or data.
-- **Parallelize** — batch independent \`web_search\`, \`deep_research\`, and \`web_scrape\` calls.
+- **Parallelize** — batch independent \`web_search\` and \`web_scrape\` calls.
 
 ---
 
@@ -2260,7 +2280,7 @@ After the paper is written, Phase 6 passes, and Phase 7 exports the PDF, deliver
 1. **One-line answer** to the research question.
 2. **Deliverables** — paths to \`output/results/<slug>-research-paper.md\` and \`output/results/<slug>-research-paper.pdf\`.
 3. **Evidence summary** — 3–5 bullet findings; each bullet ends with citation ids, e.g. \`(see [2], [5])\`.
-4. **Method snapshot** — "N queries × R rounds; web_search + deep_research; M pages scraped."
+4. **Method snapshot** — "N queries × R rounds; web_search; M pages scraped."
 5. **Limitations** — 1–2 sentences (source types, date range, language, gaps).
 6. **Next steps** — offer workspace promotion via \`promote_artifact\` if useful.
 
@@ -2272,15 +2292,13 @@ Tone: clear, academic, concise.
 
 ## Tools
 
-- **web_search** — general web search (Phase 2)
-- **deep_research** — Google Scholar / case law / patents; OpenAlex fallback when Scholar blocks (Phase 2)
+- **web_search** — general and scholarly web search (Phase 2)
 - **web_scrape** — full page content for evidence (Phase 3)
-- **write_file**, **edit_file** — paper and working JSON artifacts
-- **read_file**, **list_files** — user-provided paths or prior artifacts
+- **edit_files** — paper and working JSON artifacts (\`write\` / \`replace\`)
+- **read_file**, **shell** — user-provided paths or prior artifacts
 - **update_todos**, **read_todos** — multi-phase progress
 - **export_research_pdf** — convert final markdown paper to PDF (Phase 7)
 - **promote_artifact** — copy deliverable to workspace when requested
-- **run_script** — optional transforms on scrape JSON (only when needed)
 `,
     propertiesMd: `name: Research
 description: Structured research papers with web and scholarly search, full-page scraping, and numbered citations. Use when the user asks for a research paper, literature review, academic report, or evidence-backed analysis on a topic.
@@ -2290,7 +2308,7 @@ color: info
 enabled: true
 max_iterations: 80
 
-allowed_tools: read_file, write_file, edit_file, promote_artifact, list_files, web_search, web_scrape, deep_research, update_todos, read_todos, run_script, export_research_pdf
+allowed_tools: read_file, edit_files, promote_artifact, web_search, web_scrape, update_todos, read_todos, run_script, export_research_pdf
 `,
     attachments: {
       "refs/paper-structure.md": {
@@ -2339,7 +2357,7 @@ Plus **References** — numbered list matching inline citations \`[1]\`, \`[2]\`
 ### Methodology
 For agent-conducted research (no primary experiment), describe:
 - Query variants generated (rephrases, translations).
-- Search tools used (\`web_search\`, \`deep_research\` / Google Scholar).
+- Search tools used (\`web_search\` / scholarly queries).
 - URL selection criteria and scraping approach.
 - How evidence was coded, deduplicated, and synthesized.
 
@@ -2453,7 +2471,7 @@ The sandbox **persists across turns** in the same conversation.
 
 **Before starting the canonical workflow on every turn:**
 
-1. Check **Existing sandbox artifacts** in the SANDBOX block and/or \`list_files\` on \`output/results/\`.
+1. Check **Existing sandbox artifacts** in the SANDBOX block and/or \`read_file\` / \`shell\` (\`ls\`) on \`output/results/\`.
 2. Decide: **new site** vs **update existing**.
 
 | Situation | Action |
@@ -2557,11 +2575,8 @@ Follow [refs/design-system.md](refs/design-system.md):
 - validate_website: **Step 4.** Check HTML structure, required files, and relative links.
 - publish_website: **Publish.** Zip a site directory (root \`index.html\` required) and upload to Teralexi hosting; return \`absoluteUrl\` for the user.
 - read_file: Read user content files or prior site.json.
-- write_file: Write intermediate site.json in step 2.
-- list_files: Inspect output directory after generation.
-- glob_files: Find input files by pattern.
-- file_status: Check if a path exists before reading.
-- run_script_file: Run \`scripts/validate-site.mjs\` for deeper checks when needed.
+- edit_files: Write intermediate site.json in step 2 (mode \`write\`).
+- shell: Optional checks (e.g. \`ls\`, validate scripts under \`scripts/\`).
 - promote_artifact: Copy finished site folder into the user's workspace.
 
 ---
@@ -2601,7 +2616,7 @@ enabled: true
 refs_dir: refs, templates
 scripts_dir: scripts
 form_dir: form
-allowed_tools: read_file, edit_file, write_file, apply_patch, delete_file, move_file, copy_file, promote_artifact, list_files, grep_files, glob_files, search_files, file_status, run_script, run_script_file, web_search, web_scrape, publish_website
+allowed_tools: read_file, edit_files, promote_artifact, shell, run_script, run_script_file, web_search, web_scrape, publish_website
 `,
     attachments: {
       "form/landing-content.form.md": {

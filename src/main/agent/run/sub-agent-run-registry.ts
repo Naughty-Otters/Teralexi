@@ -29,17 +29,12 @@ const log = createLogger('agent.subAgentRegistry')
 
 const READ_ONLY_TOOL_HINTS = new Set([
   'read_file',
-  'grep_files',
-  'glob_files',
-  'list_files',
   'lsp',
-  'git_diff',
-  'git_status',
-  'git_log',
-  'git_show',
   'web_search',
+  'web_scrape',
+  'read_todos',
+  'update_todos',
 ])
-
 function shouldIsolateGitWorktree(params: ResolveChildAgentParams): boolean {
   if (params.isolateGitWorktree === false) return false
   if (params.workspacePathOverride?.trim()) return false

@@ -16,7 +16,8 @@ export const exploreManifestInjector: AgentInjector = {
   id: 'explore-manifest',
   order: INJECTOR_ORDER.EXPLORE_MANIFEST,
   applies({ profile, ctx }) {
-    if (profile.stage !== 'todoExecution' || !profile.isCodingAgent) {
+    if (!profile.isCodingAgent) return false
+    if (profile.stage !== 'todoExecution' && profile.stage !== 'toolLoop') {
       return false
     }
     const conversationId = ctx.opts.conversationId?.trim()

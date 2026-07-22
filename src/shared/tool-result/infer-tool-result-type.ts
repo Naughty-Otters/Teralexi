@@ -7,7 +7,7 @@ const TODO_TOOL_NAMES = new Set(['update_todos', 'read_todos'])
 const TERMINAL_TOOL_NAMES = new Set([
   'run_script',
   'run_script_file',
-  'run_workspace_command',
+  'shell',
 ])
 
 function asRecord(value: unknown): Record<string, unknown> | null {

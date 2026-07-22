@@ -33,6 +33,8 @@ describe('coding-mode', () => {
   it('normalizes subagent profile types', () => {
     expect(parseSubagentProfileType('architect')).toBe('architect')
     expect(parseSubagentProfileType('plan')).toBe('architect')
+    expect(parseSubagentProfileType('bash')).toBe('bash')
+    expect(parseSubagentProfileType('browser')).toBe('browser')
     expect(parseSubagentProfileType('nope')).toBeNull()
   })
 })

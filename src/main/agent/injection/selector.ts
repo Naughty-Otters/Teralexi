@@ -46,6 +46,7 @@ const TOOL_LOOP_CODING_INSTRUCTIONS = [
   'workspace-open-files',
   'git-status',
   'workspace-structure',
+  'explore-manifest',
   'session-tool-ledger',
   'language',
   'deep-thinking-after-answer',

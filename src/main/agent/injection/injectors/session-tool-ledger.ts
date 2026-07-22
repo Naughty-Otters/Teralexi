@@ -8,7 +8,7 @@ export function formatSessionReadLedger(paths: readonly string[]): string | null
   const shown = paths.slice(0, MAX_LEDGER_PATHS)
   const lines = [
     '### Session read ledger',
-    'These paths were already read earlier in this user turn (explore, planning, or prior todos). Do not `read_file` the same path+offset+limit again — use prior results, read the next page with a new `offset` (see the prior `note`), or pass `reason` if you truly need a fresh read.',
+    'These paths were already read earlier in this user turn (explore, planning, prior todos, or a parent agent). Do not `read_file` the same path+offset+limit again — use prior results, read the next page with a new `offset` (see the prior `note`), or pass `reason` if you truly need a fresh read.',
     ...shown.map((p) => `- \`${p}\``),
   ]
   if (paths.length > shown.length) {

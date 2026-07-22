@@ -16,7 +16,7 @@ For implementing fixes, suggest the **Coding** skill.
 
 ### Workflow
 
-1. **Scope** — `git_status` / `git_diff` (or `read_file` for named paths). Use `grep_files`, `glob_files`, `lsp` to gather context.
+1. **Scope** — via `shell`: `git status` / `git diff` (or `read_file` for named paths). Use `lsp` and read-only `shell` (`rg`/`find`) to gather context.
 2. **Analyze** — Check correctness, edge cases, security, tests, conventions.
 3. **Report** — Structured findings (see below). No file edits.
 
@@ -37,7 +37,7 @@ Sort by severity (Critical → Suggestion → Nice-to-have). One row per finding
 
 ### Rules
 
-- Read-only: no `edit_file`, `write_file`, `apply_patch`, or `run_workspace_command` that mutates state.
+- Read-only: no `edit_files` or `shell` that mutates state.
 - Cite file:line when possible.
 - Be direct and technical; prioritize real bugs over style nitpicks.
 
@@ -45,9 +45,8 @@ Sort by severity (Critical → Suggestion → Nice-to-have). One row per finding
 
 ## Tools
 
-- `read_file`, `grep_files`, `glob_files`, `list_files`, `lsp`
-- `git_status`, `git_diff`, `git_log`, `git_show`
-- `invoke_agent` — delegate deep review per [../coding/refs/sub-agents.md](../coding/refs/sub-agents.md)
+- `read_file`, `lsp`, `shell` (read-only: `rg`, `find`, `git status|diff|log|show`)
+- `invoke_agents` — delegate deep review per [../coding/refs/sub-agents.md](../coding/refs/sub-agents.md)
 
 ---
 
@@ -66,6 +65,6 @@ Review my uncommitted changes.
 
 ### Assistant
 
-1. `git_status`, then `git_diff`.
+1. `shell` → `git status`, then `git diff`.
 2. Read changed files for context.
 3. Return findings table with severity, location, and finding.

@@ -39,8 +39,9 @@ describe('previewFileChange', () => {
     await rm(sandboxRoot, { recursive: true, force: true })
   })
 
-  it('previews edit_file without writing', async () => {
-    const result = await previewFileChange('edit_file', {
+  it('previews edit_files replace without writing', async () => {
+    const result = await previewFileChange('edit_files', {
+      mode: 'replace',
       path: 'hello.txt',
       old_string: 'world',
       new_string: 'otter',
@@ -55,8 +56,9 @@ describe('previewFileChange', () => {
     )
   })
 
-  it('previews write_file overwrite', async () => {
-    const result = await previewFileChange('write_file', {
+  it('previews edit_files write overwrite', async () => {
+    const result = await previewFileChange('edit_files', {
+      mode: 'write',
       path: 'hello.txt',
       data: 'replacement',
       overwrite: true,
@@ -67,8 +69,9 @@ describe('previewFileChange', () => {
     expect(result.files[0]?.diff).toContain('+replacement')
   })
 
-  it('previews apply_patch for new file', async () => {
-    const result = await previewFileChange('apply_patch', {
+  it('previews edit_files patch for new file', async () => {
+    const result = await previewFileChange('edit_files', {
+      mode: 'patch',
       patch_text: `*** Begin Patch
 *** Add File: new.txt
 +line one
@@ -89,8 +92,14 @@ describe('previewFileChange', () => {
       error: expect.stringContaining('Unsupported tool'),
     })
 
+    await expect(previewFileChange('move_file', {})).resolves.toMatchObject({
+      ok: false,
+      error: expect.stringContaining('Unsupported tool'),
+    })
+
     await expect(
-      previewFileChange('write_file', {
+      previewFileChange('edit_files', {
+        mode: 'write',
         path: 'hello.txt',
         data: 'x',
         overwrite: true,
@@ -102,7 +111,8 @@ describe('previewFileChange', () => {
     })
 
     await expect(
-      previewFileChange('write_file', {
+      previewFileChange('edit_files', {
+        mode: 'write',
         path: 'hello.txt',
         data: 'x',
         overwrite: false,
@@ -113,16 +123,17 @@ describe('previewFileChange', () => {
     })
   })
 
-  it('returns apply_patch validation errors', async () => {
+  it('returns edit_files patch validation errors', async () => {
     await expect(
-      previewFileChange('apply_patch', { patch_text: '' }),
+      previewFileChange('edit_files', { mode: 'patch', patch_text: '' }),
     ).resolves.toMatchObject({
       ok: false,
       error: expect.stringContaining('Invalid patch_text'),
     })
 
     await expect(
-      previewFileChange('apply_patch', {
+      previewFileChange('edit_files', {
+        mode: 'patch',
         patch_text: `*** Begin Patch\n*** End Patch`,
       }),
     ).resolves.toMatchObject({
@@ -131,7 +142,8 @@ describe('previewFileChange', () => {
     })
 
     await expect(
-      previewFileChange('apply_patch', {
+      previewFileChange('edit_files', {
+        mode: 'patch',
         patch_text: `*** Begin Patch
 *** Delete File: missing.txt
 *** End Patch`,
@@ -145,7 +157,8 @@ describe('previewFileChange', () => {
   it('returns errors when sandbox is inactive', async () => {
     setSandboxRoot(undefined)
     await expect(
-      previewFileChange('edit_file', {
+      previewFileChange('edit_files', {
+        mode: 'replace',
         path: 'hello.txt',
         old_string: 'a',
         new_string: 'b',
@@ -154,9 +167,10 @@ describe('previewFileChange', () => {
     setSandboxRoot(sandboxRoot)
   })
 
-  it('validates edit_file inputs and missing files', async () => {
+  it('validates edit_files replace inputs and missing files', async () => {
     await expect(
-      previewFileChange('edit_file', {
+      previewFileChange('edit_files', {
+        mode: 'replace',
         path: '',
         old_string: 'a',
         new_string: 'b',
@@ -164,7 +178,8 @@ describe('previewFileChange', () => {
     ).resolves.toMatchObject({ ok: false, error: expect.stringContaining('path') })
 
     await expect(
-      previewFileChange('edit_file', {
+      previewFileChange('edit_files', {
+        mode: 'replace',
         path: 'hello.txt',
         old_string: 'world',
         new_string: 'world',
@@ -172,7 +187,8 @@ describe('previewFileChange', () => {
     ).resolves.toMatchObject({ ok: false, error: expect.stringContaining('identical') })
 
     await expect(
-      previewFileChange('edit_file', {
+      previewFileChange('edit_files', {
+        mode: 'replace',
         path: 'missing.txt',
         old_string: 'x',
         new_string: 'y',
@@ -181,7 +197,8 @@ describe('previewFileChange', () => {
 
     await mkdir(path.join(sandboxRoot, 'subdir'))
     await expect(
-      previewFileChange('edit_file', {
+      previewFileChange('edit_files', {
+        mode: 'replace',
         path: 'subdir',
         old_string: 'x',
         new_string: 'y',
@@ -189,8 +206,9 @@ describe('previewFileChange', () => {
     ).resolves.toMatchObject({ ok: false, error: expect.stringContaining('not a file') })
   })
 
-  it('returns edit_file error when replacement cannot be applied', async () => {
-    const result = await previewFileChange('edit_file', {
+  it('returns edit_files replace error when replacement cannot be applied', async () => {
+    const result = await previewFileChange('edit_files', {
+      mode: 'replace',
       path: 'hello.txt',
       old_string: 'missing-substring',
       new_string: 'replacement',
@@ -201,8 +219,9 @@ describe('previewFileChange', () => {
     }
   })
 
-  it('previews edit_file create via empty old_string', async () => {
-    const result = await previewFileChange('edit_file', {
+  it('previews edit_files create via empty old_string', async () => {
+    const result = await previewFileChange('edit_files', {
+      mode: 'replace',
       path: 'brand-new-edit.txt',
       old_string: '',
       new_string: 'created',
@@ -213,8 +232,9 @@ describe('previewFileChange', () => {
     }
   })
 
-  it('previews apply_patch rename and write_file create', async () => {
-    const renamePreview = await previewFileChange('apply_patch', {
+  it('previews edit_files patch rename and write create', async () => {
+    const renamePreview = await previewFileChange('edit_files', {
+      mode: 'patch',
       patch_text: `*** Begin Patch
 *** Update File: hello.txt
 *** Move to: renamed.txt
@@ -229,7 +249,8 @@ describe('previewFileChange', () => {
       expect(renamePreview.files[0]?.moveFrom).toBe('hello.txt')
     }
 
-    const writeCreate = await previewFileChange('write_file', {
+    const writeCreate = await previewFileChange('edit_files', {
+      mode: 'write',
       path: 'brand-new.txt',
       data: 'new-content',
       overwrite: false,
@@ -241,8 +262,11 @@ describe('previewFileChange', () => {
     }
   })
 
-  it('previews delete_file without deleting', async () => {
-    const result = await previewFileChange('delete_file', { path: 'hello.txt' })
+  it('previews edit_files delete without deleting', async () => {
+    const result = await previewFileChange('edit_files', {
+      mode: 'delete',
+      path: 'hello.txt',
+    })
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.files[0]?.action).toBe('delete')
@@ -250,28 +274,5 @@ describe('previewFileChange', () => {
     expect(await readFileFs(path.join(sandboxRoot, 'hello.txt'), 'utf-8')).toBe(
       'hello world',
     )
-  })
-
-  it('previews move_file and copy_file', async () => {
-    const move = await previewFileChange('move_file', {
-      source: 'hello.txt',
-      destination: 'moved.txt',
-    })
-    expect(move.ok).toBe(true)
-    if (move.ok) {
-      expect(move.files[0]?.action).toBe('rename')
-      expect(move.files[0]?.moveFrom).toBe('hello.txt')
-      expect(move.files[0]?.path).toBe('moved.txt')
-    }
-
-    const copy = await previewFileChange('copy_file', {
-      source: 'hello.txt',
-      destination: 'copy.txt',
-    })
-    expect(copy.ok).toBe(true)
-    if (copy.ok) {
-      expect(copy.files[0]?.action).toBe('create')
-      expect(copy.files[0]?.path).toBe('copy.txt')
-    }
   })
 })

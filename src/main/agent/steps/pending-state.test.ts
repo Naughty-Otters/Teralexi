@@ -131,6 +131,53 @@ describe('savePendingApprovalState', () => {
     )
   })
 
+  it('preserves nested runStack when re-saving parent pending state', async () => {
+    const { getPendingExecution, setPendingExecution } =
+      await import('../pending/store')
+    vi.mocked(getPendingExecution).mockReturnValue({
+      currentMessages: [],
+      stepOutputs: {},
+      stepContexts: {},
+      stepHistory: [],
+      nextTodoIndex: 0,
+      collectedFormByTodoId: {},
+      runStack: [
+        {
+          runId: 'child-1',
+          agentId: 'skill:coding',
+          currentMessages: [],
+          stepOutputs: {},
+          stepContexts: {},
+          stepHistory: [],
+          nextTodoIndex: 0,
+          collectedFormByTodoId: {},
+        },
+      ],
+      activeRunId: 'child-1',
+    })
+    const ctx = {
+      opts: { conversationId: 'c1', assistantMessageId: 'a1' },
+      currentMessages: [],
+      stepOutputs: {},
+      stepContexts: {},
+      stepHistory: [],
+      collectedFormByTodoId: {},
+      lastHitlPausedStageId: 'foreachItem',
+    }
+    savePendingApprovalState(ctx as never, 1, 3)
+    expect(setPendingExecution).toHaveBeenCalledWith(
+      'pending-key',
+      expect.objectContaining({
+        nextTodoIndex: 1,
+        pendingApprovalTodoId: 3,
+        activeRunId: 'child-1',
+        runStack: [
+          expect.objectContaining({ runId: 'child-1', agentId: 'skill:coding' }),
+        ],
+      }),
+    )
+  })
+
   it('no-ops when storage key is missing', async () => {
     const { pendingExecutionStorageKey, setPendingExecution } =
       await import('../pending/store')

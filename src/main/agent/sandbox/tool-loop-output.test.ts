@@ -19,7 +19,6 @@ import {
   toolLoopOutputRelBase,
 } from './tool-loop-output'
 import { readFile as readFileTool, writeFile as writeFileTool } from '@toolSet/file-system'
-import { runScript } from '@toolSet/shell-command'
 
 const execFileMock = vi.hoisted(() => vi.fn())
 
@@ -160,7 +159,7 @@ describe('tool-loop per-step sandbox output', () => {
   })
 
   describe('use case 1: each step writes only under its own step key', () => {
-    it('isolates write_file, run_script, and legacy output/results paths per step', async () => {
+    it('isolates write_file and legacy output/results paths per step', async () => {
       // --- Step A ---
       syncSandboxGlobals(stepKeyA)
       ensureToolLoopStepOutputDirs(sandboxRoot, stepKeyA)
@@ -175,13 +174,12 @@ describe('tool-loop per-step sandbox output', () => {
         stepArtifactPath(sandboxRoot, stepKeyA, 'step-a-artifact.md'),
       )
 
-      mockExecSuccess('capture-a\n')
-      const scriptA = await runScript.execute({
-        scriptType: 'python',
-        scriptContent: 'print("a")',
-        captureRelativePath: 'run-a-capture.txt',
+      const captureA = await writeFileTool.execute({
+        path: 'output/results/run-a-capture.txt',
+        data: 'capture-a\n',
+        overwrite: true,
       })
-      expect(scriptA).toMatchObject({ success: true })
+      expect(captureA).toMatchObject({ written: true })
       expect(
         await pathExists(
           stepArtifactPath(sandboxRoot, stepKeyA, 'run-a-capture.txt'),
@@ -203,11 +201,10 @@ describe('tool-loop per-step sandbox output', () => {
         stepArtifactPath(sandboxRoot, stepKeyB, 'step-b-artifact.md'),
       )
 
-      mockExecSuccess('capture-b\n')
-      await runScript.execute({
-        scriptType: 'python',
-        scriptContent: 'print("b")',
-        captureRelativePath: 'run-b-capture.txt',
+      await writeFileTool.execute({
+        path: 'output/results/run-b-capture.txt',
+        data: 'capture-b\n',
+        overwrite: true,
       })
 
       // Step B folders must not contain Step A artifacts

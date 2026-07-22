@@ -116,6 +116,13 @@ export function formatToolHumanReadableAction(
       return `Write file ${quotePath(path || 'file')}`
     case 'edit_file':
       return `Edit file ${quotePath(path || 'file')}`
+    case 'edit_files': {
+      const mode = typeof record?.mode === 'string' ? record.mode.trim() : ''
+      if (mode === 'delete') return `Delete file ${quotePath(path || 'file')}`
+      if (mode === 'write') return `Write file ${quotePath(path || 'file')}`
+      if (mode === 'patch') return 'Apply patch'
+      return `Edit file ${quotePath(path || 'file')}`
+    }
     case 'apply_patch':
       return `Apply changes to ${quotePath(path || 'file')}`
     case 'delete_file':
@@ -136,7 +143,7 @@ export function formatToolHumanReadableAction(
       return path ? `Check status of ${quotePath(path)}` : 'Check file status'
     case 'storage_check':
       return 'Check project storage usage'
-    case 'run_workspace_command': {
+    case 'shell': {
       const command = Array.isArray(record?.command)
         ? record.command.map(String).join(' ')
         : typeof record?.command === 'string'
@@ -176,12 +183,8 @@ export function formatToolHumanReadableAction(
       return 'Start planning'
     case 'exit_plan_mode':
       return 'Finish planning'
-    case 'invoke_agent':
-      return 'Delegate work to a specialist agent'
     case 'invoke_agents':
       return 'Delegate work to specialist agents'
-    case 'wait_for_sub_agent_runs':
-      return 'Wait for delegated agents to finish'
     case 'best_of_n':
       return 'Run best-of-N parallel candidates'
     case 'promote_artifact':

@@ -172,6 +172,7 @@ export class AgentRun {
     })
 
     const childFlow = new AgentFlow(opts, model)
+    childFlow.context.adoptToolSessionFrom(parent.context)
     childFlow.fromAgentConfig()
 
     return new AgentRun(childFlow, childMeta, parent)

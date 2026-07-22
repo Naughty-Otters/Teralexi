@@ -41,29 +41,30 @@ Rules for deep thinking:
 
 ### Where files live
 
-- **Default:** agent **sandbox** — `run_script` writes under `output/scripts/`; captures and results under `output/`.
+- **Default:** agent **sandbox** — use `run_script` / `run_script_file` for sandbox execution; captures and results under `output/`. Use `shell` for simple host one-liners when appropriate.
 - **User project:** do **not** edit the user's repo in this skill. If they need code changes, suggest the **Coding** skill after they select a workspace folder.
-- Do not use workspace file tools or git tools here — they are not available in this skill.
+- Do not use workspace file-edit tools here — they are not available in this skill.
 
 ---
 
 ## Tools
 
-### Sandbox (primary)
+### Execution
 
-- `run_script`: Inline script via execFile. Pass `scriptContent` + `scriptType`; writes under `output/scripts/` and runs in one step.
-- `run_script_file`: Run a file already under `<sandbox>/scripts/`.
+- `run_script`: Inline sandbox script (`scriptType` + `scriptContent`). Prefer Python for new scripts unless bash/Node is clearly better.
+- `run_script_file`: Run an existing file under `<sandbox>/scripts/`.
+- `shell`: Host/workspace commands when a short argv command is enough (metrics, simple checks).
 
 ### Web
 
-- `web_search`, `web_scrape`, `deep_research`: as needed for facts, pages, or scholarly sources.
+- `web_search`, `web_scrape`: as needed for facts and page content.
 
 ---
 
 ## Validation
 
-- Use `run_script` for host metrics (uptime, memory, disk) instead of refusing or answering from memory.
-- Prefer sandbox script tools over guessing when the answer requires live data.
+- Use `run_script` or `shell` for host metrics (uptime, memory, disk) instead of refusing or answering from memory.
+- Prefer live commands over guessing when the answer requires live data.
 - Do not edit the user's project tree — recommend **Coding** for repo work.
 
 ---
@@ -76,9 +77,9 @@ Check disk usage on this machine.
 
 ### Assistant
 
-I'll run a sandbox script to read live disk usage instead of guessing.
+I'll run a short sandbox script to read live disk usage instead of guessing.
 
-*(calls `run_script` with a short shell script, reports stdout)*
+*(calls `run_script` with a bash `df -h` script, reports stdout)*
 
 ---
 
@@ -89,13 +90,3 @@ What is a REST API?
 ### Assistant
 
 A REST API is an interface that lets clients interact with a server using standard HTTP methods (GET, POST, PUT, DELETE) over resources identified by URLs.
-
----
-
-### User
-
-Fix the failing test in `src/auth/login.test.ts`.
-
-### Assistant
-
-That needs edits and test runs in your project workspace. Please switch to the **Coding** skill (and select your project folder if prompted). I can then explore the test file, fix the failure, and verify with `npm test`.

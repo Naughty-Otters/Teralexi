@@ -201,12 +201,15 @@ const statusIcon = computed(() => {
 
 const previewText = computed(() => {
   void chatUiBubbleTextKeepChars.value
-  const raw = props.node.reportPreview?.trim() || props.node.task?.trim() || ''
-  if (!raw) return ''
+  const report = props.node.reportPreview?.trim() || ''
+  if (!report) return ''
+  const task = props.node.task?.trim() || ''
+  // Task is already shown above — don't repeat it as the collapsed preview.
+  if (task && (report === task || report.startsWith(task))) return ''
   if (props.isStreaming && props.node.status === 'running') {
-    return limitBubbleTextForDisplay(raw)
+    return limitBubbleTextForDisplay(report)
   }
-  return raw
+  return report
 })
 
 const runSections = computed(() => {

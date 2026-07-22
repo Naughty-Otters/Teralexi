@@ -17,18 +17,20 @@ Use **Coding Review** for read-only review. Use **Coding PR** for branch/PR-only
 
 ### Interaction modes
 
-See [refs/plan-modes.md](refs/plan-modes.md). For long-running commands, pass `background: true` to `run_workspace_command`.
+See [refs/plan-modes.md](refs/plan-modes.md). For long-running commands, pass `background: true` to `shell`.
 
 ---
 
 ### Workflow
 
-1. **Explore** — Before changing anything, understand the code. Search and read **source files** first (see **Source scope**). Use `grep_files` / `glob_files` to locate files and `read_file` to read them. Prefer `lsp` (definition, references, hover, document_symbols, workspace_symbols) over text search. Batch independent reads. Do not re-read a file whose content already appears in tool results this turn unless it was edited or you need a new line range (`offset`).
-2. **Edit** — `edit_file` or `apply_patch` for partial changes; `write_file` only for new files or full rewrites; `delete_file` to remove. Match existing style and patterns.
-3. **Verify** — Run project checks with `run_workspace_command` (argv arrays). Read output; fix failures and re-run until pass.
-4. **Review** — `git_status`, then `git_diff` before summarizing.
+1. **Explore** — Prefer `lsp` (definition, references, hover, document_symbols, workspace_symbols). Read with `read_file`. For text search / globs, use `shell` (e.g. `rg`, `find`) — or delegate `profile: "explore"` / `"bash"`. Do not re-read a file already in the session read ledger unless it was edited or you need a new offset.
+2. **Edit** — One tool: `edit_files` with `mode`: `replace` (partial), `write` (new/full), `delete`, or `patch` (multi-file). Match existing style.
+3. **Verify** — `shell` (argv arrays). Read output; fix failures and re-run until pass.
+4. **Review** — `shell` with `["git","status"]` and `["git","diff"]` before summarizing (or `profile: "bash"`).
 
 Procedural details: [refs/procedural-contracts.md](refs/procedural-contracts.md). Sub-agents: [refs/sub-agents.md](refs/sub-agents.md).
+
+**Priority sub-agents (Cursor built-ins):** when work would flood context, call `invoke_agents` with `profile` before doing it inline — `explore` (search), `bash` (command series via the `shell` tool — there is no `bash`/`run_script` tool), `browser` (web/DOM). Use a one-element `runs` array for a single child. Then optional `architect`/`plan` → `coder`. Consume the brief; do not re-run the same loop in the parent.
 
 ---
 
@@ -38,7 +40,7 @@ Procedural details: [refs/procedural-contracts.md](refs/procedural-contracts.md)
 
 **Out of scope** unless explicitly requested: binaries/media, `node_modules/`, lockfiles, `dist/`/`build/`, generated output, secrets (`.env`, keys).
 
-Prefer `grep_files` / `glob_files` with source globs (e.g. `**/*.{ts,tsx,js,py}`) over blind repo-wide scans.
+Prefer scoped `rg`/`find` via shell (source globs) over blind repo-wide scans.
 
 ---
 
@@ -58,7 +60,7 @@ Prefer `grep_files` / `glob_files` with source globs (e.g. `**/*.{ts,tsx,js,py}`
 ### Where files live
 
 - **Project code:** workspace-relative paths (`src/…`, `package.json`). Absolute paths under the workspace root are OK.
-- **Sandbox (`output/`, `scripts/`):** agent artifacts only — rare. Use `run_workspace_command` for tests, not `run_script`.
+- **Sandbox (`output/`, `scripts/`):** agent artifacts only — rare. Use `shell` for tests.
 - **Promote sandbox deliverables** with `promote_artifact` when copying from `output/toolLoop/.../results/` into the workspace.
 
 ---
@@ -66,7 +68,7 @@ Prefer `grep_files` / `glob_files` with source globs (e.g. `**/*.{ts,tsx,js,py}`
 ### Rules
 
 - Do not delete or overwrite without clear reason.
-- Do not commit or push unless the user asks.
+- Do not commit or push unless the user asks (use **Coding PR** for structured commit/PR tools).
 - If no workspace is set, ask the user to pick a folder before editing.
 - Communicate concisely: what changed, why, verification result.
 
@@ -74,9 +76,14 @@ Prefer `grep_files` / `glob_files` with source globs (e.g. `**/*.{ts,tsx,js,py}`
 
 ## Tools
 
-Core (explicit): `read_file`, `edit_file`, `write_file`, `apply_patch`, `delete_file`, `move_file`, `copy_file`, `promote_artifact`, `grep_files`, `glob_files`, `lsp`, `update_todos`, `read_todos`, `invoke_agent`.
+Cursor-like lean set (explicit only — no tag expansion):
 
-Also enabled via skill defaults: `list_files`, `run_workspace_command`, git tools, `enter_plan_mode`, `exit_plan_mode`, `invoke_agents`.
+- Read / symbols: `read_file`, `lsp`
+- Edit: `edit_files` (`replace` | `write` | `delete` | `patch`)
+- Shell (tests, grep/glob, git): `shell`
+- Web: `web_search`, `web_scrape`
+- Todos / plan / promote: `update_todos`, `read_todos`, `enter_plan_mode`, `exit_plan_mode`, `promote_artifact`
+- Sub-agents: `invoke_agents` (one-element `runs` for a single child)
 
 ---
 
@@ -84,8 +91,8 @@ Also enabled via skill defaults: `list_files`, `run_workspace_command`, git tool
 
 - Never edit a file you have not read in this task (unless applying a user-provided patch).
 - After edits, run the project's test/lint/typecheck command when one exists.
-- Confirm intended diff with `git_diff` before claiming completion.
-- Do not use `run_script` for project tests — use `run_workspace_command`.
+- Confirm intended diff with `git diff` via `shell` before claiming completion.
+- Prefer `shell` for project tests and git/`rg` commands.
 
 ---
 
@@ -97,10 +104,10 @@ Add input validation to `createUser` in `src/auth/user.ts`.
 
 ### Assistant
 
-1. `grep_files` for `createUser`, then `read_file` on `src/auth/user.ts`.
-2. `edit_file` with minimal validation matching nearby patterns.
-3. `run_workspace_command` with `["npm","test","--","auth"]` (or project equivalent).
-4. `git_diff` and summarize changes + test result.
+1. `lsp` / shell `rg` for `createUser`, then `read_file` on `src/auth/user.ts`.
+2. `edit_files` mode `replace` with minimal validation matching nearby patterns.
+3. `shell` with `["npm","test","--","auth"]` (or project equivalent).
+4. `shell` `["git","diff"]` and summarize.
 
 ---
 
@@ -110,4 +117,4 @@ Where is `SkillDefinition` defined?
 
 ### Assistant
 
-Use `lsp` with `workspace_symbols` or `grep_files` on `SkillDefinition`, then `read_file` the defining file — do not guess the path.
+Use `lsp` with `workspace_symbols` (or shell `rg`), then `read_file` the defining file — do not guess the path.

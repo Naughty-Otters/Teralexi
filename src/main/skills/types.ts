@@ -216,9 +216,9 @@ export interface ExecutionSteps<TTool = SkillTool> {
     tools: TTool[]
     /** Maximum number of tool-call iterations before forcing a final answer (default: 40) */
     maxIterations?: number
-    /** When true, exposes the `invoke_agent` tool to run nested agent pipelines. */
+    /** When true, exposes the `invoke_agents` tool to run nested agent pipelines. */
     allowSubAgents?: boolean
-    /** Optional allow-list of catalog agent ids for `invoke_agent`. */
+    /** Optional allow-list of catalog agent ids for `invoke_agents`. */
     subAgentIds?: string[]
   }
   /** Declarative sub-agent stages (see {@link AgentFlow.subFlow}). */

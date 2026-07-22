@@ -51,7 +51,7 @@ describe('coding-agent-policy', () => {
     const toolSet = {
       read_file: { needsApproval: false },
       write_file: { needsApproval: true },
-      run_workspace_command: { needsApproval: true },
+      shell: { needsApproval: true },
     }
     applyCodingAgentPolicy(toolSet, 'conv-1', 'coding')
     expect(Object.keys(toolSet).sort()).toEqual(['read_file'])
@@ -63,11 +63,11 @@ describe('coding-agent-policy', () => {
     } as never)
     const toolSet = {
       write_file: { needsApproval: true },
-      run_workspace_command: { needsApproval: true },
+      shell: { needsApproval: true },
     }
     applyCodingAgentPolicy(toolSet, 'conv-1', 'documents')
     expect(toolSet.write_file.needsApproval).toBe(false)
-    expect(toolSet.run_workspace_command.needsApproval).toBe(false)
+    expect(toolSet.shell.needsApproval).toBe(false)
   })
 
   it('explore mode is ignored for non-coding skills', () => {
@@ -120,12 +120,12 @@ describe('coding-agent-policy', () => {
       write_file: { needsApproval: true },
       exit_plan_mode: { needsApproval: true },
       enter_plan_mode: { needsApproval: true },
-      run_workspace_command: { needsApproval: true },
+      shell: { needsApproval: true },
     }
     applyCodingAgentPolicy(toolSet, 'conv-1', 'coding')
     expect(toolSet.exit_plan_mode.needsApproval).toBe(true)
     expect(toolSet.enter_plan_mode.needsApproval).toBe(false)
-    expect(toolSet.run_workspace_command).toBeUndefined()
+    expect(toolSet.shell).toBeUndefined()
     expect(toolSet.write_file).toBeDefined()
   })
 
@@ -135,11 +135,11 @@ describe('coding-agent-policy', () => {
     } as never)
     const toolSet = {
       write_file: { needsApproval: true },
-      run_workspace_command: { needsApproval: true },
+      shell: { needsApproval: true },
     }
     applyCodingAgentPolicy(toolSet, 'conv-1', 'coding')
     expect(toolSet.write_file.needsApproval).toBe(false)
-    expect(toolSet.run_workspace_command.needsApproval).toBe(false)
+    expect(toolSet.shell.needsApproval).toBe(false)
   })
 
   it('skips explore and plan-mode tool filtering for sub-agent runs', () => {
@@ -149,10 +149,10 @@ describe('coding-agent-policy', () => {
     const toolSet = {
       read_file: { needsApproval: false },
       write_file: { needsApproval: true },
-      run_workspace_command: { needsApproval: true },
+      shell: { needsApproval: true },
     }
     applyCodingAgentPolicy(toolSet, 'conv-1', 'coding', 1)
     expect(toolSet.write_file).toBeDefined()
-    expect(toolSet.run_workspace_command).toBeDefined()
+    expect(toolSet.shell).toBeDefined()
   })
 })

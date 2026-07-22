@@ -11,4 +11,4 @@ variant: pr
 variant_label: PR
 group_order: 1
 variant_order: 3
-allowed_tools: read_file, grep_files, git_status, git_diff, git_log, git_show, git_add, git_reset, git_commit, git_branch, git_checkout, git_push, git_fetch, git_create_pr, invoke_agent
+allowed_tools: read_file, shell, invoke_agents

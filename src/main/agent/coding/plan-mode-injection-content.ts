@@ -28,7 +28,7 @@ const PLAN_READY_EXIT_REMINDER =
 const SPARSE_REMINDER =
   'Explore mode is active. Continue read-only research, keep the plan file and update_todos list in sync, ' +
   'then call exit_plan_mode when the plan is ready for approval. ' +
-  'During explore, build an inventory of files and remote resources (URLs, web_search, web_scrape, deep_research); on exit, the engine saves `plans/manifest.json` for execution todos — do not re-scan the repo or re-fetch the same URLs during execution.'
+  'During explore, build an inventory of files and remote resources (URLs, web_search, web_scrape); on exit, the engine saves `plans/manifest.json` for execution todos — do not re-scan the repo or re-fetch the same URLs during execution.'
 
 const PLAN_MODE_PERSISTENCE_RULE =
   '**CRITICAL:** Call `update_todos` with the full step list — that writes `plans/todos.json` and renders `plans/<slug>.md` from the Jinja plan template. ' +
@@ -76,7 +76,7 @@ export function fullPlanReminder(
     '',
     'Workflow:',
     '0. enter_plan_mode to start planning',
-    '1. Explore read-only (read_file, grep, search_files, web_search, web_scrape, deep_research, lsp, git_diff, etc.) — do NOT run scripts or shell commands during planning.',
+    '1. Explore read-only (read_file, lsp, web_search, web_scrape) — do NOT run shell or mutating commands during planning.',
     '2. design and seed the task list for downstream based on the user request (each step needs success_criteria; add verify_command when a shell check applies)',
     PLAN_MODE_TODO_GUIDANCE,
     '3. Call `exit_plan_mode` only after the plan file is written — the user must approve before implementation.',
@@ -105,7 +105,7 @@ function planFilePendingReminder(planPath: string | null): string {
   return [
     '**Plan file not written yet.** The plan must be saved to disk before exit_plan_mode.',
     planPath
-      ? `Overwrite \`${planPath}\` with write_file or edit_file — do not leave the plan only in chat.`
+      ? `Overwrite \`${planPath}\` with edit_files (mode write or replace) — do not leave the plan only in chat.`
       : 'Call enter_plan_mode or set a workspace so a plan file path is available.',
     '',
     PLAN_MODE_PERSISTENCE_RULE,

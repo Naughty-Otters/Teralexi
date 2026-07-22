@@ -8,6 +8,14 @@ export type SubAgentChildParams = {
   allowedToolNames?: string[] | 'all'
   /** When false, keep worktree for manual Merge/PR (e.g. best-of-N). */
   autoMergeWorktree?: boolean
+  /** Force / skip isolated git worktree (profiles set this explicitly). */
+  isolateGitWorktree?: boolean
+  /** Appended to the child catalog system prompt (specialized profile instructions). */
+  systemPromptAddendum?: string
+  /** When true, seed with slim explore-style context (no full parent thread). */
+  slimContext?: boolean
+  /** MCP exposure for profiled children (`none` | `browser` | `all`). */
+  mcpAccess?: 'none' | 'browser' | 'all'
 }
 
 export type SubAgentParentRun = {
@@ -193,6 +201,10 @@ export function buildSubAgentChildParams(
     task: string
     allowedToolNames?: string[] | 'all'
     autoMergeWorktree?: boolean
+    isolateGitWorktree?: boolean
+    systemPromptAddendum?: string
+    slimContext?: boolean
+    mcpAccess?: 'none' | 'browser' | 'all'
   },
 ): SubAgentChildParams {
   const agentId = input.agentId.trim()
@@ -207,6 +219,10 @@ export function buildSubAgentChildParams(
     task,
     allowedToolNames: input.allowedToolNames,
     autoMergeWorktree: input.autoMergeWorktree,
+    isolateGitWorktree: input.isolateGitWorktree,
+    systemPromptAddendum: input.systemPromptAddendum,
+    slimContext: input.slimContext,
+    mcpAccess: input.mcpAccess,
   }
 }
 

@@ -29,7 +29,7 @@ describe('parseCommandArgv', () => {
   })
 })
 
-describe('run_workspace_command tool', () => {
+describe('shell tool', () => {
   let workspaceRoot: string
 
   beforeEach(async () => {

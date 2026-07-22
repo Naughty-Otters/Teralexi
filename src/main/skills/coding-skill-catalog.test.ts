@@ -1,6 +1,6 @@
+import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
 import { expandSkillAllowedToolsForCatalog } from '@shared/agent/skill-workspace-tool-defaults'
 import { loadToolSetTools } from './skill-module-loader'
 import { resolveSkillToolCatalog } from './resolve-skill-tools'
@@ -22,11 +22,23 @@ function parseAllowedToolsFromProperties(md: string): string[] {
 }
 
 describe('coding skill catalog', () => {
-  it('allowed_tools in properties.md resolve to registered toolSet tools', async () => {
+  it('allowed_tools resolve to a Cursor-like lean set', async () => {
     const md = readFileSync(CODING_PROPERTIES, 'utf-8')
     const allowed = parseAllowedToolsFromProperties(md)
-    expect(allowed.length).toBeGreaterThan(5)
-    expect(allowed).not.toContain('run_script')
+    expect(allowed).toEqual([
+      'read_file',
+      'edit_files',
+      'lsp',
+      'shell',
+      'web_search',
+      'web_scrape',
+      'update_todos',
+      'read_todos',
+      'invoke_agents',
+      'enter_plan_mode',
+      'exit_plan_mode',
+      'promote_artifact',
+    ])
 
     const globalTools = await loadToolSetTools()
     const expanded = expandSkillAllowedToolsForCatalog(
@@ -34,26 +46,33 @@ describe('coding skill catalog', () => {
       globalTools,
       allowed,
     )
-    const catalog = resolveSkillToolCatalog(globalTools, [], expanded)
+    expect(expanded).toEqual([...new Set(allowed)])
+
+    const catalog = resolveSkillToolCatalog(
+      globalTools,
+      [],
+      expanded,
+      'coding',
+    )
     const catalogNames = new Set(catalog.map((t) => t.name))
 
     for (const name of allowed) {
       expect(catalogNames.has(name), `missing tool: ${name}`).toBe(true)
     }
 
-    expect(catalogNames.has('read_file')).toBe(true)
-    expect(catalogNames.has('run_workspace_command')).toBe(true)
-    expect(catalogNames.has('delete_file')).toBe(true)
-    expect(catalogNames.has('lsp')).toBe(true)
-    expect(catalogNames.has('git_create_pr')).toBe(true)
-    expect(catalogNames.has('enter_plan_mode')).toBe(true)
-    expect(catalogNames.has('exit_plan_mode')).toBe(true)
-    expect(catalogNames.has('invoke_agent')).toBe(true)
-    expect(catalogNames.has('invoke_agents')).toBe(true)
-    expect(catalogNames.has('best_of_n')).toBe(true)
+    expect(catalogNames.has('edit_files')).toBe(true)
+    expect(catalogNames.has('edit_file')).toBe(false)
+    expect(catalogNames.has('write_file')).toBe(false)
+    expect(catalogNames.has('apply_patch')).toBe(false)
+    expect(catalogNames.has('delete_file')).toBe(false)
+    expect(catalogNames.has('grep_files')).toBe(false)
+    expect(catalogNames.has('glob_files')).toBe(false)
+    expect(catalogNames.has('git_status')).toBe(false)
+    expect(catalogNames.has('git_diff')).toBe(false)
+    expect(catalogNames.has('best_of_n')).toBe(false)
   })
 
-  it('includes workspace file CRUD and verification tools coding workflow needs', async () => {
+  it('includes core read/edit/shell/lsp tools', async () => {
     const md = readFileSync(CODING_PROPERTIES, 'utf-8')
     const allowed = new Set(
       expandSkillAllowedToolsForCatalog(
@@ -62,19 +81,12 @@ describe('coding skill catalog', () => {
         parseAllowedToolsFromProperties(md),
       ),
     )
-    const required = [
+    for (const name of [
       'read_file',
-      'edit_file',
-      'apply_patch',
-      'delete_file',
-      'grep_files',
-      'glob_files',
-      'run_workspace_command',
+      'edit_files',
       'lsp',
-      'git_status',
-      'git_diff',
-    ]
-    for (const name of required) {
+      'shell',
+    ]) {
       expect(allowed.has(name), `coding skill should allow ${name}`).toBe(true)
     }
   })

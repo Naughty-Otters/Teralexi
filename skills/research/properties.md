@@ -6,4 +6,4 @@ color: info
 enabled: true
 max_iterations: 80
 
-allowed_tools: read_file, write_file, edit_file, promote_artifact, list_files, web_search, web_scrape, deep_research, update_todos, read_todos, run_script, export_research_pdf
+allowed_tools: read_file, edit_files, promote_artifact, web_search, web_scrape, update_todos, read_todos, run_script, export_research_pdf

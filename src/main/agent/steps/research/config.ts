@@ -65,7 +65,7 @@ export function resolveResearchConfig(
     maxRounds: config?.maxRounds ?? 3,
     maxQuestionsPerRound: config?.maxQuestionsPerRound ?? 5,
     maxTotalQuestions: config?.maxTotalQuestions ?? 15,
-    tools: config?.tools ?? ['deep_research', 'web_search', 'web_scrape'],
+    tools: config?.tools ?? ['web_search', 'web_scrape'],
     gatherPrompt: config?.gatherPrompt?.trim() || undefined,
     followUpPrompt: config?.followUpPrompt?.trim() || undefined,
   }

@@ -15,7 +15,7 @@ const PLAN_MODE_READ_TOOLS = new Set([
   'read_todos',
 ])
 
-const PLAN_MODE_WRITE_TOOLS = new Set(['write_file', 'edit_file', 'apply_patch'])
+const PLAN_MODE_WRITE_TOOLS = new Set(['edit_files'])
 
 const PLAN_MODE_TASK_TOOLS = new Set(['update_todos'])
 

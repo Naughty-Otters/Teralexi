@@ -159,22 +159,22 @@ function resolveShellInvocation(commandStr: string): {
   }
 }
 
-export const runWorkspaceCommand: SkillTool = {
-  name: 'run_workspace_command',
+export const shell: SkillTool = {
+  name: 'shell',
   tags: [...FILE_SYSTEM_TAG, 'workspace'],
   description:
-    'Run a command in the user project folder. Requires a selected workspace; do not use for sandbox paths (output/, scripts/). ' +
-    'Default: argv via execFile, no shell (e.g. ["npm","test"] or a quoted string). ' +
-    'Set `shell: true` to run a full shell command string with pipes, &&, redirects, and globs (e.g. "npm run build && npm test 2>&1 | tail -50") — runs through the OS shell in the workspace. ' +
+    'Run a command in the user project folder (Cursor-style Shell). Requires a selected workspace; do not use for sandbox paths (output/, scripts/). ' +
+    'Default: argv via execFile, no OS shell (e.g. ["npm","test"] or a quoted string). ' +
+    'Set `use_shell: true` to run a full shell command string with pipes, &&, redirects, and globs (e.g. "npm run build && npm test 2>&1 | tail -50") — runs through the OS shell in the workspace. ' +
     'Optional cwd is relative to the workspace root. Requires approval.',
   inputSchema: z.object({
     command: z.union([z.array(z.string().min(1)), z.string().min(1)]),
-    shell: z
+    use_shell: z
       .boolean()
       .optional()
       .default(false)
       .describe(
-        'Run `command` through the OS shell (supports pipes, &&, redirects, globs). `command` must be a string in shell mode.',
+        'Run `command` through the OS shell (supports pipes, &&, redirects, globs). `command` must be a string when use_shell is true.',
       ),
     cwd: z.string().optional(),
     timeoutMs: z
@@ -197,7 +197,8 @@ export const runWorkspaceCommand: SkillTool = {
     const ws = requireWorkspace()
     if (!ws.ok) return { error: ws.error }
 
-    const useShell = input['shell'] === true
+    const useShell =
+      input['use_shell'] === true || input['shell'] === true
     const timeoutMs =
       typeof input['timeoutMs'] === 'number' && input['timeoutMs'] > 0
         ? input['timeoutMs']
@@ -298,3 +299,6 @@ export const runWorkspaceCommand: SkillTool = {
     }
   },
 }
+
+/** @deprecated Prefer {@link shell}. */
+export const runWorkspaceCommand = shell

@@ -372,16 +372,16 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     color: 'Color',
     availableSet: 'AvailableSet',
     availableSetHint:
-      'Every skill agent can use the full toolSet. All tools are enabled by default; turn off tools this agent should not run.',
+      'Lists tools in this skill’s catalog. All are enabled by default; turn off tools this agent should not run.',
     availableAsSubAgent: 'Available as sub-agent',
     availableAsSubAgentHint:
-      'When enabled, other agents can delegate to this one via skill chain, invoke_skill, or invoke_agent.',
+      'When enabled, other agents can delegate to this one via skill chain, invoke_skill, or invoke_agents.',
     delegateToolLoop: 'Delegate during tool loop',
     delegateToolLoopHint:
-      'invoke_skill is always available when this agent runs a tool loop. Enable to also expose gated invoke_agent with an optional allow-list.',
+      'invoke_skill is always available when this agent runs a tool loop. Enable to also expose gated invoke_agents with an optional allow-list.',
     allowedTargets: 'Allowed target agents',
     allowedTargetsHint:
-      'All sub-agent-eligible agents are allowed by default. Uncheck specific agents to restrict invoke_agent only.',
+      'All sub-agent-eligible agents are allowed by default. Uncheck specific agents to restrict invoke_agents only.',
     noDelegatableAgents:
       'No other agents are marked as available sub-agents. Enable “Available as sub-agent” on other agents first.',
     noMcpServers:
@@ -389,8 +389,8 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     mcpServersHint: 'Enable MCP servers this agent may call during runs.',
     enableSubAgent: 'Enable sub-agent availability',
     disableSubAgent: 'Disable sub-agent availability',
-    enableDelegate: 'Enable invoke_agent delegation',
-    disableDelegate: 'Disable invoke_agent delegation',
+    enableDelegate: 'Enable invoke_agents delegation',
+    disableDelegate: 'Disable invoke_agents delegation',
     workflowBadge: 'Workflow',
     allowTarget: 'Allow {name}',
     removeTarget: 'Remove {name} from allow-list',

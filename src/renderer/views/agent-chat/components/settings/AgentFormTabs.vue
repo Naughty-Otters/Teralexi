@@ -606,7 +606,7 @@ export interface AgentFormData {
   todoMaxRetries: number
   allowAsSubAgent: boolean
   allowSubAgents: boolean
-  /** Allow-list for invoke_agent; empty = any eligible sub-agent. */
+  /** Allow-list for invoke_agents; empty = any eligible sub-agent. */
   subAgentIds: string[]
   llmRoutingMode: AgentLlmRoutingMode
   stageLlm: Partial<Record<AgentLlmStage, AgentLlmChoice>>

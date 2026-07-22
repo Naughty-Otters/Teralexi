@@ -28,11 +28,11 @@ describe('classifyToolFailure', () => {
   })
 
   it('returns true for non-zero exit_code', () => {
-    expect(classifyToolFailure('run_script', { exit_code: 1, stderr: 'oops' })).toBe(true)
+    expect(classifyToolFailure('shell', { exit_code: 1, stderr: 'oops' })).toBe(true)
   })
 
   it('returns false for exit_code: 0', () => {
-    expect(classifyToolFailure('run_script', { exit_code: 0, stdout: 'ok' })).toBe(false)
+    expect(classifyToolFailure('shell', { exit_code: 0, stdout: 'ok' })).toBe(false)
   })
 
   it('returns true for string starting with Error', () => {
@@ -130,9 +130,9 @@ describe('ToolGuardrailController — exact failure tracking', () => {
 describe('ToolGuardrailController — same-tool failure tracking', () => {
   it('warns after sameToolFailureWarnAfter failures across different args', () => {
     const ctrl = new ToolGuardrailController({ sameToolFailureWarnAfter: 3 })
-    ctrl.afterCall('run_script', { content: 'a' }, { error: 'e' })
-    ctrl.afterCall('run_script', { content: 'b' }, { error: 'e' })
-    const third = ctrl.afterCall('run_script', { content: 'c' }, { error: 'e' })
+    ctrl.afterCall('shell', { content: 'a' }, { error: 'e' })
+    ctrl.afterCall('shell', { content: 'b' }, { error: 'e' })
+    const third = ctrl.afterCall('shell', { content: 'c' }, { error: 'e' })
     expect(third.action).toBe('warn')
     expect(third.code).toBe('same_tool_failure_warning')
   })
@@ -143,9 +143,9 @@ describe('ToolGuardrailController — same-tool failure tracking', () => {
       sameToolFailureHaltAfter: 4,
     })
     for (let i = 0; i < 3; i++) {
-      ctrl.afterCall('run_script', { content: `v${i}` }, { error: 'fail' })
+      ctrl.afterCall('shell', { content: `v${i}` }, { error: 'fail' })
     }
-    const halt = ctrl.afterCall('run_script', { content: 'v4' }, { error: 'fail' })
+    const halt = ctrl.afterCall('shell', { content: 'v4' }, { error: 'fail' })
     expect(halt.action).toBe('halt')
     expect(halt.code).toBe('same_tool_failure_halt')
     expect(ctrl.lastHaltDecision?.action).toBe('halt')
@@ -153,9 +153,9 @@ describe('ToolGuardrailController — same-tool failure tracking', () => {
 
   it('resets same-tool count on success', () => {
     const ctrl = new ToolGuardrailController({ sameToolFailureWarnAfter: 2 })
-    ctrl.afterCall('run_script', { content: 'a' }, { error: 'e' })
-    ctrl.afterCall('run_script', { content: 'b' }, { success: true }) // success resets
-    const d = ctrl.afterCall('run_script', { content: 'c' }, { error: 'e' })
+    ctrl.afterCall('shell', { content: 'a' }, { error: 'e' })
+    ctrl.afterCall('shell', { content: 'b' }, { success: true }) // success resets
+    const d = ctrl.afterCall('shell', { content: 'c' }, { error: 'e' })
     expect(d.action).toBe('allow')
   })
 })
@@ -207,9 +207,9 @@ describe('ToolGuardrailController — idempotent no-progress', () => {
   it('does NOT apply no-progress to mutating tools', () => {
     const ctrl = new ToolGuardrailController({ noProgressWarnAfter: 2 })
     const args = { content: 'data' }
-    // run_script is mutating — no-progress tracking should not apply
-    ctrl.afterCall('run_script', args, { exit_code: 0, stdout: 'same' })
-    const d = ctrl.afterCall('run_script', args, { exit_code: 0, stdout: 'same' })
+    // shell is mutating — no-progress tracking should not apply
+    ctrl.afterCall('shell', args, { exit_code: 0, stdout: 'same' })
+    const d = ctrl.afterCall('shell', args, { exit_code: 0, stdout: 'same' })
     expect(d.action).toBe('allow')
   })
 })

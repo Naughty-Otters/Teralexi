@@ -26,27 +26,27 @@ describe('resolveDefaultActiveToolNames', () => {
     expect(active).not.toContain('web_search')
   })
 
-  it('coding skill includes file-system and planning tags but not web', () => {
+  it('coding skill uses mandatory tools only (no tag expansion)', () => {
     const catalog = [
       { name: 'read_file', tags: ['file-system'] },
       { name: 'apply_patch', tags: ['file-system'] },
       { name: 'update_todos', tags: ['task-tracking'] },
       { name: 'enter_plan_mode', tags: ['planning'] },
-      { name: 'run_script', tags: ['shell-command'] },
+      { name: 'shell', tags: ['file-system', 'workspace'] },
       { name: 'web_search', tags: ['web'] },
-      { name: 'invoke_agent', tags: ['sub-agents'] },
+      { name: 'invoke_agents', tags: ['sub-agents'] },
     ]
     const active = resolveDefaultActiveToolNames({
       skillId: 'coding',
       allToolNames: catalog.map((t) => t.name),
       catalogTools: catalog,
     })
-    expect(active).toContain('read_file')
+    expect(active).toContain('update_todos')
     expect(active).toContain('enter_plan_mode')
-    expect(active).toContain('invoke_agent')
+    expect(active).toContain('invoke_agents')
+    expect(active).not.toContain('read_file')
     expect(active).not.toContain('web_search')
-    // Coding skill intentionally omits shell-command from default tags.
-    expect(active).not.toContain('run_script')
+    expect(active).not.toContain('shell')
   })
 })
 

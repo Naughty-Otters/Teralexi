@@ -2,10 +2,8 @@ import { promises as fs } from 'fs'
 import type { FileChangeAction, FileChangePreview, FileChangePreviewResult, FileChangeToolName } from '@shared/file-change/types'
 import { isFileChangeToolName } from '@shared/file-change/types'
 import {
-  assertMoveAllowed,
   requireActiveSandbox,
   getWorkspacePathFromEnv,
-  resolvePathAllowingOutside,
   resolvePathInContext,
   resolveScopedPathInContext,
   sandboxPathError,
@@ -284,89 +282,6 @@ async function previewDeleteFile(input: Record<string, unknown>): Promise<FileCh
   }
 }
 
-async function previewMoveFile(input: Record<string, unknown>): Promise<FileChangePreviewResult> {
-  const sandbox = requireActiveSandbox()
-  if (!sandbox.ok) return { ok: false, error: sandbox.message }
-
-  const source = input.source
-  const destination = input.destination
-  if (typeof source !== 'string' || typeof destination !== 'string') {
-    return { ok: false, error: 'source and destination must be strings.' }
-  }
-
-  const workspacePath = getWorkspacePathFromEnv()
-  let sourcePath: string
-  let destinationPath: string
-  try {
-    sourcePath = resolvePathAllowingOutside(sandbox.root, source, workspacePath)
-    destinationPath = resolvePathInContext(sandbox.root, workspacePath, destination)
-    assertMoveAllowed(sandbox.root, workspacePath, sourcePath, destinationPath)
-  } catch (err) {
-    return sandboxPathError(err) as FileChangePreviewResult
-  }
-
-  const stats = await fs.stat(sourcePath).catch(() => null)
-  if (!stats) return { ok: false, error: `Source not found: ${sourcePath}` }
-  if (!stats.isFile()) {
-    return { ok: false, error: 'Diff preview is only available when moving a single file.' }
-  }
-
-  const contentOld = await fs.readFile(sourcePath, 'utf-8')
-  return {
-    ok: true,
-    files: [
-      buildFileChangePreview(sandbox.root, destinationPath, contentOld, contentOld, {
-        action: 'rename',
-        moveFrom: sourcePath,
-        workspacePath,
-      }),
-    ],
-  }
-}
-
-async function previewCopyFile(input: Record<string, unknown>): Promise<FileChangePreviewResult> {
-  const sandbox = requireActiveSandbox()
-  if (!sandbox.ok) return { ok: false, error: sandbox.message }
-
-  const source = input.source
-  const destination = input.destination
-  const overwrite = Boolean(input.overwrite)
-  if (typeof source !== 'string' || typeof destination !== 'string') {
-    return { ok: false, error: 'source and destination must be strings.' }
-  }
-
-  const workspacePath = getWorkspacePathFromEnv()
-  let sourcePath: string
-  let destinationPath: string
-  try {
-    sourcePath = resolvePathAllowingOutside(sandbox.root, source, workspacePath)
-    destinationPath = resolvePathInContext(sandbox.root, workspacePath, destination)
-  } catch (err) {
-    return sandboxPathError(err) as FileChangePreviewResult
-  }
-
-  const sourceStats = await fs.stat(sourcePath).catch(() => null)
-  if (!sourceStats?.isFile()) {
-    return { ok: false, error: `Source is not a file: ${sourcePath}` }
-  }
-
-  const destExists = await fs.stat(destinationPath).then(() => true).catch(() => false)
-  if (destExists && !overwrite) {
-    return { ok: false, error: `Destination already exists: ${destinationPath}` }
-  }
-
-  const contentNew = await fs.readFile(sourcePath, 'utf-8')
-  return {
-    ok: true,
-    files: [
-      buildFileChangePreview(sandbox.root, destinationPath, '', contentNew, {
-        action: 'create',
-        workspacePath,
-      }),
-    ],
-  }
-}
-
 export async function previewFileChange(
   toolName: string,
   input: Record<string, unknown>,
@@ -376,18 +291,14 @@ export async function previewFileChange(
   }
 
   switch (toolName as FileChangeToolName) {
-    case 'edit_file':
-      return previewEditFile(input)
-    case 'write_file':
-      return previewWriteFile(input)
-    case 'apply_patch':
-      return previewApplyPatch(input)
-    case 'delete_file':
-      return previewDeleteFile(input)
-    case 'move_file':
-      return previewMoveFile(input)
-    case 'copy_file':
-      return previewCopyFile(input)
+    case 'edit_files': {
+      const mode = typeof input.mode === 'string' ? input.mode : ''
+      if (mode === 'replace') return previewEditFile(input)
+      if (mode === 'write') return previewWriteFile(input)
+      if (mode === 'delete') return previewDeleteFile(input)
+      if (mode === 'patch') return previewApplyPatch(input)
+      return { ok: false, error: `Unsupported edit_files mode: ${mode || '(missing)'}` }
+    }
     case 'promote_artifact':
       return previewPromoteArtifact(input)
     default:

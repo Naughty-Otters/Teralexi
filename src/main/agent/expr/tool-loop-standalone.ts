@@ -428,7 +428,12 @@ export async function runStandaloneAgent(parentCtx: AgentStepContext): Promise<v
 
     if (!collected) return
 
-    if (collected.awaitingToolApproval) {
+    if (
+      collected.awaitingToolApproval ||
+      parentCtx.hitlAwaitingApproval ||
+      parentCtx.hitlAwaitingFormData ||
+      parentCtx.hitlAwaitingManualIntervention
+    ) {
       break
     }
 
@@ -473,8 +478,15 @@ export async function runStandaloneAgent(parentCtx: AgentStepContext): Promise<v
     return
   }
 
-  if (collected.awaitingToolApproval) {
-    parentCtx.hitlAwaitingApproval = true
+  const nestedHitlPaused =
+    parentCtx.hitlAwaitingApproval ||
+    parentCtx.hitlAwaitingFormData ||
+    parentCtx.hitlAwaitingManualIntervention
+
+  if (collected.awaitingToolApproval || nestedHitlPaused) {
+    if (collected.awaitingToolApproval) {
+      parentCtx.hitlAwaitingApproval = true
+    }
     parentCtx.setHitlPausedAtStage(TOOL_LOOP_STEP_ID)
     publishVisibleToolLoopAttachments(parentCtx)
     parentCtx.updateStepOutput(

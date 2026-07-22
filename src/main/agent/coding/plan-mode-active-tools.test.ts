@@ -21,29 +21,28 @@ describe('resolvePlanModeActiveToolNames', () => {
     const names = resolvePlanModeActiveToolNames(
       [
         'read_file',
-        'write_file',
+        'edit_files',
         'update_todos',
         'read_todos',
-        'run_workspace_command',
+        'shell',
       ],
       true,
       'conv-1',
     )
     expect(names).toContain('read_file')
-    expect(names).toContain('write_file')
+    expect(names).toContain('edit_files')
     expect(names).toContain('update_todos')
     expect(names).toContain('read_todos')
-    expect(names).not.toContain('run_workspace_command')
+    expect(names).not.toContain('shell')
   })
 
-  it('blocks run_script and sub-agents during plan mode', () => {
+  it('blocks shell and sub-agents during plan mode', () => {
     const names = resolvePlanModeActiveToolNames(
       [
         'read_file',
-        'run_script',
-        'run_script_file',
+        'shell',
+        'invoke_agents',
         'delegate_subagent',
-        'dispatch_subagent',
       ],
       true,
       'conv-1',
@@ -56,11 +55,9 @@ describe('resolvePlanModeActiveToolNames', () => {
       [
         'web_search',
         'web_scrape',
-        'deep_research',
-        'grep_files',
-        'search_files',
-        'storage_check',
-        'run_workspace_command',
+        'lsp',
+        'read_file',
+        'shell',
       ],
       true,
       'conv-1',
@@ -68,21 +65,19 @@ describe('resolvePlanModeActiveToolNames', () => {
     expect(names).toEqual([
       'web_search',
       'web_scrape',
-      'deep_research',
-      'grep_files',
-      'search_files',
-      'storage_check',
+      'lsp',
+      'read_file',
     ])
   })
 
   it('passes through all tools when plan mode is inactive', () => {
     isPlanModeActive.mockReturnValue(false)
     const names = resolvePlanModeActiveToolNames(
-      ['read_file', 'run_script', 'update_todos'],
+      ['read_file', 'shell', 'update_todos'],
       true,
       'conv-1',
     )
-    expect(names).toEqual(['read_file', 'run_script', 'update_todos'])
+    expect(names).toEqual(['read_file', 'shell', 'update_todos'])
   })
 
   it('respects root and non-root allowlist checks', () => {

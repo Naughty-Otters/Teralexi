@@ -204,7 +204,7 @@ export function isTerminalToolRunning(part: unknown): boolean {
 const TERMINAL_TOOL_NAMES = new Set([
   'run_script',
   'run_script_file',
-  'run_workspace_command',
+  'shell',
 ])
 
 /** Name-based check for command/terminal tools (usable before output exists). */
@@ -313,7 +313,7 @@ function extractTerminalCommand(
     const args = Array.isArray(input.scriptArgs) ? input.scriptArgs.join(' ') : ''
     return [input.scriptRelativePath, args].filter(Boolean).join(' ')
   }
-  // run_workspace_command: argv array or command + args.
+  // shell: argv array or command + args.
   if (Array.isArray(input.command)) return input.command.join(' ')
   if (typeof input.command === 'string') {
     const args = Array.isArray(input.args) ? input.args.join(' ') : ''

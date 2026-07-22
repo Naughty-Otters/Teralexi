@@ -7,17 +7,11 @@ export type WorkflowValidationResult = {
 
 const READ_ONLY_TOOLS = new Set([
   'read_file',
-  'list_files',
-  'grep_files',
-  'glob_files',
-  'search_files',
-  'file_status',
-  'git_status',
-  'git_diff',
-  'git_log',
-  'git_show',
   'web_search',
+  'web_scrape',
   'lsp',
+  'shell',
+  'read_todos',
 ])
 
 export function validateWorkflowDefinition(
