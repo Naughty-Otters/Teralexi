@@ -77,7 +77,7 @@ describe('assistantBubbleFramework', () => {
   it('routes file-change tool results to diff bubbles', () => {
     const message = messageWithParts([
       {
-        type: 'tool-edit_file',
+        type: 'tool-edit_files',
         state: 'output-available',
         input: { path: 'a.txt' },
         approval: { id: 'ap-1' },

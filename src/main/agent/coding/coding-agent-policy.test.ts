@@ -50,11 +50,12 @@ describe('coding-agent-policy', () => {
     } as never)
     const toolSet = {
       read_file: { needsApproval: false },
-      write_file: { needsApproval: true },
+      edit_files: { needsApproval: true },
       shell: { needsApproval: true },
     }
     applyCodingAgentPolicy(toolSet, 'conv-1', 'coding')
-    expect(Object.keys(toolSet).sort()).toEqual(['read_file'])
+    // shell stays (inspect-only in explore); edit_files is dropped
+    expect(Object.keys(toolSet).sort()).toEqual(['read_file', 'shell'])
   })
 
   it('yolo mode clears approvals for any skill', () => {
@@ -62,11 +63,11 @@ describe('coding-agent-policy', () => {
       getConversationSettings: vi.fn(() => ({ codingMode: 'yolo' })),
     } as never)
     const toolSet = {
-      write_file: { needsApproval: true },
+      edit_files: { needsApproval: true },
       shell: { needsApproval: true },
     }
     applyCodingAgentPolicy(toolSet, 'conv-1', 'documents')
-    expect(toolSet.write_file.needsApproval).toBe(false)
+    expect(toolSet.edit_files.needsApproval).toBe(false)
     expect(toolSet.shell.needsApproval).toBe(false)
   })
 
@@ -76,10 +77,10 @@ describe('coding-agent-policy', () => {
     } as never)
     const toolSet = {
       read_file: { needsApproval: false },
-      write_file: { needsApproval: true },
+      edit_files: { needsApproval: true },
     }
     applyCodingAgentPolicy(toolSet, 'conv-1', 'research')
-    expect(Object.keys(toolSet).sort()).toEqual(['read_file', 'write_file'])
+    expect(Object.keys(toolSet).sort()).toEqual(['edit_files', 'read_file'])
   })
 
   it('plan mode filters tools for non-coding skills', async () => {
@@ -94,13 +95,13 @@ describe('coding-agent-policy', () => {
     } as never)
     const toolSet = {
       read_file: { needsApproval: false },
-      write_file: { needsApproval: true },
+      edit_files: { needsApproval: true },
       run_script: { needsApproval: true },
       custom_skill_tool: { needsApproval: true },
     }
     applyCodingAgentPolicy(toolSet, 'conv-1', 'documents')
     expect(toolSet.read_file).toBeDefined()
-    expect(toolSet.write_file).toBeDefined()
+    expect(toolSet.edit_files).toBeDefined()
     expect(toolSet.run_script).toBeUndefined()
     expect(toolSet.custom_skill_tool).toBeUndefined()
   })
@@ -117,7 +118,7 @@ describe('coding-agent-policy', () => {
     } as never)
     const toolSet = {
       read_file: { needsApproval: false },
-      write_file: { needsApproval: true },
+      edit_files: { needsApproval: true },
       exit_plan_mode: { needsApproval: true },
       enter_plan_mode: { needsApproval: true },
       shell: { needsApproval: true },
@@ -126,7 +127,7 @@ describe('coding-agent-policy', () => {
     expect(toolSet.exit_plan_mode.needsApproval).toBe(true)
     expect(toolSet.enter_plan_mode.needsApproval).toBe(false)
     expect(toolSet.shell).toBeUndefined()
-    expect(toolSet.write_file).toBeDefined()
+    expect(toolSet.edit_files).toBeDefined()
   })
 
   it('yolo mode clears approvals', () => {
@@ -134,11 +135,11 @@ describe('coding-agent-policy', () => {
       getConversationSettings: vi.fn(() => ({ codingMode: 'yolo' })),
     } as never)
     const toolSet = {
-      write_file: { needsApproval: true },
+      edit_files: { needsApproval: true },
       shell: { needsApproval: true },
     }
     applyCodingAgentPolicy(toolSet, 'conv-1', 'coding')
-    expect(toolSet.write_file.needsApproval).toBe(false)
+    expect(toolSet.edit_files.needsApproval).toBe(false)
     expect(toolSet.shell.needsApproval).toBe(false)
   })
 
@@ -148,11 +149,11 @@ describe('coding-agent-policy', () => {
     } as never)
     const toolSet = {
       read_file: { needsApproval: false },
-      write_file: { needsApproval: true },
+      edit_files: { needsApproval: true },
       shell: { needsApproval: true },
     }
     applyCodingAgentPolicy(toolSet, 'conv-1', 'coding', 1)
-    expect(toolSet.write_file).toBeDefined()
+    expect(toolSet.edit_files).toBeDefined()
     expect(toolSet.shell).toBeDefined()
   })
 })

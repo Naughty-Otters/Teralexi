@@ -26,8 +26,9 @@ describe('coding-mode', () => {
 
   it('allows read-only tools in explore mode', () => {
     expect(EXPLORE_MODE_ALLOWED_TOOLS.has('read_file')).toBe(true)
-    expect(EXPLORE_MODE_ALLOWED_TOOLS.has('write_file')).toBe(false)
-    expect(EXPLORE_MODE_ALLOWED_TOOLS.has('dispatch_subagent')).toBe(true)
+    expect(EXPLORE_MODE_ALLOWED_TOOLS.has('shell')).toBe(true)
+    expect(EXPLORE_MODE_ALLOWED_TOOLS.has('edit_files')).toBe(false)
+    expect(EXPLORE_MODE_ALLOWED_TOOLS.has('invoke_agents')).toBe(false)
   })
 
   it('normalizes subagent profile types', () => {

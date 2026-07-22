@@ -17,7 +17,7 @@ describe('collectConversationWorkspaceAttachments', () => {
     const messages = [
       toolMessage([
         {
-          type: 'tool-edit_file',
+          type: 'tool-edit_files',
           toolCallId: 'tc1',
           state: 'output-available',
           input: {},
@@ -51,7 +51,7 @@ describe('collectConversationWorkspaceAttachments', () => {
     const messages = [
       toolMessage([
         {
-          type: 'tool-delete_file',
+          type: 'tool-edit_files',
           toolCallId: 'tc2',
           state: 'output-available',
           input: {},
@@ -91,7 +91,7 @@ describe('collectConversationWorkspaceAttachments', () => {
     const messages = [
       toolMessage([
         {
-          type: 'tool-edit_file',
+          type: 'tool-edit_files',
           toolCallId: 'tc-ws-url',
           state: 'output-available',
           input: {},
@@ -122,7 +122,7 @@ describe('collectConversationWorkspaceAttachments', () => {
     const messages = [
       toolMessage([
         {
-          type: 'tool-edit_file',
+          type: 'tool-edit_files',
           toolCallId: 'tc-root-ws',
           state: 'output-available',
           input: {},
@@ -153,7 +153,7 @@ describe('collectConversationWorkspaceAttachments', () => {
     const messages = [
       toolMessage([
         {
-          type: 'tool-write_file',
+          type: 'tool-edit_files',
           toolCallId: 'tc-sandbox',
           state: 'output-available',
           input: {},
@@ -180,7 +180,7 @@ describe('collectConversationWorkspaceAttachments', () => {
     const messages = [
       toolMessage([
         {
-          type: 'tool-write_file',
+          type: 'tool-edit_files',
           toolCallId: 'tc3',
           state: 'output-available',
           input: {},
@@ -200,7 +200,7 @@ describe('collectConversationWorkspaceAttachments', () => {
           },
         },
         {
-          type: 'tool-edit_file',
+          type: 'tool-edit_files',
           toolCallId: 'tc4',
           state: 'output-available',
           input: {},
