@@ -104,6 +104,18 @@ vi.mock('./create-word-doc', () => ({
   createWordDoc: { execute: (...args: unknown[]) => mockWordExecute(...args) },
 }))
 
+vi.mock('./template-core/load-themes', () => ({
+  resolveExcelTheme: () => ({
+    header: { fill: '#1F4E79' },
+  }),
+  resolvePptTheme: () => ({
+    bg: '0B1F3A',
+    title: 'FFFFFF',
+    body: 'E8EEF4',
+    accent: '4A90D9',
+  }),
+}))
+
 vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs')>()
   return {
@@ -122,16 +134,16 @@ vi.mock('fs', async (importOriginal) => {
   }
 })
 
+import { renderDocument } from './render-document'
+
 describe('render_document', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(fs.existsSync).mockReturnValue(true)
     vi.mocked(fs.readFileSync).mockReturnValue(DATA_JSON)
-    vi.resetModules()
   })
 
   it('routes excel template to create_spreadsheet', async () => {
-    const { renderDocument } = await import('./render-document')
     const result = await renderDocument.execute({
       template_id: 'sales-dashboard',
       output_filename: 'sales',
@@ -142,7 +154,6 @@ describe('render_document', () => {
   })
 
   it('routes powerpoint template to create_presentation', async () => {
-    const { renderDocument } = await import('./render-document')
     await renderDocument.execute({
       template_id: 'navy-roadmap-deck',
       output_filename: 'deck',
@@ -152,7 +163,6 @@ describe('render_document', () => {
   })
 
   it('routes word template to create_word_doc', async () => {
-    const { renderDocument } = await import('./render-document')
     await renderDocument.execute({
       template_id: 'formal-brief',
       output_filename: 'brief',
@@ -161,7 +171,6 @@ describe('render_document', () => {
   })
 
   it('routes pdf template through html and exportHtmlFileToPdf', async () => {
-    const { renderDocument } = await import('./render-document')
     const result = await renderDocument.execute({
       template_id: 'corporate-report-pdf',
       output_filename: 'report',
@@ -171,7 +180,6 @@ describe('render_document', () => {
   })
 
   it('returns error for unknown template_id', async () => {
-    const { renderDocument } = await import('./render-document')
     const result = await renderDocument.execute({
       template_id: 'nonexistent',
       output_filename: 'x',
