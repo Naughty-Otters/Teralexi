@@ -45,6 +45,7 @@ export {
 } from './thinking-utils'
 
 import { truncateString } from '../utils/str-utils'
+import { limitThinkingBubbleWords } from '@shared/text/limit-thinking-bubble-words'
 import {
   DIAGRAM_DIRECT_ANSWER_RETRY_HINT,
   DIAGRAM_THINKING_ROUTING_HINT,
@@ -259,7 +260,7 @@ class ThinkingStepDefinition extends StepExpressionDefinitionBase {
       const thinking = normalizeThinkingOutput(JSON.parse(body) as LooseThinkingOutput)
       return formatThinkingMarkdown(thinking)
     } catch {
-      return body.trim()
+      return limitThinkingBubbleWords(body.trim())
     }
   }
 

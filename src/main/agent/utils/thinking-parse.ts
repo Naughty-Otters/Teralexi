@@ -1,5 +1,6 @@
 import { jsonrepair } from 'jsonrepair'
 import { createLogger, traceFunction } from '@main/logger'
+import { limitThinkingBubbleWords } from '@shared/text/limit-thinking-bubble-words'
 import type { ThinkingExecutionMode } from '../types'
 
 export type { ThinkingExecutionMode }
@@ -172,7 +173,7 @@ export function formatThinkingMarkdown(
   if (thinking.rationale?.trim()) {
     lines.push('', `- Rationale: ${thinking.rationale.trim()}`)
   }
-  return lines.join('\n')
+  return limitThinkingBubbleWords(lines.join('\n'))
 }
 
 export function formatThinkingDigestForPlanning(
@@ -225,5 +226,5 @@ export function formatPartialThinkingProgress(raw: string): string {
     }
   }
 
-  return trimmed
+  return limitThinkingBubbleWords(trimmed)
 }

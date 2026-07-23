@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
+import { limitThinkingBubbleWords } from '@shared/text/limit-thinking-bubble-words'
 import { compactPaneScrollTop } from './reasoningBubbleLayout'
 
 const props = defineProps<{
@@ -23,8 +24,9 @@ const text = computed(() => {
   const part = props.part as { type?: string; text?: string; state?: string }
   if (part?.type !== 'reasoning') return ''
   const raw = String(part.text ?? '')
-  if (part.state === 'streaming' || part.state === 'partial') return raw
-  return raw.trim()
+  const body =
+    part.state === 'streaming' || part.state === 'partial' ? raw : raw.trim()
+  return limitThinkingBubbleWords(body)
 })
 
 const streaming = computed(() => {

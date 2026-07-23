@@ -10,6 +10,7 @@ import type MarkdownIt from 'markdown-it'
 import { extractUserFacingTextFromFinalResult } from '@shared/agent/assistant-external-reply'
 import { AGENTIC_RUN_STEP_TITLE } from '@shared/agent/agentic-run-labels'
 import { prepareMarkdownSource } from '@shared/markdown/prepare-markdown-source'
+import { limitThinkingBubbleWords } from '@shared/text/limit-thinking-bubble-words'
 import {
   attachmentsFromOutputLinks,
   dedupeStepAttachments,
@@ -393,7 +394,9 @@ function isThinkingSectionId(sectionId: string): boolean {
 function thinkingSectionBodyFields(
   text: string,
 ): Pick<StructuredDebugSection, 'bodyHtml' | 'bodyMarkdown'> {
-  const bodyMarkdown = text.replace(/\r\n/g, '\n').trim()
+  const bodyMarkdown = limitThinkingBubbleWords(
+    text.replace(/\r\n/g, '\n').trim(),
+  )
   if (!bodyMarkdown) {
     return { bodyHtml: '', bodyMarkdown: '' }
   }

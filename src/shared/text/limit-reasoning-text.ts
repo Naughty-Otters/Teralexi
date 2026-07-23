@@ -1,3 +1,5 @@
+import { limitThinkingBubbleWords } from './limit-thinking-bubble-words'
+
 export const REASONING_TRUNCATION_MARKER = '\n…[earlier reasoning omitted]\n'
 
 export type ReasoningCapState = {
@@ -9,8 +11,12 @@ export function createReasoningCapState(): ReasoningCapState {
 }
 
 function visibleReasoningText(buffer: string, maxChars: number): string {
-  if (buffer.length <= maxChars) return buffer
-  return `${REASONING_TRUNCATION_MARKER}${buffer.slice(-maxChars)}`
+  const byChars =
+    buffer.length <= maxChars
+      ? buffer
+      : `${REASONING_TRUNCATION_MARKER}${buffer.slice(-maxChars)}`
+  // Hard ceiling: never show more than 2k words in the Thinking bubble.
+  return limitThinkingBubbleWords(byChars)
 }
 
 /**
@@ -35,9 +41,11 @@ export function appendReasoningDeltaWithCap(
     return { emitDelta: '', resetPart: false }
   }
 
-  if (state.buffer.length > maxChars) {
-    return { emitDelta: nextVisible, resetPart: true, resetText: nextVisible }
+  // Char or word caps reshaped the visible window — replace the UI part so the
+  // Chat SDK does not keep accumulating unbounded text.
+  if (nextVisible === previousVisible + delta) {
+    return { emitDelta: delta, resetPart: false }
   }
 
-  return { emitDelta: delta, resetPart: false }
+  return { emitDelta: nextVisible, resetPart: true, resetText: nextVisible }
 }
