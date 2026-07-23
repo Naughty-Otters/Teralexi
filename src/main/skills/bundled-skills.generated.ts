@@ -98,7 +98,7 @@ Cursor-like lean set (explicit only — no tag expansion):
 - Read / symbols: \`read_file\`, \`lsp\`
 - Edit: \`edit_files\` (\`replace\` | \`write\` | \`delete\` | \`patch\`) — required for project source changes
 - Shell (tests, grep/glob, git): \`shell\` — do not use shell to rewrite source files
-- Web: \`web_search\`, \`web_scrape\`
+- Web: \`web_search\`, \`web_scrape\`, \`browser_navigate\` / \`browser_snapshot\` / \`browser_click\` / \`browser_fill\` / \`browser_tabs\`
 - Todos / plan / promote: \`update_todos\`, \`read_todos\`, \`enter_plan_mode\`, \`exit_plan_mode\`, \`promote_artifact\`
 - Sub-agents: \`invoke_agents\` (one-element \`runs\` for a single child)
 
@@ -150,7 +150,7 @@ variant_label: Implement
 group_order: 1
 variant_order: 1
 group_primary: true
-allowed_tools: read_file, edit_files, lsp, shell, run_script, run_script_file, web_search, web_scrape, update_todos, read_todos, invoke_agents, enter_plan_mode, exit_plan_mode, promote_artifact
+allowed_tools: read_file, edit_files, lsp, shell, run_script, run_script_file, web_search, web_scrape, browser_navigate, browser_snapshot, browser_click, browser_fill, browser_tabs, update_todos, read_todos, invoke_agents, enter_plan_mode, exit_plan_mode, promote_artifact
 `,
     attachments: {
       "refs/plan-modes.md": {
@@ -217,12 +217,13 @@ One child = one-element \`runs\` array. Multiple = parallel. Always waits for re
 | --- | --- | --- | --- |
 | \`explore\` | Explore | \`read_file\`, \`lsp\`, read-only shell | Find/where/how; map before edits. Fans out parallel reads/rg in one turn. |
 | \`bash\` | Bash | \`shell\`, \`run_script\`, \`run_script_file\`, \`edit_files\`, \`read_file\` | Tests, builds, scripts, rg/find, git, small fixes |
-| \`browser\` | Browser | \`web_search\` / \`web_scrape\` + browser MCP | Pages, DOM, screenshots |
+| \`browser\` | Browser | \`browser_*\` tools + Playwright MCP + \`web_search\` / \`web_scrape\` | Interactive pages, DOM, screenshots |
 
 Omit \`agentId\` when using a profile — defaults to \`skill:coding\`.
 
 **Important:** \`bash\` / \`explore\` / \`browser\` are **profiles** for \`invoke_agents\`. There is no tool named \`bash\` — use \`shell\` / \`run_script\` / \`run_script_file\` under the \`bash\` profile.
 
+**Browser MCP:** Settings → MCP includes built-in **Playwright Browser** (\`ref-mcp-playwright\`), enabled by default and launched from the bundled \`@playwright/mcp\` package (not \`npx @latest\`). Prefer MCP navigate/snapshot/click/fill for interactive work; use \`web_scrape\` only for one-shot markdown extraction. Chromium: \`npx playwright install chromium\` (or system Chrome) if MCP tools fail to launch.
 ## Orchestration profiles
 
 | Profile | Role |
@@ -2048,7 +2049,7 @@ The sandbox **persists across turns** in the same conversation. Prior deliverabl
 | Tool | Role |
 |------|------|
 | \`web_search\` | General and scholarly web: news, reports, journal pages, patents, government sources |
-| \`web_scrape\` | Full page content for URLs returned by search — primary evidence |
+| \`web_scrape\` | Main-content markdown for URLs returned by search — primary evidence |
 
 Prefer academic/scholarly query phrasing for literature (author/year/journal keywords).
 
@@ -2297,7 +2298,7 @@ Tone: clear, academic, concise.
 ## Tools
 
 - **web_search** — general and scholarly web search (Phase 2)
-- **web_scrape** — full page content for evidence (Phase 3)
+- **web_scrape** — main-content markdown for evidence (Phase 3)
 - **edit_files** — paper and working JSON artifacts (\`write\` / \`replace\`)
 - **read_file**, **shell** — user-provided paths or prior artifacts
 - **update_todos**, **read_todos** — multi-phase progress

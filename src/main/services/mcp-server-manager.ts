@@ -14,6 +14,7 @@ import {
   ensureMcpSpawnPathReady,
   resolveCommandOnPath,
   resolveStdioMcpCommand,
+  withMcpSpawnPath,
 } from './mcp-runtime-check'
 
 export interface McpToolDefinition {
@@ -67,14 +68,20 @@ class McpServerManager {
         pathPreview: path.split(process.platform === 'win32' ? ';' : ':').slice(0, 10),
       })
 
-      return createMCPClient({
-        transport: new Experimental_StdioMCPTransport({
-          command,
-          args: server.args,
-          env: buildStdioMcpEnv(server.env),
-          stderr: 'pipe',
+      const env = buildStdioMcpEnv(server.env)
+      // See withMcpSpawnPath: ai-sdk overwrites transport PATH from process.env.
+      return withMcpSpawnPath(env.PATH, async () =>
+        createMCPClient({
+          transport: new Experimental_StdioMCPTransport({
+            command,
+            args: server.args,
+            env,
+            // Must be a stdio type with an fd ('pipe'/'inherit'/…). PassThrough
+            // streams are rejected by child_process.spawn.
+            stderr: 'pipe',
+          }),
         }),
-      })
+      )
     }
 
     if (!server.url.trim()) {

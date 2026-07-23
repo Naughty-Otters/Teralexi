@@ -64,6 +64,28 @@ describe('McpServersRepository', () => {
     expect(playwright?.args).toEqual(['@playwright/mcp'])
   })
 
+  it('re-enables Playwright Browser when launch seed already matches', () => {
+    const db = createMigrationTestDatabase()
+    runMigrations(db)
+    const repo = new McpServersRepository(db)
+
+    repo.create({
+      id: 'ref-mcp-playwright',
+      userId: 'default',
+      name: 'Playwright Browser',
+      transportType: 'stdio',
+      url: '',
+      command: 'node',
+      args: ['@playwright/mcp'],
+      env: {},
+      headers: {},
+      enabled: false,
+    })
+
+    repo.ensureReferenceServers('default', '/tmp/workspace')
+    expect(repo.get('default', 'ref-mcp-playwright')?.enabled).toBe(true)
+  })
+
   it('rejects deleting built-in reference servers', () => {
     const db = createMigrationTestDatabase()
     runMigrations(db)

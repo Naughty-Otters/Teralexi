@@ -11,9 +11,12 @@ import {
   resolveFilesystemMcpAllowedPaths,
 } from '@shared/mcp/filesystem-mcp-paths'
 import { isPlaywrightReferenceMcpServer } from '@shared/mcp/reference-mcp-servers'
-import { resolvePlaywrightMcpCliPath } from './playwright-mcp-launch'
+import {
+  buildPlaywrightMcpStdioLaunch,
+  resolvePlaywrightMcpCliPath,
+} from './playwright-mcp-launch'
 import { getBrowserCdpEndpointHint } from '@main/agent/browser/browser-session'
-import { bundledBinDir } from '@main/agent/lsp/language-servers'
+import { isPackagedApp, resolveAppRoot } from '@main/config/app-paths'
 
 export type McpServerRuntimeContext = {
   userId?: string
@@ -40,30 +43,44 @@ function ensureAccessibleDirectories(paths: readonly string[]): void {
   }
 }
 
-function resolveAppRootForNodeModules(): string | null {
-  const binDir = bundledBinDir()
-  if (!binDir) return null
-  // …/node_modules/.bin → app root
-  return binDir.replace(/[/\\]node_modules[/\\]\.bin\/?$/, '')
-}
-
 function resolvePlaywrightMcpServer(server: StoredMcpServer): StoredMcpServer {
   const cdp = getBrowserCdpEndpointHint()
   const extraArgs = cdp ? ['--cdp-endpoint', cdp] : []
-  const cliPath = resolvePlaywrightMcpCliPath(resolveAppRootForNodeModules())
+  const cliPath = resolvePlaywrightMcpCliPath(resolveAppRoot())
 
-  const base: StoredMcpServer = cliPath
-    ? {
-        ...server,
-        command: 'node',
-        args: [cliPath, ...extraArgs],
-      }
-    : {
-        ...server,
-        // Fallback when the package is missing from node_modules.
-        command: 'npx',
-        args: ['-y', '@playwright/mcp', ...extraArgs],
-      }
+  if (!cliPath) {
+    if (isPackagedApp()) {
+      throw new Error(
+        'Bundled Playwright MCP (@playwright/mcp) was not found in the app package. Rebuild/reinstall the app so the MCP package is shipped.',
+      )
+    }
+    // Dev-only fallback when the package is missing from node_modules.
+    const base: StoredMcpServer = {
+      ...server,
+      command: 'npx',
+      args: ['-y', '@playwright/mcp', ...extraArgs],
+    }
+    if (!cdp) return base
+    return {
+      ...base,
+      env: {
+        ...(base.env ?? {}),
+        PLAYWRIGHT_MCP_CDP_ENDPOINT: cdp,
+        OPENFDE_BROWSER_CDP_URL: cdp,
+      },
+    }
+  }
+
+  const launch = buildPlaywrightMcpStdioLaunch(cliPath, extraArgs)
+  const base: StoredMcpServer = {
+    ...server,
+    command: launch.command,
+    args: launch.args,
+    env: {
+      ...(server.env ?? {}),
+      ...launch.env,
+    },
+  }
 
   if (!cdp) return base
   return {

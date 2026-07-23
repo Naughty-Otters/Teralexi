@@ -51,6 +51,7 @@ import {
   resolveCommandOnPath,
   resolveCommonUserBinPaths,
   resolveLoginShellPath,
+  withMcpSpawnPath,
 } from './mcp-runtime-check'
 
 describe('mcp-runtime-check', () => {
@@ -65,6 +66,15 @@ describe('mcp-runtime-check', () => {
 
   it('builds an augmented PATH for MCP spawns', () => {
     expect(buildMcpSpawnPath()).toContain('/opt/homebrew/bin')
+  })
+
+  it('applies spawn PATH on process.env for the duration of withMcpSpawnPath', async () => {
+    const previous = process.env.PATH
+    const custom = `/mcp-test-bin${previous ? `:${previous}` : ''}`
+    await withMcpSpawnPath(custom, async () => {
+      expect(process.env.PATH).toBe(custom)
+    })
+    expect(process.env.PATH).toBe(previous)
   })
 
   it.skipIf(isWin)('includes pyenv shims such as ~/.pyenv/shims/uvx', () => {

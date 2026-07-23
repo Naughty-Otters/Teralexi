@@ -112,6 +112,7 @@ describe('mcp-server-runtime', () => {
     expect(resolved.command).toBe('node')
     expect(resolved.args[0]).toMatch(/cli\.js$/)
     expect(resolved.args[0]).toContain('@playwright')
+    expect(resolved.env?.TMPDIR).toBeTruthy()
   })
 
   it('injects CDP endpoint args for Playwright MCP when a session hint exists', async () => {

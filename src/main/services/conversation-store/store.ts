@@ -93,6 +93,7 @@ export class ConversationStore {
       'default',
       this.userProperties.getWorkspacePath('default'),
     )
+    this.agentConfigurations.ensurePlaywrightMcpOnAllowlists('default')
   }
 
   // ── Conversation settings ─────────────────────────────────────────────────
@@ -543,6 +544,7 @@ export class ConversationStore {
       userId,
       this.userProperties.getWorkspacePath(userId),
     )
+    this.agentConfigurations.ensurePlaywrightMcpOnAllowlists(userId)
     return this.mcpServers.list(userId)
   }
 

@@ -277,6 +277,28 @@ export function buildStdioMcpEnv(
   }
 }
 
+/**
+ * `@ai-sdk/mcp` Stdio transport rebuilds env via an allowlist and **overwrites**
+ * PATH from `process.env.PATH`. Apply our augmented PATH on `process.env`
+ * around the spawn so the child actually receives it.
+ */
+export async function withMcpSpawnPath<T>(
+  path: string,
+  run: () => Promise<T>,
+): Promise<T> {
+  const previous = process.env.PATH
+  process.env.PATH = path
+  try {
+    return await run()
+  } finally {
+    if (previous === undefined) {
+      delete process.env.PATH
+    } else {
+      process.env.PATH = previous
+    }
+  }
+}
+
 export function resolveStdioMcpCommand(command: string): {
   command: string
   path: string
