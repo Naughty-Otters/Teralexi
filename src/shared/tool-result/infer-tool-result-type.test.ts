@@ -51,4 +51,38 @@ describe('inferToolResultType', () => {
       'error',
     )
   })
+
+  it('keeps shell/script terminal even when files[] diffs are attached', () => {
+    expect(
+      inferToolResultType('shell', {
+        stdout: 'ok',
+        exitCode: 0,
+        files: [
+          {
+            path: 'a.ts',
+            diff: '+x',
+            additions: 1,
+            deletions: 0,
+            action: 'create',
+            workspacePath: '/ws',
+          },
+        ],
+      }),
+    ).toBe('terminal')
+    expect(
+      inferToolResultType('run_script', {
+        success: true,
+        output: 'done',
+        files: [
+          {
+            path: 'polluted.txt',
+            diff: '+x',
+            additions: 1,
+            deletions: 0,
+            workspacePath: '/ws',
+          },
+        ],
+      }),
+    ).toBe('terminal')
+  })
 })

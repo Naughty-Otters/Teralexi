@@ -78,6 +78,6 @@ describe('edit_files', () => {
 
   it('rejects invalid input', async () => {
     const result = await editFiles.execute({ mode: 'replace' })
-    expect(result).toMatchObject({ error: 'Invalid edit_files input.' })
+    expect(result).toMatchObject({ error: 'replace mode requires path.' })
   })
 })

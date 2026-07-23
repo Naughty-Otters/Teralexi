@@ -382,8 +382,8 @@ const statusText = computed(() => {
 .exploring-panel__body--compact {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 12px 10px;
+  gap: 6px;
+  padding: 8px 10px 10px;
 }
 
 .exploring-panel--active .exploring-panel__header {

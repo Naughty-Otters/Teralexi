@@ -171,7 +171,8 @@ export const lang: AppLocaleBundle = {
       'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars, latest thinking bubble only, compact exploring accordion.',
   },
   chat: {
-    thoughtBubbleTitle: 'Thought briefly',
+    thoughtBubbleTitle: 'Thinking',
+    thoughtBubbleStreaming: 'Thinking',
     exportBubblePdf: 'Export as PDF',
     exportBubblePdfSuccess: 'PDF saved',
     exportBubblePdfFailed: 'Could not export PDF',

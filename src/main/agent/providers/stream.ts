@@ -174,7 +174,24 @@ export async function runLlmTextSilent(
 export async function streamLlmTextToStepProgress(
   ctx: AgentStepContext,
   params: StreamTextParams,
+  options?: {
+    /**
+     * Also consume `textStream` for progress. Some providers omit live
+     * text-deltas from `fullStream` until the response finishes.
+     * Default true.
+     */
+    pipeTextStreamToProgress?: boolean
+    /**
+     * When set, accumulate stream text and replace step progress with the
+     * mapped body (instead of appending raw deltas).
+     */
+    replaceProgressWith?: (accumulatedText: string) => string
+  },
 ): Promise<{ text: string }> {
+  const pipeTextStreamToProgress = options?.pipeTextStreamToProgress === true
+  const replaceProgressWith = options?.replaceProgressWith
+  let accumulated = ''
+
   return withLlmRetry(stepRetryContext(ctx), 'streamText:progress', async () => {
     const { text, response } = await runLlmStream({
       streamParams: {
@@ -182,8 +199,17 @@ export async function streamLlmTextToStepProgress(
         abortSignal: params.abortSignal ?? ctx.opts.abortSignal,
       } as StreamTextParams,
       mode: 'progress',
+      pipeTextStreamToProgress,
       processorCtx: {
-        emitStepProgress: (chunk) => ctx.emitStepProgress(chunk),
+        emitStepProgress: (chunk) => {
+          if (!chunk) return
+          accumulated += chunk
+          if (replaceProgressWith) {
+            ctx.setStepProgressContent(replaceProgressWith(accumulated))
+            return
+          }
+          ctx.emitStepProgress(chunk)
+        },
         bus: ctx.opts.eventBus,
       },
       ...llmValidationContext(ctx, 'streamText:progress'),
@@ -194,15 +220,19 @@ export async function streamLlmTextToStepProgress(
       { source: 'streamText', stepId: ctx.stepId },
       await readStreamTextUsage(response),
     )
-    return { text }
+    // Prefer processor text; fall back to progress accumulation when the
+    // provider only streamed via textStream (fullStream omitted deltas).
+    return { text: text.trim() || accumulated }
   })
 }
 
 export async function streamLlmObjectToStepProgress<T>(params: {
   ctx: AgentStepContext
   streamParams: StreamTextParams
+  replaceProgressWith?: (accumulatedText: string) => string
 }): Promise<{ text: string; output: T }> {
-  const { ctx, streamParams } = params
+  const { ctx, streamParams, replaceProgressWith } = params
+  let accumulated = ''
   return withLlmRetry(stepRetryContext(ctx), 'streamObject:progress', async () => {
     const { text, output, response } = await runLlmStream({
       streamParams: {
@@ -210,8 +240,17 @@ export async function streamLlmObjectToStepProgress<T>(params: {
         abortSignal: streamParams.abortSignal ?? ctx.opts.abortSignal,
       } as StreamTextParams,
       mode: 'progress',
+      pipeTextStreamToProgress: true,
       processorCtx: {
-        emitStepProgress: (chunk) => ctx.emitStepProgress(chunk),
+        emitStepProgress: (chunk) => {
+          if (!chunk) return
+          accumulated += chunk
+          if (replaceProgressWith) {
+            ctx.setStepProgressContent(replaceProgressWith(accumulated))
+            return
+          }
+          ctx.emitStepProgress(chunk)
+        },
         bus: ctx.opts.eventBus,
       },
       ...llmValidationContext(ctx, 'streamObject:progress'),
@@ -223,7 +262,7 @@ export async function streamLlmObjectToStepProgress<T>(params: {
       await readStreamTextUsage(response),
     )
     return {
-      text,
+      text: text.trim() || accumulated,
       output: (output ?? (await response.output)) as T,
     }
   })

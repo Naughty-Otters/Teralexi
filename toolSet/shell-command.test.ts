@@ -475,6 +475,13 @@ describe('shell-command tools', () => {
       success: true,
       workspaceWriteWarning: expect.stringContaining('user workspace'),
       workspaceWrites: ['polluted.txt'],
+      files: [
+        expect.objectContaining({
+          path: 'polluted.txt',
+          action: 'create',
+          workspacePath: workspaceRoot,
+        }),
+      ],
     })
   })
 })

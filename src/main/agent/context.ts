@@ -81,6 +81,7 @@ import {
 } from './context/step-attachments'
 import {
   emitStepProgress as emitStepProgressHelper,
+  setStepProgressContent as setStepProgressContentHelper,
   publishStepProgress as publishStepProgressHelper,
   shouldRegisterToolLoopStepContext,
 } from './context/step-progress-policy'
@@ -925,6 +926,28 @@ export class AgentFlowContext {
     )
   }
 
+  setStepProgressContent(
+    content: string,
+    stepId?: AgentStepId,
+    instanceKey?: string,
+  ): void {
+    setStepProgressContentHelper(
+      {
+        opts: this.opts,
+        stepHistory: this.stepHistory,
+        stepContexts: this.stepContexts,
+        stepProgressTextByKey: this.stepProgressTextByKey,
+        stepAttachmentsByKey: this.stepAttachmentsByKey,
+        flowId: this.flowId,
+        lastHitlPausedStageId: this.lastHitlPausedStageId,
+        getLatestStepContext: () => this.getLatestStepContext(),
+      },
+      content,
+      stepId,
+      instanceKey,
+    )
+  }
+
   private getLatestStepContext(): AgentStepSnapshot | undefined {
     return [...this.stepHistory].sort((a, b) => b.sequence - a.sequence)[0]
   }
@@ -972,6 +995,10 @@ export class AgentStepContext {
 
   resolveStageChoice(stage: AgentLlmStage) {
     return this.flowContext.resolveStageChoice(stage)
+  }
+
+  resolveDefaultLlmChoice() {
+    return this.flowContext.resolveDefaultLlmChoice()
   }
 
   resolveToolLoopExecutionChoice(isRecoveryAttempt: boolean) {
@@ -1167,6 +1194,17 @@ export class AgentStepContext {
 
   emitStepProgress(chunk: string, stepId: AgentStepId = this.stepId) {
     this.flowContext.emitStepProgress(chunk, stepId, this.instanceKey)
+  }
+
+  setStepProgressContent(
+    content: string,
+    stepId: AgentStepId = this.stepId,
+  ): void {
+    this.flowContext.setStepProgressContent(
+      content,
+      stepId,
+      this.instanceKey,
+    )
   }
 
   /** Stream tool-loop text to the batch parent section (not per-todo child keys). */

@@ -65,8 +65,45 @@ describe('streamLlmTextToStepProgress', () => {
     expect(runLlmStream).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: 'progress',
+        pipeTextStreamToProgress: false,
       }),
     )
+  })
+
+  it('enables textStream pipe when requested', async () => {
+    runLlmStream.mockResolvedValue(successStream('hello'))
+    await streamLlmTextToStepProgress(
+      makeCtx(),
+      { model: 'test' } as never,
+      { pipeTextStreamToProgress: true },
+    )
+    expect(runLlmStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'progress',
+        pipeTextStreamToProgress: true,
+      }),
+    )
+  })
+
+  it('replaces step progress with mapped accumulated text', async () => {
+    runLlmStream.mockImplementation(async (params: {
+      processorCtx?: { emitStepProgress?: (chunk: string) => void }
+    }) => {
+      params.processorCtx?.emitStepProgress?.('{"goal":"')
+      params.processorCtx?.emitStepProgress?.('hi"}')
+      return successStream('{"goal":"hi"}')
+    })
+    const setStepProgressContent = vi.fn()
+    const out = await streamLlmTextToStepProgress(
+      makeCtx({ setStepProgressContent }),
+      { model: 'test' } as never,
+      {
+        replaceProgressWith: (acc) => `MAPPED:${acc}`,
+      },
+    )
+    expect(out.text).toBe('{"goal":"hi"}')
+    expect(setStepProgressContent).toHaveBeenCalledWith('MAPPED:{"goal":"')
+    expect(setStepProgressContent).toHaveBeenCalledWith('MAPPED:{"goal":"hi"}')
   })
 })
 
@@ -79,6 +116,12 @@ describe('streamLlmObjectToStepProgress', () => {
     })
     expect(out.output).toEqual({ ok: true })
     expect(out.text).toBe('x')
+    expect(runLlmStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'progress',
+        pipeTextStreamToProgress: true,
+      }),
+    )
   })
 })
 

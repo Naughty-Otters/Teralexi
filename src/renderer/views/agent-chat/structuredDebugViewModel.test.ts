@@ -36,7 +36,7 @@ describe('buildStructuredDebugViewFromStepProgress', () => {
     expect(view?.sections[0]?.id).toBe('ThinkingStep')
   })
 
-  it('renders backend-truncated running step bodies as markdown', () => {
+  it('renders thinking step bodies as plain pre (JSON-safe, not markdown)', () => {
     const head = 'H'.repeat(HEAD_TAIL_KEEP_CHARS)
     const tail = 'LIVE_TAIL'
     const content = limitPersistedStepText(
@@ -60,9 +60,37 @@ describe('buildStructuredDebugViewFromStepProgress', () => {
     )
 
     const html = view?.sections[0]?.bodyHtml ?? ''
+    expect(html).toContain('conversation-thinking-text')
+    expect(html).toContain('<pre')
     expect(html).toContain('....')
     expect(html).toContain('LIVE_TAIL')
-    expect(html).not.toContain('<pre>')
+  })
+
+  it('does not let markdown eat underscores in streamed thinking JSON', () => {
+    const view = buildStructuredDebugViewFromStepProgress(
+      [
+        {
+          id: 'thinking-live-1',
+          data: {
+            stepId: 'thinking',
+            title: 'Thinking',
+            sequence: 1,
+            status: 'running',
+            content:
+              '{"execution_mode":"agent_call","goal":"The user wants a fix","rationale":"The bubble must show full lines"}',
+          },
+        },
+      ],
+      markdown,
+      { isStreaming: true },
+    )
+
+    const html = view?.sections[0]?.bodyHtml ?? ''
+    expect(html).toContain('conversation-thinking-text')
+    expect(html).toContain('execution_mode')
+    expect(html).toContain('The user wants a fix')
+    expect(html).toContain('The bubble must show full lines')
+    expect(html).not.toContain('<em>')
   })
 
   it('renders markdown inside outer prose fences as html, not a code block', () => {

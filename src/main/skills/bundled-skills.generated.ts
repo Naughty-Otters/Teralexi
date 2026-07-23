@@ -41,7 +41,7 @@ See [refs/plan-modes.md](refs/plan-modes.md). For long-running commands, pass \`
 ### Workflow
 
 1. **Explore** — Prefer \`lsp\` (definition, references, hover, document_symbols, workspace_symbols). Read with \`read_file\`. For text search / globs, use \`shell\` (e.g. \`rg\`, \`find\`) — or delegate \`profile: "explore"\` / \`"bash"\`. Do not re-read a file already in the session read ledger unless it was edited or you need a new offset.
-2. **Edit** — One tool: \`edit_files\` with \`mode\`: \`replace\` (partial), \`write\` (new/full), \`delete\`, or \`patch\` (multi-file). Match existing style.
+2. **Edit** — One tool: \`edit_files\` with \`mode\`: \`replace\` (partial), \`write\` (new/full), \`delete\`, or \`patch\` (multi-file). Match existing style. **Never** create/edit project source via \`shell\` redirects, \`sed -i\`, \`tee\`, or heredocs — those skip chat diffs.
 3. **Verify** — \`shell\` (argv arrays). Read output; fix failures and re-run until pass.
 4. **Review** — \`shell\` with \`["git","status"]\` and \`["git","diff"]\` before summarizing (or \`profile: "bash"\`).
 
@@ -96,8 +96,8 @@ Prefer scoped \`rg\`/\`find\` via shell (source globs) over blind repo-wide scan
 Cursor-like lean set (explicit only — no tag expansion):
 
 - Read / symbols: \`read_file\`, \`lsp\`
-- Edit: \`edit_files\` (\`replace\` | \`write\` | \`delete\` | \`patch\`)
-- Shell (tests, grep/glob, git): \`shell\`
+- Edit: \`edit_files\` (\`replace\` | \`write\` | \`delete\` | \`patch\`) — required for project source changes
+- Shell (tests, grep/glob, git): \`shell\` — do not use shell to rewrite source files
 - Web: \`web_search\`, \`web_scrape\`
 - Todos / plan / promote: \`update_todos\`, \`read_todos\`, \`enter_plan_mode\`, \`exit_plan_mode\`, \`promote_artifact\`
 - Sub-agents: \`invoke_agents\` (one-element \`runs\` for a single child)

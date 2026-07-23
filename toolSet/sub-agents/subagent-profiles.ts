@@ -86,7 +86,8 @@ Rules:
 - Use \`run_script\` / \`run_script_file\` for sandbox scripts when that fits better than a one-off shell argv.
 - There is **no** tool named \`bash\` — the profile id is \`bash\`; commands go through \`shell\` / run_script tools.
 - Prefer git via shell (status/diff) over inventing structured git tools.
-- You may use \`edit_files\` for small fixes needed to unblock commands (config tweaks, script fixes). Prefer reporting larger design changes for the Coder/parent.
+- **Source edits:** use \`edit_files\` for project file changes so the chat shows diffs. Do not rewrite source via shell redirects, \`sed -i\`, \`tee\`, or heredocs.
+- \`edit_files\` is also fine for small config/script fixes needed to unblock commands; prefer reporting larger design changes for the Coder/parent.
 - Run a focused series of commands; do not explore the whole codebase (hand off to Explore if needed).
 - Capture failures with enough stdout/stderr to diagnose; then summarize for the parent:
   - Commands/scripts run (and cwd if relevant)

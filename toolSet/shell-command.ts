@@ -20,6 +20,7 @@ import {
   toolLoopOutputRelBase,
 } from './sandbox-paths'
 import {
+  buildWorkspaceWriteFileChanges,
   detectWorkspaceWrites,
   snapshotWorkspaceGuard,
   WORKSPACE_WRITE_WARNING,
@@ -704,7 +705,7 @@ async function runScriptFileAndCapture(options: {
   const deliverableWatchRoot = resolveDeliverableWatchRoot(root)
   const beforeSnapshot = await snapshotDeliverableFiles(deliverableWatchRoot)
   const workspaceBefore = workspacePath
-    ? await snapshotWorkspaceGuard(workspacePath)
+    ? await snapshotWorkspaceGuard(workspacePath, { captureTextContent: true })
     : null
 
   const preflight = await runScriptPreflight({
@@ -849,6 +850,9 @@ async function runScriptFileAndCapture(options: {
 
   let workspaceWrites: string[] | undefined
   let workspaceWriteWarning: string | undefined
+  let workspaceFiles: Awaited<
+    ReturnType<typeof buildWorkspaceWriteFileChanges>
+  > = []
   if (workspacePath && workspaceBefore) {
     const workspaceAfter = await snapshotWorkspaceGuard(workspacePath)
     const writes = detectWorkspaceWrites({
@@ -859,6 +863,12 @@ async function runScriptFileAndCapture(options: {
     if (writes.length > 0) {
       workspaceWrites = writes
       workspaceWriteWarning = WORKSPACE_WRITE_WARNING
+      workspaceFiles = await buildWorkspaceWriteFileChanges({
+        workspaceRoot: workspacePath,
+        before: workspaceBefore,
+        after: workspaceAfter,
+        relativeWrites: writes,
+      })
     }
   }
 
@@ -879,6 +889,7 @@ async function runScriptFileAndCapture(options: {
     ...(workspaceWrites?.length
       ? { workspaceWrites, workspaceWriteWarning }
       : {}),
+    ...(workspaceFiles.length > 0 ? { files: workspaceFiles } : {}),
     ...(result.error ? { error: result.error } : {}),
   }
 }

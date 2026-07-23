@@ -12,6 +12,13 @@ export type LlmProcessorContext = {
   onUIMessageChunk?: (chunk: Record<string, unknown>) => void
   /** Text/reasoning/step UI chunks when native `toUIMessageStream` owns tool parts. */
   synthesizeUiChunk?: (chunk: Record<string, unknown>) => void
+  /**
+   * When true, skip forwarding text-deltas to emitStepProgress/onChunk.
+   * Used with {@link RunLlmStreamParams.pipeTextStreamToProgress} so structured
+   * Output.object streams can drive progress from `textStream` instead (fullStream
+   * often omits text-deltas for object generation).
+   */
+  suppressTextStepProgress?: boolean
   reasoningMaxChars?: number
   bus?: AgentEventBus
 }

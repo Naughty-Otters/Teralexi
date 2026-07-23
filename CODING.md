@@ -16,8 +16,11 @@ Use **one diff presentation layer**, not separate UIs per tool:
 | `delete_file` | Yes | Full-file deletion preview |
 | `move_file` | Yes | Rename card (`moveFrom` → `path`) |
 | `copy_file` | Yes | Create-at-destination preview |
-| `shell` | No | stdout/stderr only; requires workspace |
+| `shell` | Yes* | stdout/stderr primary; when the command mutates workspace files, incidental `files[]` diffs are also shown |
+| `run_script` / `run_script_file` | Yes* | Same: terminal + incidental workspace `files[]` when scripts write outside the sandbox |
 | `git_diff` | Same renderer | Read-only; no preview IPC |
+
+\* Prefer `edit_files` for intentional source edits. Shell/script diffs are a safety net when the model mutates files via commands.
 
 Chat shows **unified diff** (green/red lines). Side-by-side editors belong in the sandbox/report panel, not in the approval bubble.
 

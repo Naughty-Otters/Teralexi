@@ -6,34 +6,99 @@ import { deleteFile } from './delete-file'
 import { editFile } from './edit-file'
 import { writeFile } from './write-file'
 
-const editFilesSchema = z.discriminatedUnion('mode', [
-  z.object({
-    mode: z.literal('replace'),
-    path: z.string().min(1),
-    old_string: z.string(),
-    new_string: z.string(),
-    replace_all: z.boolean().optional().default(false),
-  }),
-  z.object({
-    mode: z.literal('write'),
-    path: z.string().min(1),
-    data: z.string(),
-    overwrite: z.boolean().optional().default(false),
-    createDirectories: z.boolean().optional().default(true),
-    encoding: z
-      .enum(['utf8', 'ascii', 'base64', 'hex', 'latin1'])
-      .optional()
-      .default('utf8'),
-  }),
-  z.object({
-    mode: z.literal('delete'),
-    path: z.string().min(1),
-  }),
-  z.object({
-    mode: z.literal('patch'),
-    patch_text: z.string().min(1),
-  }),
-])
+/**
+ * Flat object schema (not discriminatedUnion) so JSON Schema root is
+ * `type: "object"`. Providers reject `oneOf`/`anyOf` roots (`type: null`).
+ */
+const editFilesSchema = z.object({
+  mode: z
+    .enum(['replace', 'write', 'delete', 'patch'])
+    .describe(
+      'replace = search/replace; write = full file; delete = remove file; patch = multi-file patch text',
+    ),
+  path: z
+    .string()
+    .min(1)
+    .optional()
+    .describe('File path (required for replace, write, delete)'),
+  old_string: z
+    .string()
+    .optional()
+    .describe('replace: text to find (empty string creates/overwrites the file)'),
+  new_string: z
+    .string()
+    .optional()
+    .describe('replace: replacement text'),
+  replace_all: z
+    .boolean()
+    .optional()
+    .describe('replace: replace every match when true'),
+  data: z
+    .string()
+    .optional()
+    .describe('write: full file contents'),
+  overwrite: z
+    .boolean()
+    .optional()
+    .describe('write: allow overwriting an existing file'),
+  createDirectories: z
+    .boolean()
+    .optional()
+    .describe('write: create parent directories'),
+  encoding: z
+    .enum(['utf8', 'ascii', 'base64', 'hex', 'latin1'])
+    .optional()
+    .describe('write: file encoding'),
+  patch_text: z
+    .string()
+    .min(1)
+    .optional()
+    .describe('patch: *** Begin Patch *** multi-file patch body'),
+})
+
+type EditFilesInput = z.infer<typeof editFilesSchema>
+
+function validateEditFilesInput(
+  data: EditFilesInput,
+): { ok: true; data: EditFilesInput } | { ok: false; error: string } {
+  switch (data.mode) {
+    case 'replace': {
+      if (!data.path?.trim()) {
+        return { ok: false, error: 'replace mode requires path.' }
+      }
+      if (typeof data.old_string !== 'string' || typeof data.new_string !== 'string') {
+        return {
+          ok: false,
+          error: 'replace mode requires old_string and new_string.',
+        }
+      }
+      return { ok: true, data }
+    }
+    case 'write': {
+      if (!data.path?.trim()) {
+        return { ok: false, error: 'write mode requires path.' }
+      }
+      if (typeof data.data !== 'string') {
+        return { ok: false, error: 'write mode requires data.' }
+      }
+      return { ok: true, data }
+    }
+    case 'delete': {
+      if (!data.path?.trim()) {
+        return { ok: false, error: 'delete mode requires path.' }
+      }
+      return { ok: true, data }
+    }
+    case 'patch': {
+      if (!data.patch_text?.trim()) {
+        return { ok: false, error: 'patch mode requires patch_text.' }
+      }
+      return { ok: true, data }
+    }
+    default:
+      return { ok: false, error: `Unsupported edit_files mode.` }
+  }
+}
 
 /**
  * Unified file mutation tool (Cursor-style single edit surface).
@@ -58,27 +123,32 @@ export const editFiles: SkillTool = {
       }
     }
 
-    const data = parsed.data
+    const validated = validateEditFilesInput(parsed.data)
+    if (!validated.ok) {
+      return { error: validated.error }
+    }
+
+    const data = validated.data
     switch (data.mode) {
       case 'replace':
         return editFile.execute({
-          path: data.path,
-          old_string: data.old_string,
-          new_string: data.new_string,
-          replace_all: data.replace_all,
+          path: data.path!,
+          old_string: data.old_string!,
+          new_string: data.new_string!,
+          replace_all: data.replace_all ?? false,
         })
       case 'write':
         return writeFile.execute({
-          path: data.path,
-          data: data.data,
-          overwrite: data.overwrite,
-          createDirectories: data.createDirectories,
-          encoding: data.encoding,
+          path: data.path!,
+          data: data.data!,
+          overwrite: data.overwrite ?? false,
+          createDirectories: data.createDirectories ?? true,
+          encoding: data.encoding ?? 'utf8',
         })
       case 'delete':
-        return deleteFile.execute({ path: data.path })
+        return deleteFile.execute({ path: data.path! })
       case 'patch':
-        return applyPatch.execute({ patch_text: data.patch_text })
+        return applyPatch.execute({ patch_text: data.patch_text! })
     }
   },
 }

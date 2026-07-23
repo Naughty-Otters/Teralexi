@@ -91,7 +91,17 @@ export function inferToolResultType(
     if (!hasPayload) return 'error'
   }
 
-  if (isFileChangeToolName(toolName) || hasFileChangeShape(record)) {
+  // Dedicated file tools always classify as file_change.
+  if (isFileChangeToolName(toolName)) {
+    return 'file_change'
+  }
+
+  // Shell/script stays terminal even when incidental `files[]` diffs are attached.
+  if (isTerminalToolName(toolName) || hasTerminalShape(record)) {
+    return 'terminal'
+  }
+
+  if (hasFileChangeShape(record)) {
     return 'file_change'
   }
 
@@ -101,10 +111,6 @@ export function inferToolResultType(
 
   if (QUERY_TOOL_NAMES.has(toolName) || hasQueryShape(record)) {
     return 'query'
-  }
-
-  if (isTerminalToolName(toolName) || hasTerminalShape(record)) {
-    return 'terminal'
   }
 
   return 'raw'

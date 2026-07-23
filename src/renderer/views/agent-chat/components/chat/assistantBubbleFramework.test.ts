@@ -118,6 +118,39 @@ describe('assistantBubbleFramework', () => {
     expect(bubbles[0]?.kind).toBe('terminal')
   })
 
+  it('shows terminal + diff when shell output includes workspace files[]', () => {
+    const message = messageWithParts([
+      {
+        type: 'tool-shell',
+        state: 'output-available',
+        input: { command: ['sh', '-c', 'echo hi > a.ts'] },
+        output: {
+          stdout: '',
+          stderr: '',
+          exitCode: 0,
+          output: '',
+          files: [
+            {
+              path: 'a.ts',
+              diff: '+hi',
+              additions: 1,
+              deletions: 0,
+              action: 'create',
+              workspacePath: '/tmp/ws',
+            },
+          ],
+        },
+      },
+    ])
+
+    const bubbles = resolveAssistantBubbles(message, {
+      structuredLayoutEnabled: false,
+      shouldShowStepProgress: () => false,
+    })
+
+    expect(bubbles.map((b) => b.kind)).toEqual(['terminal', 'diff'])
+  })
+
 
   it('groups agentic-run tool calls into one tool-group panel', () => {
     const progressPart = {

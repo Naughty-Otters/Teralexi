@@ -20,6 +20,16 @@ export type RunExpressionLlmOptions = {
   /** When false, collect LLM text without streaming tokens into step progress. */
   streamToProgress?: boolean
   stage?: AgentLlmStage
+  /**
+   * When streaming, also pipe `textStream` (default true). Needed when the
+   * provider withholds live text-deltas from `fullStream`.
+   */
+  pipeTextStreamToProgress?: boolean
+  /**
+   * Replace step-progress body with mapped accumulated text while streaming
+   * (instead of appending raw token deltas).
+   */
+  replaceProgressWith?: (accumulatedText: string) => string
 }
 
 export type RunExpressionLlmObjectOptions = {
@@ -28,6 +38,11 @@ export type RunExpressionLlmObjectOptions = {
   /** When false, collect structured output without streaming tokens into step progress. */
   streamToProgress?: boolean
   stage?: AgentLlmStage
+  /**
+   * Replace step-progress body with mapped accumulated text while streaming
+   * (instead of appending raw token deltas).
+   */
+  replaceProgressWith?: (accumulatedText: string) => string
 }
 
 function expressionLlmCallExtras(
@@ -86,6 +101,10 @@ export async function runExpressionLlmText(
   const { text } = await ctx.providers.streamTextToStepProgress(
     ctx,
     streamParams as Parameters<typeof ctx.providers.streamTextToStepProgress>[1],
+    {
+      pipeTextStreamToProgress: options?.pipeTextStreamToProgress,
+      replaceProgressWith: options?.replaceProgressWith,
+    },
   )
   return text.trim()
 }
@@ -131,6 +150,7 @@ export async function runExpressionLlmObject<T>(
   const { output } = await streamLlmObjectToStepProgress<T>({
     ctx,
     streamParams: streamParams as StreamTextParams,
+    replaceProgressWith: options.replaceProgressWith,
   })
   return output
 }

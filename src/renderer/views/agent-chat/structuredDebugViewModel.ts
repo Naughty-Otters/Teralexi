@@ -372,10 +372,45 @@ function userFacingFinalResultMarkdown(finalResult: string): string {
   return extractUserFacingTextFromFinalResult(finalResult) || finalResult.trim()
 }
 
+function escapeHtmlText(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function isThinkingSectionId(sectionId: string): boolean {
+  const id = sectionId.trim()
+  return id === 'ThinkingStep' || id === 'thinking'
+}
+
+/**
+ * Thinking streams raw JSON (and later markdown lists). Running that through
+ * markdown-it breaks on `_` / quotes and can leave only a fragment like "The"
+ * visible. Always render as escaped plain text in a full-width pre.
+ */
+function thinkingSectionBodyFields(
+  text: string,
+): Pick<StructuredDebugSection, 'bodyHtml' | 'bodyMarkdown'> {
+  const bodyMarkdown = text.replace(/\r\n/g, '\n').trim()
+  if (!bodyMarkdown) {
+    return { bodyHtml: '', bodyMarkdown: '' }
+  }
+  return {
+    bodyMarkdown,
+    bodyHtml: `<pre class="conversation-thinking-text">${escapeHtmlText(bodyMarkdown)}</pre>`,
+  }
+}
+
 function sectionBodyFields(
   markdown: MarkdownIt,
   text: string,
+  opts?: { sectionId?: string },
 ): Pick<StructuredDebugSection, 'bodyHtml' | 'bodyMarkdown'> {
+  if (opts?.sectionId && isThinkingSectionId(opts.sectionId)) {
+    return thinkingSectionBodyFields(text)
+  }
   const bodyMarkdown = markdownBodyFromText(text)
   if (!bodyMarkdown) {
     return { bodyHtml: '', bodyMarkdown: '' }
@@ -412,7 +447,7 @@ function buildSectionsFromPipelineConversation(
     sections.push({
       id: sectionId,
       title: turn.title?.trim() || 'Step',
-      ...sectionBodyFields(markdown, turn.content ?? ''),
+      ...sectionBodyFields(markdown, turn.content ?? '', { sectionId }),
       status: 'done',
       ...(attachments.length ? { attachments } : {}),
     })
@@ -620,7 +655,9 @@ export function buildStructuredDebugViewFromStepProgress(
         : isResearchReport
           ? 'Research Report'
           : title,
-      ...sectionBodyFields(markdown, content),
+      ...sectionBodyFields(markdown, content, {
+        sectionId: isResearchReport ? 'researchReport' : resolvedSectionId,
+      }),
       status,
       ...(progressKey ? { progressPartKey: progressKey } : {}),
       ...(attachments.length ? { attachments } : {}),
@@ -748,7 +785,7 @@ function buildSectionsFromStructured(
     return {
       id: step.type,
       title: renderStepLabel(step),
-      ...sectionBodyFields(markdown, stepContent),
+      ...sectionBodyFields(markdown, stepContent, { sectionId: step.type }),
       status: isRunning ? 'running' : 'done',
     }
   })

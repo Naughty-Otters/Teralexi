@@ -139,33 +139,42 @@ export function resolvePublishStepProgressTarget(
   return parent
 }
 
-export function emitStepProgress(
-  host: {
-    opts: AgentResponseOpts
-    stepHistory: AgentStepSnapshot[]
-    stepContexts: AgentStepContextMap
-    stepProgressTextByKey: StepProgressTextStore
-    stepAttachmentsByKey: StepAttachmentsStore
-    flowId: string
-    lastHitlPausedStageId?: string
-    getLatestStepContext: () => AgentStepSnapshot | undefined
-  },
-  chunk: string,
+type StepProgressHost = {
+  opts: AgentResponseOpts
+  stepHistory: AgentStepSnapshot[]
+  stepContexts: AgentStepContextMap
+  stepProgressTextByKey: StepProgressTextStore
+  stepAttachmentsByKey: StepAttachmentsStore
+  flowId: string
+  lastHitlPausedStageId?: string
+  getLatestStepContext: () => AgentStepSnapshot | undefined
+}
+
+function resolveStepProgressTarget(
+  host: StepProgressHost,
   stepId?: AgentStepId,
   instanceKey?: string,
-): void {
-  if (!chunk) return
+): AgentStepSnapshot | undefined {
   let target = instanceKey
     ? host.stepHistory.find((step) => step.key === instanceKey)
     : stepId
       ? host.stepContexts[stepId] ??
         host.stepHistory.find((step) => step.stepId === stepId)
       : host.getLatestStepContext()
-  if (!target || !host.opts.onStepProgress) {
-    if (host.opts.onStepProgress && host.stepHistory.length > 0) {
-      target = host.getLatestStepContext()
-    }
+  if (!target && host.opts.onStepProgress && host.stepHistory.length > 0) {
+    target = host.getLatestStepContext()
   }
+  return target
+}
+
+export function emitStepProgress(
+  host: StepProgressHost,
+  chunk: string,
+  stepId?: AgentStepId,
+  instanceKey?: string,
+): void {
+  if (!chunk) return
+  const target = resolveStepProgressTarget(host, stepId, instanceKey)
   if (!target || !host.opts.onStepProgress) {
     host.opts.onChunk(chunk)
     return
@@ -175,6 +184,24 @@ export function emitStepProgress(
   )
   host.stepProgressTextByKey.set(target.key, next)
   const publishTarget = resolvePublishStepProgressTarget(host, target, chunk)
+  if (!publishTarget) return
+  publishStepProgress(host, publishTarget)
+}
+
+/** Replace (do not append) the live step-progress body and republish. */
+export function setStepProgressContent(
+  host: StepProgressHost,
+  content: string,
+  stepId?: AgentStepId,
+  instanceKey?: string,
+): void {
+  const target = resolveStepProgressTarget(host, stepId, instanceKey)
+  if (!target || !host.opts.onStepProgress) {
+    if (content) host.opts.onChunk(content)
+    return
+  }
+  host.stepProgressTextByKey.set(target.key, limitPersistedStepText(content))
+  const publishTarget = resolvePublishStepProgressTarget(host, target, content)
   if (!publishTarget) return
   publishStepProgress(host, publishTarget)
 }

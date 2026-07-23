@@ -838,12 +838,19 @@ const transport = new IpcAgentChatTransport({
       scheduleUiFlush(
         'messages-sync',
         () => {
-          const inst = chatInst.value as unknown as {
-            state?: { messagesRef?: { value: UIMessage[] } }
-          }
-          syncReactiveMessagesFromChat(inst?.state?.messagesRef?.value, {
-            full: true,
-          })
+          const chat =
+            getConversationChat(conversationId) ??
+            (chatInst.value?.id === conversationId ? chatInst.value : null)
+          if (!chat) return
+          if (agentStore.currentConversationId !== conversationId) return
+          syncReactiveMessagesFromChat(
+            (
+              chat as unknown as {
+                state?: { messagesRef?: { value: UIMessage[] } }
+              }
+            ).state?.messagesRef?.value ?? chat.messages,
+            { full: true },
+          )
         },
         { conversationId, priority: 'immediate', force: true },
       )
@@ -856,10 +863,20 @@ const transport = new IpcAgentChatTransport({
     scheduleUiFlush(
       'messages-sync',
       () => {
-        const inst = chatInst.value as unknown as {
-          state?: { messagesRef?: { value: UIMessage[] } }
-        }
-        syncReactiveMessagesFromChat(inst?.state?.messagesRef?.value)
+        const chat =
+          getConversationChat(conversationId) ??
+          (chatInst.value?.id === conversationId ? chatInst.value : null)
+        if (!chat) return
+        // Background streams keep Chat + snapshot fresh; only the visible
+        // conversation paints into reactiveMessages.
+        if (agentStore.currentConversationId !== conversationId) return
+        syncReactiveMessagesFromChat(
+          (
+            chat as unknown as {
+              state?: { messagesRef?: { value: UIMessage[] } }
+            }
+          ).state?.messagesRef?.value ?? chat.messages,
+        )
       },
       {
         conversationId,
@@ -1570,6 +1587,10 @@ watch(
       scheduleSnapshot(previousId, true)
     }
     setVisibleConversationForUiFlush(conversationId)
+    if (conversationId) {
+      // Run any namespaced jobs that were deferred while this chat was background.
+      flushAllUiForConversation(conversationId)
+    }
     streamingTextBuffer.clear()
     resetFollowUpUiForConversationSwitch()
     void rebuildChat()

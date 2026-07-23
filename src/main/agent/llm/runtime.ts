@@ -39,6 +39,12 @@ export type RunLlmStreamParams = {
   mode?: LlmProcessorMode
   validationContext?: LlmMessageValidationContext
   llmDebug?: LlmDebugContext
+  /**
+   * Structured `Output.object` streams often omit text-deltas from `fullStream`.
+   * When true (and mode is progress with emitStepProgress), also pipe
+   * `result.textStream` into step progress for live Thinking UI.
+   */
+  pipeTextStreamToProgress?: boolean
 }
 
 export type RunLlmStreamResult = {
@@ -51,6 +57,7 @@ export type RunLlmStreamResult = {
 
 function buildProcessorCtx(
   params: RunLlmStreamParams,
+  opts?: { suppressTextStepProgress?: boolean },
 ): LlmProcessorContext {
   return {
     mode: params.mode ?? params.processorCtx?.mode ?? 'progress',
@@ -58,6 +65,19 @@ function buildProcessorCtx(
     emitStepProgress: params.processorCtx?.emitStepProgress,
     onUIMessageChunk: params.processorCtx?.onUIMessageChunk,
     bus: params.processorCtx?.bus,
+    suppressTextStepProgress:
+      opts?.suppressTextStepProgress ||
+      params.processorCtx?.suppressTextStepProgress,
+  }
+}
+
+async function pipeTextStreamToStepProgress(
+  textStream: AsyncIterable<string> | undefined,
+  emitStepProgress: ((chunk: string) => void) | undefined,
+): Promise<void> {
+  if (!textStream || typeof emitStepProgress !== 'function') return
+  for await (const chunk of textStream) {
+    if (chunk) emitStepProgress(chunk)
   }
 }
 
@@ -65,6 +85,7 @@ async function drainStreamResult(
   result: StreamTextResult,
   processor: LlmProcessor,
   ctx: LlmProcessorContext,
+  opts?: { pipeTextStreamToProgress?: boolean },
 ): Promise<LlmEvent[]> {
   const events: LlmEvent[] = []
   const onEvent = (event: LlmEvent) => {
@@ -72,12 +93,20 @@ async function drainStreamResult(
     processor.processEvent(event, ctx)
   }
 
-  if (result.fullStream) {
-    await drainFullStreamToLlmEvents(result.fullStream, onEvent)
-  } else {
-    await drainTextStreamToLlmEvents(result.textStream, onEvent)
-  }
+  const eventDrain = result.fullStream
+    ? drainFullStreamToLlmEvents(result.fullStream, onEvent)
+    : drainTextStreamToLlmEvents(result.textStream, onEvent)
 
+  // Only when fullStream exists — otherwise eventDrain already consumes textStream.
+  const progressDrain =
+    opts?.pipeTextStreamToProgress &&
+    result.fullStream &&
+    result.textStream &&
+    ctx.emitStepProgress
+      ? pipeTextStreamToStepProgress(result.textStream, ctx.emitStepProgress)
+      : Promise.resolve()
+
+  await Promise.all([eventDrain, progressDrain])
   return events
 }
 
@@ -114,9 +143,20 @@ export async function runLlmStream(
     )
 
     const result = streamText(params.streamParams)
+    const pipeTextStreamToProgress =
+      params.pipeTextStreamToProgress === true &&
+      mode === 'progress' &&
+      typeof params.processorCtx?.emitStepProgress === 'function' &&
+      Boolean(result.fullStream) &&
+      Boolean(result.textStream)
+
     const processor = new LlmProcessor()
-    const ctx = buildProcessorCtx(params)
-    const events = await drainStreamResult(result, processor, ctx)
+    const ctx = buildProcessorCtx(params, {
+      suppressTextStepProgress: pipeTextStreamToProgress,
+    })
+    const events = await drainStreamResult(result, processor, ctx, {
+      pipeTextStreamToProgress,
+    })
     await result.response
 
     let output: unknown
@@ -140,6 +180,7 @@ export async function runLlmStream(
         textLength: text.length,
         eventCount: events.length,
         finishReason: processor.state.finishReason,
+        pipeTextStreamToProgress,
       })
     }
 

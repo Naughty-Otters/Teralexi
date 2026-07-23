@@ -1,8 +1,9 @@
-import { mkdir, writeFile, rm } from 'node:fs/promises'
+import { mkdir, writeFile, rm, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { describe, expect, it, afterEach } from 'vitest'
 import {
+  buildWorkspaceWriteFileChanges,
   detectWorkspaceWrites,
   snapshotWorkspaceGuard,
 } from './run-script-workspace-guard'
@@ -41,5 +42,53 @@ describe('run-script-workspace-guard', () => {
     })
     expect(writes).toEqual(['out.txt'])
     expect(findChangedFiles(before, after).length).toBe(1)
+  })
+
+  it('detects deleted workspace files', async () => {
+    dir = join(tmpdir(), `ws-del-${Date.now()}`)
+    await mkdir(dir, { recursive: true })
+    await writeFile(join(dir, 'gone.txt'), 'bye', 'utf8')
+    const before = await snapshotWorkspaceGuard(dir, { captureTextContent: true })
+    await unlink(join(dir, 'gone.txt'))
+    const after = await snapshotWorkspaceGuard(dir)
+    const writes = detectWorkspaceWrites({
+      workspaceRoot: dir,
+      before,
+      after,
+    })
+    expect(writes).toEqual(['gone.txt'])
+  })
+
+  it('builds file-change previews for create/modify when content was captured', async () => {
+    dir = join(tmpdir(), `ws-diff-${Date.now()}`)
+    await mkdir(join(dir, 'src'), { recursive: true })
+    await writeFile(join(dir, 'src', 'a.ts'), 'old\n', 'utf8')
+    const before = await snapshotWorkspaceGuard(dir, { captureTextContent: true })
+    expect(before.get(join(dir, 'src', 'a.ts'))?.content).toBe('old\n')
+
+    await writeFile(join(dir, 'src', 'a.ts'), 'new\n', 'utf8')
+    await writeFile(join(dir, 'src', 'b.ts'), 'created\n', 'utf8')
+    const after = await snapshotWorkspaceGuard(dir)
+    const writes = detectWorkspaceWrites({
+      workspaceRoot: dir,
+      before,
+      after,
+    })
+    const files = await buildWorkspaceWriteFileChanges({
+      workspaceRoot: dir,
+      before,
+      after,
+      relativeWrites: writes,
+    })
+
+    expect(files.map((f) => f.path).sort()).toEqual(['src/a.ts', 'src/b.ts'])
+    const modified = files.find((f) => f.path === 'src/a.ts')
+    const created = files.find((f) => f.path === 'src/b.ts')
+    expect(modified?.action).toBe('modify')
+    expect(modified?.diff).toContain('-old')
+    expect(modified?.diff).toContain('+new')
+    expect(modified?.workspacePath).toBe(dir)
+    expect(created?.action).toBe('create')
+    expect(created?.diff).toContain('+created')
   })
 })

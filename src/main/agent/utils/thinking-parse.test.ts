@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatPartialThinkingProgress,
   formatThinkingMarkdown,
   normalizeThinkingOutput,
   parseThinkingJson,
@@ -81,6 +82,26 @@ describe('parseThinkingJson', () => {
 
   it('rejects non-JSON', () => {
     expect(() => parseThinkingJson('## Goal\nHi')).toThrow(/valid JSON/i)
+  })
+})
+
+describe('formatPartialThinkingProgress', () => {
+  it('shows raw tokens until goal/task text exists', () => {
+    const partial = '{"execution_mode":"agent_call","goal":"'
+    expect(formatPartialThinkingProgress(partial)).toBe(partial)
+  })
+
+  it('formats once a non-empty goal is present', () => {
+    const partial =
+      '{"execution_mode":"agent_call","goal":"Fix the Thinking bubble","task":"Stream live'
+    const formatted = formatPartialThinkingProgress(partial)
+    expect(formatted).toContain('Mode:')
+    expect(formatted).toContain('Fix the Thinking bubble')
+    expect(formatted).toContain('Stream live')
+  })
+
+  it('falls back to raw text before any JSON object starts', () => {
+    expect(formatPartialThinkingProgress('Analyzing')).toBe('Analyzing')
   })
 })
 

@@ -16,13 +16,13 @@ import type { PipelineEntry } from '../flow/pipeline'
 import { buildPipelineEntry } from '../flow/pipeline-entry'
 import type { StepOutputEntry, ThinkingStepData } from '../steps/step-io'
 import { PIPELINE_CONTEXT_LLM } from '../constants'
-import { Output } from '@teralexi-ai'
-import { z } from 'zod'
-import { runExpressionLlmObject } from './run-expression-llm'
+import { runExpressionLlmText } from './run-expression-llm'
 import type { StepExpressionPlan } from './expression-plan'
 import {
+  formatPartialThinkingProgress,
   formatThinkingMarkdown,
   normalizeThinkingOutput,
+  parseThinkingJson,
   type LooseThinkingOutput,
   type NormalizedThinkingOutput,
 } from '../utils/thinking-parse'
@@ -51,34 +51,6 @@ import {
 } from '@shared/agent/diagram-output-instructions'
 import { downgradeAgentCallForInlineDiagram } from './thinking-route-guard'
 
-const thinkingRouterSchema = z.object({
-  execution_mode: z
-    .enum(['planning', 'agent_call', 'direct_answer'])
-    .describe(
-      'Use direct_answer ONLY for pure Q&A with no code/env changes. Default to agent_call when the user wants something done. Use planning for multi-step work needing approval.',
-    ),
-  goal: z.string().describe('One sentence — overall user intent'),
-  task: z.string().describe('One sentence — what they want now (no solutions)'),
-  context: z
-    .array(z.string())
-    .max(3)
-    .describe('Up to 3 critical facts from prior turns; use [] if none'),
-  rationale: z
-    .string()
-    .describe(
-      'One short sentence on constraints or approach; use empty string when nothing to add beyond goal/task',
-    ),
-  response: z
-    .string()
-    .describe(
-      'Full user-facing answer when execution_mode is direct_answer; empty string otherwise',
-    ),
-})
-
-const thinkingRouterOutputSpec = (Output.object as any)({
-  schema: thinkingRouterSchema,
-})
-
 const THINKING_LLM = {
   MAX_OUTPUT_TOKENS: 800,
   SYSTEM_INSTRUCTIONS: `You are a **fast intent router** before the agent executes. Elaborate what the user really wants and choose how the pipeline should proceed.
@@ -93,7 +65,18 @@ Routing rules:
 4. Always include rationale; use "" when there is nothing meaningful to add beyond goal/task.
 5. Do not ask the user questions. If details are missing, state reasonable assumptions in goal/task/context.
 6. **When uncertain, prefer agent_call over direct_answer** — except for explain/plot/graph/visualize requests that need only prose + a built-in \`\`\`diagram\` block (use direct_answer).
-7. Never use direct_answer when the user delegates work ("please fix", "can you implement", "help me build", "go ahead and …").`,
+7. Never use direct_answer when the user delegates work ("please fix", "can you implement", "help me build", "go ahead and …").
+
+Output format (required):
+Reply with ONLY one JSON object (no markdown fences, no prose outside JSON). Keys:
+{
+  "execution_mode": "planning" | "agent_call" | "direct_answer",
+  "goal": "…",
+  "task": "…",
+  "context": ["…"],
+  "rationale": "…",
+  "response": "…"
+}`,
   RESEARCH_CONTEXT_HEADER: 'Read-only research summary (for routing only):',
   ADDITIONAL_CONFIG_HEADER: 'Additional instructions:',
 } as const
@@ -105,6 +88,18 @@ const THINKING_STEP_OUTCOME =
 
 const THINKING_MAX_HISTORY_MESSAGES = 8
 const THINKING_MAX_CHARS_PER_MESSAGE = 1_200
+
+function thinkingFallbackFromRaw(raw: string): NormalizedThinkingOutput {
+  const preview = raw.replace(/\s+/g, ' ').trim().slice(0, 240)
+  return normalizeThinkingOutput({
+    execution_mode: 'agent_call',
+    goal: preview || 'Continue with the user request',
+    task: preview || 'Handle the latest user message',
+    context: [],
+    rationale: 'Thinking router returned non-JSON; defaulting to agent_call.',
+    response: '',
+  })
+}
 
 function buildThinkingInstructions(
   extraThinkingConfig?: string,
@@ -157,18 +152,21 @@ async function runThinkingRouterLlm(
   messages: AgentMessage[],
   llmOptions?: { maxOutputTokens?: number },
 ): Promise<NormalizedThinkingOutput> {
-  const parsed = await runExpressionLlmObject<LooseThinkingOutput>(
-    ctx,
-    plan,
-    messages,
-    {
-      output: thinkingRouterOutputSpec,
-      maxOutputTokens: llmOptions?.maxOutputTokens,
-      streamToProgress: true,
-      stage: 'explore',
-    },
-  )
-  return normalizeThinkingOutput(parsed)
+  // Plain streamText (not Output.object): object mode withholds textStream
+  // until partial JSON parses, so the bubble only got a few characters live.
+  // Stream every token into step progress; parse JSON when the stream ends.
+  const text = await runExpressionLlmText(ctx, plan, messages, {
+    maxOutputTokens: llmOptions?.maxOutputTokens,
+    streamToProgress: true,
+    pipeTextStreamToProgress: true,
+    stage: 'explore',
+    replaceProgressWith: formatPartialThinkingProgress,
+  })
+  try {
+    return parseThinkingJson(text)
+  } catch {
+    return thinkingFallbackFromRaw(text)
+  }
 }
 
 function normalizeThinkingForConversation(
@@ -253,7 +251,7 @@ class ThinkingStepDefinition extends StepExpressionDefinitionBase {
   }
 
   onStart(ctx: AgentStepContext, _plan: StepExpressionPlan): void {
-    ctx.emitStepProgress(`\nAnalyzing request…\n`)
+    ctx.setStepProgressContent('Analyzing request…')
   }
 
   formatBody(body: string, _ctx: AgentStepContext): string {

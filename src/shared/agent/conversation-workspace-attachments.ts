@@ -1,5 +1,4 @@
 import type { UIMessage } from '@teralexi-ai'
-import { isFileChangeToolName } from '@shared/file-change/types'
 import { parseToolFileChanges } from '@shared/file-change/parse-tool-file-changes'
 import { isLikelyBinaryFilePath } from './non-binary-file'
 import {
@@ -13,18 +12,6 @@ import {
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   return value as Record<string, unknown>
-}
-
-function toolPartName(part: unknown): string {
-  const row = asRecord(part)
-  if (!row) return ''
-  if (row.type === 'dynamic-tool' && typeof row.toolName === 'string') {
-    return row.toolName
-  }
-  if (typeof row.type === 'string' && row.type.startsWith('tool-')) {
-    return row.type.slice('tool-'.length)
-  }
-  return ''
 }
 
 function toolPartOutput(part: unknown): unknown {
@@ -88,8 +75,6 @@ function previewToAttachment(
 }
 
 function attachmentsFromToolPart(part: unknown): StepAttachment[] {
-  const name = toolPartName(part)
-  if (!isFileChangeToolName(name)) return []
   if (!toolPartHasCompletedOutput(part)) return []
 
   const output = toolPartOutput(part)

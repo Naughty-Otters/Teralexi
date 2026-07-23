@@ -14,17 +14,7 @@
       v-html="renderAgentErrorMarkdown(errorText)"
     />
     <template v-for="bubble in visibleReasoningBubbles" :key="bubble.key">
-      <details class="reasoning-bubble" open>
-        <summary class="reasoning-bubble__summary">
-          <UIcon
-            name="i-lucide-brain"
-            class="reasoning-bubble__icon"
-            aria-hidden="true"
-          />
-          <span>{{ t.chat.thoughtBubbleTitle }}</span>
-        </summary>
-        <pre class="reasoning-bubble__body">{{ reasoningTextFromPart(bubble.part) }}</pre>
-      </details>
+      <ChatReasoningBubble :part="bubble.part" />
     </template>
     <ChatAssistantConversationView
       v-if="useConversationViewForMessage(props.message)"
@@ -44,21 +34,10 @@
           :part="bubble.part"
           :html="props.renderTextPartHtml(props.message, bubble.part)"
         />
-        <details
+        <ChatReasoningBubble
           v-else-if="bubble.kind === 'reasoning'"
-          class="reasoning-bubble"
-          open
-        >
-          <summary class="reasoning-bubble__summary">
-          <UIcon
-            name="i-lucide-brain"
-            class="reasoning-bubble__icon"
-            aria-hidden="true"
-          />
-          <span>{{ t.chat.thoughtBubbleTitle }}</span>
-        </summary>
-          <pre class="reasoning-bubble__body">{{ reasoningTextFromPart(bubble.part) }}</pre>
-        </details>
+          :part="bubble.part"
+        />
         <div
           v-else-if="bubble.kind === 'error'"
           class="msg-error"
@@ -160,6 +139,7 @@ import {
 import { assistantStepProgressDisplayTitle } from '@shared/agent/chat-persona'
 import ChatCollectFormCard from './ChatCollectFormCard.vue'
 import ChatListItemsBubble from './ChatListItemsBubble.vue'
+import ChatReasoningBubble from './ChatReasoningBubble.vue'
 import ChatStepProgressPanel from './ChatStepProgressPanel.vue'
 import ChatTerminalMessageBubble from './ChatTerminalMessageBubble.vue'
 import ChatToolApprovalCard from './ChatToolApprovalCard.vue'
@@ -274,7 +254,6 @@ const resolvedBubbles = computed<AssistantBubbleDescriptor[]>(() => {
 })
 
 const reasoningBubbles = computed(() => {
-  if (messageFinalTextStarted(props.message)) return []
   return resolveAssistantBubbles(props.message, {
     structuredLayoutEnabled: false,
     shouldShowStepProgress: () => false,
@@ -294,9 +273,8 @@ const briefModeBubbles = computed(() => {
     ? []
     : resolvedBubbles.value
   if (messageFinalTextStarted(props.message)) {
-    bubbles = bubbles.filter(
-      (bubble) => bubble.kind !== 'reasoning' && bubble.kind !== 'tool-group',
-    )
+    // Keep reasoning visible after the reply starts (classic always-open bubble).
+    bubbles = bubbles.filter((bubble) => bubble.kind !== 'tool-group')
   }
   bubbles = filterAssistantReasoningBubbles(
     bubbles,
@@ -584,11 +562,6 @@ function listDataFromBubble(
   return bubble.payload as AssistantListBubbleData
 }
 
-function reasoningTextFromPart(part: unknown): string {
-  if ((part as { type?: string }).type !== 'reasoning') return ''
-  return String((part as { text?: string }).text ?? '').trim()
-}
-
 function toolGroupItems(
   bubble: AssistantBubbleDescriptor,
 ): AssistantBubbleDescriptor[] {
@@ -622,6 +595,13 @@ function toolGroupIsActive(bubble: AssistantBubbleDescriptor): boolean {
 
 .assistant-msg-parts--conversation {
   gap: 10px;
+}
+
+.assistant-msg-parts :deep(.reasoning-bubble) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  align-self: stretch;
 }
 .msg-html :deep(p),
 .structured-debug-body :deep(p),
@@ -808,42 +788,6 @@ function toolGroupIsActive(bubble: AssistantBubbleDescriptor): boolean {
   padding: 4px;
 }
 
-.reasoning-bubble {
-  margin: 8px 0;
-  border: 1px solid var(--ui-border);
-  border-radius: 8px;
-  background: var(--ui-bg-elevated);
-}
-.reasoning-bubble__summary {
-  cursor: pointer;
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ui-text-muted);
-  list-style: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.reasoning-bubble__icon {
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
-  opacity: 0.75;
-}
-.reasoning-bubble__summary::-webkit-details-marker {
-  display: none;
-}
-.reasoning-bubble__body {
-  margin: 0;
-  padding: 0 12px 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--ui-text-muted);
-  font-family: var(--font-mono, ui-monospace, monospace);
-}
 .thinking-strip {
   display: inline-flex;
   align-items: center;

@@ -174,6 +174,27 @@ describe('extractAttachmentsFromToolResult', () => {
     expect(items[0]?.deletions).toBe(1)
   })
 
+  it('extracts incidental shell workspace file-change previews', () => {
+    const items = extractAttachmentsFromToolResult('shell', {
+      stdout: '',
+      exitCode: 0,
+      files: [
+        {
+          path: 'src/a.ts',
+          diff: '+hi',
+          action: 'create',
+          additions: 1,
+          deletions: 0,
+          workspacePath: '/project',
+        },
+      ],
+    })
+    expect(items).toHaveLength(1)
+    expect(items[0]?.path).toBe('/project/src/a.ts')
+    expect(items[0]?.toolName).toBe('shell')
+    expect(items[0]?.diff).toBe('+hi')
+  })
+
   it('resolves workspace file changes against workspace root not sandbox', () => {
     const items = extractAttachmentsFromToolResult('edit_files', {
       sandboxRoot: '/sandbox',

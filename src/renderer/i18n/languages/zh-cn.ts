@@ -164,7 +164,8 @@ export const lang: AppLocaleBundle = {
       '默认值：每端 {keepChars} 字符，{compactLines} 行紧凑高度，{contextMessages} 条上下文消息，推理 {reasoningMax} 字符，默认仅显示最新思考气泡、紧凑 Exploring 手风琴。',
   },
   chat: {
-    thoughtBubbleTitle: '稍作思考',
+    thoughtBubbleTitle: '思考',
+    thoughtBubbleStreaming: '思考中',
     exportBubblePdf: '导出为 PDF',
     exportBubblePdfSuccess: 'PDF 已保存',
     exportBubblePdfFailed: '无法导出 PDF',

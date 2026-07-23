@@ -16,6 +16,7 @@ import {
   isTerminalToolRunning,
   isTodoToolPart,
   shouldShowApprovedFileChangePart,
+  shouldShowIncidentalFileChangePart,
   toolPartNeedsApproval,
 } from './chatToolPartHelpers'
 import {
@@ -368,6 +369,7 @@ function shouldShowToolResultBubble(part: unknown): boolean {
   if (!isToolOrDynamicToolUIPart(p)) return false
   if (toolPartNeedsApproval(part)) return false
   if (shouldShowApprovedFileChangePart(part)) return false
+  if (shouldShowIncidentalFileChangePart(part)) return false
   if (isTerminalToolPart(part)) return false
   if (isFileChangeToolPart(part)) return false
 
@@ -460,6 +462,15 @@ export function resolveAssistantBubbles(
 
     if (isTerminalToolPart(part)) {
       out.push({ key, kind: 'terminal', part })
+      // Shell/script may also carry workspace `files[]` diffs — show both.
+      if (shouldShowIncidentalFileChangePart(part)) {
+        out.push({ key: `${key}-diff`, kind: 'diff', part })
+      }
+      continue
+    }
+
+    if (shouldShowIncidentalFileChangePart(part)) {
+      out.push({ key, kind: 'diff', part })
       continue
     }
 

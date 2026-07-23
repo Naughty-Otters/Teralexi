@@ -3,6 +3,7 @@ import { ref, type Ref } from 'vue'
 import { recordUiFlush } from './chatUiPerf'
 
 export type FlushPriority = 'normal' | 'immediate'
+/** Logical flush kind; stored keys are namespaced per conversation. */
 export type FlushKey = 'snapshot' | 'messages-sync' | 'scroll' | 'store-sync'
 
 export type ScheduleUiFlushOptions = {
@@ -14,6 +15,7 @@ export type ScheduleUiFlushOptions = {
 }
 
 type PendingJob = {
+  kind: FlushKey
   fn: () => void
   priority: FlushPriority
   conversationId?: string
@@ -22,8 +24,9 @@ type PendingJob = {
 
 const BACKLOG_FAST_FORWARD_THRESHOLD = 100
 const NORMAL_MIN_INTERVAL_MS = 32
+const GLOBAL_FLUSH_NAMESPACE = '_'
 
-const pendingByKey = new Map<FlushKey, PendingJob>()
+const pendingByKey = new Map<string, PendingJob>()
 const ingressBacklogByConversation = new Map<string, number>()
 const catchingUpByConversation = new Map<string, Ref<boolean>>()
 
@@ -40,6 +43,15 @@ let scheduleRaf: RafFn =
     : (cb) => setTimeout(() => cb(performance.now()), 16) as unknown as number
 
 let scheduleMicrotask: MicrotaskFn = (cb) => queueMicrotask(cb)
+
+/** `conversationId::kind` so concurrent conversations do not overwrite each other. */
+export function namespacedFlushKey(
+  kind: FlushKey,
+  conversationId?: string,
+): string {
+  const cid = conversationId?.trim() || GLOBAL_FLUSH_NAMESPACE
+  return `${cid}::${kind}`
+}
 
 /** Test hook: replace rAF / microtask schedulers. */
 export function setChatUiFlushSchedulers(opts: {
@@ -96,14 +108,14 @@ function drainIngressBacklog(conversationId: string): void {
   getCatchingUpRef(key).value = false
 }
 
-function runPendingJob(key: FlushKey, job: PendingJob): void {
+function runPendingJob(mapKey: string, job: PendingJob): void {
   if (!shouldRunJob(job)) return
   recordUiFlush()
   job.fn()
   if (job.conversationId) {
     drainIngressBacklog(job.conversationId)
   }
-  pendingByKey.delete(key)
+  pendingByKey.delete(mapKey)
 }
 
 function flushNormalJobs(): void {
@@ -128,18 +140,21 @@ function scheduleNormalFlush(): void {
 
 /**
  * Coalesce UI-side work to rAF (normal) or microtask (immediate).
- * Latest callback per `key` wins.
+ * Latest callback per namespaced `conversationId::kind` wins.
  */
 export function scheduleUiFlush(
-  key: FlushKey,
+  kind: FlushKey,
   fn: () => void,
   options: ScheduleUiFlushOptions = {},
 ): void {
   const priority = options.priority ?? 'normal'
+  const conversationId = options.conversationId?.trim() || undefined
+  const mapKey = namespacedFlushKey(kind, conversationId)
   const job: PendingJob = {
+    kind,
     fn,
     priority,
-    conversationId: options.conversationId,
+    conversationId,
     force: options.force,
   }
 
@@ -147,10 +162,10 @@ export function scheduleUiFlush(
     visibleConversationId = options.visibleConversationId?.trim() || null
   }
 
-  pendingByKey.set(key, job)
+  pendingByKey.set(mapKey, job)
 
   if (priority === 'immediate') {
-    runPendingJob(key, job)
+    runPendingJob(mapKey, job)
     return
   }
 
@@ -161,9 +176,10 @@ export function scheduleUiFlush(
 export function flushAllUiForConversation(conversationId: string): void {
   const key = conversationId.trim()
   if (!key) return
+  const prefix = `${key}::`
 
   for (const [flushKey, job] of [...pendingByKey.entries()]) {
-    if (job.conversationId !== key) continue
+    if (!flushKey.startsWith(prefix) && job.conversationId !== key) continue
     runPendingJob(flushKey, { ...job, force: true })
   }
   drainIngressBacklog(key)

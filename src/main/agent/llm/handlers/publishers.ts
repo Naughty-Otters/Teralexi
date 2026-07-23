@@ -11,6 +11,7 @@ export function publishTextDelta(
   ctx.run.bus?.publish({ type: 'agent.llm.text.delta', delta })
   if (ctx.run.mode === 'silent') return
   if (ctx.run.synthesizeUiChunk) return
+  if (ctx.run.suppressTextStepProgress) return
   if (ctx.run.emitStepProgress) {
     ctx.run.emitStepProgress(delta)
   } else {

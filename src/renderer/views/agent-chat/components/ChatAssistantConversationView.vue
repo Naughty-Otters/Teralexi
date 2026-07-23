@@ -392,6 +392,12 @@ function isBubbleExpanded(
   if (isTextResponseConversationSection(section)) return true
   if (tone === 'summary' || tone === 'report') return true
 
+  // Thinking: stay expanded so streamed / final content is readable (not a
+  // 70px clipped pane). User can still collapse via the title chevron.
+  if (section.id === 'ThinkingStep' || section.id === 'thinking') {
+    return true
+  }
+
   return conversationSectionExpandedByDefault(section, {
     isPrimaryReply: isPrimaryReplyConversationSection(
       conversationSections.value,
@@ -756,6 +762,9 @@ function onCompactBodyScroll(sectionId: string, el: HTMLElement): void {
 function scrollCompactBodiesToEnd(): void {
   for (const [sectionIndex, section] of conversationSections.value.entries()) {
     if (isBubbleExpanded(section, sectionIndex)) continue
+    // Only follow the live tail while the step is still running. When done,
+    // keep the preview at the start so collapse/expand shows the same message.
+    if (section.status !== 'running') continue
     const key = sectionExpandKey(section, sectionIndex)
     const el = compactBodyEls.get(key)
     if (!el) continue
@@ -788,9 +797,20 @@ function toggleBubbleView(
   }
   if (next) {
     compactBodyStickToBottom.delete(key)
-  } else {
+    void nextTick(() => {
+      const el = compactBodyEls.get(key)
+      if (el) el.scrollTop = 0
+    })
+  } else if (section.status === 'running') {
     compactBodyStickToBottom.set(key, true)
     void nextTick(scrollCompactBodiesToEnd)
+  } else {
+    // Collapsed preview of a finished bubble: first lines, same text as expanded.
+    compactBodyStickToBottom.set(key, false)
+    void nextTick(() => {
+      const el = compactBodyEls.get(key)
+      if (el) el.scrollTop = 0
+    })
   }
 }
 
@@ -1310,6 +1330,37 @@ function bubblePresentation(
     #000 100%
   );
   mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 100%);
+}
+
+/* Thinking stays a full readable bubble; body is plain <pre> (JSON-safe). */
+.conversation-bubble--thinking .conversation-bubble__body:not(.conversation-bubble__body--empty) {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ui-text-muted);
+  max-height: min(50vh, 360px);
+  overflow-y: auto;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.conversation-bubble--thinking .conversation-bubble__body :deep(.conversation-thinking-text),
+.conversation-bubble__body :deep(.conversation-thinking-text) {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.45;
+  font-family: var(--font-mono, ui-monospace, Menlo, monospace);
+  color: var(--ui-text-muted);
+  background: transparent;
+  border: none;
 }
 
 .conversation-bubble--compact .conversation-bubble__body:not(.conversation-bubble__body--empty)::-webkit-scrollbar {

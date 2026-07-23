@@ -25,6 +25,8 @@ const SHELL_SECTION = {
     'When the user has a workspace folder and needs project commands (git, tests, rg/find, builds), **use `shell`** with an argv array. Do not invent `git_*` / `grep_files` tools.',
   ARGV:
     '- Pass `command` as a string or argv array; prefer argv. Keep commands short and task-focused.',
+  NO_SOURCE_EDITS:
+    '- **Do not** create or edit project source via shell redirects, `sed -i`, `tee`, or heredocs — use `edit_files` so the chat shows diffs.',
 } as const
 
 export function buildRunScriptPreferenceBlock(tools: RuntimeToolMeta[]): string {
@@ -43,6 +45,7 @@ export function buildRunScriptPreferenceBlock(tools: RuntimeToolMeta[]): string 
   if (hasShell) {
     lines.push(
       'For **workspace/project** commands (git, tests, rg), prefer the `shell` tool instead of wrapping everything in `run_script`.',
+      SHELL_SECTION.NO_SOURCE_EDITS,
     )
   } else {
     lines.push(
@@ -70,6 +73,7 @@ export function buildShellPreferenceBlock(tools: RuntimeToolMeta[]): string {
     SHELL_SECTION.TITLE,
     SHELL_SECTION.WHEN_TO_USE,
     SHELL_SECTION.ARGV,
+    SHELL_SECTION.NO_SOURCE_EDITS,
   ].join('\n')
 }
 

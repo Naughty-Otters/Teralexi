@@ -105,13 +105,14 @@ export function filterVisibleConversationBubbles<
   if (!options) return result
 
   if (options.finalTextStarted) {
-    result = result.filter(
-      (section) => !THINKING_CONVERSATION_SECTION_IDS.has(section.id),
-    )
+    // Keep Thinking visible (classic bubble). Hide agentic-run section shells —
+    // tool activity lives in the Exploring panel instead.
     result = result.filter(
       (section) => !AGENTIC_RUN_CONVERSATION_SECTION_IDS.has(section.id),
     )
-  } else if (options.thinkingBubbleDisplay) {
+  }
+
+  if (options.thinkingBubbleDisplay) {
     result = filterThinkingConversationSections(
       result,
       options.thinkingBubbleDisplay,
@@ -156,7 +157,6 @@ export function isTextResponseConversationSection(
 }
 
 const COMPACT_BY_DEFAULT_CONVERSATION_SECTION_IDS = new Set([
-  ...THINKING_CONVERSATION_SECTION_IDS,
   ...AGENTIC_RUN_CONVERSATION_SECTION_IDS,
   'PlanningStep',
   'planning',
@@ -184,7 +184,7 @@ export function isPrimaryReplyConversationSection(
   return false
 }
 
-/** Conversation bubbles start expanded except agentic / thinking steps. */
+/** Conversation bubbles start expanded except agentic / planning steps. */
 export function conversationSectionExpandedByDefault(
   section: Pick<StructuredDebugSection, 'id' | 'title'>,
   opts?: { isPrimaryReply?: boolean },

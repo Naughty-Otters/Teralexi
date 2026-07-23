@@ -94,6 +94,18 @@ export function shouldShowApprovedFileChangePart(part: unknown): boolean {
   return parseToolFileChanges(getToolPartOutput(part)).length > 0
 }
 
+/**
+ * True when a completed tool result carries file-change previews — including
+ * incidental workspace writes from `shell` / `run_script` (no HITL required).
+ */
+export function shouldShowIncidentalFileChangePart(part: unknown): boolean {
+  if (toolPartNeedsApproval(part)) return false
+  const state = getToolPartState(part)
+  if (state !== 'output-available' && state !== 'output-error') return false
+  if (isFileChangeToolPart(part)) return false
+  return parseToolFileChanges(getToolPartOutput(part)).length > 0
+}
+
 export function formatToolInput(part: unknown): string {
   const p = part as UIMessagePart<any, UITools>
   if (!isToolOrDynamicToolUIPart(p)) return ''
