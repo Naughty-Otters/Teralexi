@@ -71,7 +71,7 @@ export function useAssistantStructuredMessageView(
 
   const view = computed((): StructuredDebugView | null => {
     void chatUiBubbleTextKeepChars.value
-    if (!markdown.value) return null
+    // Thinking is plain text and must not wait on markdown-it.
     return buildStructuredDebugViewForMessage({
       raw: assistantTextRaw.value,
       stepProgressParts: parentStepProgressParts.value,

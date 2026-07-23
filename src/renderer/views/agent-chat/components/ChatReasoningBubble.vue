@@ -1,8 +1,19 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
-import { limitThinkingBubbleWords } from '@shared/text/limit-thinking-bubble-words'
 import { compactPaneScrollTop } from './reasoningBubbleLayout'
+import {
+  THINKING_STREAM_DISPLAY_INTERVAL_MS,
+  thinkingBubbleDisplayText,
+} from './thinkingBubbleDisplay'
+import { useImperativePlainPre } from './useImperativePlainPre'
 
 const props = defineProps<{
   part: unknown
@@ -10,7 +21,8 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-const bodyEl = ref<HTMLElement | null>(null)
+/** Vue-owned host only — the &lt;pre&gt; is created outside the VDOM. */
+const bodyHostEl = ref<HTMLElement | null>(null)
 /** Default collapsed; chevron expands (right → down). */
 const userExpanded = ref(false)
 /**
@@ -20,13 +32,14 @@ const userExpanded = ref(false)
 const programmaticScroll = ref(false)
 const stickToBottom = ref(true)
 
-const text = computed(() => {
+let displayFlushTimer: ReturnType<typeof setTimeout> | null = null
+let displayDirty = false
+
+const rawText = computed(() => {
   const part = props.part as { type?: string; text?: string; state?: string }
   if (part?.type !== 'reasoning') return ''
   const raw = String(part.text ?? '')
-  const body =
-    part.state === 'streaming' || part.state === 'partial' ? raw : raw.trim()
-  return limitThinkingBubbleWords(body)
+  return part.state === 'streaming' || part.state === 'partial' ? raw : raw.trim()
 })
 
 const streaming = computed(() => {
@@ -36,11 +49,34 @@ const streaming = computed(() => {
 
 const compact = computed(() => !userExpanded.value)
 
+const visible = computed(() => Boolean(rawText.value || streaming.value))
+
 const title = computed(() => t.value.chat.thoughtBubbleTitle)
 
-async function syncCompactScroll() {
-  await nextTick()
-  const el = bodyEl.value
+function onBodyScroll() {
+  if (!compact.value || programmaticScroll.value) return
+  const el = plainPre.getPre()
+  if (!el) return
+  stickToBottom.value =
+    el.scrollHeight - el.scrollTop - el.clientHeight < 8
+}
+
+const plainPre = useImperativePlainPre({
+  hostEl: bodyHostEl,
+  className: 'reasoning-bubble__body',
+  onScroll: onBodyScroll,
+})
+
+function computeDisplayText(): string {
+  return thinkingBubbleDisplayText({
+    raw: rawText.value,
+    streaming: streaming.value,
+    expanded: !compact.value,
+  })
+}
+
+function syncCompactScrollNow() {
+  const el = plainPre.getPre()
   if (!el || !compact.value || !stickToBottom.value) return
   programmaticScroll.value = true
   el.scrollTop = compactPaneScrollTop(el.scrollHeight, el.clientHeight)
@@ -49,9 +85,40 @@ async function syncCompactScroll() {
   })
 }
 
+function paintBodyText(next: string) {
+  plainPre.setText(next)
+  if (compact.value) {
+    stickToBottom.value = true
+    syncCompactScrollNow()
+  }
+}
+
+function flushDisplayText() {
+  displayDirty = false
+  if (displayFlushTimer != null) {
+    clearTimeout(displayFlushTimer)
+    displayFlushTimer = null
+  }
+  paintBodyText(computeDisplayText())
+}
+
+function scheduleDisplayText() {
+  if (!streaming.value || !compact.value) {
+    flushDisplayText()
+    return
+  }
+  displayDirty = true
+  if (displayFlushTimer != null) return
+  displayFlushTimer = setTimeout(() => {
+    displayFlushTimer = null
+    if (!displayDirty) return
+    flushDisplayText()
+  }, THINKING_STREAM_DISPLAY_INTERVAL_MS)
+}
+
 async function scrollExpandedToTop() {
   await nextTick()
-  const el = bodyEl.value
+  const el = plainPre.getPre()
   if (!el) return
   programmaticScroll.value = true
   el.scrollTop = 0
@@ -62,34 +129,33 @@ async function scrollExpandedToTop() {
 
 function toggleExpanded() {
   userExpanded.value = !userExpanded.value
+  flushDisplayText()
   if (userExpanded.value) {
     stickToBottom.value = false
     void scrollExpandedToTop()
     return
   }
   stickToBottom.value = true
-  void syncCompactScroll()
-}
-
-function onBodyScroll() {
-  if (!compact.value || programmaticScroll.value) return
-  const el = bodyEl.value
-  if (!el) return
-  stickToBottom.value =
-    el.scrollHeight - el.scrollTop - el.clientHeight < 8
+  syncCompactScrollNow()
 }
 
 onMounted(() => {
-  void syncCompactScroll()
+  flushDisplayText()
+})
+
+onBeforeUnmount(() => {
+  if (displayFlushTimer != null) {
+    clearTimeout(displayFlushTimer)
+    displayFlushTimer = null
+  }
 })
 
 watch(
-  [text, compact],
-  () => {
-    if (!compact.value) return
-    // Any content change while compact: show the latest lines.
-    stickToBottom.value = true
-    void syncCompactScroll()
+  [rawText, streaming, compact, visible],
+  async () => {
+    if (!visible.value) return
+    await nextTick()
+    scheduleDisplayText()
   },
   { flush: 'post' },
 )
@@ -97,7 +163,7 @@ watch(
 
 <template>
   <article
-    v-if="text || streaming"
+    v-if="visible"
     class="reasoning-bubble"
     :class="{
       'reasoning-bubble--streaming': streaming,
@@ -131,11 +197,15 @@ watch(
       </button>
     </header>
 
-    <pre
-      ref="bodyEl"
-      class="reasoning-bubble__body"
-      @scroll.passive="onBodyScroll"
-    >{{ text }}</pre>
+    <!--
+      Empty host only (v-once). The real <pre> is document.createElement'd and
+      updated via textContent — it never appears in Vue's VNode tree.
+    -->
+    <div
+      ref="bodyHostEl"
+      v-once
+      class="reasoning-bubble__body-host"
+    />
   </article>
 </template>
 
@@ -153,6 +223,7 @@ watch(
   border-radius: 8px;
   background: var(--ui-bg-elevated, var(--ui-bg));
   overflow: hidden;
+  contain: content;
 }
 
 .reasoning-bubble--streaming {
@@ -241,8 +312,20 @@ watch(
   animation: reasoning-shimmer 1.6s linear infinite;
 }
 
-.reasoning-bubble__body {
+.reasoning-bubble__body-host {
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+/*
+ * Imperative <pre> is not scoped — style via host deep / global class name
+ * set in createElement.
+ */
+.reasoning-bubble__body-host :deep(.reasoning-bubble__body),
+.reasoning-bubble :deep(pre.reasoning-bubble__body) {
   box-sizing: border-box;
+  display: block;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -257,7 +340,8 @@ watch(
   font-family: var(--font-mono, ui-monospace, Menlo, monospace);
 }
 
-.reasoning-bubble--compact .reasoning-bubble__body {
+.reasoning-bubble--compact .reasoning-bubble__body-host :deep(.reasoning-bubble__body),
+.reasoning-bubble--compact :deep(pre.reasoning-bubble__body) {
   height: 70px;
   max-height: 70px;
   overflow-x: hidden;
@@ -265,11 +349,12 @@ watch(
   scrollbar-width: none;
 }
 
-.reasoning-bubble--compact .reasoning-bubble__body::-webkit-scrollbar {
+.reasoning-bubble--compact :deep(pre.reasoning-bubble__body)::-webkit-scrollbar {
   display: none;
 }
 
-.reasoning-bubble--expanded .reasoning-bubble__body {
+.reasoning-bubble--expanded .reasoning-bubble__body-host :deep(.reasoning-bubble__body),
+.reasoning-bubble--expanded :deep(pre.reasoning-bubble__body) {
   height: auto;
   max-height: min(50vh, 360px);
   overflow-x: hidden;

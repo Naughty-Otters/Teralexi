@@ -52,6 +52,10 @@ export type StructuredDebugSection = {
   bodyHtml: string
   /** Markdown source used to render {@link bodyHtml} (for PDF export). */
   bodyMarkdown?: string
+  /**
+   * Plain-text body for Thinking. Never passed through markdown-it or `v-html`.
+   */
+  bodyPlainText?: string
   status: StructuredDebugSectionStatus
   sectionKind?: StructuredDebugSectionKind
   attachments?: StepAttachment[]
@@ -99,6 +103,7 @@ export function attachmentSectionId(parentSectionId: string): string {
 function sectionHasVisibleBody(section: StructuredDebugSection): boolean {
   return (
     section.bodyHtml.trim().length > 0 ||
+    Boolean(section.bodyPlainText?.trim()) ||
     section.status === 'running' ||
     Boolean(section.previewFileUrl?.trim())
   )
@@ -373,59 +378,57 @@ function userFacingFinalResultMarkdown(finalResult: string): string {
   return extractUserFacingTextFromFinalResult(finalResult) || finalResult.trim()
 }
 
-function escapeHtmlText(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
 function isThinkingSectionId(sectionId: string): boolean {
   const id = sectionId.trim()
   return id === 'ThinkingStep' || id === 'thinking'
 }
 
 /**
- * Thinking streams raw JSON (and later markdown lists). Running that through
- * markdown-it breaks on `_` / quotes and can leave only a fragment like "The"
- * visible. Always render as escaped plain text in a full-width pre.
+ * Thinking is plain text only — never markdown-it / HTML. Streaming JSON and
+ * underscores must stay intact for the conversation bubble and PDF export.
  */
 function thinkingSectionBodyFields(
   text: string,
-): Pick<StructuredDebugSection, 'bodyHtml' | 'bodyMarkdown'> {
-  const bodyMarkdown = limitThinkingBubbleWords(
+): Pick<StructuredDebugSection, 'bodyHtml' | 'bodyMarkdown' | 'bodyPlainText'> {
+  const bodyPlainText = limitThinkingBubbleWords(
     text.replace(/\r\n/g, '\n').trim(),
   )
-  if (!bodyMarkdown) {
-    return { bodyHtml: '', bodyMarkdown: '' }
+  if (!bodyPlainText) {
+    return { bodyHtml: '', bodyMarkdown: '', bodyPlainText: '' }
   }
   return {
-    bodyMarkdown,
-    bodyHtml: `<pre class="conversation-thinking-text">${escapeHtmlText(bodyMarkdown)}</pre>`,
+    bodyHtml: '',
+    // Keep markdown export empty so copy/print/PDF never run markdown-it.
+    bodyMarkdown: '',
+    bodyPlainText,
   }
 }
 
 function sectionBodyFields(
-  markdown: MarkdownIt,
+  markdown: MarkdownIt | null,
   text: string,
   opts?: { sectionId?: string },
-): Pick<StructuredDebugSection, 'bodyHtml' | 'bodyMarkdown'> {
+): Pick<StructuredDebugSection, 'bodyHtml' | 'bodyMarkdown' | 'bodyPlainText'> {
   if (opts?.sectionId && isThinkingSectionId(opts.sectionId)) {
     return thinkingSectionBodyFields(text)
   }
   const bodyMarkdown = markdownBodyFromText(text)
   if (!bodyMarkdown) {
-    return { bodyHtml: '', bodyMarkdown: '' }
+    return { bodyHtml: '', bodyMarkdown: '', bodyPlainText: '' }
+  }
+  if (!markdown) {
+    // Defer HTML until markdown-it is ready; source stays available for export.
+    return { bodyMarkdown, bodyHtml: '', bodyPlainText: '' }
   }
   return {
     bodyMarkdown,
     bodyHtml: applyStatusBadges(markdown.render(bodyMarkdown)),
+    bodyPlainText: '',
   }
 }
 
 function bodyHtmlFromMarkdown(
-  markdown: MarkdownIt,
+  markdown: MarkdownIt | null,
   text: string,
 ): string {
   return sectionBodyFields(markdown, text).bodyHtml
@@ -435,7 +438,7 @@ function buildSectionsFromPipelineConversation(
   turns: NonNullable<
     AssistantStructuredContent['assistantContent']['outer']['pipelineConversation']
   >,
-  markdown: MarkdownIt,
+  markdown: MarkdownIt | null,
 ): StructuredDebugSection[] {
   const seen = new Set<string>()
   const sections: StructuredDebugSection[] = []
@@ -466,7 +469,7 @@ function buildResearchReportSection(
     sourceCount: number
     paperExcerpt?: string
   },
-  markdown: MarkdownIt,
+  markdown: MarkdownIt | null,
 ): StructuredDebugSection {
   const pdfUrl = report.pdfUrl.trim()
   const label = pdfUrl.split('/').pop()?.split('?')[0] || 'research-report.pdf'
@@ -590,7 +593,7 @@ function stepProgressSectionId(
 
 function buildAgentErrorSections(
   raw: string,
-  markdown: MarkdownIt,
+  markdown: MarkdownIt | null,
 ): StructuredDebugSection[] {
   const sections: StructuredDebugSection[] = []
   const trimmed = raw.trim()
@@ -607,7 +610,7 @@ function buildAgentErrorSections(
 
 export function buildStructuredDebugViewFromStepProgress(
   parts: readonly StepProgressPartInput[],
-  markdown: MarkdownIt,
+  markdown: MarkdownIt | null,
   options?: { isStreaming?: boolean },
 ): StructuredDebugView | null {
   const ordered = dedupeStepProgressParts(parts)
@@ -676,7 +679,7 @@ export function buildStructuredDebugViewFromStepProgress(
 
 function buildSectionsFromStructured(
   content: AssistantStructuredContent,
-  markdown: MarkdownIt,
+  markdown: MarkdownIt | null,
   isStreaming: boolean,
 ): StructuredDebugSection[] {
   const pipeline = content.assistantContent.outer.pipelineConversation
@@ -733,8 +736,7 @@ function buildSectionsFromStructured(
     ]).filter(
       (s) =>
         s.sectionKind === 'attachments' ||
-        s.bodyHtml.trim() ||
-        s.status === 'running' ||
+        sectionHasVisibleBody(s) ||
         Boolean(s.previewFileUrl?.trim()),
     )
   }
@@ -842,15 +844,14 @@ function buildSectionsFromStructured(
   return postProcessConversationSections(withCaptureAttachments).filter(
     (s) =>
       s.sectionKind === 'attachments' ||
-      s.bodyHtml.trim() ||
-      s.status === 'running' ||
+      sectionHasVisibleBody(s) ||
       Boolean(s.previewFileUrl?.trim()),
   )
 }
 
 function buildStructuredDebugViewFromRaw(
   raw: string,
-  markdown: MarkdownIt,
+  markdown: MarkdownIt | null,
   options?: { isStreaming?: boolean },
 ): StructuredDebugView | null {
   const trimmed = raw.trim()
@@ -945,7 +946,7 @@ function mergeAttachmentSectionsFromProgress(
 export function buildStructuredDebugViewForMessage(opts: {
   raw: string
   stepProgressParts: readonly StepProgressPartInput[]
-  markdown: MarkdownIt
+  markdown: MarkdownIt | null
   isStreaming?: boolean
 }): StructuredDebugView | null {
   const errorSections = buildAgentErrorSections(opts.raw, opts.markdown)

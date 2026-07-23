@@ -21,6 +21,8 @@ export function limitThinkingBubbleWords(
   maxWords: number = THINKING_BUBBLE_MAX_WORDS,
 ): string {
   if (!text || maxWords <= 0) return text
+  // Impossible to exceed the word budget if there aren't enough characters.
+  if (text.length <= maxWords) return text
   if (countThinkingBubbleWords(text) <= maxWords) return text
 
   const words = text.trim().split(/\s+/)

@@ -74,9 +74,10 @@
         :class="`sub-agent-bubble__section--${section.status}`"
       >
         <ChatBubblePdfExportButton
-          v-if="showPdfExportButtons"
+          v-if="showPdfExportButtons && sectionHasExportableBody(section)"
           corner
-          :markdown="section.bodyMarkdown"
+          :markdown="section.bodyPlainText ? null : section.bodyMarkdown"
+          :plain-text="section.bodyPlainText || null"
           :section-title="section.title"
           :section-id="section.id"
           :message-id="messageId"
@@ -86,8 +87,14 @@
         <header class="sub-agent-bubble__section-header">
           <span class="sub-agent-bubble__section-title">{{ section.title }}</span>
         </header>
+        <ConversationThinkingPlainBody
+          v-if="section.bodyPlainText"
+          class="sub-agent-bubble__section-body"
+          :text="section.bodyPlainText"
+          body-class="conversation-thinking-text"
+        />
         <div
-          v-if="section.bodyHtml"
+          v-else-if="section.bodyHtml"
           class="sub-agent-bubble__section-body msg-html"
           v-html="section.bodyHtml"
         />
@@ -141,6 +148,7 @@ import {
 import { toolPartsForRun } from '../toolRunScope'
 import { useI18n } from '@renderer/composables/useI18n'
 import ChatToolLoopPanel from './ChatToolLoopPanel.vue'
+import ConversationThinkingPlainBody from './ConversationThinkingPlainBody.vue'
 
 const ChatBubblePdfExportButton = defineAsyncComponent(
   () => import('./ChatBubblePdfExportButton.vue'),
@@ -320,6 +328,13 @@ const runSections = computed(() => {
   })
   return view?.sections ?? []
 })
+
+function sectionHasExportableBody(section: {
+  bodyMarkdown?: string
+  bodyPlainText?: string
+}): boolean {
+  return Boolean(section.bodyPlainText?.trim() || section.bodyMarkdown?.trim())
+}
 
 const visibleChildren = computed(() =>
   props.node.depth >= SUB_AGENT_UI_MAX_DEPTH ? [] : props.node.children,

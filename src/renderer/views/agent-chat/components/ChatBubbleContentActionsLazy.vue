@@ -8,6 +8,7 @@
     <ChatBubbleContentActions
       v-if="show"
       :markdown="markdown"
+      :plain-text="plainText"
       :section-title="sectionTitle"
       :section-id="sectionId"
       :message-id="messageId"
@@ -33,6 +34,7 @@ const ChatBubbleContentActions = defineAsyncComponent(
 withDefaults(
   defineProps<{
     markdown?: string | null
+    plainText?: string | null
     sectionTitle: string
     sectionId?: string
     messageId: string

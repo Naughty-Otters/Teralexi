@@ -463,6 +463,14 @@ function escapePlainMarkdownFallback(text: string): string {
     .replace(/\n/g, '<br>')
 }
 
+function escapeHtmlText(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 function renderAgentErrorMarkdown(text: string): string {
   if (!text.trim()) return ''
   const md = stepProgressMarkdown.value
@@ -495,6 +503,16 @@ function renderStepProgressBodyHtml(
   part: unknown,
 ): string {
   const raw = agentStepProgressText(part)
+  const stepId =
+    typeof agentStepProgressData(part).stepId === 'string'
+      ? String(agentStepProgressData(part).stepId).trim()
+      : ''
+  // Thinking step progress must stay plain text — never markdown-it.
+  if (stepId === 'thinking' || stepId === 'ThinkingStep') {
+    const plain = raw.replace(/\r\n/g, '\n').trim()
+    if (!plain) return ''
+    return `<pre class="conversation-thinking-text">${escapeHtmlText(plain)}</pre>`
+  }
   const prepared = prepareMarkdownSource(raw)
   if (!prepared) return ''
   const md = stepProgressMarkdown.value

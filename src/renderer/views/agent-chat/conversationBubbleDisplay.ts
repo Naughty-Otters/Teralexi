@@ -164,7 +164,7 @@ const COMPACT_BY_DEFAULT_CONVERSATION_SECTION_IDS = new Set([
 
 type ConversationSectionExpandHint = Pick<
   StructuredDebugSection,
-  'id' | 'title' | 'bodyHtml' | 'bodyMarkdown' | 'sectionKind'
+  'id' | 'title' | 'bodyHtml' | 'bodyMarkdown' | 'bodyPlainText' | 'sectionKind'
 >
 
 /** Last visible content bubble in the message — the primary assistant reply. */
@@ -176,7 +176,9 @@ export function isPrimaryReplyConversationSection(
     const section = sections[index]
     if (section.sectionKind === 'attachments') continue
     const hasBody = Boolean(
-      section.bodyMarkdown?.trim() || section.bodyHtml?.trim(),
+      section.bodyPlainText?.trim() ||
+        section.bodyMarkdown?.trim() ||
+        section.bodyHtml?.trim(),
     )
     if (!hasBody) continue
     return index === sectionIndex
