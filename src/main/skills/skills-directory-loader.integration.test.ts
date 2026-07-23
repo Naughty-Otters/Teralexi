@@ -39,7 +39,7 @@ describe('bundled skills (integration)', () => {
     expect(defaultSkill?.tools.some((t) => t.name === 'shell')).toBe(true)
     expect(defaultSkill?.tools.some((t) => t.name === 'web_search')).toBe(true)
     expect(defaultSkill?.tools.some((t) => t.name === 'read_file')).toBe(false)
-    expect(defaultSkill?.tools.some((t) => t.name === 'edit_files')).toBe(false)
+    expect(defaultSkill?.tools.some((t) => t.name === 'edit_files')).toBe(true)
     expect(defaultSkill?.tools.some((t) => t.name === 'git_status')).toBe(false)
   })
 
