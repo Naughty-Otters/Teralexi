@@ -178,6 +178,17 @@ export const lang: AppLocaleBundle = {
       '此技能需要先保存本地配置才能开始聊天。设置会写入 ~/.teralexi/config/config.properties，不会加入对话记录。',
     skillSetupSave: '保存并继续',
     skillSetupSaving: '保存中…',
+    deleteConversationDialog: {
+      title: '删除会话',
+      message:
+        '确定删除「{name}」？将移除该会话、全部消息以及沙箱数据，此操作无法撤销。',
+      messageChannel:
+        '确定删除「{name}」？将移除消息与沙箱数据。该渠道联系人的下一条消息会开启新会话。',
+      cancel: '取消',
+      confirm: '删除',
+      deleting: '删除中…',
+      failed: '无法删除会话',
+    },
   },
   monitor: {
     title: 'Token 监控',

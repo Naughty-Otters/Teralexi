@@ -345,7 +345,7 @@
                 class="agent-item-action-btn agent-item-action-btn--danger"
                 title="Delete conversation"
                 aria-label="Delete conversation"
-                @click="confirmDelete(conv)"
+                @click="openDeleteDialog(conv)"
               >
                 <UIcon
                   name="i-lucide-trash-2"
@@ -361,6 +361,55 @@
       No conversations yet.
     </li>
   </ul>
+
+  <Teleport to="body">
+    <div
+      v-if="showDeleteDialog"
+      class="conversation-delete-backdrop"
+      role="presentation"
+      @click.self="closeDeleteDialog"
+    >
+      <div
+        class="conversation-delete-dialog"
+        role="alertdialog"
+        aria-modal="true"
+        :aria-labelledby="deleteDialogTitleId"
+        :aria-describedby="deleteDialogMessageId"
+      >
+        <h3 :id="deleteDialogTitleId" class="conversation-delete-dialog__title">
+          {{ t.chat.deleteConversationDialog.title }}
+        </h3>
+        <p
+          :id="deleteDialogMessageId"
+          class="conversation-delete-dialog__message"
+        >
+          {{ deleteDialogMessage }}
+        </p>
+        <div class="conversation-delete-dialog__actions">
+          <button
+            type="button"
+            class="conversation-delete-dialog__btn"
+            :disabled="deletingConversation"
+            @click="closeDeleteDialog"
+          >
+            {{ t.chat.deleteConversationDialog.cancel }}
+          </button>
+          <button
+            type="button"
+            class="conversation-delete-dialog__btn conversation-delete-dialog__btn--danger"
+            :disabled="deletingConversation"
+            @click="confirmDeleteConversation"
+          >
+            {{
+              deletingConversation
+                ? t.chat.deleteConversationDialog.deleting
+                : t.chat.deleteConversationDialog.confirm
+            }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -403,6 +452,11 @@ const agentStore = useAgentStore()
 const { t } = useI18n()
 const toast = useToast()
 const conversationItemRefs = new Map<string, HTMLElement>()
+const showDeleteDialog = ref(false)
+const deletingConversation = ref(false)
+const deleteTarget = ref<Conversation | null>(null)
+const deleteDialogTitleId = 'conversation-delete-dialog-title'
+const deleteDialogMessageId = 'conversation-delete-dialog-message'
 const groupByMenuOpen = ref(false)
 const groupByTriggerRef = ref<HTMLButtonElement | null>(null)
 const groupByMenuEl = ref<HTMLElement | null>(null)
@@ -650,22 +704,46 @@ function onWindowReposition() {
   if (workspaceMenuOpen.value) positionWorkspaceMenu()
 }
 
-async function confirmDelete(conv: Conversation) {
-  const isChannel = conv.type === 'channel'
-  const ok = window.confirm(
-    isChannel
-      ? `Delete "${conv.title}"? Messages and sandbox data will be removed. The next message from this channel contact will start a fresh conversation.`
-      : `Delete "${conv.title}"? This removes the conversation, all messages, and sandbox data. This cannot be undone.`,
-  )
-  if (!ok) return
+const deleteDialogMessage = computed(() => {
+  const conv = deleteTarget.value
+  if (!conv) return ''
+  const name = conv.title?.trim() || 'Untitled'
+  const template =
+    conv.type === 'channel'
+      ? t.value.chat.deleteConversationDialog.messageChannel
+      : t.value.chat.deleteConversationDialog.message
+  return template.replace('{name}', name)
+})
 
-  clearConversationSession(conv.id)
-  await agentStore.deleteConversation(conv.id)
-  toast.add({
-    title: 'Conversation deleted',
-    description: conv.title,
-    color: 'neutral',
-  })
+function openDeleteDialog(conv: Conversation) {
+  deleteTarget.value = conv
+  showDeleteDialog.value = true
+}
+
+function closeDeleteDialog() {
+  if (deletingConversation.value) return
+  showDeleteDialog.value = false
+  deleteTarget.value = null
+}
+
+async function confirmDeleteConversation() {
+  const conv = deleteTarget.value
+  if (!conv || deletingConversation.value) return
+  deletingConversation.value = true
+  try {
+    clearConversationSession(conv.id)
+    await agentStore.deleteConversation(conv.id)
+    showDeleteDialog.value = false
+    deleteTarget.value = null
+  } catch (err) {
+    toast.add({
+      title: t.value.chat.deleteConversationDialog.failed,
+      description: err instanceof Error ? err.message : String(err),
+      color: 'error',
+    })
+  } finally {
+    deletingConversation.value = false
+  }
 }
 
 onMounted(() => {
@@ -1267,5 +1345,74 @@ const conversationTooltipModelById = computed(
   font-size: 12px;
   color: var(--ui-text-muted);
   padding: 10px 12px;
+}
+
+.conversation-delete-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: color-mix(in srgb, #000 45%, transparent);
+}
+
+.conversation-delete-dialog {
+  width: min(420px, 100%);
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-bg-elevated, var(--ui-bg));
+  box-shadow: 0 16px 48px color-mix(in srgb, #000 28%, transparent);
+  box-sizing: border-box;
+}
+
+.conversation-delete-dialog__title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ui-text);
+}
+
+.conversation-delete-dialog__message {
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ui-text-muted);
+}
+
+.conversation-delete-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.conversation-delete-dialog__btn {
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.conversation-delete-dialog__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.conversation-delete-dialog__btn--danger {
+  border-color: color-mix(in srgb, var(--color-error-500, #ef4444) 40%, var(--ui-border));
+  background: color-mix(in srgb, var(--color-error-500, #ef4444) 12%, var(--ui-bg));
+  color: var(--color-error-600, #dc2626);
+}
+
+.conversation-delete-dialog__btn--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-error-500, #ef4444) 18%, var(--ui-bg));
 }
 </style>
