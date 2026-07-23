@@ -12,6 +12,7 @@ export * from './todos'
 export * from './generate-follow-up'
 export * from './lsp'
 export * from './web'
+export * from './browser-tools'
 export * from './planning-tools'
 export * from './sub-agent-tools'
 /** Scholar helpers for the research step pipeline (not catalog tools). */
@@ -27,6 +28,7 @@ import { planningTools } from './planning-tools'
 import { subAgentTools } from './sub-agent-tools'
 import { lspTools } from './lsp'
 import { webScrape, webSearch } from './web'
+import { browserTools } from './browser-tools'
 
 export const tools: SkillTool[] = [
   readFile,
@@ -42,6 +44,7 @@ export const tools: SkillTool[] = [
   ...lspTools,
   webSearch,
   webScrape,
+  ...browserTools,
 ]
 
 export default { tools } satisfies SkillToolModule

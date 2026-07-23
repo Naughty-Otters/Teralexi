@@ -46,7 +46,7 @@ The sandbox **persists across turns** in the same conversation. Prior deliverabl
 | Tool | Role |
 |------|------|
 | `web_search` | General and scholarly web: news, reports, journal pages, patents, government sources |
-| `web_scrape` | Full page content for URLs returned by search — primary evidence |
+| `web_scrape` | Main-content markdown for URLs returned by search — primary evidence |
 
 Prefer academic/scholarly query phrasing for literature (author/year/journal keywords).
 
@@ -295,7 +295,7 @@ Tone: clear, academic, concise.
 ## Tools
 
 - **web_search** — general and scholarly web search (Phase 2)
-- **web_scrape** — full page content for evidence (Phase 3)
+- **web_scrape** — main-content markdown for evidence (Phase 3)
 - **edit_files** — paper and working JSON artifacts (`write` / `replace`)
 - **read_file**, **shell** — user-provided paths or prior artifacts
 - **update_todos**, **read_todos** — multi-phase progress

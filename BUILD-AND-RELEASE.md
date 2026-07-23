@@ -69,6 +69,12 @@ npm install
 npm run dev          # uses env/.dev.env (-m dev); production API by default
 ```
 
+**Browser MCP (Playwright):** OpenFDE ships `@playwright/mcp` as a dependency and enables the built-in **Playwright Browser** MCP server by default. Runtime launches the local `cli.js` (not `npx @latest`). Chromium for the MCP still needs installing once:
+
+```bash
+npx playwright install chromium
+```
+
 `npm run dev` sets `TERALEXI_BUILD_ENV=dev` and loads env files for both the build tooling and the running app:
 
 1. `env/.dev.env` (committed defaults)

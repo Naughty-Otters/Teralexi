@@ -81,7 +81,7 @@ Cursor-like lean set (explicit only — no tag expansion):
 - Read / symbols: `read_file`, `lsp`
 - Edit: `edit_files` (`replace` | `write` | `delete` | `patch`) — required for project source changes
 - Shell (tests, grep/glob, git): `shell` — do not use shell to rewrite source files
-- Web: `web_search`, `web_scrape`
+- Web: `web_search`, `web_scrape`, `browser_navigate` / `browser_snapshot` / `browser_click` / `browser_fill` / `browser_tabs`
 - Todos / plan / promote: `update_todos`, `read_todos`, `enter_plan_mode`, `exit_plan_mode`, `promote_artifact`
 - Sub-agents: `invoke_agents` (one-element `runs` for a single child)
 

@@ -27,6 +27,7 @@ const EXTERNAL_PACKAGES = new Set([
   'glob',
   'playwright-core',
   'playwright',
+  '@playwright/mcp',
   'cloakbrowser',
   'discord.js',
   'zlib-sync',

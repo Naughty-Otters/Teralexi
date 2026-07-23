@@ -304,11 +304,14 @@ export function buildExploreManifestFromToolResults(args: {
         const key = `web_scrape\0${url}`
         if (resourceByKey.has(key)) continue
         const html = typeof row.html === 'string' ? row.html : ''
+        const markdown =
+          typeof row.markdown === 'string' ? row.markdown : ''
+        const body = markdown || html
         resourceByKey.set(key, {
           kind: 'web_scrape',
           url,
           title: typeof row.title === 'string' ? row.title.trim() : undefined,
-          snippet: html ? htmlToTextSnippet(html) : undefined,
+          snippet: body ? htmlToTextSnippet(body) : undefined,
         })
       }
       continue

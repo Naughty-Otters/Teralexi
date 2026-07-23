@@ -95,6 +95,47 @@ describe('mcp-server-runtime', () => {
     expect(resolveRuntimeMcpServer(customServer)).toEqual(customServer)
   })
 
+  it('injects bundled CLI path for Playwright MCP when package is installed', async () => {
+    const { setBrowserCdpEndpointHint } = await import(
+      '@main/agent/browser/browser-session'
+    )
+    setBrowserCdpEndpointHint(null)
+    const playwrightServer: StoredMcpServer = {
+      ...filesystemServer,
+      id: 'ref-mcp-playwright',
+      name: 'Playwright Browser',
+      command: 'node',
+      args: ['@playwright/mcp'],
+      enabled: true,
+    }
+    const resolved = resolveRuntimeMcpServer(playwrightServer)
+    expect(resolved.command).toBe('node')
+    expect(resolved.args[0]).toMatch(/cli\.js$/)
+    expect(resolved.args[0]).toContain('@playwright')
+  })
+
+  it('injects CDP endpoint args for Playwright MCP when a session hint exists', async () => {
+    const { setBrowserCdpEndpointHint } = await import(
+      '@main/agent/browser/browser-session'
+    )
+    setBrowserCdpEndpointHint('http://127.0.0.1:9222')
+    const playwrightServer: StoredMcpServer = {
+      ...filesystemServer,
+      id: 'ref-mcp-playwright',
+      name: 'Playwright Browser',
+      command: 'node',
+      args: ['@playwright/mcp'],
+      enabled: true,
+    }
+    const resolved = resolveRuntimeMcpServer(playwrightServer)
+    expect(resolved.args).toContain('--cdp-endpoint')
+    expect(resolved.args).toContain('http://127.0.0.1:9222')
+    expect(resolved.env?.PLAYWRIGHT_MCP_CDP_ENDPOINT).toBe(
+      'http://127.0.0.1:9222',
+    )
+    setBrowserCdpEndpointHint(null)
+  })
+
   it('creates sandbox directories before returning runtime args', () => {
     const sandboxRoot = join(tempDir('mcp-parent-'), 'nested-sandbox')
     resolvePlanSandboxRootMock.mockReturnValue(sandboxRoot)

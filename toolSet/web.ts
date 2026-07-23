@@ -7,6 +7,7 @@ import type { CheerioAPI } from 'cheerio'
 import { z } from 'zod'
 import type { SkillTool } from '@main/skills/actions'
 export { htmlToMarkdown, isParseableMarkdown } from './html-to-markdown'
+import { htmlToMarkdown } from './html-to-markdown'
 import {
   defaultSearchCrawlerHandlers,
   type SearchCrawlerHandlerRegistry,
@@ -104,6 +105,9 @@ const webSearchInput = z.object({
     ),
 })
 
+/** Aligns with typical tool-output budgets so scrape results stay LLM-sized. */
+export const DEFAULT_WEB_SCRAPE_MARKDOWN_MAX_CHARS = 12_000
+
 const webScrapeInput = z.object({
   url: z.string().url().optional().describe('Single page URL to fetch.'),
   urls: z
@@ -116,9 +120,11 @@ const webScrapeInput = z.object({
     .positive()
     .optional()
     .describe(
-      'Optional per-page character cap for `html`. Omit to return the full page (no truncation).',
+      `Per-page character cap for returned \`markdown\` (default ${DEFAULT_WEB_SCRAPE_MARKDOWN_MAX_CHARS}).`,
     ),
 })
+
+const MIN_MAIN_CONTENT_CHARS = 80
 
 function createEphemeralCrawleeConfig(storageDir: string): Configuration {
   return new Configuration({
@@ -131,16 +137,98 @@ function createEphemeralCrawleeConfig(storageDir: string): Configuration {
 
 export type PageExtractResult = {
   title: string
-  /** Full document HTML (entire `<html>` outer HTML after removing script/style/noscript). */
-  html: string
+  /** Main-content markdown for the LLM (scripts/chrome stripped). */
+  markdown: string
   truncated: boolean
 }
 
-/** Full document for scrape (not `main` / `article` heuristics). */
-function prepareScrapeDocument($: CheerioAPI) {
-  $('script, style, noscript').remove()
-  const html = $('html')
-  return html.length > 0 ? html : $.root()
+function visibleTextLength(text: string): number {
+  return text.replace(/\s+/g, ' ').trim().length
+}
+
+/** Strip scripts and other non-content nodes before region selection. */
+export function pruneScrapeDom($: CheerioAPI): void {
+  $(
+    [
+      'script',
+      'style',
+      'noscript',
+      'template',
+      'svg',
+      'canvas',
+      'iframe',
+      'object',
+      'embed',
+      'link',
+      'meta',
+    ].join(', '),
+  ).remove()
+}
+
+function removeChrome($: CheerioAPI): void {
+  $(
+    [
+      'nav',
+      'footer',
+      'aside',
+      'header',
+      '[role="navigation"]',
+      '[role="banner"]',
+      '[role="contentinfo"]',
+      '[role="complementary"]',
+      '.nav',
+      '.navbar',
+      '.sidebar',
+      '.footer',
+      '#cookie-banner',
+      '.cookie-banner',
+    ].join(', '),
+  ).remove()
+}
+
+function candidateFromSelector(
+  $: CheerioAPI,
+  selector: string,
+): string | null {
+  const el = $(selector).first()
+  if (!el.length) return null
+  if (visibleTextLength(el.text()) < MIN_MAIN_CONTENT_CHARS) return null
+  const html = $.html(el)?.trim()
+  return html || null
+}
+
+/**
+ * Prefer article/main regions; otherwise body with chrome removed.
+ * Returns an HTML fragment suitable for Turndown.
+ */
+export function selectMainContentHtml($: CheerioAPI): string {
+  pruneScrapeDom($)
+
+  const selectors = [
+    'article',
+    'main',
+    '[role="main"]',
+    '#content',
+    '#main',
+    '#main-content',
+    '.post-content',
+    '.article-body',
+    '.entry-content',
+    '.markdown-body',
+  ]
+
+  for (const selector of selectors) {
+    const html = candidateFromSelector($, selector)
+    if (html) return html
+  }
+
+  removeChrome($)
+  const body = $('body')
+  if (body.length > 0) {
+    const html = $.html(body)?.trim()
+    if (html) return html
+  }
+  return $.html($.root())?.trim() || ''
 }
 
 function applyMaxChars(value: string, maxChars?: number): {
@@ -153,38 +241,43 @@ function applyMaxChars(value: string, maxChars?: number): {
   return { value: value.slice(0, maxChars), truncated: true }
 }
 
-function serializeScrapeHtml($: CheerioAPI): string {
-  const htmlEl = $('html')
-  if (htmlEl.length > 0) {
-    return $.html(htmlEl) ?? ''
-  }
-  return $.root().html() ?? ''
-}
-
-/** Full-document HTML for scrape (no region selection or markdown conversion). */
+/**
+ * Prune → main content → markdown → optional char cap.
+ * Default cap: {@link DEFAULT_WEB_SCRAPE_MARKDOWN_MAX_CHARS}.
+ */
 export function extractPageContent(
   $: CheerioAPI,
   options?: { maxChars?: number },
 ): PageExtractResult {
   const title = $('title').first().text().replace(/\s+/g, ' ').trim()
-  prepareScrapeDocument($)
-  const htmlResult = applyMaxChars(serializeScrapeHtml($), options?.maxChars)
+  const fragment = selectMainContentHtml($)
+  const markdown = htmlToMarkdown(fragment, title || undefined)
+  const maxChars = options?.maxChars ?? DEFAULT_WEB_SCRAPE_MARKDOWN_MAX_CHARS
+  const capped = applyMaxChars(markdown, maxChars)
   return {
     title,
-    html: htmlResult.value,
-    truncated: htmlResult.truncated,
+    markdown: capped.value,
+    truncated: capped.truncated,
   }
 }
 
-/** @deprecated Prefer {@link extractPageContent} (returns HTML). */
+/** Flat text extract (scripts pruned). Prefer {@link extractPageContent}. */
 export function extractPageText(
   $: CheerioAPI,
   options?: { maxChars?: number },
 ): { title: string; text: string; truncated: boolean } {
   const title = $('title').first().text().replace(/\s+/g, ' ').trim()
-  const root = prepareScrapeDocument($)
-  const raw = root.text().replace(/\s+/g, ' ').trim()
-  const textResult = applyMaxChars(raw, options?.maxChars)
+  pruneScrapeDom($)
+  removeChrome($)
+  const body = $('body')
+  const raw =
+    body.length > 0
+      ? body.text().replace(/\s+/g, ' ').trim()
+      : $.root().text().replace(/\s+/g, ' ').trim()
+  const textResult = applyMaxChars(
+    raw,
+    options?.maxChars ?? DEFAULT_WEB_SCRAPE_MARKDOWN_MAX_CHARS,
+  )
   return { title, text: textResult.value, truncated: textResult.truncated }
 }
 
@@ -437,8 +530,8 @@ export type ScrapedPage = {
   url: string
   loadedUrl?: string
   title: string
-  /** Full document HTML. */
-  html: string
+  /** Main-content markdown for the LLM. */
+  markdown: string
   truncated: boolean
   /** Which fetch path produced this page (`playwright` only when used as fallback). */
   fetchMode: SearchCrawlMode
@@ -448,7 +541,7 @@ export type ScrapePageOptions = {
   maxChars?: number
 }
 
-const MIN_SCRAPE_HTML_CHARS = 80
+const MIN_SCRAPE_CONTENT_CHARS = 80
 
 /** True when HTML is a JS-required shell with little usable text. */
 export function isJsShellHtml(html: string): boolean {
@@ -458,36 +551,43 @@ export function isJsShellHtml(html: string): boolean {
   )
 }
 
+/** True when scraped markdown (or legacy HTML) has too little readable content. */
+export function isScrapeMarkdownInsufficient(
+  markdown: string,
+  minChars = MIN_SCRAPE_CONTENT_CHARS,
+): boolean {
+  return (
+    markdown
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/[#>*`_\-[\]()|]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim().length < minChars
+  )
+}
+
+/** @deprecated Use {@link isScrapeMarkdownInsufficient}. */
 export function isScrapeHtmlInsufficient(
   html: string,
-  minChars = MIN_SCRAPE_HTML_CHARS,
+  minChars = MIN_SCRAPE_CONTENT_CHARS,
 ): boolean {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().length < minChars
+  return isScrapeMarkdownInsufficient(html, minChars)
 }
 
-/** @deprecated Use {@link isScrapeHtmlInsufficient}. */
-export function isScrapeMarkdownInsufficient(
-  html: string,
-  minChars = MIN_SCRAPE_HTML_CHARS,
-): boolean {
-  return isScrapeHtmlInsufficient(html, minChars)
-}
-
-/** @deprecated Use {@link isScrapeHtmlInsufficient}. */
+/** @deprecated Use {@link isScrapeMarkdownInsufficient}. */
 export function isScrapeTextInsufficient(
   text: string,
-  minChars = MIN_SCRAPE_HTML_CHARS,
+  minChars = MIN_SCRAPE_CONTENT_CHARS,
 ): boolean {
   return text.replace(/\s+/g, ' ').trim().length < minChars
 }
 
-/** @deprecated Use {@link isScrapeHtmlInsufficient}. */
+/** @deprecated Use {@link isScrapeMarkdownInsufficient}. */
 export function isScrapeContentInsufficient(
   _text: string,
   html: string | null | undefined,
-  minChars = MIN_SCRAPE_HTML_CHARS,
+  minChars = MIN_SCRAPE_CONTENT_CHARS,
 ): boolean {
-  return isScrapeHtmlInsufficient(html ?? '', minChars)
+  return isScrapeMarkdownInsufficient(html ?? '', minChars)
 }
 
 async function scrapeUrlWithCheerio(
@@ -511,7 +611,7 @@ async function scrapeUrlWithCheerio(
           const extracted = extractPageContent($, {
             maxChars: options?.maxChars,
           })
-          if (isScrapeHtmlInsufficient(extracted.html)) {
+          if (isScrapeMarkdownInsufficient(extracted.markdown)) {
             return
           }
 
@@ -519,7 +619,7 @@ async function scrapeUrlWithCheerio(
             url: request.url,
             loadedUrl: request.loadedUrl,
             title: extracted.title,
-            html: extracted.html,
+            markdown: extracted.markdown,
             truncated: extracted.truncated,
             fetchMode: 'cheerio',
           }
@@ -546,7 +646,7 @@ async function scrapeUrlWithPlaywright(
   const extracted = extractPageContent(payload.$, {
     maxChars: options?.maxChars,
   })
-  if (isScrapeHtmlInsufficient(extracted.html)) {
+  if (isScrapeMarkdownInsufficient(extracted.markdown)) {
     return null
   }
 
@@ -554,7 +654,7 @@ async function scrapeUrlWithPlaywright(
     url,
     loadedUrl: payload.requestUrl,
     title: extracted.title,
-    html: extracted.html,
+    markdown: extracted.markdown,
     truncated: extracted.truncated,
     fetchMode: 'playwright',
   }
@@ -567,16 +667,23 @@ export async function scrapePage(
   handlers: SearchCrawlerHandlerRegistry = defaultSearchCrawlerHandlers,
 ): Promise<ScrapedPage> {
   let cheerioError: string | undefined
+  const scrapeOpts: ScrapePageOptions = {
+    maxChars: options?.maxChars ?? DEFAULT_WEB_SCRAPE_MARKDOWN_MAX_CHARS,
+  }
 
   try {
-    const cheerioPage = await scrapeUrlWithCheerio(url, options)
+    const cheerioPage = await scrapeUrlWithCheerio(url, scrapeOpts)
     if (cheerioPage) return cheerioPage
   } catch (e) {
     cheerioError = e instanceof Error ? e.message : String(e)
   }
 
   try {
-    const playwrightPage = await scrapeUrlWithPlaywright(url, options, handlers)
+    const playwrightPage = await scrapeUrlWithPlaywright(
+      url,
+      scrapeOpts,
+      handlers,
+    )
     if (playwrightPage) return playwrightPage
   } catch (e) {
     const playwrightError = e instanceof Error ? e.message : String(e)
@@ -588,7 +695,7 @@ export async function scrapePage(
 
   throw new Error(
     cheerioError ??
-      `Could not extract enough HTML from ${url} via Cheerio or Playwright.`,
+      `Could not extract enough content from ${url} via Cheerio or Playwright.`,
   )
 }
 
@@ -596,7 +703,7 @@ export const webScrape: SkillTool = {
   name: 'web_scrape',
   tags: ['web'],
   description:
-    'Fetch public pages and return each page as `title` plus full-document `html` (entire page; script/style/noscript removed; no auto-selection of main/article). Uses Cheerio first; falls back to Playwright when the page is empty or JS-only. Pass `url` or `urls`. Optional `maxChars` caps HTML length; omit it for no limit.',
+    'Fetch public pages and return each page as `title` plus main-content `markdown` (scripts/chrome stripped; article/main preferred; HTML→Markdown for the LLM). Cheerio first; Playwright fallback for empty/JS-only pages. Pass `url` or `urls`. Optional `maxChars` caps markdown length (default 12000).',
   inputSchema: webScrapeInput,
   needsApproval: false,
   async execute(input) {
@@ -621,7 +728,9 @@ export const webScrape: SkillTool = {
       for (const targetUrl of targetUrls) {
         try {
           pages.push(
-            await scrapePage(targetUrl, { maxChars }),
+            await scrapePage(targetUrl, {
+              maxChars: maxChars ?? DEFAULT_WEB_SCRAPE_MARKDOWN_MAX_CHARS,
+            }),
           )
         } catch (e) {
           errors.push(

@@ -140,7 +140,7 @@ describe('resolveSearchEngineOrder', () => {
 })
 
 describe('extractPageContent', () => {
-  it('returns full document HTML with structure preserved', () => {
+  it('returns main-content markdown with structure preserved', () => {
     const $ = cheerio.load(`
       <html><head><title>Page</title></head><body>
         <article>
@@ -150,36 +150,37 @@ describe('extractPageContent', () => {
         </article>
       </body></html>
     `)
-    const { html } = extractPageContent($)
-    expect(html).toMatch(/^<html[\s>]/i)
-    expect(html).toContain('<h1')
-    expect(html).toContain('Hello')
-    expect(html).toContain('href="/docs"')
-    expect(html).toContain('<li>One</li>')
-    expect(html).not.toContain('<script')
+    const { markdown, title } = extractPageContent($)
+    expect(title).toBe('Page')
+    expect(markdown).toContain('# Page')
+    expect(markdown).toContain('# Hello')
+    expect(markdown).toMatch(/\[docs\]\(\/docs\)/)
+    expect(markdown).toMatch(/-\s+One/)
+    expect(markdown).not.toContain('<script')
+    expect(markdown).not.toContain('<h1')
   })
 
-  it('includes full document content, not only a main region', () => {
+  it('prefers main content and drops nav/footer chrome', () => {
     const $ = cheerio.load(`
       <html><body>
-        <nav>Nav link</nav>
-        <main><p>Main copy</p></main>
-        <footer>Footer note</footer>
+        <nav>Nav link to ignore</nav>
+        <main><p>${'Main body copy that is long enough to qualify as the primary region. '.repeat(3)}</p></main>
+        <footer>Footer note to ignore</footer>
       </body></html>
     `)
-    const { html } = extractPageContent($)
-    expect(html).toContain('Nav link')
-    expect(html).toContain('Main copy')
-    expect(html).toContain('Footer note')
+    const { markdown } = extractPageContent($)
+    expect(markdown).toContain('Main body copy')
+    expect(markdown).not.toContain('Nav link')
+    expect(markdown).not.toContain('Footer note')
   })
 
-  it('strips script tags from returned HTML', () => {
+  it('strips script tags from returned markdown', () => {
     const $ = cheerio.load(
-      '<html><body><script>alert(1)</script><p>Visible</p></body></html>',
+      '<html><body><script>alert(1)</script><p>Visible content for the reader on this page.</p></body></html>',
     )
-    const { html } = extractPageContent($)
-    expect(html).not.toContain('alert(1)')
-    expect(html).toContain('Visible')
+    const { markdown } = extractPageContent($)
+    expect(markdown).not.toContain('alert(1)')
+    expect(markdown).toContain('Visible content')
   })
 })
 
@@ -205,10 +206,12 @@ describe('extractPageText', () => {
 })
 
 describe('extractPageContent truncation', () => {
-  it('truncates HTML when maxChars is set', () => {
-    const $ = cheerio.load(`<html><body>${'x'.repeat(200)}</body></html>`)
-    const { html, truncated } = extractPageContent($, { maxChars: 50 })
-    expect(html.length).toBe(50)
+  it('truncates markdown when maxChars is set', () => {
+    const $ = cheerio.load(
+      `<html><body><p>${'word '.repeat(200)}</p></body></html>`,
+    )
+    const { markdown, truncated } = extractPageContent($, { maxChars: 50 })
+    expect(markdown.length).toBe(50)
     expect(truncated).toBe(true)
   })
 })

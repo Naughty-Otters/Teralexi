@@ -38,6 +38,14 @@ export const DEFAULT_TOOL_OUTPUT_CHAR_CAP = 12_000
  */
 export const SUB_AGENT_TOOL_OUTPUT_CHAR_CAP = 32_000
 
+/** Tighter cap for browser/Playwright MCP snapshots (a11y trees are huge). */
+export const BROWSER_MCP_TOOL_OUTPUT_CHAR_CAP = 8_000
+
+function isBrowserLikeToolName(name: string): boolean {
+  return /browser[_-]|playwright|snapshot|navigate|browser_click|browser_fill|browser_type|browser_tabs/i.test(
+    name,
+  )
+}
 /** Total char budget across all initial messages before pruning triggers.
  *  ~37 K tokens — leaves headroom for system instructions and the live loop. */
 export const DEFAULT_MESSAGE_CHAR_BUDGET = 150_000
@@ -72,9 +80,11 @@ export function applyToolOutputTruncation(
     const spec = toolSet[name] as Record<string, unknown> | null
     if (!spec || typeof spec['execute'] !== 'function') continue
 
-    const cap = SUB_AGENT_TOOL_NAMES.has(name)
-      ? Math.min(maxChars, SUB_AGENT_TOOL_OUTPUT_CHAR_CAP)
-      : maxChars
+    const cap = isBrowserLikeToolName(name)
+      ? Math.min(maxChars, BROWSER_MCP_TOOL_OUTPUT_CHAR_CAP)
+      : SUB_AGENT_TOOL_NAMES.has(name)
+        ? Math.min(maxChars, SUB_AGENT_TOOL_OUTPUT_CHAR_CAP)
+        : maxChars
 
     const origExecute = (spec['execute'] as (...a: unknown[]) => Promise<unknown>).bind(spec)
     spec['execute'] = async (input: unknown): Promise<unknown> => {

@@ -58,6 +58,11 @@ const BASH_TOOLS = [
 ]
 
 const BROWSER_TOOLS = [
+  'browser_navigate',
+  'browser_snapshot',
+  'browser_click',
+  'browser_fill',
+  'browser_tabs',
   'web_search',
   'web_scrape',
   'read_file',
@@ -98,8 +103,9 @@ Rules:
 const BROWSER_SYSTEM = `You are a Browser sub-agent (Cursor built-in). You isolate noisy DOM snapshots, screenshots, and page scrapes.
 
 Rules:
-- Use web_search / web_scrape and any browser MCP tools available to you.
-- Prefer targeted navigation and extraction over dumping full pages.
+- Prefer Playwright / browser MCP tools (\`browser_navigate\`, \`browser_snapshot\`, \`browser_click\`, \`browser_fill\`, tabs) when they are available.
+- Use \`web_search\` / \`web_scrape\` only for non-interactive lookups (search snippets or one-shot page markdown).
+- Prefer targeted navigation + accessibility snapshots over dumping full pages.
 - Filter intermediate noise; return only what the parent needs:
   - What you opened / searched
   - Relevant extracted facts or UI state

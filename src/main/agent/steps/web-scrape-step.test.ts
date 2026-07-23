@@ -94,7 +94,7 @@ describe('WebScrapeOrchestrator', () => {
     vi.mocked(scrapePage).mockResolvedValue({
       url: 'https://example.com/otters',
       title: 'Otters',
-      html: '<html><body><p>River otters</p></body></html>',
+      markdown: '# Otters\n\nRiver otters',
       truncated: false,
       fetchMode: 'cheerio',
     })

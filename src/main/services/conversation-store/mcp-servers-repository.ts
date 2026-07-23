@@ -78,6 +78,63 @@ export class McpServersRepository {
         timestamp,
       )
     }
+
+    this.enablePlaywrightMcpMigration(userId)
+  }
+
+  /**
+   * Existing DBs may already have other reference rows (INSERT OR IGNORE skips
+   * re-seed). Ensure Playwright Browser is present, enabled, and uses the
+   * bundled package launch seed (not npx @latest).
+   */
+  enablePlaywrightMcpMigration(userId: string): void {
+    const definition = REFERENCE_MCP_SERVER_DEFINITIONS.find(
+      (item) => item.id === 'ref-mcp-playwright',
+    )
+    if (!definition) return
+
+    const existing = this.get(userId, definition.id)
+    if (!existing) {
+      this.create({
+        id: definition.id,
+        userId,
+        name: definition.name,
+        transportType: definition.transportType,
+        url: '',
+        command: definition.command,
+        args: definition.args,
+        env: definition.env ?? {},
+        headers: definition.headers ?? {},
+        enabled: true,
+      })
+      return
+    }
+
+    const needsLaunchRewrite =
+      existing.command !== definition.command ||
+      JSON.stringify(existing.args) !== JSON.stringify(definition.args)
+    if (needsLaunchRewrite) {
+      const now = new Date().toISOString()
+      this.db
+        .prepare(
+          `UPDATE mcp_servers
+           SET name = ?, command = ?, args_json = ?, enabled = 1, updated_at = ?
+           WHERE user_id = ? AND id = ?`,
+        )
+        .run(
+          definition.name,
+          definition.command,
+          JSON.stringify(definition.args),
+          now,
+          userId,
+          definition.id,
+        )
+      return
+    }
+
+    if (!existing.enabled) {
+      this.setEnabled(userId, definition.id, true)
+    }
   }
 
   list(userId: string): StoredMcpServer[] {

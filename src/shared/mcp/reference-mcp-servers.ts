@@ -9,6 +9,9 @@ export type ReferenceMcpServerDefinition = {
   enabled?: boolean
 }
 
+/** Seed args for the built-in Playwright MCP (runtime rewrites to bundled cli.js). */
+export const PLAYWRIGHT_MCP_SEED_ARGS = ['@playwright/mcp'] as const
+
 /** Official MCP reference servers from https://github.com/modelcontextprotocol/servers */
 export const REFERENCE_MCP_SERVER_DEFINITIONS: ReferenceMcpServerDefinition[] = [
   {
@@ -59,7 +62,19 @@ export const REFERENCE_MCP_SERVER_DEFINITIONS: ReferenceMcpServerDefinition[] = 
     args: ['-y', '@modelcontextprotocol/server-sequential-thinking'],
     enabled: false,
   },
+  {
+    id: 'ref-mcp-playwright',
+    name: 'Playwright Browser',
+    transportType: 'stdio',
+    // Seed uses `node` + package name; runtime rewrites to the bundled cli.js.
+    command: 'node',
+    args: [...PLAYWRIGHT_MCP_SEED_ARGS],
+    enabled: true,
+  },
 ]
+
+/** Built-in Playwright browser MCP (Cursor-like agent automation). */
+export const PLAYWRIGHT_MCP_SERVER_ID = 'ref-mcp-playwright'
 
 const REFERENCE_MCP_SERVER_IDS = new Set(
   REFERENCE_MCP_SERVER_DEFINITIONS.map((definition) => definition.id),
@@ -67,4 +82,10 @@ const REFERENCE_MCP_SERVER_IDS = new Set(
 
 export function isReferenceMcpServer(server: { id: string }): boolean {
   return REFERENCE_MCP_SERVER_IDS.has(server.id)
+}
+
+export function isPlaywrightReferenceMcpServer(server: {
+  id: string
+}): boolean {
+  return server.id === PLAYWRIGHT_MCP_SERVER_ID
 }

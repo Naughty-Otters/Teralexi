@@ -11,24 +11,57 @@ describe('McpServersRepository', () => {
 
     repo.ensureReferenceServers('default', '/tmp/workspace')
     const first = repo.list('default')
-    expect(first.map((server) => server.name)).toEqual([
-      'Everything',
-      'Fetch',
-      'Filesystem',
-      'Memory',
-      'Time',
-      'Sequential Thinking',
-    ])
+    expect(first.map((server) => server.name).sort()).toEqual(
+      [
+        'Everything',
+        'Fetch',
+        'Filesystem',
+        'Memory',
+        'Playwright Browser',
+        'Sequential Thinking',
+        'Time',
+      ].sort(),
+    )
 
     const filesystem = first.find((server) => server.id === 'ref-mcp-filesystem')
     expect(filesystem?.args).toEqual([
       '-y',
       '@modelcontextprotocol/server-filesystem',
     ])
-    expect(first.every((server) => !server.enabled)).toBe(true)
+    expect(filesystem?.enabled).toBe(false)
+
+    const playwright = first.find((server) => server.id === 'ref-mcp-playwright')
+    expect(playwright?.enabled).toBe(true)
+    expect(playwright?.command).toBe('node')
+    expect(playwright?.args).toEqual(['@playwright/mcp'])
 
     repo.ensureReferenceServers('default', '/other/workspace')
-    expect(repo.list('default')).toHaveLength(6)
+    expect(repo.list('default')).toHaveLength(7)
+  })
+
+  it('enables Playwright Browser for existing users on migration', () => {
+    const db = createMigrationTestDatabase()
+    runMigrations(db)
+    const repo = new McpServersRepository(db)
+
+    repo.create({
+      id: 'ref-mcp-playwright',
+      userId: 'default',
+      name: 'Playwright Browser',
+      transportType: 'stdio',
+      url: '',
+      command: 'npx',
+      args: ['-y', '@playwright/mcp@latest'],
+      env: {},
+      headers: {},
+      enabled: false,
+    })
+
+    repo.ensureReferenceServers('default', '/tmp/workspace')
+    const playwright = repo.get('default', 'ref-mcp-playwright')
+    expect(playwright?.enabled).toBe(true)
+    expect(playwright?.command).toBe('node')
+    expect(playwright?.args).toEqual(['@playwright/mcp'])
   })
 
   it('rejects deleting built-in reference servers', () => {
@@ -40,6 +73,6 @@ describe('McpServersRepository', () => {
     expect(() => repo.delete('default', 'ref-mcp-filesystem')).toThrow(
       'Cannot delete a built-in MCP server.',
     )
-    expect(repo.list('default')).toHaveLength(6)
+    expect(repo.list('default')).toHaveLength(7)
   })
 })

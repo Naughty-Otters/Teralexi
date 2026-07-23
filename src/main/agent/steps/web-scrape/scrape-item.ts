@@ -1,6 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { scrapePage } from '@toolSet/web'
-import { htmlToMarkdown } from '@toolSet/html-to-markdown'
 import type { SearchResultItem } from '../search-config'
 import { slugFromUrl, webScrapeOutputDir, webScrapeOutputPath } from './paths'
 
@@ -25,7 +24,7 @@ export async function scrapeSearchItemToMarkdownFile(input: {
   try {
     const page = await scrapePage(url, maxChars != null ? { maxChars } : undefined)
     const title = page.title?.trim() || item.title?.trim()
-    const markdown = htmlToMarkdown(page.html, title)
+    const markdown = page.markdown
     const fileName = slugFromUrl(url, index)
     const outputDir = webScrapeOutputDir(sandboxRoot)
     await mkdir(outputDir, { recursive: true })

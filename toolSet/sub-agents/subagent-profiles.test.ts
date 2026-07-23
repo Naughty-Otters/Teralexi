@@ -58,6 +58,8 @@ describe('subagent-profiles', () => {
     if (Array.isArray(tools)) {
       expect(tools).toContain('web_scrape')
       expect(tools).toContain('web_search')
+      expect(tools).toContain('browser_navigate')
+      expect(tools).toContain('browser_snapshot')
       expect(tools).toContain('edit_files')
       expect(tools).not.toContain('list_files')
     }
@@ -109,6 +111,7 @@ describe('subagent-profiles', () => {
   it('filters MCP tools for browser access', () => {
     const tools = [
       { name: 'browser_navigate', serverId: 'playwright' },
+      { name: 'browser_snapshot', serverId: 'ref-mcp-playwright' },
       { name: 'db_query', serverId: 'postgres' },
       { name: 'take_screenshot', serverId: 'chrome-devtools' },
     ]
@@ -116,10 +119,12 @@ describe('subagent-profiles', () => {
     expect(filterMcpToolsForSubagentAccess(tools, 'all')).toEqual(tools)
     expect(filterMcpToolsForSubagentAccess(tools, 'browser').map((t) => t.name)).toEqual([
       'browser_navigate',
+      'browser_snapshot',
       'take_screenshot',
     ])
     expect(isBrowserMcpToolName('click_element', 'puppeteer')).toBe(true)
     expect(isBrowserMcpToolName('list_tables', 'sql')).toBe(false)
+    expect(isBrowserMcpToolName('list_tools', 'ref-mcp-playwright')).toBe(true)
   })
 
   it('formats priority routing instructions for built-ins', () => {

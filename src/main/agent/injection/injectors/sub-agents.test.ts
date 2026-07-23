@@ -78,8 +78,10 @@ describe('subAgentsInjector', () => {
     expect(subAgentsInjector.applies(makeRunCtx({ tools: [] }))).toBe(false)
   })
 
-  it('injectInstructions returns formatted routing block', () => {
+  it('injectInstructions returns priority built-ins plus routing block', () => {
     const block = subAgentsInjector.injectInstructions!(makeRunCtx())
+    expect(block).toContain('Priority built-in sub-agents')
+    expect(block).toContain('`browser`')
     expect(block).toContain('skill:documents')
     expect(buildSkillRoutingCatalog).toHaveBeenCalled()
     expect(formatSkillRoutingBlock).toHaveBeenCalled()

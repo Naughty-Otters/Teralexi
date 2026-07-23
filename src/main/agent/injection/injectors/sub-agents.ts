@@ -5,6 +5,7 @@ import {
   hasSkillRoutingTargets,
   hasSubAgentDelegationTool,
 } from '../../delegation/skill-routing-catalog'
+import { formatBuiltinSubagentPriorityInstructions } from '@toolSet/sub-agents/subagent-profiles'
 import type { AgentInjector } from '../types'
 import { INJECTOR_ORDER } from './orders'
 
@@ -23,6 +24,9 @@ export const subAgentsInjector: AgentInjector = {
     const toolNames = tools.map((t) => t.name)
     const catalog = buildSkillRoutingCatalog(ctx, toolNames)
     if (!catalog) return null
-    return formatSkillRoutingBlock(catalog, toolNames)
+    const routing = formatSkillRoutingBlock(catalog, toolNames)
+    if (!hasSubAgentDelegationTool(toolNames)) return routing
+    const priority = formatBuiltinSubagentPriorityInstructions()
+    return [priority, routing].filter(Boolean).join('\n\n')
   },
 }

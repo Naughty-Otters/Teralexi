@@ -82,6 +82,24 @@ describe('applyToolOutputTruncation', () => {
     expect(s.length).toBeLessThan(300) // truncated + notice, not the full 200
   })
 
+  it('applies a tighter cap to browser MCP tool names', async () => {
+    const longOutput = 'y'.repeat(20_000)
+    const toolSet = {
+      browser_snapshot: {
+        execute: async () => longOutput,
+      },
+    }
+    applyToolOutputTruncation(toolSet, 12_000)
+    const result = await (
+      toolSet.browser_snapshot.execute as (i: unknown) => Promise<unknown>
+    )({})
+    expect(typeof result).toBe('string')
+    const s = result as string
+    expect(s.startsWith('y'.repeat(8_000))).toBe(true)
+    expect(s).toContain('truncated')
+    expect(s.length).toBeLessThan(9_000)
+  })
+
   it('truncates large string fields in object results', async () => {
     const big = 'a'.repeat(500)
     const toolSet = makeToolSet(async () => ({ stdout: big, exit_code: 0 }))

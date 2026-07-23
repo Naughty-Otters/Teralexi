@@ -30,6 +30,7 @@ describe('electron-after-pack', () => {
   it('keeps main-process runtime packages', () => {
     expect(shouldRemovePackage('better-sqlite3')).toBe(false)
     expect(shouldRemovePackage('playwright-core')).toBe(false)
+    expect(shouldRemovePackage('@playwright/mcp')).toBe(false)
     expect(shouldRemovePackage('pyright')).toBe(false)
     expect(shouldRemovePackage('typescript-language-server')).toBe(false)
     expect(shouldRemovePackage('@ai-sdk/openai')).toBe(false)

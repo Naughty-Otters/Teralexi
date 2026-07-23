@@ -17,6 +17,11 @@ const CATALOG = [
   'lsp',
   'web_search',
   'web_scrape',
+  'browser_navigate',
+  'browser_snapshot',
+  'browser_click',
+  'browser_fill',
+  'browser_tabs',
 ] as const
 
 describe('toolSet index', () => {

@@ -11,12 +11,13 @@ One child = one-element `runs` array. Multiple = parallel. Always waits for resu
 | --- | --- | --- | --- |
 | `explore` | Explore | `read_file`, `lsp`, read-only shell | Find/where/how; map before edits. Fans out parallel reads/rg in one turn. |
 | `bash` | Bash | `shell`, `run_script`, `run_script_file`, `edit_files`, `read_file` | Tests, builds, scripts, rg/find, git, small fixes |
-| `browser` | Browser | `web_search` / `web_scrape` + browser MCP | Pages, DOM, screenshots |
+| `browser` | Browser | `browser_*` tools + Playwright MCP + `web_search` / `web_scrape` | Interactive pages, DOM, screenshots |
 
 Omit `agentId` when using a profile — defaults to `skill:coding`.
 
 **Important:** `bash` / `explore` / `browser` are **profiles** for `invoke_agents`. There is no tool named `bash` — use `shell` / `run_script` / `run_script_file` under the `bash` profile.
 
+**Browser MCP:** Settings → MCP includes built-in **Playwright Browser** (`ref-mcp-playwright`), enabled by default and launched from the bundled `@playwright/mcp` package (not `npx @latest`). Prefer MCP navigate/snapshot/click/fill for interactive work; use `web_scrape` only for one-shot markdown extraction. Chromium: `npx playwright install chromium` (or system Chrome) if MCP tools fail to launch.
 ## Orchestration profiles
 
 | Profile | Role |
