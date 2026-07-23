@@ -120,8 +120,11 @@ export class LlmProcessor {
       mode,
     })
 
-    const drainPromise = result.fullStream
-      ? drainFullStreamToLlmEvents(result.fullStream, onEvent)
+    const eventStream =
+      (result as { stream?: AsyncIterable<unknown> }).stream ??
+      (result as { fullStream?: AsyncIterable<unknown> }).fullStream
+    const drainPromise = eventStream
+      ? drainFullStreamToLlmEvents(eventStream, onEvent)
       : drainTextStreamToLlmEvents(result.textStream, onEvent)
 
     await Promise.all([uiForwardPromise, drainPromise])

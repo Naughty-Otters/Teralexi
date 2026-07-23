@@ -109,7 +109,7 @@ async function inferValuesWithLlm(params: {
   const { output: parsed } = await ctx.providers.streamObjectToStepProgress<{
     values?: Record<string, unknown>
   }>(ctx, {
-    system: ctx.config.withResponseLanguageInstruction(
+    instructions: ctx.config.withResponseLanguageInstruction(
       `You extract structured form values from a user message.
 
 Read the form document for field meaning, then map the user message onto these keys:

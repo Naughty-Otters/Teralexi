@@ -63,7 +63,7 @@ export async function verifyTodoResult(
     summary: string
   }>(ctx, {
     model: ctx.resolveStageModel('verifier'),
-    system: ctx.config.withResponseLanguageInstruction(
+    instructions: ctx.config.withResponseLanguageInstruction(
       SKILLS_TOOL_EXECUTION_LLM.VERIFIER_SYSTEM,
       ctx.opts.responseLanguage,
     ),

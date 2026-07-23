@@ -93,6 +93,9 @@ class McpServerManager {
         type: server.transportType,
         url: server.url,
         headers: Object.keys(server.headers).length > 0 ? server.headers : undefined,
+        // AI SDK 7 defaults redirect to 'error' (SSRF hardening). Keep follow
+        // for existing remote MCP servers that issue redirects.
+        redirect: 'follow',
       },
     })
   }

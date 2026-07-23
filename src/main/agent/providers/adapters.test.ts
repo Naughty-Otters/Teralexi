@@ -4,7 +4,7 @@ const {
   createOllama,
   createOpenAI,
   createAnthropic,
-  createGoogleGenerativeAI,
+  createGoogle,
   createDeepSeek,
   createZhipu,
   createMoonshotAI,
@@ -21,7 +21,7 @@ const {
   createOllama: vi.fn(() => vi.fn(() => ({ provider: 'ollama' }))),
   createOpenAI: vi.fn(() => vi.fn(() => ({ provider: 'openai' }))),
   createAnthropic: vi.fn(() => vi.fn(() => ({ provider: 'anthropic' }))),
-  createGoogleGenerativeAI: vi.fn(() => vi.fn(() => ({ provider: 'gemini' }))),
+  createGoogle: vi.fn(() => vi.fn(() => ({ provider: 'gemini' }))),
   createDeepSeek: vi.fn(() => vi.fn(() => ({ provider: 'deepseek' }))),
   createZhipu: vi.fn(() => vi.fn(() => ({ provider: 'zhipu' }))),
   createMoonshotAI: vi.fn(() => vi.fn(() => ({ provider: 'moonshot' }))),
@@ -40,7 +40,7 @@ vi.mock('@teralexi-ai', () => ({
   createOllama,
   createOpenAI,
   createAnthropic,
-  createGoogleGenerativeAI,
+  createGoogle,
   createDeepSeek,
   createZhipu,
   createMoonshotAI,
@@ -138,7 +138,7 @@ describe('ProviderAdapter', () => {
       geminiApiKey: 'gem',
       geminiBaseURL: 'https://generativelanguage.googleapis.com/v1beta',
     } as never)
-    expect(createGoogleGenerativeAI).toHaveBeenCalledWith({
+    expect(createGoogle).toHaveBeenCalledWith({
       apiKey: 'gem',
       baseURL: 'https://generativelanguage.googleapis.com/v1beta',
     })

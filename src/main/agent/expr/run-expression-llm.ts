@@ -82,7 +82,7 @@ export async function runExpressionLlmText(
 
   const streamParams = {
     ...expressionLlmCallExtras(ctx, options?.stage),
-    ...(instructions ? { instructions, system: instructions } : {}),
+    ...(instructions ? { instructions } : {}),
     messages: llmParams.messages,
     abortSignal: ctx.opts.abortSignal,
     ...(options?.maxOutputTokens != null
@@ -130,7 +130,7 @@ export async function runExpressionLlmObject<T>(
 
   const streamParams = {
     ...expressionLlmCallExtras(ctx, options.stage),
-    ...(instructions ? { instructions, system: instructions } : {}),
+    ...(instructions ? { instructions } : {}),
     messages: llmParams.messages,
     output: options.output,
     abortSignal: ctx.opts.abortSignal,

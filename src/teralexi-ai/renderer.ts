@@ -13,5 +13,8 @@ export {
   lastAssistantMessageIsCompleteWithApprovalResponses,
   Output,
   stepCountIs,
-  isToolOrDynamicToolUIPart,
+  isToolUIPart,
 } from 'ai'
+
+/** @deprecated Use `isToolUIPart` (AI SDK 7). */
+export { isToolUIPart as isToolOrDynamicToolUIPart } from 'ai'
