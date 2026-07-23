@@ -11,6 +11,10 @@ import {
   isPlanFileWritten,
   resolvePlanModeStorage,
 } from './plan-mode-state'
+import {
+  consumeExecuteContinuationReminder,
+  hasExecuteContinuationReminder,
+} from './plan-mode-session-reminders'
 import { readPlanModeTodoList } from './plan-mode-storage-impl'
 
 export const PLAN_MODE_USER_TRIGGERS = {
@@ -18,6 +22,8 @@ export const PLAN_MODE_USER_TRIGGERS = {
   reenter: '- reenter explore mode, update todos with plan steps \n- exit the plan after user approval, and execute the plan',
   /** Post-approval execution phase (explore mode is already off). */
   execute: 'execute approved plan',
+  /** Same-turn continuation when plans/todos.json still has unfinished steps. */
+  executeContinuation: 'continue approved plan execution',
   continue: 'continue explore mode',
   yolo: 'yolo mode',
 } as const
@@ -48,6 +54,13 @@ export function exitPlanReminder(): string {
     'Explore mode ended and was approved. The engine will execute approved plan tasks one-by-one using full tools.',
     'Each task runs in its own tool loop; progress syncs to `plans/todos.json` and `plans/<slug>.md`.',
     'If execution pauses for approval, resume when ready — remaining tasks continue automatically.',
+  ].join(' ')
+}
+
+export function planExecutionContinuationReminder(): string {
+  return [
+    '`plans/todos.json` still has unfinished approved steps.',
+    'Execute the next pending step using tools now — do not reply with text only.',
   ].join(' ')
 }
 
@@ -114,6 +127,7 @@ function planFilePendingReminder(planPath: string | null): string {
 
 export type PlanModeInjectionPhase =
   | 'execute'
+  | 'executeContinuation'
   | 'enter'
   | 'reenter'
   | 'continue'
@@ -160,6 +174,12 @@ function buildSlice(
         phase,
         instructionBlock: exitPlanReminder(),
         userTrigger: PLAN_MODE_USER_TRIGGERS.execute,
+      }
+    case 'executeContinuation':
+      return {
+        phase,
+        instructionBlock: planExecutionContinuationReminder(),
+        userTrigger: PLAN_MODE_USER_TRIGGERS.executeContinuation,
       }
     case 'enter':
       return {
@@ -212,6 +232,9 @@ export function resolvePlanModeInjectionSlice(
     if (hasPendingPlanExecution(id) && consumePendingPlanExecution(id)) {
       return buildSlice('execute', null, false, false, 0)
     }
+    if (hasExecuteContinuationReminder(id) && consumeExecuteContinuationReminder(id)) {
+      return buildSlice('executeContinuation', null, false, false, 0)
+    }
     return null
   }
 
@@ -247,6 +270,10 @@ export function resolvePlanModeInstructionBlock(
 
   if (hasPendingPlanExecution(id)) {
     return exitPlanReminder()
+  }
+
+  if (hasExecuteContinuationReminder(id)) {
+    return planExecutionContinuationReminder()
   }
 
   if (state.status !== 'planning') return null

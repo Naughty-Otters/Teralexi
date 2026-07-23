@@ -55,6 +55,7 @@ import {
   type AgentFlowPipelineRecipe,
 } from './pipelines/agent-flow-pipeline'
 import { ThinkingBranchComposer } from './pipelines/thinking-branches'
+import { runPlanExecutionContinuations } from '../coding/plan-mode-execution-bridge'
 
 const log = createLogger('agent.flow')
 
@@ -283,20 +284,31 @@ export class AgentFlowBase {
     })
   }
 
+  private async executePipelineWithPlanContinuations(options?: {
+    startIndex?: number
+    startFromStageId?: FlowStageId | string
+  }): Promise<string> {
+    await this.executePipeline(options)
+
+    const hitl = this.returnIfHitlPaused()
+    if (hitl !== null) {
+      return hitl
+    }
+
+    await runPlanExecutionContinuations(this.ctx)
+
+    return this.returnIfHitlPaused() ?? this.ctx.buildStructuredAssistantContent()
+  }
+
   private async runHitlContinuation(
     pausedStageId: string | undefined,
     options?: { releasePendingExecutionKey?: string },
   ): Promise<string> {
     this.fromAgentConfig()
 
-    const result = await this.executePipeline(
+    const result = await this.executePipelineWithPlanContinuations(
       pausedStageId ? { startFromStageId: pausedStageId } : undefined,
     )
-
-    const hitl = this.returnIfHitlPaused()
-    if (hitl !== null) {
-      return hitl
-    }
 
     if (options?.releasePendingExecutionKey) {
       deletePendingExecution(options.releasePendingExecutionKey)
@@ -320,7 +332,7 @@ export class AgentFlowBase {
     }
 
     this.ensurePipelineForRun()
-    const result = await this.executePipeline()
+    const result = await this.executePipelineWithPlanContinuations()
 
     log.info('Agent flow completed', {
       conversationId: this.ctx.opts.conversationId,

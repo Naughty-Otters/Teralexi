@@ -3,11 +3,16 @@ import {
   PLAN_MODE_USER_TRIGGERS,
   exitPlanReminder,
   fullPlanReminder,
+  planExecutionContinuationReminder,
   reentryPlanReminder,
   resolvePlanModeInstructionBlock,
   resolvePlanModeInjectionMessage,
   resolvePlanModeInjectionSlice,
 } from './plan-mode-injection-content'
+import {
+  markExecuteContinuationReminder,
+  resetAllPlanRemindersForTests,
+} from './plan-mode-session-reminders'
 
 vi.mock('./coding-agent-policy', () => ({
   getCodingModeForConversation: vi.fn(() => 'normal'),
@@ -49,6 +54,7 @@ import { existsSync } from 'node:fs'
 
 describe('plan-mode-injection-content', () => {
   beforeEach(() => {
+    resetAllPlanRemindersForTests()
     vi.mocked(getPlanModeStateForConversation).mockReturnValue({
       status: 'tool_execute',
       planSlug: null,
@@ -100,6 +106,20 @@ describe('plan-mode-injection-content', () => {
     const block = resolvePlanModeInstructionBlock('conv-1', 0)
     expect(block).toBe(exitPlanReminder())
     expect(consumePendingPlanExecution).not.toHaveBeenCalled()
+  })
+
+  it('injects continuation reminder when unfinished plan todos need another loop', () => {
+    vi.mocked(getPlanModeStateForConversation).mockReturnValue({
+      status: 'plan_tool_execute',
+      planSlug: 'my-plan',
+    })
+    markExecuteContinuationReminder('conv-1')
+
+    const block = resolvePlanModeInstructionBlock('conv-1', 0)
+    expect(block).toBe(planExecutionContinuationReminder())
+
+    const msg = resolvePlanModeInjectionMessage('conv-1', 0)
+    expect(msg?.content).toContain(PLAN_MODE_USER_TRIGGERS.executeContinuation)
   })
 
   it('wraps short user triggers for post-approval execution phase', () => {

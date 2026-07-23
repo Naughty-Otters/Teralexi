@@ -7,10 +7,22 @@ export const MANDATORY_TOOL_NAMES = new Set<string>([
   'invoke_agents',
   'promote_artifact',
   'generate_follow_up',
+  'edit_files',
+  'shell',
+])
+
+/** Mandatory tools that still require HITL approval unless the user disables it. */
+export const APPROVAL_REQUIRED_BY_DEFAULT_TOOL_NAMES = new Set<string>([
+  'edit_files',
+  'shell',
 ])
 
 export function isMandatoryTool(toolName: string): boolean {
   return MANDATORY_TOOL_NAMES.has(toolName)
+}
+
+export function isApprovalRequiredByDefault(toolName: string): boolean {
+  return APPROVAL_REQUIRED_BY_DEFAULT_TOOL_NAMES.has(toolName)
 }
 
 /** Merge mandatory tool names that exist in the catalog into a name list. */

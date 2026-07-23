@@ -1,5 +1,7 @@
+import { isApprovalRequiredByDefault } from './mandatory-tools'
+
 /**
- * Default tool enablement + no-approval policy for shared toolSet categories.
+ * Default tool enablement + approval policy for shared toolSet categories.
  * Most skills receive file-system / workspace tools by default unless listed
  * in {@link NO_TOOLSET_EXPANSION_SKILL_IDS}.
  */
@@ -149,6 +151,10 @@ export function resolveSkillWorkspaceApprovalOverrides<
 
   for (const tool of catalogTools) {
     if (!enabled.has(tool.name)) continue
+    if (isApprovalRequiredByDefault(tool.name)) {
+      overrides[tool.name] = true
+      continue
+    }
     if (!(tool.tags ?? []).some((tag) => tags.has(tag))) continue
     overrides[tool.name] = false
   }

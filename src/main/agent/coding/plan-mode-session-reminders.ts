@@ -4,6 +4,7 @@
  */
 const enterReminderByConversation = new Set<string>()
 const executeReminderByConversation = new Set<string>()
+const executeContinuationReminderByConversation = new Set<string>()
 /** Blocks silent auto-explore after an approved plan finishes executing. */
 const executionCompletedByConversation = new Set<string>()
 
@@ -41,10 +42,28 @@ export function consumeExecutePlanReminder(conversationId: string): boolean {
   return true
 }
 
+export function markExecuteContinuationReminder(conversationId: string): void {
+  const id = conversationId.trim()
+  if (!id) return
+  executeContinuationReminderByConversation.add(id)
+}
+
+export function hasExecuteContinuationReminder(conversationId: string): boolean {
+  return executeContinuationReminderByConversation.has(conversationId.trim())
+}
+
+export function consumeExecuteContinuationReminder(conversationId: string): boolean {
+  const id = conversationId.trim()
+  if (!executeContinuationReminderByConversation.has(id)) return false
+  executeContinuationReminderByConversation.delete(id)
+  return true
+}
+
 export function clearPlanReminders(conversationId: string): void {
   const id = conversationId.trim()
   enterReminderByConversation.delete(id)
   executeReminderByConversation.delete(id)
+  executeContinuationReminderByConversation.delete(id)
 }
 
 export function markPlanExecutionCompleted(conversationId: string): void {
@@ -71,5 +90,6 @@ export function clearPlanExecutionCompleted(conversationId: string): void {
 export function resetAllPlanRemindersForTests(): void {
   enterReminderByConversation.clear()
   executeReminderByConversation.clear()
+  executeContinuationReminderByConversation.clear()
   executionCompletedByConversation.clear()
 }

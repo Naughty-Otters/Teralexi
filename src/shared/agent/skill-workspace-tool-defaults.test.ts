@@ -80,7 +80,7 @@ describe('skill-workspace-tool-defaults', () => {
     expect(expanded).toContain('export_research_pdf')
   })
 
-  it('builds no-approval overrides for research skill toolsets', () => {
+  it('builds approval overrides for research skill toolsets', () => {
     const overrides = mergeSkillWorkspaceApprovalOverrides(
       'research',
       catalog,
@@ -95,7 +95,7 @@ describe('skill-workspace-tool-defaults', () => {
     )
     expect(overrides).toEqual({
       read_file: false,
-      shell: false,
+      shell: true,
       web_search: false,
       web_scrape: false,
       export_research_pdf: false,
@@ -111,7 +111,7 @@ describe('skill-workspace-tool-defaults', () => {
     expect(expanded).not.toContain('lsp')
   })
 
-  it('builds no-approval overrides for toolset tools on documents skill', () => {
+  it('builds approval overrides for toolset tools on documents skill', () => {
     const overrides = mergeSkillWorkspaceApprovalOverrides(
       'documents',
       catalog,
@@ -120,8 +120,8 @@ describe('skill-workspace-tool-defaults', () => {
     )
     expect(overrides).toEqual({
       read_file: false,
-      edit_files: false,
-      shell: false,
+      edit_files: true,
+      shell: true,
     })
     expect(overrides.lsp).toBeUndefined()
   })
@@ -134,6 +134,6 @@ describe('skill-workspace-tool-defaults', () => {
       { edit_files: true },
     )
     expect(overrides.edit_files).toBe(true)
-    expect(overrides.shell).toBe(false)
+    expect(overrides.shell).toBe(true)
   })
 })

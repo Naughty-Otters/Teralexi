@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  APPROVAL_REQUIRED_BY_DEFAULT_TOOL_NAMES,
+  isApprovalRequiredByDefault,
   isMandatoryTool,
   MANDATORY_TOOL_NAMES,
   withMandatoryToolsInCatalog,
@@ -10,7 +12,7 @@ import {
 } from './tool-selection'
 
 describe('mandatory tools', () => {
-  it('includes planning, todos, invoke, promote, and follow-up tools', () => {
+  it('includes planning, todos, invoke, promote, follow-up, and workspace tools', () => {
     expect(MANDATORY_TOOL_NAMES.has('read_todos')).toBe(true)
     expect(MANDATORY_TOOL_NAMES.has('update_todos')).toBe(true)
     expect(MANDATORY_TOOL_NAMES.has('enter_plan_mode')).toBe(true)
@@ -21,6 +23,8 @@ describe('mandatory tools', () => {
     expect(MANDATORY_TOOL_NAMES.has('best_of_n')).toBe(false)
     expect(MANDATORY_TOOL_NAMES.has('promote_artifact')).toBe(true)
     expect(MANDATORY_TOOL_NAMES.has('generate_follow_up')).toBe(true)
+    expect(MANDATORY_TOOL_NAMES.has('edit_files')).toBe(true)
+    expect(MANDATORY_TOOL_NAMES.has('shell')).toBe(true)
   })
 
   it('sub-agent delegation tools are always enabled when customized off-list', () => {
@@ -35,6 +39,18 @@ describe('mandatory tools', () => {
   it('is always enabled in available set UI even when customized off-list', () => {
     expect(
       isToolEnabledInAvailableSet('enter_plan_mode', {
+        availableSetTouched: true,
+        availableSet: ['read_file'],
+      }),
+    ).toBe(true)
+    expect(
+      isToolEnabledInAvailableSet('edit_files', {
+        availableSetTouched: true,
+        availableSet: ['read_file'],
+      }),
+    ).toBe(true)
+    expect(
+      isToolEnabledInAvailableSet('shell', {
         availableSetTouched: true,
         availableSet: ['read_file'],
       }),
@@ -59,6 +75,12 @@ describe('mandatory tools', () => {
         savedAvailableSet: ['read_file'],
       }),
     ).toEqual(['read_file', 'enter_plan_mode'])
+  })
+
+  it('marks shell and edit_files as approval-required by default', () => {
+    expect(APPROVAL_REQUIRED_BY_DEFAULT_TOOL_NAMES.has('shell')).toBe(true)
+    expect(APPROVAL_REQUIRED_BY_DEFAULT_TOOL_NAMES.has('edit_files')).toBe(true)
+    expect(isApprovalRequiredByDefault('read_file')).toBe(false)
   })
 
   it('withMandatoryToolsInCatalog merges only catalog members', () => {
