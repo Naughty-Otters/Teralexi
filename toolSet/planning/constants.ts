@@ -9,38 +9,16 @@ export const PLAN_MODE_TOOL_NAMES = new Set<string>([
 ])
 
 /** File tools that may write only the active plan file while plan mode is active. */
-export const PLAN_FILE_WRITE_TOOLS = new Set([
-  'write_file',
-  'edit_file',
-  'apply_patch',
-])
+export const PLAN_FILE_WRITE_TOOLS = new Set(['edit_files'])
 
 /** Read-only file / workspace IO allowed during agent plan mode. */
-export const PLAN_MODE_FILE_IO_TOOLS = new Set([
-  'read_file',
-  'grep_files',
-  'glob_files',
-  'list_files',
-  'search_files',
-  'file_status',
-  'storage_check',
-  'lsp',
-  'read_spreadsheet',
-])
+export const PLAN_MODE_FILE_IO_TOOLS = new Set(['read_file', 'lsp'])
 
 /** External research tools allowed during agent plan mode. */
-export const PLAN_MODE_RESEARCH_TOOLS = new Set([
-  'web_search',
-  'web_scrape',
-  'deep_research',
-])
+export const PLAN_MODE_RESEARCH_TOOLS = new Set(['web_search', 'web_scrape'])
 
-/** Read-only git inspection during agent plan mode. */
-export const PLAN_MODE_GIT_READ_TOOLS = new Set([
-  'git_status',
-  'git_diff',
-  'git_log',
-])
+/** Read-only git inspection during agent plan mode (via shell). */
+export const PLAN_MODE_GIT_READ_TOOLS = new Set<string>([])
 
 /**
  * Always included in skill catalogs and forced on while agent plan mode is active,
@@ -49,7 +27,6 @@ export const PLAN_MODE_GIT_READ_TOOLS = new Set([
 export const PLAN_MODE_ALWAYS_IN_CATALOG_TOOL_NAMES = new Set([
   ...PLAN_MODE_FILE_IO_TOOLS,
   ...PLAN_MODE_RESEARCH_TOOLS,
-  ...PLAN_MODE_GIT_READ_TOOLS,
   'read_todos',
   'update_todos',
 ])

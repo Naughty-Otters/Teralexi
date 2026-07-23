@@ -2,11 +2,11 @@ import { resolveToolLoopMaxIterations } from './tool-loop'
 
 /** Per-agent sub-agent / delegation settings (persisted in agent_configurations). */
 export type SubAgentSettings = {
-  /** When false, skill_chain / invoke_skill / invoke_agent cannot target this agent. */
+  /** When false, skill_chain / invoke_skill / invoke_agents cannot target this agent. */
   allowAsSubAgent?: boolean
-  /** When true, tool loop exposes gated `invoke_agent` (in addition to always-on `invoke_skill`). */
+  /** When true, tool loop exposes gated `invoke_agents` (in addition to always-on `invoke_skill`). */
   allowSubAgents?: boolean
-  /** Allow-list for `invoke_agent`; null/empty = any sub-agent-eligible agent. */
+  /** Allow-list for `invoke_agents`; null/empty = any sub-agent-eligible agent. */
   subAgentIds?: string[] | null
 }
 
@@ -36,7 +36,7 @@ export function isSubAgentTargetAllowed(
   return (subAgentIds ?? []).includes(agentId)
 }
 
-/** Toggle one target in the invoke_agent allow-list; empty result means allow all. */
+/** Toggle one target in the invoke_agents allow-list; empty result means allow all. */
 export function toggleSubAgentTargetSelection(
   agentId: string,
   checked: boolean,

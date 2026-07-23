@@ -30,7 +30,7 @@ export {
   type ParsedScopedId,
 } from './flow-scoped-ids'
 export {
-  INVOKE_AGENT_TOOL_NAME,
+  INVOKE_AGENTS_TOOL_NAME,
   MAX_AGENT_RUN_DEPTH,
   type AgentRunId,
   type AgentRunMeta,

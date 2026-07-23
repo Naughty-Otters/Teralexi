@@ -77,9 +77,10 @@
             }}
           </span>
           <UIcon
-            name="i-lucide-chevron-down"
+            :name="
+              showAllItems ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'
+            "
             class="li-bubble__toggle-chevron"
-            :class="{ 'li-bubble__toggle-chevron--expanded': showAllItems }"
             aria-hidden="true"
           />
         </button>
@@ -328,10 +329,7 @@ watch(hasOverflow, (overflow) => {
 .li-bubble__toggle-chevron {
   width: 14px;
   height: 14px;
-  transition: transform 0.16s ease;
-}
-.li-bubble__toggle-chevron--expanded {
-  transform: rotate(180deg);
+  flex-shrink: 0;
 }
 
 .li-bubble-item-enter-active,

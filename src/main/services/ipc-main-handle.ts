@@ -142,6 +142,12 @@ import {
   resolveSandboxRootForConversation,
 } from '@main/agent/sandbox'
 import {
+  getBrowserSessionState,
+  pollBrowserSelection,
+  searchKeysFromSelectedElement,
+  setBrowserInspectMode,
+} from '@main/agent/browser/browser-session'
+import {
   clearFollowUpMeta,
   readFollowUpMeta,
 } from '@main/agent/follow-up'
@@ -2083,6 +2089,41 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     return navigateSandboxOutputView(event, {
       action: args?.action === 'forward' ? 'forward' : 'back',
     })
+  }
+
+  BrowserSessionGetState: (
+    _event: Electron.IpcMainInvokeEvent,
+  ) => ReturnType<typeof getBrowserSessionState> = () => {
+    return getBrowserSessionState()
+  }
+
+  BrowserSessionSetInspectMode: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { enabled: boolean },
+  ) => Promise<ReturnType<typeof getBrowserSessionState>> = async (
+    _event,
+    args,
+  ) => {
+    return setBrowserInspectMode(Boolean(args?.enabled))
+  }
+
+  BrowserSessionPollSelection: (
+    _event: Electron.IpcMainInvokeEvent,
+  ) => Promise<
+    Awaited<ReturnType<typeof pollBrowserSelection>>
+  > = async () => {
+    return pollBrowserSelection()
+  }
+
+  BrowserSessionFindInCodeKeys: (
+    _event: Electron.IpcMainInvokeEvent,
+  ) => Promise<{ keys: string[]; selected: boolean }> = async () => {
+    const selected = await pollBrowserSelection()
+    if (!selected) return { keys: [], selected: false }
+    return {
+      keys: searchKeysFromSelectedElement(selected),
+      selected: true,
+    }
   }
 
   RemoveSandboxDirectories: (

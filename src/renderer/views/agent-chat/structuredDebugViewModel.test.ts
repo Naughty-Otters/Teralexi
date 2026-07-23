@@ -36,7 +36,30 @@ describe('buildStructuredDebugViewFromStepProgress', () => {
     expect(view?.sections[0]?.id).toBe('ThinkingStep')
   })
 
-  it('renders backend-truncated running step bodies as markdown', () => {
+  it('builds thinking sections without markdown-it', () => {
+    const view = buildStructuredDebugViewFromStepProgress(
+      [
+        {
+          id: 'thinking-live-1',
+          data: {
+            stepId: 'thinking',
+            title: 'Thinking',
+            sequence: 1,
+            status: 'running',
+            content: '{"goal":"keep_underscores_intact"}',
+          },
+        },
+      ],
+      null,
+      { isStreaming: true },
+    )
+
+    expect(view?.sections[0]?.bodyPlainText).toContain('keep_underscores_intact')
+    expect(view?.sections[0]?.bodyHtml).toBe('')
+    expect(view?.sections[0]?.bodyMarkdown).toBe('')
+  })
+
+  it('renders thinking step bodies as plain text (not markdown HTML)', () => {
     const head = 'H'.repeat(HEAD_TAIL_KEEP_CHARS)
     const tail = 'LIVE_TAIL'
     const content = limitPersistedStepText(
@@ -59,10 +82,38 @@ describe('buildStructuredDebugViewFromStepProgress', () => {
       { isStreaming: true },
     )
 
-    const html = view?.sections[0]?.bodyHtml ?? ''
-    expect(html).toContain('....')
-    expect(html).toContain('LIVE_TAIL')
-    expect(html).not.toContain('<pre>')
+    const section = view?.sections[0]
+    expect(section?.bodyHtml).toBe('')
+    expect(section?.bodyPlainText).toContain('....')
+    expect(section?.bodyPlainText).toContain('LIVE_TAIL')
+    // Thinking must not enter the markdown export / render path.
+    expect(section?.bodyMarkdown).toBe('')
+  })
+
+  it('does not let markdown eat underscores in streamed thinking JSON', () => {
+    const view = buildStructuredDebugViewFromStepProgress(
+      [
+        {
+          id: 'thinking-live-1',
+          data: {
+            stepId: 'thinking',
+            title: 'Thinking',
+            sequence: 1,
+            status: 'running',
+            content:
+              '{"execution_mode":"agent_call","goal":"The user wants a fix","rationale":"The bubble must show full lines"}',
+          },
+        },
+      ],
+      markdown,
+      { isStreaming: true },
+    )
+
+    const plain = view?.sections[0]?.bodyPlainText ?? ''
+    expect(plain).toContain('"execution_mode"')
+    expect(plain).toContain('The user wants a fix')
+    expect(plain).toContain('The bubble must show full lines')
+    expect(view?.sections[0]?.bodyHtml).toBe('')
   })
 
   it('renders markdown inside outer prose fences as html, not a code block', () => {

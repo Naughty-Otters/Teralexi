@@ -29,7 +29,15 @@ const TEXT_EXTENSIONS = new Set([
   '.tex',
 ])
 
-export type FileSnapshotEntry = { mtimeMs: number; size: number }
+export type FileSnapshotEntry = {
+  mtimeMs: number
+  size: number
+  /**
+   * Optional utf-8 body captured before a command so post-hoc workspace diffs
+   * can show old→new without relying on git.
+   */
+  content?: string
+}
 
 /** Top-level subdirs under a step folder that are tool-managed, not LLM deliverables. */
 export const STEP_NON_DELIVERABLE_SUBDIRS = ['scripts'] as const

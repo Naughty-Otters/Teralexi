@@ -338,8 +338,17 @@ export async function executeTodoToolLoop(
       }
     }
 
-    if (collected.awaitingToolApproval) {
-      toolRunCtx.hitlAwaitingApproval = true
+    // Nested invoke_agents may set HITL flags via mergeChildHitlPause while this
+    // stream itself did not emit a tool-approval-request.
+    const nestedHitlPaused =
+      toolRunCtx.hitlAwaitingApproval ||
+      toolRunCtx.hitlAwaitingFormData ||
+      toolRunCtx.hitlAwaitingManualIntervention
+
+    if (collected.awaitingToolApproval || nestedHitlPaused) {
+      if (collected.awaitingToolApproval) {
+        toolRunCtx.hitlAwaitingApproval = true
+      }
       toolRunCtx.setHitlPausedAtStage(TOOL_LOOP_STEP_ID)
       toolRunCtx.updateStepOutput(
         TOOL_LOOP_STEP_ID,

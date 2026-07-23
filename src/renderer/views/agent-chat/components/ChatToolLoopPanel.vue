@@ -1,21 +1,51 @@
 <template>
   <article
     class="exploring-panel"
-    :class="{ 'exploring-panel--active': props.active }"
+    :class="{
+      'exploring-panel--active': props.active,
+      'exploring-panel--collapsed': !expanded,
+    }"
   >
-    <header class="exploring-panel__header">
+    <button
+      type="button"
+      class="exploring-panel__header"
+      :aria-expanded="expanded"
+      @click="expanded = !expanded"
+    >
       <UIcon
         name="i-lucide-compass"
         class="exploring-panel__icon"
         aria-hidden="true"
       />
       <span class="exploring-panel__title">{{ panelTitle }}</span>
+      <UIcon
+        :name="expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+        class="exploring-panel__chevron"
+        aria-hidden="true"
+      />
       <span class="exploring-panel__status" aria-live="polite">
         {{ statusText }}
       </span>
-    </header>
+    </button>
 
-    <div v-if="showFullList && listVisibleItems.length > 0" class="exploring-panel__body exploring-panel__body--list">
+    <div
+      v-if="expanded && showCompactList && listVisibleItems.length > 0"
+      class="exploring-panel__body exploring-panel__body--compact"
+    >
+      <ChatExploreToolRow
+        v-for="item in listVisibleItems"
+        :key="item.key"
+        :part="item.part"
+      />
+      <p v-if="listDroppedCount > 0" class="exploring-panel__dropped">
+        {{ listDroppedCount }} earlier tool{{ listDroppedCount === 1 ? '' : 's' }} not shown
+      </p>
+    </div>
+
+    <div
+      v-else-if="expanded && showFullList && listVisibleItems.length > 0"
+      class="exploring-panel__body exploring-panel__body--list"
+    >
       <div
         v-for="item in listVisibleItems"
         :key="item.key"
@@ -32,7 +62,7 @@
       </p>
     </div>
 
-    <div v-else-if="latestDetail" class="exploring-panel__body">
+    <div v-else-if="expanded && latestDetail" class="exploring-panel__body">
       <p class="exploring-panel__action">{{ latestDetail.action }}</p>
 
       <dl
@@ -109,6 +139,10 @@
 import type { ChatUiToolCallListDisplay } from '@shared/agent/tool-call-list-display'
 import { EXPLORING_PANEL_TITLE } from '@shared/agent/agentic-run-labels'
 import {
+  countExploreActivity,
+  formatExploreActivityStatus,
+} from '@shared/agent/explore-activity-summary'
+import {
   formatToolHumanReadableAction,
 } from '@shared/tool-result/tool-human-readable'
 import {
@@ -118,7 +152,8 @@ import {
   type ExploringField,
   type ExploringResult,
 } from '@shared/tool-result/tool-exploring-display'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import ChatExploreToolRow from './ChatExploreToolRow.vue'
 import ChatTerminalMessageBubble from './ChatTerminalMessageBubble.vue'
 import ChatToolInvocationRow from './ChatToolInvocationRow.vue'
 import type { AssistantBubbleDescriptor } from './chat/assistantBubbleFramework'
@@ -140,29 +175,47 @@ const props = withDefaults(
   defineProps<{
     items: readonly AssistantBubbleDescriptor[]
     active?: boolean
-    /** When `all`, list every tool in this batch; when `latest`, show the most recent only. */
+    /**
+     * `compact` — Cursor-like slim rows (default UX).
+     * `all` — full invocation rows.
+     * `latest` — detail for the most recent tool only.
+     */
     listDisplay?: ChatUiToolCallListDisplay
+    /** Override panel title (e.g. Explore for profiled sub-agents). */
+    title?: string
+    /** When set, controls expand state from outside (sub-agent bubble). */
+    defaultExpanded?: boolean
   }>(),
   {
     active: false,
-    listDisplay: 'all',
+    listDisplay: 'compact',
+    title: undefined,
+    defaultExpanded: undefined,
   },
 )
 
-const panelTitle = EXPLORING_PANEL_TITLE
+const expanded = ref(
+  props.defaultExpanded ?? (props.active || props.listDisplay === 'all'),
+)
+
+watch(
+  () => props.active,
+  (live) => {
+    if (live) expanded.value = true
+    else if (props.listDisplay === 'compact' && props.defaultExpanded !== true) {
+      expanded.value = false
+    }
+  },
+)
+
+const panelTitle = computed(() => props.title?.trim() || EXPLORING_PANEL_TITLE)
 
 const showFullList = computed(() => props.listDisplay === 'all')
+const showCompactList = computed(() => props.listDisplay === 'compact')
 
 const listPanelItems = computed(() => visibleToolLoopPanelItems(props.items))
-
 const listVisibleItems = computed(() => listPanelItems.value.visible)
-
 const listDroppedCount = computed(() => listPanelItems.value.droppedCount)
-
-function bubbleItemIsRunning(item: AssistantBubbleDescriptor): boolean {
-  if (item.kind === 'terminal') return isTerminalToolRunning(item.part)
-  return isRunningState(getToolPartState(item.part))
-}
 
 type ExploringToolDetail = {
   action: string
@@ -179,6 +232,7 @@ const latestItem = computed((): AssistantBubbleDescriptor | null => {
 })
 
 const latestDetail = computed((): ExploringToolDetail | null => {
+  if (showFullList.value || showCompactList.value) return null
   const item = latestItem.value
   if (!item) return null
   return buildExploringToolDetail(item)
@@ -245,17 +299,22 @@ function buildExploringToolDetail(
   }
 }
 
+const activityCounts = computed(() =>
+  countExploreActivity(
+    props.items.map((item) => ({
+      toolName: toolPartDisplayName(item.part),
+      input: getToolPartInput(item.part),
+    })),
+  ),
+)
+
 const statusText = computed(() => {
-  if (showFullList.value) {
-    const total = props.items.length
-    if (total === 0) {
-      return props.active ? 'Looking around…' : 'Finished exploring'
-    }
-    const running = props.items.filter(bubbleItemIsRunning).length
-    if (running > 0) {
-      return `${running} of ${total} in progress`
-    }
-    return `${total} tool${total === 1 ? '' : 's'}`
+  if (showCompactList.value || showFullList.value) {
+    return formatExploreActivityStatus({
+      live: props.active,
+      toolCount: activityCounts.value.toolCount,
+      fileCount: activityCounts.value.fileCount,
+    })
   }
 
   const detail = latestDetail.value
@@ -301,10 +360,30 @@ const statusText = computed(() => {
   width: 100%;
   margin: 0;
   padding: 9px 12px;
+  border: none;
   border-bottom: 1px solid color-mix(in srgb, var(--ui-border) 80%, transparent);
   background: transparent;
   font: inherit;
   text-align: left;
+  cursor: pointer;
+}
+
+.exploring-panel--collapsed .exploring-panel__header {
+  border-bottom: none;
+}
+
+.exploring-panel__chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--ui-text-muted);
+}
+
+.exploring-panel__body--compact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 10px;
 }
 
 .exploring-panel--active .exploring-panel__header {

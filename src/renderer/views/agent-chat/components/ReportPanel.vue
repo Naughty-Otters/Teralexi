@@ -135,21 +135,71 @@
         >
           <UIcon name="i-lucide-copy" class="cp-icon-btn__glyph" />
         </button>
+        <button
+          type="button"
+          class="cp-icon-btn cp-icon-btn--compact"
+          :class="{ 'cp-icon-btn--active': inspectMode }"
+          :disabled="!isHttpPreview"
+          :title="inspectMode ? 'Exit inspect mode' : 'Inspect element'"
+          :aria-label="inspectMode ? 'Exit inspect mode' : 'Inspect element'"
+          :aria-pressed="inspectMode"
+          @click="toggleInspectMode"
+        >
+          <UIcon name="i-lucide-mouse-pointer-2" class="cp-icon-btn__glyph" />
+        </button>
       </div>
     </div>
 
-    <div
-      ref="sandboxHostEl"
-      class="report-panel-viewport"
-    >
+    <div class="report-panel-body">
       <div
-        v-if="!previewUrl"
-        class="report-panel-placeholder"
+        ref="sandboxHostEl"
+        class="report-panel-viewport"
       >
-        <UIcon name="i-lucide-folder-open" class="report-panel-placeholder-icon" />
-        <p>No sandbox preview yet</p>
-        <span>Run the agent to attach <code>output/results</code>. The folder opens here.</span>
+        <div
+          v-if="!previewUrl"
+          class="report-panel-placeholder"
+        >
+          <UIcon name="i-lucide-folder-open" class="report-panel-placeholder-icon" />
+          <p>No sandbox preview yet</p>
+          <span>Run the agent to attach <code>output/results</code>. The folder opens here.</span>
+        </div>
       </div>
+
+      <aside
+        v-if="inspectMode || selectedElement"
+        class="report-panel-inspector"
+        aria-label="Style inspector"
+      >
+        <header class="report-panel-inspector__header">
+          <strong>Inspector</strong>
+          <button
+            v-if="selectedElement"
+            type="button"
+            class="report-panel-inspector__find"
+            title="Copy find-in-code search keys"
+            @click="copyFindInCodeKeys"
+          >
+            Find in code
+          </button>
+        </header>
+        <p v-if="!selectedElement" class="report-panel-inspector__hint">
+          Click an element in the page to inspect styles.
+        </p>
+        <template v-else>
+          <p class="report-panel-inspector__selector">{{ selectedElement.selector }}</p>
+          <dl class="report-panel-inspector__styles">
+            <div
+              v-for="(value, key) in selectedElement.styles"
+              :key="key"
+              class="report-panel-inspector__row"
+            >
+              <dt>{{ key }}</dt>
+              <dd>{{ value }}</dd>
+            </div>
+          </dl>
+          <pre class="report-panel-inspector__html">{{ selectedElement.htmlSnippet }}</pre>
+        </template>
+      </aside>
     </div>
   </aside>
 </template>
@@ -207,6 +257,20 @@ const urlDraft = ref('')
 const markdownPreviewView = ref<MarkdownPreviewViewMode>('html')
 const canGoBack = ref(false)
 const canGoForward = ref(false)
+const inspectMode = ref(false)
+const selectedElement = ref<{
+  ref: string
+  tag: string
+  id?: string
+  className?: string
+  text?: string
+  testId?: string
+  selector: string
+  htmlSnippet: string
+  styles: Record<string, string>
+  bounds: { x: number; y: number; width: number; height: number }
+} | null>(null)
+let inspectPollTimer: ReturnType<typeof setInterval> | null = null
 
 const activeLinkTab = computed(() => {
   const id = props.activeLinkTabId
@@ -263,6 +327,11 @@ const previewUrl = computed(() => {
     return activeLinkTab.value?.url?.trim() || null
   }
   return activeResultsFileUrl.value
+})
+
+const isHttpPreview = computed(() => {
+  const url = previewUrl.value?.trim() ?? ''
+  return /^https?:\/\//i.test(url)
 })
 
 const showMarkdownViewToggle = computed(() =>
@@ -367,6 +436,45 @@ function copyResultsUrl() {
   const url = previewUrl.value
   if (!url || !navigator.clipboard?.writeText) return
   void navigator.clipboard.writeText(url)
+}
+
+async function toggleInspectMode() {
+  const next = !inspectMode.value
+  const ipc = window.ipcRendererChannel?.BrowserSessionSetInspectMode
+  if (!ipc?.invoke) {
+    inspectMode.value = next
+    return
+  }
+  const state = await ipc.invoke({ enabled: next })
+  inspectMode.value = Boolean(state?.inspectMode)
+  selectedElement.value = state?.selected ?? null
+  syncInspectPolling()
+}
+
+function syncInspectPolling() {
+  if (inspectPollTimer) {
+    clearInterval(inspectPollTimer)
+    inspectPollTimer = null
+  }
+  if (!inspectMode.value) return
+  inspectPollTimer = setInterval(() => {
+    void pollSelection()
+  }, 400)
+}
+
+async function pollSelection() {
+  const ipc = window.ipcRendererChannel?.BrowserSessionPollSelection
+  if (!ipc?.invoke) return
+  selectedElement.value = (await ipc.invoke()) ?? null
+}
+
+async function copyFindInCodeKeys() {
+  const ipc = window.ipcRendererChannel?.BrowserSessionFindInCodeKeys
+  if (!ipc?.invoke) return
+  const result = await ipc.invoke()
+  const keys = result?.keys ?? []
+  if (!keys.length || !navigator.clipboard?.writeText) return
+  await navigator.clipboard.writeText(keys.join('\n'))
 }
 
 function applyNavigationState(state: {
@@ -504,6 +612,10 @@ onBeforeUnmount(() => {
   if (boundsSyncTimer) {
     clearTimeout(boundsSyncTimer)
     boundsSyncTimer = null
+  }
+  if (inspectPollTimer) {
+    clearInterval(inspectPollTimer)
+    inspectPollTimer = null
   }
   sandboxResizeObserver?.disconnect()
   window.removeEventListener('resize', onWindowResize)
@@ -705,6 +817,82 @@ onBeforeUnmount(() => {
   min-height: 200px;
   position: relative;
   background: var(--ui-bg);
+}
+
+.report-panel-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+}
+
+.report-panel-inspector {
+  width: 220px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--ui-border);
+  background: var(--ui-bg-elevated);
+  padding: 10px;
+  overflow: auto;
+  font-size: 11px;
+  color: var(--ui-text);
+}
+
+.report-panel-inspector__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.report-panel-inspector__find {
+  border: 1px solid var(--ui-border);
+  background: var(--ui-bg);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--ui-text);
+}
+
+.report-panel-inspector__hint,
+.report-panel-inspector__selector {
+  margin: 0 0 8px;
+  color: var(--ui-text-muted);
+  word-break: break-word;
+}
+
+.report-panel-inspector__styles {
+  margin: 0 0 8px;
+}
+
+.report-panel-inspector__row {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.report-panel-inspector__row dt {
+  color: var(--ui-text-muted);
+}
+
+.report-panel-inspector__row dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.report-panel-inspector__html {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 10px;
+  color: var(--ui-text-muted);
+}
+
+.cp-icon-btn--active {
+  background: color-mix(in srgb, var(--color-primary-500, #3b82f6) 18%, transparent);
+  color: var(--color-primary-600, #2563eb);
 }
 
 .report-panel-placeholder {

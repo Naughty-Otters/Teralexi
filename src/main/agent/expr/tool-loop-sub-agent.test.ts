@@ -1,9 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { AgentStepContext } from '../context'
 import { filterToolsByAvailableSet } from '../steps/step-helpers'
-import {
-  INVOKE_AGENT_TOOL_NAME,
-} from '@toolSet/sub-agents'
+import { INVOKE_AGENTS_TOOL_NAME } from '@toolSet/sub-agents'
 import { buildAgentToolSetForTests } from './tool-loop-expr'
 
 vi.mock('../coding/plan-mode-state', () => ({
@@ -72,19 +70,14 @@ describe('buildAgentToolSet sub-agent tools', () => {
       source: 'skill' as const,
     },
     {
-      name: INVOKE_AGENT_TOOL_NAME,
-      description: 'Invoke configured sub-agent',
-      source: 'skill' as const,
-    },
-    {
-      name: 'invoke_agents',
-      description: 'Invoke multiple sub-agents',
+      name: INVOKE_AGENTS_TOOL_NAME,
+      description: 'Invoke sub-agents',
       source: 'skill' as const,
     },
   ]
   const tools = filterToolsByAvailableSet(runtimeTools)
 
-   it('registers sub-agent tools only when allowSubAgents is enabled', () => {
+  it('registers sub-agent tools only when allowSubAgents is enabled', () => {
     const without = buildAgentToolSetForTests(
       tools,
       makeRunCtx({
@@ -94,8 +87,7 @@ describe('buildAgentToolSet sub-agent tools', () => {
       }),
       'demo',
     )
-    expect(without[INVOKE_AGENT_TOOL_NAME]).toBeUndefined()
-    expect(without.invoke_agents).toBeUndefined()
+    expect(without[INVOKE_AGENTS_TOOL_NAME]).toBeUndefined()
 
     const withDelegation = buildAgentToolSetForTests(
       tools,
@@ -111,8 +103,7 @@ describe('buildAgentToolSet sub-agent tools', () => {
       }),
       'demo',
     )
-    expect(withDelegation[INVOKE_AGENT_TOOL_NAME]).toBeDefined()
-    expect(withDelegation.invoke_agents).toBeDefined()
+    expect(withDelegation[INVOKE_AGENTS_TOOL_NAME]).toBeDefined()
   })
 
   it('omits all sub-agent delegation tools on nested runs', () => {
@@ -130,6 +121,6 @@ describe('buildAgentToolSet sub-agent tools', () => {
       }),
       'demo',
     )
-    expect(toolSet[INVOKE_AGENT_TOOL_NAME]).toBeUndefined()
+    expect(toolSet[INVOKE_AGENTS_TOOL_NAME]).toBeUndefined()
   })
 })

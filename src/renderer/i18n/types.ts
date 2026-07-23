@@ -145,6 +145,7 @@ export type AppLabels = {
     showAgenticRunTitle: string
     showAgenticRunDesc: string
     toolCallListNone: string
+    toolCallListCompact: string
     toolCallListAll: string
     toolCallListLatest: string
     thinkingBubbleTitle: string
@@ -156,6 +157,7 @@ export type AppLabels = {
   }
   chat: {
     thoughtBubbleTitle: string
+    thoughtBubbleStreaming: string
     exportBubblePdf: string
     exportBubblePdfSuccess: string
     exportBubblePdfFailed: string
@@ -167,6 +169,15 @@ export type AppLabels = {
     skillSetupIntro: string
     skillSetupSave: string
     skillSetupSaving: string
+    deleteConversationDialog: {
+      title: string
+      message: string
+      messageChannel: string
+      cancel: string
+      confirm: string
+      deleting: string
+      failed: string
+    }
   }
   monitor: {
     title: string

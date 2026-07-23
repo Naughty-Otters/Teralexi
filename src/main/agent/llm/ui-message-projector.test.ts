@@ -43,6 +43,40 @@ describe('forwardAgentUiMessageStream', () => {
     expect(pending.has('call-1')).toBe(true)
     expect(pending.has('approval:appr-1')).toBe(true)
   })
+
+  it('does not forward reasoning-delta (handlers synthesize those)', async () => {
+    const onUIMessageChunk = vi.fn()
+
+    async function* uiStream() {
+      yield { type: 'reasoning-start', id: 'r1' }
+      yield { type: 'reasoning-delta', id: 'r1', delta: 'live' }
+      yield { type: 'reasoning-end', id: 'r1' }
+      yield {
+        type: 'tool-input-available',
+        toolCallId: 'call-1',
+        toolName: 'run_script',
+        input: {},
+      }
+    }
+
+    await forwardAgentUiMessageStream({
+      result: {
+        textStream: (async function* () {})(),
+        response: Promise.resolve(),
+        toUIMessageStream: () => uiStream(),
+      },
+      onUIMessageChunk,
+      pendingApprovals: new Set(),
+    })
+
+    expect(onUIMessageChunk).toHaveBeenCalledTimes(1)
+    expect(onUIMessageChunk).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'tool-input-available' }),
+    )
+    expect(onUIMessageChunk).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'reasoning-delta' }),
+    )
+  })
 })
 
 describe('reconcilePendingApprovalKeys', () => {

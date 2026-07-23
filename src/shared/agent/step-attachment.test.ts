@@ -15,8 +15,8 @@ import {
 } from './step-attachment'
 
 describe('extractAttachmentsFromToolResult', () => {
-  it('extracts from write_file structured files', () => {
-    const items = extractAttachmentsFromToolResult('write_file', {
+  it('extracts from edit_files structured files', () => {
+    const items = extractAttachmentsFromToolResult('edit_files', {
       sandboxRoot: '/sandbox',
       written: true,
       path: '/sandbox/out/new.txt',
@@ -33,7 +33,7 @@ describe('extractAttachmentsFromToolResult', () => {
     })
     expect(items).toHaveLength(1)
     expect(items[0]?.path).toBe('/sandbox/out/new.txt')
-    expect(items[0]?.toolName).toBe('write_file')
+    expect(items[0]?.toolName).toBe('edit_files')
     expect(items[0]?.action).toBe('create')
     expect(items[0]?.diff).toContain('+hi')
     expect(items[0]?.additions).toBe(1)
@@ -89,10 +89,10 @@ describe('extractAttachmentsFromToolResult', () => {
 
   it('skips errors and deletes in step attachment bubbles', () => {
     expect(
-      extractAttachmentsFromToolResult('write_file', { error: 'fail' }),
+      extractAttachmentsFromToolResult('edit_files', { error: 'fail' }),
     ).toEqual([])
     expect(
-      extractAttachmentsFromToolResult('delete_file', {
+      extractAttachmentsFromToolResult('edit_files', {
         sandboxRoot: '/sandbox',
         workspacePath: '/project',
         files: [
@@ -110,7 +110,7 @@ describe('extractAttachmentsFromToolResult', () => {
   })
 
   it('still extracts sandbox-only file creates and edits', () => {
-    const created = extractAttachmentsFromToolResult('write_file', {
+    const created = extractAttachmentsFromToolResult('edit_files', {
       sandboxRoot: '/sandbox',
       files: [
         {
@@ -127,7 +127,7 @@ describe('extractAttachmentsFromToolResult', () => {
     expect(created[0]?.displayPath).toBe('output/report.html')
     expect(created[0]?.url).toMatch(/^file:\/\//)
 
-    const edited = extractAttachmentsFromToolResult('edit_file', {
+    const edited = extractAttachmentsFromToolResult('edit_files', {
       sandboxRoot: '/sandbox',
       files: [
         {
@@ -144,7 +144,7 @@ describe('extractAttachmentsFromToolResult', () => {
   })
 
   it('extracts written path without diff', () => {
-    const items = extractAttachmentsFromToolResult('write_file', {
+    const items = extractAttachmentsFromToolResult('edit_files', {
       sandboxRoot: '/sandbox',
       written: true,
       path: '/sandbox/binary.dat',
@@ -155,8 +155,8 @@ describe('extractAttachmentsFromToolResult', () => {
     expect(items[0]?.sizeBytes).toBe(100)
   })
 
-  it('extracts edit_file file-change previews with line stats', () => {
-    const items = extractAttachmentsFromToolResult('edit_file', {
+  it('extracts edit_files file-change previews with line stats', () => {
+    const items = extractAttachmentsFromToolResult('edit_files', {
       sandboxRoot: '/sandbox',
       files: [
         {
@@ -174,8 +174,29 @@ describe('extractAttachmentsFromToolResult', () => {
     expect(items[0]?.deletions).toBe(1)
   })
 
+  it('extracts incidental shell workspace file-change previews', () => {
+    const items = extractAttachmentsFromToolResult('shell', {
+      stdout: '',
+      exitCode: 0,
+      files: [
+        {
+          path: 'src/a.ts',
+          diff: '+hi',
+          action: 'create',
+          additions: 1,
+          deletions: 0,
+          workspacePath: '/project',
+        },
+      ],
+    })
+    expect(items).toHaveLength(1)
+    expect(items[0]?.path).toBe('/project/src/a.ts')
+    expect(items[0]?.toolName).toBe('shell')
+    expect(items[0]?.diff).toBe('+hi')
+  })
+
   it('resolves workspace file changes against workspace root not sandbox', () => {
-    const items = extractAttachmentsFromToolResult('edit_file', {
+    const items = extractAttachmentsFromToolResult('edit_files', {
       sandboxRoot: '/sandbox',
       workspacePath: '/project',
       files: [
@@ -196,13 +217,13 @@ describe('extractAttachmentsFromToolResult', () => {
 
   it('skips failed tool results and non-success scripts', () => {
     expect(
-      extractAttachmentsFromToolResult('write_file', { success: false }),
+      extractAttachmentsFromToolResult('edit_files', { success: false }),
     ).toEqual([])
     expect(
-      extractAttachmentsFromToolResult('write_file', { ok: false }),
+      extractAttachmentsFromToolResult('edit_files', { ok: false }),
     ).toEqual([])
     expect(
-      extractAttachmentsFromToolResult('write_file', { written: false }),
+      extractAttachmentsFromToolResult('edit_files', { written: false }),
     ).toEqual([])
     expect(
       extractAttachmentsFromToolResult('run_script', { success: false }),
@@ -210,7 +231,7 @@ describe('extractAttachmentsFromToolResult', () => {
   })
 
   it('handles relative paths and rename rows in files array', () => {
-    const items = extractAttachmentsFromToolResult('write_file', {
+    const items = extractAttachmentsFromToolResult('edit_files', {
       sandboxRoot: '/sandbox',
       files: [
         {
@@ -253,8 +274,8 @@ describe('extractAttachmentsFromToolResult', () => {
   })
 
   it('returns empty for invalid or empty results', () => {
-    expect(extractAttachmentsFromToolResult('write_file', null)).toEqual([])
-    expect(extractAttachmentsFromToolResult('write_file', [])).toEqual([])
+    expect(extractAttachmentsFromToolResult('edit_files', null)).toEqual([])
+    expect(extractAttachmentsFromToolResult('edit_files', [])).toEqual([])
   })
 })
 

@@ -26,27 +26,46 @@ describe('resolveDefaultActiveToolNames', () => {
     expect(active).not.toContain('web_search')
   })
 
-  it('coding skill includes file-system and planning tags but not web', () => {
+  it('coding skill advertises its full allowlist (no empty-tag shrink)', () => {
     const catalog = [
       { name: 'read_file', tags: ['file-system'] },
       { name: 'apply_patch', tags: ['file-system'] },
       { name: 'update_todos', tags: ['task-tracking'] },
       { name: 'enter_plan_mode', tags: ['planning'] },
-      { name: 'run_script', tags: ['shell-command'] },
+      { name: 'shell', tags: ['file-system', 'workspace'] },
       { name: 'web_search', tags: ['web'] },
-      { name: 'invoke_agent', tags: ['sub-agents'] },
+      { name: 'invoke_agents', tags: ['sub-agents'] },
+    ]
+    const allToolNames = [
+      'read_file',
+      'shell',
+      'lsp',
+      'update_todos',
+      'invoke_agents',
     ]
     const active = resolveDefaultActiveToolNames({
       skillId: 'coding',
-      allToolNames: catalog.map((t) => t.name),
+      allToolNames,
       catalogTools: catalog,
     })
+    expect(active.sort()).toEqual([...allToolNames].sort())
     expect(active).toContain('read_file')
-    expect(active).toContain('enter_plan_mode')
-    expect(active).toContain('invoke_agent')
+    expect(active).toContain('shell')
     expect(active).not.toContain('web_search')
-    // Coding skill intentionally omits shell-command from default tags.
-    expect(active).not.toContain('run_script')
+  })
+
+  it('explore-sized allToolNames stay available for coding children', () => {
+    const active = resolveDefaultActiveToolNames({
+      skillId: 'coding',
+      allToolNames: ['read_file', 'lsp', 'shell', 'update_todos'],
+      catalogTools: [
+        { name: 'read_file', tags: ['file-system'] },
+        { name: 'lsp', tags: ['code-intelligence'] },
+        { name: 'shell', tags: ['file-system', 'workspace'] },
+        { name: 'update_todos', tags: ['task-tracking'] },
+      ],
+    })
+    expect(active).toEqual(['read_file', 'lsp', 'shell', 'update_todos'])
   })
 })
 

@@ -2,7 +2,7 @@ export const FILE_SYSTEM_TAG = ['file-system'] as const
 
 /** Paths for reading/editing the user's project when a workspace folder is set. */
 export const WORKSPACE_PATH_HINT =
-  'Paths may be workspace-relative (e.g. src/foo.ts), absolute under the project root, or absolute paths returned by list_files/grep_files. Always call this tool — do not assume host paths are inaccessible.'
+  'Paths may be workspace-relative (e.g. src/foo.ts), absolute under the project root, or absolute paths returned by prior tool results. Always call this tool — do not assume host paths are inaccessible.'
 
 /** When a tool can also target sandbox artifact directories. */
 export const SANDBOX_ARTIFACT_HINT =

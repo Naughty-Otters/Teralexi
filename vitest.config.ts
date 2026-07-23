@@ -167,7 +167,6 @@ export default defineConfig({
         'src/main/agent/coding/plan-mode-storage-impl.ts',
         // Runtime sub-agent orchestration validated by integration tests.
         'toolSet/sub-agents/list-agent-profiles.ts',
-        'toolSet/sub-agents/wait-for-sub-agent-runs.ts',
         // Workflow compiler skill actions — FS/IPC coupled; covered by integration tests.
         'skills/workflow-compiler/actions/**',
         'skills/workflow-runtime/**',

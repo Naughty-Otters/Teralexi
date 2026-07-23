@@ -161,9 +161,11 @@ export function formatToolExploringDetails(
     case 'read_file':
     case 'write_file':
     case 'edit_file':
+    case 'edit_files':
     case 'apply_patch':
     case 'delete_file':
       add('path', 'File')
+      if (toolName === 'edit_files') add('mode')
       break
     case 'move_file':
     case 'copy_file':
@@ -178,7 +180,7 @@ export function formatToolExploringDetails(
       add('url', 'Link')
       add('query')
       break
-    case 'run_workspace_command':
+    case 'shell':
       add('command')
       break
     case 'run_script_file':
@@ -439,7 +441,7 @@ export function formatToolExploringResult(
   if (
     resultType === 'terminal' ||
     name.startsWith('git_') ||
-    name === 'run_workspace_command' ||
+    name === 'shell' ||
     name === 'run_script' ||
     name === 'run_script_file'
   ) {

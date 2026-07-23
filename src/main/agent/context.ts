@@ -81,6 +81,7 @@ import {
 } from './context/step-attachments'
 import {
   emitStepProgress as emitStepProgressHelper,
+  setStepProgressContent as setStepProgressContentHelper,
   publishStepProgress as publishStepProgressHelper,
   shouldRegisterToolLoopStepContext,
 } from './context/step-progress-policy'
@@ -156,12 +157,9 @@ export class AgentFlowContext {
   public stepOutputs: StepOutputs = {}
   public readonly outputStore = new StepOutputStore()
   /** Per user-turn cache for successful `read_file` results (invalidated on mtime change). */
-  public readonly toolReadCache = new ToolReadCache()
+  public toolReadCache: ToolReadCache
   /** Shared in-flight / succeeded dedupe keys across tool-loop streams in one turn. */
-  public readonly toolInputDedupeState: ToolInputDedupeState = {
-    inflightByKey: new Map(),
-    succeededKeys: new Set(),
-  }
+  public toolInputDedupeState: ToolInputDedupeState
   public stepContexts: AgentStepContextMap = {}
   public stepHistory: AgentStepContextHistory = []
   private readonly stepProgressTextByKey = new Map<string, string>()
@@ -249,12 +247,26 @@ export class AgentFlowContext {
     stageModels?: StageModelRegistry,
   ) {
     this.currentMessages = [...opts.messages]
+    this.toolReadCache = new ToolReadCache()
+    this.toolInputDedupeState = {
+      inflightByKey: new Map(),
+      succeededKeys: new Set(),
+    }
     this.config = new ConfigContext(() => opts.responseLanguage)
     this.stageModels = stageModels ?? StageModelRegistry.fromOpts(opts)
     this.providers = new ProviderContext(opts, model)
     this.references = new ReferenceContext()
     this.sandbox = new SandboxContext(this.references)
     this.form = new FormContext(this as AgentFlowContext & FormFlowHost)
+  }
+
+  /**
+   * Reuse the parent's read ledger / tool-input dedupe for this child run so
+   * sub-agents do not re-read the same path+offset windows.
+   */
+  adoptToolSessionFrom(parent: AgentFlowContext): void {
+    this.toolReadCache = parent.toolReadCache
+    this.toolInputDedupeState = parent.toolInputDedupeState
   }
 
   get model() {
@@ -914,6 +926,28 @@ export class AgentFlowContext {
     )
   }
 
+  setStepProgressContent(
+    content: string,
+    stepId?: AgentStepId,
+    instanceKey?: string,
+  ): void {
+    setStepProgressContentHelper(
+      {
+        opts: this.opts,
+        stepHistory: this.stepHistory,
+        stepContexts: this.stepContexts,
+        stepProgressTextByKey: this.stepProgressTextByKey,
+        stepAttachmentsByKey: this.stepAttachmentsByKey,
+        flowId: this.flowId,
+        lastHitlPausedStageId: this.lastHitlPausedStageId,
+        getLatestStepContext: () => this.getLatestStepContext(),
+      },
+      content,
+      stepId,
+      instanceKey,
+    )
+  }
+
   private getLatestStepContext(): AgentStepSnapshot | undefined {
     return [...this.stepHistory].sort((a, b) => b.sequence - a.sequence)[0]
   }
@@ -961,6 +995,10 @@ export class AgentStepContext {
 
   resolveStageChoice(stage: AgentLlmStage) {
     return this.flowContext.resolveStageChoice(stage)
+  }
+
+  resolveDefaultLlmChoice() {
+    return this.flowContext.resolveDefaultLlmChoice()
   }
 
   resolveToolLoopExecutionChoice(isRecoveryAttempt: boolean) {
@@ -1156,6 +1194,17 @@ export class AgentStepContext {
 
   emitStepProgress(chunk: string, stepId: AgentStepId = this.stepId) {
     this.flowContext.emitStepProgress(chunk, stepId, this.instanceKey)
+  }
+
+  setStepProgressContent(
+    content: string,
+    stepId: AgentStepId = this.stepId,
+  ): void {
+    this.flowContext.setStepProgressContent(
+      content,
+      stepId,
+      this.instanceKey,
+    )
   }
 
   /** Stream tool-loop text to the batch parent section (not per-todo child keys). */

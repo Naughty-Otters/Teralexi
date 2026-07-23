@@ -24,12 +24,14 @@ import {
   bubblePdfDefaultFileName,
   bubblePdfKindForSection,
   exportBubbleMarkdownAsPdf,
+  exportBubblePlainTextAsPdf,
   type BubblePdfDocumentKind,
 } from '../bubblePdfExportHelpers'
 
 const props = withDefaults(
   defineProps<{
     markdown?: string | null
+    plainText?: string | null
     sectionTitle: string
     sectionId?: string
     messageId: string
@@ -48,24 +50,36 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const exporting = ref(false)
 
-const hasContent = computed(() => Boolean(props.markdown?.trim()))
+const hasContent = computed(
+  () => Boolean(props.plainText?.trim() || props.markdown?.trim()),
+)
 
 async function onExport(): Promise<void> {
+  if (exporting.value) return
+  const plain = props.plainText?.trim()
   const markdown = props.markdown?.trim()
-  if (!markdown || exporting.value) return
+  if (!plain && !markdown) return
 
   exporting.value = true
   try {
-    const result = await exportBubbleMarkdownAsPdf({
-      markdown,
-      defaultFileName: bubblePdfDefaultFileName(
-        props.sectionTitle,
-        props.messageId,
-      ),
-      kind:
-        props.kind ??
-        bubblePdfKindForSection(props.sectionId?.trim() || 'generic'),
-    })
+    const defaultFileName = bubblePdfDefaultFileName(
+      props.sectionTitle,
+      props.messageId,
+    )
+    const kind =
+      props.kind ??
+      bubblePdfKindForSection(props.sectionId?.trim() || 'generic')
+    const result = plain
+      ? await exportBubblePlainTextAsPdf({
+          text: plain,
+          defaultFileName,
+          kind,
+        })
+      : await exportBubbleMarkdownAsPdf({
+          markdown: markdown!,
+          defaultFileName,
+          kind,
+        })
     if (result.savedPath) {
       emit('exported', result.savedPath)
       return

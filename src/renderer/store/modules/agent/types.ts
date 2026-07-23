@@ -74,9 +74,9 @@ export interface Agent {
   todoMaxRetries?: number
   /** Other agents may delegate to this agent. */
   allowAsSubAgent?: boolean
-  /** Tool loop may use gated `invoke_agent` ( `invoke_skill` is always available when tool loop runs). */
+  /** Tool loop may use gated `invoke_agents` (`invoke_skill` is always available when tool loop runs). */
   allowSubAgents?: boolean
-  /** Allow-list for `invoke_agent`; null/empty = any eligible sub-agent. */
+  /** Allow-list for `invoke_agents`; null/empty = any eligible sub-agent. */
   subAgentIds?: string[] | null
   /** Structured compile output when loaded from disk/DB. */
   compiledArtifact?: {

@@ -173,6 +173,64 @@ describe('incrementalSyncChatMessages', () => {
     expect(tail?.type === 'text' && tail.text).toBe('hello')
   })
 
+  it('clones reasoning parts so in-place SDK text growth re-renders the bubble', () => {
+    const reasoningPart = {
+      type: 'reasoning' as const,
+      text: 'The',
+      state: 'streaming' as const,
+    }
+    const assistant: UIMessage = {
+      id: 'a1',
+      role: 'assistant',
+      parts: [reasoningPart],
+    }
+    const prev = normalizeChatMessagesForDisplay([assistant])
+    const prevReasoning = prev[0]?.parts[0]
+
+    // Chat SDK mutates the live part in place (same object identity).
+    reasoningPart.text = 'The user wants a full streaming fix'
+
+    const next = incrementalSyncChatMessages([assistant], prev)
+    const nextReasoning = next[0]?.parts[0]
+
+    expect(nextReasoning).not.toBe(prevReasoning)
+    expect(nextReasoning).not.toBe(reasoningPart)
+    expect(nextReasoning?.type === 'reasoning' && nextReasoning.text).toBe(
+      'The user wants a full streaming fix',
+    )
+  })
+
+  it('treats running step-progress as in-flight for incremental sync', () => {
+    const progressPart = {
+      type: 'data-agent-step-progress' as const,
+      id: 'thinking-1',
+      data: {
+        stepId: 'thinking',
+        title: 'Thinking',
+        status: 'running',
+        content: 'Analyzing',
+        sequence: 1,
+      },
+    }
+    const assistant: UIMessage = {
+      id: 'a1',
+      role: 'assistant',
+      parts: [progressPart as UIMessage['parts'][number]],
+    }
+    const prev = normalizeChatMessagesForDisplay([assistant])
+    progressPart.data.content = 'Analyzing request with more detail'
+
+    const next = incrementalSyncChatMessages([assistant], prev)
+    const nextProgress = next[0]?.parts[0] as {
+      type: string
+      data?: { content?: string }
+    }
+    expect(nextProgress.data?.content).toBe(
+      'Analyzing request with more detail',
+    )
+    expect(nextProgress).not.toBe(prev[0]?.parts[0])
+  })
+
   it('falls back to full normalize when message count changes', () => {
     const prev = normalizeChatMessagesForDisplay([
       {

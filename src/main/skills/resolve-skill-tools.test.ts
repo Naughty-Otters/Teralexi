@@ -32,54 +32,46 @@ describe('resolveSkillToolCatalog', () => {
     ])
     expect(catalog.map((t) => t.name)).toEqual([
       'read_file',
-      'web_search',
       'create_spreadsheet',
     ])
   })
 
-  it('always includes plan mode and sub-agent tools even when not in allowed_tools', () => {
+  it('always includes plan mode and core sub-agent tools even when not in allowed_tools', () => {
     const globalWithUniversal = [
       ...global,
       stubTool('enter_plan_mode'),
       stubTool('exit_plan_mode'),
-      stubTool('invoke_agent'),
       stubTool('invoke_agents'),
-      stubTool('wait_for_sub_agent_runs'),
-      stubTool('best_of_n'),
     ]
     const catalog = resolveSkillToolCatalog(globalWithUniversal, [], ['read_file'])
     expect(catalog.map((t) => t.name)).toEqual([
       'read_file',
-      'web_search',
       'enter_plan_mode',
       'exit_plan_mode',
-      'invoke_agent',
       'invoke_agents',
-      'wait_for_sub_agent_runs',
-      'best_of_n',
     ])
+    expect(catalog.map((t) => t.name)).not.toContain('web_search')
   })
 
-  it('default skill omits plan-mode file/git reads from universal catalog', () => {
+  it('default skill omits plan-mode file reads from universal catalog', () => {
     const globalWithUniversal = [
       stubTool('read_file'),
-      stubTool('git_status'),
       stubTool('web_search'),
-      stubTool('run_script'),
+      stubTool('shell'),
       stubTool('enter_plan_mode'),
-      stubTool('invoke_agent'),
+      stubTool('invoke_agents'),
     ]
     const catalog = resolveSkillToolCatalog(
       globalWithUniversal,
       [],
-      ['run_script', 'web_search'],
+      ['shell', 'web_search'],
       'default',
     )
     expect(catalog.map((t) => t.name)).toEqual([
       'web_search',
-      'run_script',
+      'shell',
       'enter_plan_mode',
-      'invoke_agent',
+      'invoke_agents',
     ])
   })
 

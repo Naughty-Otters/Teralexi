@@ -289,10 +289,25 @@ function createIpcUIMessageReadableStream(opts: {
 
   const ipc = window.ipcRendererChannel
 
+  /** Serialize UI chunk writes so reasoning-start always lands before deltas. */
+  let writeQueue: Promise<void> = Promise.resolve()
+  function enqueueWrite(
+    chunk: UIMessageChunk,
+    afterWrite?: () => void,
+  ): void {
+    writeQueue = writeQueue
+      .then(async () => {
+        if (finished) return
+        await writer.write(chunk)
+        afterWrite?.()
+      })
+      .catch(() => {})
+  }
+
   function ensureLegacyTextStart() {
     if (legacyTextStartSent || preferUiChunks) return
     legacyTextStartSent = true
-    void writer.write({ type: 'text-start', id: opts.textPartId })
+    enqueueWrite({ type: 'text-start', id: opts.textPartId })
   }
 
   const listenerUiChunk = (
@@ -333,7 +348,7 @@ function createIpcUIMessageReadableStream(opts: {
       ) {
         transportLog.error('LLM/agent error step progress received', {
           conversationId: payload.conversationId,
-          assistantMessageId: payload.assistantId,
+          assistantMessageId: opts.assistantMessageId,
           stepId: data?.stepId,
           content: (progressContent || progressSummary).trim().slice(0, 500),
         })
@@ -341,8 +356,14 @@ function createIpcUIMessageReadableStream(opts: {
     }
     const immediate =
       rawChunk.type === 'tool-approval-request' ||
-      rawChunk.type === 'data-collect-form-request'
-    void writer.write(chunk).then(() => {
+      rawChunk.type === 'data-collect-form-request' ||
+      rawChunk.type === 'reasoning-start' ||
+      rawChunk.type === 'reasoning-delta' ||
+      rawChunk.type === 'reasoning-end' ||
+      (rawChunk.type === 'data-agent-step-progress' &&
+        (rawChunk.data as { stepId?: string } | undefined)?.stepId ===
+          'thinking')
+    enqueueWrite(chunk, () => {
       recordIngressChunk()
       recordIngressChunkForBackpressure(payload.conversationId)
       opts.onStreamUiChunk?.(payload.conversationId, { immediate })
@@ -357,8 +378,8 @@ function createIpcUIMessageReadableStream(opts: {
       assistantMessageId: opts.assistantMessageId,
       content: trimmed.slice(0, 500),
     })
-    void writer
-      .write({
+    enqueueWrite(
+      {
         type: 'data-agent-step-progress',
         id: `${opts.assistantMessageId}-live-error`,
         data: {
@@ -369,12 +390,13 @@ function createIpcUIMessageReadableStream(opts: {
           status: 'completed',
           sequence: 999_999,
         },
-      } as UIMessageChunk)
-      .then(() => {
+      } as UIMessageChunk,
+      () => {
         recordIngressChunk()
         recordIngressChunkForBackpressure(opts.conversationId)
         opts.onStreamUiChunk?.(opts.conversationId, { immediate: true })
-      })
+      },
+    )
   }
 
   const listenerStringChunk = (
@@ -394,17 +416,18 @@ function createIpcUIMessageReadableStream(opts: {
       return
     }
     ensureLegacyTextStart()
-    void writer
-      .write({
+    enqueueWrite(
+      {
         type: 'text-delta',
         id: opts.textPartId,
         delta: payload.chunk,
-      })
-      .then(() => {
+      },
+      () => {
         recordIngressChunk()
         recordIngressChunkForBackpressure(payload.conversationId)
         opts.onStreamUiChunk?.(payload.conversationId)
-      })
+      },
+    )
   }
 
   ipc?.AgentUIMessageChunk?.on?.(

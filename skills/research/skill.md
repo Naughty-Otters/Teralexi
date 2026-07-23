@@ -13,7 +13,7 @@ Use this skill when the user asks to:
 
 ### Where files live
 
-- **Deliverables:** `output/results/<slug>-research-paper.md` and `output/results/<slug>-research-paper.pdf` (sandbox). Use `write_file` for markdown; use `export_research_pdf` for the PDF. Offer `promote_artifact` if the user wants either file in their workspace.
+- **Deliverables:** `output/results/<slug>-research-paper.md` and `output/results/<slug>-research-paper.pdf` (sandbox). Use `edit_files` (mode `write`) for markdown; use `export_research_pdf` for the PDF. Offer `promote_artifact` if the user wants either file in their workspace.
 - **Working notes:** `output/toolLoop/.../results/` — query log, source ledger, scrape notes (optional but recommended for long runs).
 - **Reference:** `refs/paper-structure.md` — section definitions and citation rules.
 - Do **not** edit the user's project repo unless they explicitly ask.
@@ -26,7 +26,7 @@ The sandbox **persists across turns** in the same conversation. Prior deliverabl
 
 **Before starting the canonical workflow on every turn:**
 
-1. Check **Existing sandbox artifacts** in the SANDBOX instructions block (if present), and/or run **`list_files`** on `output/results/`.
+1. Check **Existing sandbox artifacts** in the SANDBOX instructions block (if present), and/or inspect `output/results/` via `read_file` / `shell` (`ls`).
 2. Decide whether this is a **new research request** or a **continuation** of prior work.
 
 | Situation | Action |
@@ -37,7 +37,7 @@ The sandbox **persists across turns** in the same conversation. Prior deliverabl
 | User asks to redo / expand topic | Full workflow from Phase 0; reuse or replace prior files as appropriate |
 | No prior markdown, user only said "yes" | Infer the task from chat/plan context **and** any existing artifacts — never assume files are missing without checking |
 
-**Never claim** that no research paper exists until you have checked `output/results/` (via the artifacts list or `list_files`).
+**Never claim** that no research paper exists until you have checked `output/results/` (via the artifacts list or `shell`/`read_file`).
 
 ---
 
@@ -45,11 +45,10 @@ The sandbox **persists across turns** in the same conversation. Prior deliverabl
 
 | Tool | Role |
 |------|------|
-| `web_search` | General web: news, reports, tutorials, products, government pages |
-| `deep_research` | Scholarly deep search (Google Scholar, with OpenAlex API fallback): journal articles, citations, patents, US case law |
-| `web_scrape` | Full page content for URLs returned by search — primary evidence |
+| `web_search` | General and scholarly web: news, reports, journal pages, patents, government sources |
+| `web_scrape` | Main-content markdown for URLs returned by search — primary evidence |
 
-There is no separate `deep_search` tool — use **`deep_research`** for academic/scholarly queries.
+Prefer academic/scholarly query phrasing for literature (author/year/journal keywords).
 
 ---
 
@@ -64,7 +63,7 @@ Unless the user specifies otherwise:
 | **maxResults** | **8** per search call | Top hits per query per engine |
 | **scrape budget** | **25–40** unique URLs | Prioritize high-signal pages; skip duplicates and thin aggregators |
 
-User overrides: "use 10 queries", "one round only", "focus on case law" → adjust N, R, or `deep_research` category.
+User overrides: "use 10 queries", "one round only", "focus on case law" → adjust N, R, or query phrasing.
 
 ---
 
@@ -78,7 +77,7 @@ Track progress with `update_todos` / `read_todos`. Do not draft the paper until 
 
 1. Restate the user's topic as a **single focused research question** (one sentence).
 2. List 3–5 **sub-questions** the paper must answer.
-3. Note domain: STEM / policy / humanities / legal → steers `deep_research` category (`article` vs `case_law*`).
+3. Note domain: STEM / policy / humanities / legal → steers scholarly query phrasing.
 4. If the topic is non-English or the user asked for multilingual coverage, plan **translated query variants** (same meaning, target language keywords).
 
 **Output (mental or written):** research question + sub-questions + domain.
@@ -97,7 +96,7 @@ Generate **N distinct query strings** (default N = 6). Each variant must differ 
 | Narrow | One sub-question or facet |
 | Broad | Context + topic for background |
 | Translated | Same query in another language (when relevant) |
-| Scholarly | Author/year/journal-style keywords for `deep_research` |
+| Scholarly | Author/year/journal-style keywords for `web_search` |
 
 Write variants to `output/toolLoop/step-1/results/queries.json`:
 
@@ -113,20 +112,18 @@ Write variants to `output/toolLoop/step-1/results/queries.json`:
 
 ---
 
-#### Phase 2 — Search (R rounds × N variants × 2 tools)
+#### Phase 2 — Search (R rounds × N variants)
 
 For **each round** r = 1 … R:
 
 For **each query variant** q1 … qN:
 
 1. **`web_search`** — `{ "query": "<variant text>", "maxResults": 8 }`
-2. **`deep_research`** — `{ "query": "<variant text>", "category": "article", "maxResults": 8 }`  
-   - Use `case_law` / `case_law_federal` / `case_law_state` when the topic is legal.
-   - Use `includePatents: true` only when patents matter.
+2. For scholarly/legal topics, run a second `web_search` with academic or case-law phrasing for the same variant.
 
-**Round 1:** execute all N × 2 searches (batch independent calls in parallel when possible).
+**Round 1:** execute all N searches (batch independent calls in parallel when possible).
 
-**Round 2+:** add new variants only for **identified gaps** (missing statistics, outdated data, conflicting claims, uncovered sub-questions). Re-run web_search + deep_research for those gap-targeted variants only, plus re-search any variant that returned zero useful results.
+**Round 2+:** add new variants only for **identified gaps** (missing statistics, outdated data, conflicting claims, uncovered sub-questions). Re-run `web_search` for those gap-targeted variants only, plus re-search any variant that returned zero useful results.
 
 **Log every search** in `output/toolLoop/step-2/results/search-log.json`:
 
@@ -274,7 +271,7 @@ After Phase 5 passes, export the final paper as a print-ready PDF:
 - **Be precise** — quote numbers exactly as in the source; cite the source that states them.
 - **Stay scoped** — do not wander into adjacent topics not tied to the research question.
 - **No fabrication** — if evidence is insufficient, say so in Discussion; do not invent citations or data.
-- **Parallelize** — batch independent `web_search`, `deep_research`, and `web_scrape` calls.
+- **Parallelize** — batch independent `web_search` and `web_scrape` calls.
 
 ---
 
@@ -285,7 +282,7 @@ After the paper is written, Phase 6 passes, and Phase 7 exports the PDF, deliver
 1. **One-line answer** to the research question.
 2. **Deliverables** — paths to `output/results/<slug>-research-paper.md` and `output/results/<slug>-research-paper.pdf`.
 3. **Evidence summary** — 3–5 bullet findings; each bullet ends with citation ids, e.g. `(see [2], [5])`.
-4. **Method snapshot** — "N queries × R rounds; web_search + deep_research; M pages scraped."
+4. **Method snapshot** — "N queries × R rounds; web_search; M pages scraped."
 5. **Limitations** — 1–2 sentences (source types, date range, language, gaps).
 6. **Next steps** — offer workspace promotion via `promote_artifact` if useful.
 
@@ -297,12 +294,10 @@ Tone: clear, academic, concise.
 
 ## Tools
 
-- **web_search** — general web search (Phase 2)
-- **deep_research** — Google Scholar / case law / patents; OpenAlex fallback when Scholar blocks (Phase 2)
-- **web_scrape** — full page content for evidence (Phase 3)
-- **write_file**, **edit_file** — paper and working JSON artifacts
-- **read_file**, **list_files** — user-provided paths or prior artifacts
+- **web_search** — general and scholarly web search (Phase 2)
+- **web_scrape** — main-content markdown for evidence (Phase 3)
+- **edit_files** — paper and working JSON artifacts (`write` / `replace`)
+- **read_file**, **shell** — user-provided paths or prior artifacts
 - **update_todos**, **read_todos** — multi-phase progress
 - **export_research_pdf** — convert final markdown paper to PDF (Phase 7)
 - **promote_artifact** — copy deliverable to workspace when requested
-- **run_script** — optional transforms on scrape JSON (only when needed)

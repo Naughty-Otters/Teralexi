@@ -38,6 +38,9 @@ export function savePendingApprovalState(
   )
   if (!storageKey) return
 
+  // Preserve nested sub-agent frames if a child already paused (invoke_agents HITL).
+  const existing = getPendingExecution(storageKey)
+
   setPendingExecution(storageKey, {
     currentMessages: cloneAgentMessages(ctx.currentMessages),
     stepOutputs: cloneStepOutputs(ctx.stepOutputs),
@@ -55,6 +58,12 @@ export function savePendingApprovalState(
         : {}),
     collectedFormByTodoId: { ...ctx.collectedFormByTodoId },
     pausedStageId: ctx.lastHitlPausedStageId,
+    ...(existing?.runStack?.length
+      ? {
+          runStack: existing.runStack,
+          activeRunId: existing.activeRunId,
+        }
+      : {}),
     ...(ctx instanceof ResearchStepContext && ctx.researchResumeState
       ? { researchResumeState: ctx.researchResumeState }
       : {}),

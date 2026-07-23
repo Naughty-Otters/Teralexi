@@ -139,6 +139,14 @@ describe('buildChildAgentResponseOpts', () => {
     ])
 
     const parentOnChunk = vi.fn()
+    const parentOnUIMessageChunk = vi.fn()
+    const clientUiMessages = [
+      {
+        id: 'm1',
+        role: 'assistant' as const,
+        parts: [{ type: 'tool-approval-response' as const, approvalId: 'ap1', approved: true }],
+      },
+    ]
     const { opts, agent } = await buildChildAgentResponseOpts({
       agentId: 'coding',
       parentOpts: {
@@ -153,6 +161,8 @@ describe('buildChildAgentResponseOpts', () => {
         userId: 'user-1',
         conversationId: 'conv-1',
         onChunk: parentOnChunk,
+        onUIMessageChunk: parentOnUIMessageChunk,
+        clientUiMessages,
       },
       task: 'Implement feature X',
       parentCurrentMessages: [{ role: 'user', content: 'parent thread' }],
@@ -168,8 +178,50 @@ describe('buildChildAgentResponseOpts', () => {
     expect(opts.systemPrompt).toBe('child coding prompt')
     expect(opts.agentId).toBe('skill:coding')
     expect(opts.skillId).toBe('coding')
+    // Child text must not stream into the parent bubble by default.
     expect(opts.onChunk).toBeUndefined()
+    // HITL UI + resume payloads must be wired or the child sticks on
+    // "Awaiting approval" with no Approve button.
+    expect(opts.onUIMessageChunk).toBe(parentOnUIMessageChunk)
+    expect(opts.clientUiMessages).toBe(clientUiMessages)
     expect(opts.messages.at(-1)?.content).toContain('Implement feature X')
+  })
+
+  it('appends systemPromptAddendum to the child system prompt', async () => {
+    loadEngineAgents.mockResolvedValue([
+      {
+        id: 'skill:coding',
+        name: 'Coding',
+        skillId: 'coding',
+        provider: 'ollama',
+        model: 'gemma4',
+        allowAsSubAgent: true,
+        systemPrompt: 'child coding prompt',
+        toolNeedsApprovalOverrides: {},
+      },
+    ])
+
+    const { opts } = await buildChildAgentResponseOpts({
+      agentId: 'skill:coding',
+      parentOpts: {
+        provider: 'openai',
+        model: 'gpt-4.1',
+        stageLlm: {
+          mode: 'unified',
+          default: { provider: 'openai', model: 'gpt-4.1' },
+        },
+        systemPrompt: 'parent',
+        messages: [],
+        userId: 'user-1',
+        conversationId: 'conv-1',
+      },
+      task: 'Find auth',
+      systemPromptAddendum: 'You are an Explore sub-agent.',
+    })
+
+    expect(opts.systemPrompt).toBe(
+      'child coding prompt\n\nYou are an Explore sub-agent.',
+    )
   })
 
   it('assigns a sub-agent llm debug run id derived from the parent session', async () => {
@@ -260,6 +312,72 @@ describe('buildChildAgentResponseOpts', () => {
     })
     expect(envelope.pipelineMessages).toHaveLength(1)
     expect(envelope.delegationTask).toBe('Delegated sub-task')
+  })
+
+  it('applies profile allowedToolNames when parent skill has untouched availableSet', async () => {
+    loadEngineAgents.mockResolvedValue([
+      {
+        id: 'skill:coding',
+        name: 'Coding',
+        skillId: 'coding',
+        provider: 'ollama',
+        model: 'gemma4',
+        allowAsSubAgent: true,
+        systemPrompt: 'child',
+        toolNeedsApprovalOverrides: {},
+        availableSetTouched: false,
+      },
+    ])
+
+    const { opts } = await buildChildAgentResponseOpts({
+      agentId: 'skill:coding',
+      parentOpts: {
+        provider: 'openai',
+        model: 'gpt-4.1',
+        systemPrompt: 'parent',
+        messages: [],
+        userId: 'user-1',
+        conversationId: 'conv-1',
+      },
+      task: 'Map auth',
+      allowedToolNames: ['read_file', 'lsp', 'shell'],
+    })
+
+    expect(opts.availableSet).toEqual(['read_file', 'lsp', 'shell'])
+    expect(opts.availableSetTouched).toBe(true)
+  })
+
+  it('leaves availableSet unrestricted when profile allows all tools', async () => {
+    loadEngineAgents.mockResolvedValue([
+      {
+        id: 'skill:coding',
+        name: 'Coding',
+        skillId: 'coding',
+        provider: 'ollama',
+        model: 'gemma4',
+        allowAsSubAgent: true,
+        systemPrompt: 'child',
+        toolNeedsApprovalOverrides: {},
+        availableSetTouched: false,
+      },
+    ])
+
+    const { opts } = await buildChildAgentResponseOpts({
+      agentId: 'skill:coding',
+      parentOpts: {
+        provider: 'openai',
+        model: 'gpt-4.1',
+        systemPrompt: 'parent',
+        messages: [],
+        userId: 'user-1',
+        conversationId: 'conv-1',
+      },
+      task: 'Implement',
+      allowedToolNames: 'all',
+    })
+
+    expect(opts.availableSet).toBeUndefined()
+    expect(opts.availableSetTouched).toBe(false)
   })
 })
 

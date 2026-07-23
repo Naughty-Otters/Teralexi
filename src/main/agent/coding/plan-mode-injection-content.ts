@@ -11,6 +11,10 @@ import {
   isPlanFileWritten,
   resolvePlanModeStorage,
 } from './plan-mode-state'
+import {
+  consumeExecuteContinuationReminder,
+  hasExecuteContinuationReminder,
+} from './plan-mode-session-reminders'
 import { readPlanModeTodoList } from './plan-mode-storage-impl'
 
 export const PLAN_MODE_USER_TRIGGERS = {
@@ -18,6 +22,8 @@ export const PLAN_MODE_USER_TRIGGERS = {
   reenter: '- reenter explore mode, update todos with plan steps \n- exit the plan after user approval, and execute the plan',
   /** Post-approval execution phase (explore mode is already off). */
   execute: 'execute approved plan',
+  /** Same-turn continuation when plans/todos.json still has unfinished steps. */
+  executeContinuation: 'continue approved plan execution',
   continue: 'continue explore mode',
   yolo: 'yolo mode',
 } as const
@@ -28,7 +34,7 @@ const PLAN_READY_EXIT_REMINDER =
 const SPARSE_REMINDER =
   'Explore mode is active. Continue read-only research, keep the plan file and update_todos list in sync, ' +
   'then call exit_plan_mode when the plan is ready for approval. ' +
-  'During explore, build an inventory of files and remote resources (URLs, web_search, web_scrape, deep_research); on exit, the engine saves `plans/manifest.json` for execution todos — do not re-scan the repo or re-fetch the same URLs during execution.'
+  'During explore, build an inventory of files and remote resources (URLs, web_search, web_scrape); on exit, the engine saves `plans/manifest.json` for execution todos — do not re-scan the repo or re-fetch the same URLs during execution.'
 
 const PLAN_MODE_PERSISTENCE_RULE =
   '**CRITICAL:** Call `update_todos` with the full step list — that writes `plans/todos.json` and renders `plans/<slug>.md` from the Jinja plan template. ' +
@@ -48,6 +54,13 @@ export function exitPlanReminder(): string {
     'Explore mode ended and was approved. The engine will execute approved plan tasks one-by-one using full tools.',
     'Each task runs in its own tool loop; progress syncs to `plans/todos.json` and `plans/<slug>.md`.',
     'If execution pauses for approval, resume when ready — remaining tasks continue automatically.',
+  ].join(' ')
+}
+
+export function planExecutionContinuationReminder(): string {
+  return [
+    '`plans/todos.json` still has unfinished approved steps.',
+    'Execute the next pending step using tools now — do not reply with text only.',
   ].join(' ')
 }
 
@@ -76,7 +89,7 @@ export function fullPlanReminder(
     '',
     'Workflow:',
     '0. enter_plan_mode to start planning',
-    '1. Explore read-only (read_file, grep, search_files, web_search, web_scrape, deep_research, lsp, git_diff, etc.) — do NOT run scripts or shell commands during planning.',
+    '1. Explore read-only (read_file, lsp, web_search, web_scrape) — do NOT run shell or mutating commands during planning.',
     '2. design and seed the task list for downstream based on the user request (each step needs success_criteria; add verify_command when a shell check applies)',
     PLAN_MODE_TODO_GUIDANCE,
     '3. Call `exit_plan_mode` only after the plan file is written — the user must approve before implementation.',
@@ -105,7 +118,7 @@ function planFilePendingReminder(planPath: string | null): string {
   return [
     '**Plan file not written yet.** The plan must be saved to disk before exit_plan_mode.',
     planPath
-      ? `Overwrite \`${planPath}\` with write_file or edit_file — do not leave the plan only in chat.`
+      ? `Overwrite \`${planPath}\` with edit_files (mode write or replace) — do not leave the plan only in chat.`
       : 'Call enter_plan_mode or set a workspace so a plan file path is available.',
     '',
     PLAN_MODE_PERSISTENCE_RULE,
@@ -114,6 +127,7 @@ function planFilePendingReminder(planPath: string | null): string {
 
 export type PlanModeInjectionPhase =
   | 'execute'
+  | 'executeContinuation'
   | 'enter'
   | 'reenter'
   | 'continue'
@@ -160,6 +174,12 @@ function buildSlice(
         phase,
         instructionBlock: exitPlanReminder(),
         userTrigger: PLAN_MODE_USER_TRIGGERS.execute,
+      }
+    case 'executeContinuation':
+      return {
+        phase,
+        instructionBlock: planExecutionContinuationReminder(),
+        userTrigger: PLAN_MODE_USER_TRIGGERS.executeContinuation,
       }
     case 'enter':
       return {
@@ -212,6 +232,9 @@ export function resolvePlanModeInjectionSlice(
     if (hasPendingPlanExecution(id) && consumePendingPlanExecution(id)) {
       return buildSlice('execute', null, false, false, 0)
     }
+    if (hasExecuteContinuationReminder(id) && consumeExecuteContinuationReminder(id)) {
+      return buildSlice('executeContinuation', null, false, false, 0)
+    }
     return null
   }
 
@@ -247,6 +270,10 @@ export function resolvePlanModeInstructionBlock(
 
   if (hasPendingPlanExecution(id)) {
     return exitPlanReminder()
+  }
+
+  if (hasExecuteContinuationReminder(id)) {
+    return planExecutionContinuationReminder()
   }
 
   if (state.status !== 'planning') return null

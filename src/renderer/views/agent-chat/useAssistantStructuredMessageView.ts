@@ -58,14 +58,20 @@ export function useAssistantStructuredMessageView(
   )
 
   const isStreaming = computed(() =>
-    message.value.parts.some(
-      (part) => part.type === 'text' && part.state === 'streaming',
-    ),
+    message.value.parts.some((part) => {
+      if (part.type === 'text' && part.state === 'streaming') return true
+      if (part.type === 'reasoning' && part.state === 'streaming') return true
+      if (part.type === 'data-agent-step-progress') {
+        const status = (part as { data?: { status?: string } }).data?.status
+        return status === 'running' || status === 'in_progress'
+      }
+      return false
+    }),
   )
 
   const view = computed((): StructuredDebugView | null => {
     void chatUiBubbleTextKeepChars.value
-    if (!markdown.value) return null
+    // Thinking is plain text and must not wait on markdown-it.
     return buildStructuredDebugViewForMessage({
       raw: assistantTextRaw.value,
       stepProgressParts: parentStepProgressParts.value,

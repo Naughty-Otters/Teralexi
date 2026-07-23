@@ -90,7 +90,7 @@ type ToolRow = {
   name: string
   description: string
   tags?: string[]
-  /** From shared toolSet scan only (reference label in UI) */
+  /** Catalog default from shared toolSet (when the tool exists there). */
   catalogNeedsApproval: boolean
   /** Override baseline: skill metadata, else catalog */
   defaultNeedsApproval: boolean
@@ -157,35 +157,32 @@ onMounted(async () => {
 
 const normalizedTools = computed((): ToolRow[] => {
   const skillTools = props.tools ?? []
-  const skillByName = new Map(skillTools.map((tool) => [tool.name, tool]))
-  const names = new Set([
-    ...Object.keys(catalogByName.value),
-    ...skillTools.map((tool) => tool.name),
-  ])
 
-  return [...names].sort((a, b) => a.localeCompare(b)).map((name) => {
-    const skill = skillByName.get(name)
-    const catalog = catalogByName.value[name]
-    const cleanedTags = (skill?.tags ?? []).filter(
-      (tag) => typeof tag === 'string' && tag.trim() !== '',
-    )
-    const catalogTags = catalog?.tags ?? []
-    const catalogApproval = catalog?.needsApproval ?? false
-    const skillDefault = skill?.needsApproval ?? catalogApproval
+  return [...skillTools]
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((skill) => {
+      const catalog = catalogByName.value[skill.name]
+      const cleanedTags = (skill.tags ?? []).filter(
+        (tag) => typeof tag === 'string' && tag.trim() !== '',
+      )
+      const catalogTags = catalog?.tags ?? []
+      const catalogApproval = catalog?.needsApproval ?? false
+      const skillDefault = skill.needsApproval ?? catalogApproval
 
-    return {
-      name,
-      description: skill?.description ?? catalog?.description ?? '',
-      catalogNeedsApproval: catalogApproval,
-      defaultNeedsApproval: skillDefault,
-      tags:
-        cleanedTags.length > 0
-          ? Array.from(new Set(cleanedTags))
-          : catalogTags.length > 0
-            ? catalogTags
-            : ['toolSet'],
-    }
-  })
+      return {
+        name: skill.name,
+        description: skill.description || catalog?.description || '',
+        catalogNeedsApproval: catalogApproval,
+        defaultNeedsApproval: skillDefault,
+        tags:
+          cleanedTags.length > 0
+            ? Array.from(new Set(cleanedTags))
+            : catalogTags.length > 0
+              ? catalogTags
+              : ['toolSet'],
+      }
+    })
 })
 
 const availableTags = computed(() => {

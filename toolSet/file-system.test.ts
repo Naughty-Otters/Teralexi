@@ -1,7 +1,6 @@
 import {
   mkdtemp,
   mkdir,
-  readFile as readFileFs,
   rm,
   writeFile,
 } from 'node:fs/promises'
@@ -13,16 +12,10 @@ import {
   SANDBOX_ROOT_GLOBAL_KEY,
 } from './sandbox-paths'
 import {
-  copyFile as copyFileTool,
-  editFile,
-  fileStatus,
-  globFiles,
-  grepFiles,
-  listFiles,
-  moveFile,
+  editFiles,
   readFile,
-  searchFiles,
-  storageCheck,
+  shell,
+  promoteArtifact,
   writeFile as writeFileTool,
   applyPatch,
 } from './file-system'
@@ -54,66 +47,6 @@ describe('file-system tools', () => {
     await rm(sandboxRoot, { recursive: true, force: true })
   })
 
-  it('listFiles returns error when sandbox inactive', async () => {
-    setSandboxRoot(undefined)
-    const result = await listFiles.execute({ path: '.' })
-    expect(result).toMatchObject({ error: expect.stringContaining('sandbox') })
-  })
-
-  it('listFiles lists sandbox directory', async () => {
-    const result = (await listFiles.execute({ path: '.' })) as {
-      entries: Array<{ name: string }>
-    }
-    expect(result.entries.map((e) => e.name)).toContain('hello.txt')
-  })
-
-  it('listFiles supports recursive listing', async () => {
-    const result = (await listFiles.execute({
-      path: '.',
-      recursive: true,
-      maxDepth: 2,
-    })) as { entries: Array<{ name: string; children?: unknown[] }> }
-    const sub = result.entries.find((e) => e.name === 'subdir')
-    expect(sub?.children).toBeDefined()
-  })
-
-  it('searchFiles finds by name and content', async () => {
-    const byName = (await searchFiles.execute({
-      path: '.',
-      query: 'hello',
-    })) as { results: Array<{ match: string }> }
-    expect(byName.results.some((r) => r.match === 'name')).toBe(true)
-
-    const byContent = (await searchFiles.execute({
-      path: '.',
-      query: 'nested',
-      matchContent: true,
-    })) as { results: Array<{ match: string }> }
-    expect(byContent.results.some((r) => r.match === 'content')).toBe(true)
-  })
-
-  it('fileStatus returns metadata', async () => {
-    const result = (await fileStatus.execute({ path: 'hello.txt' })) as {
-      isFile: boolean
-      size: number
-    }
-    expect(result.isFile).toBe(true)
-    expect(result.size).toBeGreaterThan(0)
-  })
-
-  it('storageCheck returns df stats or a posix fallback note', async () => {
-    const result = (await storageCheck.execute({})) as {
-      data?: Array<{ available: number }>
-      error?: string
-      note?: string
-    }
-    if (Array.isArray(result.data) && result.data.length > 0) {
-      expect(result.data[0]?.available).toBeGreaterThanOrEqual(0)
-    } else {
-      expect(result.error ?? result.note).toBeTruthy()
-    }
-  })
-
   it('writeFile and readFile round-trip', async () => {
     const wrote = await writeFileTool.execute({
       path: 'out/new.txt',
@@ -125,31 +58,6 @@ describe('file-system tools', () => {
       content: string
     }
     expect(read.content).toBe('1: payload')
-  })
-
-  it('copyFile copies inside sandbox', async () => {
-    const result = await copyFileTool.execute({
-      source: 'hello.txt',
-      destination: 'hello-copy.txt',
-    })
-    expect(result).toMatchObject({ copied: true })
-    const copy = await readFileFs(path.join(sandboxRoot, 'hello-copy.txt'), 'utf-8')
-    expect(copy).toBe('hello world')
-  })
-
-  it('moveFile moves inside sandbox', async () => {
-    await writeFile(path.join(sandboxRoot, 'move-me.txt'), 'mv', 'utf-8')
-    const result = await moveFile.execute({
-      source: 'move-me.txt',
-      destination: 'moved.txt',
-    })
-    expect(result).toMatchObject({ moved: true })
-    await expect(
-      readFileFs(path.join(sandboxRoot, 'move-me.txt'), 'utf-8'),
-    ).rejects.toThrow()
-    expect(await readFileFs(path.join(sandboxRoot, 'moved.txt'), 'utf-8')).toBe(
-      'mv',
-    )
   })
 
   it('readFile lists directories', async () => {
@@ -181,8 +89,9 @@ describe('file-system tools', () => {
     expect(result.content).toBe('2: b')
   })
 
-  it('editFile applies search/replace with diff metadata', async () => {
-    const result = (await editFile.execute({
+  it('editFiles replace applies search/replace with diff metadata', async () => {
+    const result = (await editFiles.execute({
+      mode: 'replace',
       path: 'hello.txt',
       old_string: 'world',
       new_string: 'otter',
@@ -206,24 +115,6 @@ describe('file-system tools', () => {
     expect(result.additions + result.deletions).toBeGreaterThan(0)
   })
 
-  it('grepFiles finds content', async () => {
-    const result = (await grepFiles.execute({
-      path: '.',
-      pattern: 'nested',
-    })) as { matchCount: number; matches: string }
-    expect(result.matchCount).toBeGreaterThan(0)
-    expect(result.matches).toContain('nested')
-  })
-
-  it('globFiles finds files by pattern', async () => {
-    const result = (await globFiles.execute({
-      path: '.',
-      pattern: '*.txt',
-    })) as { count: number; paths: string[] }
-    expect(result.count).toBeGreaterThan(0)
-    expect(result.paths.some((p) => p.endsWith('hello.txt'))).toBe(true)
-  })
-
   it('applyPatch adds a file', async () => {
     const result = await applyPatch.execute({
       patch_text: `*** Begin Patch
@@ -236,11 +127,12 @@ describe('file-system tools', () => {
     expect(read.content).toContain('patched content')
   })
 
-  it('exports tool metadata', () => {
-    expect(listFiles.name).toBe('list_files')
+  it('exports lean catalog tool metadata', () => {
+    expect(readFile.name).toBe('read_file')
+    expect(editFiles.name).toBe('edit_files')
+    expect(shell.name).toBe('shell')
+    expect(promoteArtifact.name).toBe('promote_artifact')
     expect(readFile.needsApproval).toBe(false)
-    expect(moveFile.needsApproval).toBe(true)
-    expect(editFile.needsApproval).toBe(true)
-    expect(grepFiles.name).toBe('grep_files')
+    expect(editFiles.needsApproval).toBe(true)
   })
 })

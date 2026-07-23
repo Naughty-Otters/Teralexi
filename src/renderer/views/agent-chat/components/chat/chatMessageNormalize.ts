@@ -39,6 +39,10 @@ export function assistantRowLooksInFlight(m: UIMessage): boolean {
   for (const p of m.parts) {
     if (p.type === 'reasoning' && p.state === 'streaming') return true
     if (p.type === 'text' && p.state === 'streaming') return true
+    if (p.type === 'data-agent-step-progress') {
+      const status = (p as { data?: { status?: string } }).data?.status
+      if (status === 'running' || status === 'in_progress') return true
+    }
     if (
       isToolOrDynamicToolUIPart(p) &&
       p.state !== 'output-available' &&
@@ -145,6 +149,19 @@ export function normalizeSingleMessage(msg: UIMessage): UIMessage {
     : msg
 }
 
+/**
+ * Shallow-clone a message (and each part) so Vue sees new part object identities
+ * when the Chat SDK mutates `text` / `data` in place on the live stream row.
+ * Without this, incremental sync can keep the same part references and the
+ * Thinking/reasoning bubble never re-renders until a full sync at turn end.
+ */
+export function cloneMessageForDisplay(msg: UIMessage): UIMessage {
+  return {
+    ...msg,
+    parts: msg.parts.map((part) => ({ ...part })),
+  }
+}
+
 function partsStructureSignature(msg: UIMessage): string {
   return msg.parts
     .map((p) => {
@@ -193,7 +210,8 @@ export function incrementalSyncChatMessages(
   }
   const next = [...prev]
   const tail = deduped[deduped.length - 1]
-  next[next.length - 1] = normalizeSingleMessage(tail)
+  // Clone so in-place SDK mutations become new part identities for Vue.
+  next[next.length - 1] = cloneMessageForDisplay(normalizeSingleMessage(tail))
   return next
 }
 
@@ -203,7 +221,7 @@ export function normalizeChatMessagesForDisplay(
   let m = dedupeMessagesByIdLastWins(raw)
   m = dedupeConsecutiveDuplicateAssistantRows(m)
   m = dedupeConsecutiveAssistantsSameVisibleText(m)
-  return m.map((msg) => normalizeSingleMessage(msg))
+  return m.map((msg) => cloneMessageForDisplay(normalizeSingleMessage(msg)))
 }
 
 function assistantTextLength(msg: UIMessage): number {

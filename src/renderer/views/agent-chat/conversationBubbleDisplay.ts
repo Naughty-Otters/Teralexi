@@ -105,13 +105,14 @@ export function filterVisibleConversationBubbles<
   if (!options) return result
 
   if (options.finalTextStarted) {
-    result = result.filter(
-      (section) => !THINKING_CONVERSATION_SECTION_IDS.has(section.id),
-    )
+    // Keep Thinking visible (classic bubble). Hide agentic-run section shells —
+    // tool activity lives in the Exploring panel instead.
     result = result.filter(
       (section) => !AGENTIC_RUN_CONVERSATION_SECTION_IDS.has(section.id),
     )
-  } else if (options.thinkingBubbleDisplay) {
+  }
+
+  if (options.thinkingBubbleDisplay) {
     result = filterThinkingConversationSections(
       result,
       options.thinkingBubbleDisplay,
@@ -130,6 +131,7 @@ export function filterVisibleConversationBubbles<
       AGENTIC_RUN_CONVERSATION_SECTION_IDS,
     )
   }
+  // compact / all: keep agentic-run sections (Exploring panel uses them as anchors)
 
   // Never hide every bubble — fall back to deliverable-filtered sections only.
   if (result.length === 0 && sections.length > 0) {
@@ -155,7 +157,6 @@ export function isTextResponseConversationSection(
 }
 
 const COMPACT_BY_DEFAULT_CONVERSATION_SECTION_IDS = new Set([
-  ...THINKING_CONVERSATION_SECTION_IDS,
   ...AGENTIC_RUN_CONVERSATION_SECTION_IDS,
   'PlanningStep',
   'planning',
@@ -163,7 +164,7 @@ const COMPACT_BY_DEFAULT_CONVERSATION_SECTION_IDS = new Set([
 
 type ConversationSectionExpandHint = Pick<
   StructuredDebugSection,
-  'id' | 'title' | 'bodyHtml' | 'bodyMarkdown' | 'sectionKind'
+  'id' | 'title' | 'bodyHtml' | 'bodyMarkdown' | 'bodyPlainText' | 'sectionKind'
 >
 
 /** Last visible content bubble in the message — the primary assistant reply. */
@@ -175,7 +176,9 @@ export function isPrimaryReplyConversationSection(
     const section = sections[index]
     if (section.sectionKind === 'attachments') continue
     const hasBody = Boolean(
-      section.bodyMarkdown?.trim() || section.bodyHtml?.trim(),
+      section.bodyPlainText?.trim() ||
+        section.bodyMarkdown?.trim() ||
+        section.bodyHtml?.trim(),
     )
     if (!hasBody) continue
     return index === sectionIndex
@@ -183,7 +186,7 @@ export function isPrimaryReplyConversationSection(
   return false
 }
 
-/** Conversation bubbles start expanded except agentic / thinking steps. */
+/** Conversation bubbles start expanded except agentic / planning steps. */
 export function conversationSectionExpandedByDefault(
   section: Pick<StructuredDebugSection, 'id' | 'title'>,
   opts?: { isPrimaryReply?: boolean },

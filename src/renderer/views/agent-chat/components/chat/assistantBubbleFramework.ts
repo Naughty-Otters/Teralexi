@@ -16,6 +16,7 @@ import {
   isTerminalToolRunning,
   isTodoToolPart,
   shouldShowApprovedFileChangePart,
+  shouldShowIncidentalFileChangePart,
   toolPartNeedsApproval,
 } from './chatToolPartHelpers'
 import {
@@ -24,6 +25,10 @@ import {
   isLlmErrorProgressText,
   LLM_ERROR_PROGRESS_MARKER,
 } from '@shared/agent/llm-error-ui'
+import {
+  buildToolRunScopeIndex,
+  isSubAgentToolPart,
+} from '../../toolRunScope'
 
 export type AssistantBubbleKind =
   | 'markdown'
@@ -364,6 +369,7 @@ function shouldShowToolResultBubble(part: unknown): boolean {
   if (!isToolOrDynamicToolUIPart(p)) return false
   if (toolPartNeedsApproval(part)) return false
   if (shouldShowApprovedFileChangePart(part)) return false
+  if (shouldShowIncidentalFileChangePart(part)) return false
   if (isTerminalToolPart(part)) return false
   if (isFileChangeToolPart(part)) return false
 
@@ -385,6 +391,7 @@ export function resolveAssistantBubbles(
   options: AssistantBubbleResolveOptions,
 ): AssistantBubbleDescriptor[] {
   const out: AssistantBubbleDescriptor[] = []
+  const scopeIndex = buildToolRunScopeIndex(message)
 
   for (const [index, part] of message.parts.entries()) {
     const key = `${message.id}-p-${index}`
@@ -435,6 +442,11 @@ export function resolveAssistantBubbles(
       continue
     }
 
+    // Nested explore/bash tools nest under ChatSubAgentBubble.
+    if (isSubAgentToolPart(part, scopeIndex)) {
+      continue
+    }
+
     if (
       isTodoToolPart(part) &&
       getToolPartState(part) === 'output-available'
@@ -450,6 +462,15 @@ export function resolveAssistantBubbles(
 
     if (isTerminalToolPart(part)) {
       out.push({ key, kind: 'terminal', part })
+      // Shell/script may also carry workspace `files[]` diffs — show both.
+      if (shouldShowIncidentalFileChangePart(part)) {
+        out.push({ key: `${key}-diff`, kind: 'diff', part })
+      }
+      continue
+    }
+
+    if (shouldShowIncidentalFileChangePart(part)) {
+      out.push({ key, kind: 'diff', part })
       continue
     }
 

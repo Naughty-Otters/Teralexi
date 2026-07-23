@@ -40,7 +40,7 @@ describe('wrapPlanModeFileToolExecutes', () => {
 
   it('no-ops when conversation id is missing', () => {
     const toolSet = {
-      write_file: {
+      edit_files: {
         needsApproval: true,
         async execute() {
           return { ok: true }
@@ -51,13 +51,13 @@ describe('wrapPlanModeFileToolExecutes', () => {
     wrapPlanModeFileToolExecutes(toolSet, undefined)
 
     expect(resolvePlanModeStorage).not.toHaveBeenCalled()
-    expect(toolSet.write_file.needsApproval).toBe(true)
+    expect(toolSet.edit_files.needsApproval).toBe(true)
   })
 
   it('no-ops when plan storage is unavailable', () => {
     resolvePlanModeStorage.mockReturnValue(null)
     const toolSet = {
-      write_file: {
+      edit_files: {
         async execute() {
           return { ok: true }
         },
@@ -66,19 +66,23 @@ describe('wrapPlanModeFileToolExecutes', () => {
 
     wrapPlanModeFileToolExecutes(toolSet, 'conv-1')
 
-    expect(toolSet.write_file.execute).toBeDefined()
+    expect(toolSet.edit_files.execute).toBeDefined()
   })
 
   it('blocks writes outside the active plan file', async () => {
     const orig = vi.fn(async () => ({ ok: true }))
     const toolSet = {
-      write_file: { needsApproval: true, execute: orig },
+      edit_files: { needsApproval: true, execute: orig },
     }
 
     wrapPlanModeFileToolExecutes(toolSet, 'conv-1')
 
-    expect(toolSet.write_file.needsApproval).toBe(false)
-    const blocked = await toolSet.write_file.execute({ path: 'src/other.ts' })
+    expect(toolSet.edit_files.needsApproval).toBe(false)
+    const blocked = await toolSet.edit_files.execute({
+      mode: 'write',
+      path: 'src/other.ts',
+      data: 'x',
+    })
     expect(blocked).toMatchObject({
       error: expect.stringContaining('Explore mode'),
     })
@@ -88,32 +92,17 @@ describe('wrapPlanModeFileToolExecutes', () => {
   it('allows writes to the canonical plan file', async () => {
     const orig = vi.fn(async () => ({ ok: true }))
     const toolSet = {
-      edit_file: { execute: orig },
+      edit_files: { execute: orig },
     }
 
     wrapPlanModeFileToolExecutes(toolSet, 'conv-1')
 
-    const allowed = await toolSet.edit_file.execute({
+    const allowed = await toolSet.edit_files.execute({
+      mode: 'write',
       path: 'plans/test-plan.md',
-      content: '# Plan',
+      data: '# Plan',
     })
     expect(allowed).toEqual({ ok: true })
-    expect(orig).toHaveBeenCalled()
-  })
-
-  it('passes apply_patch through when no file paths are extracted', async () => {
-    const orig = vi.fn(async () => ({ ok: true }))
-    const toolSet = {
-      apply_patch: { execute: orig },
-    }
-
-    wrapPlanModeFileToolExecutes(toolSet, 'conv-1')
-
-    const result = await toolSet.apply_patch.execute({
-      path: 'README.md',
-      patch: '...',
-    })
-    expect(result).toEqual({ ok: true })
     expect(orig).toHaveBeenCalled()
   })
 })

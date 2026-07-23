@@ -2,12 +2,28 @@ import { formatExistingSandboxArtifactsBlock } from '../../sandbox/step-output-l
 import { resolveEffectiveThreadTag } from '../../expr/thread-context-builder'
 import type { AgentInjector } from '../types'
 import { INJECTOR_ORDER } from './orders'
+import {
+  recordOncePerTurnInjection,
+  shouldInjectOncePerTurn,
+} from '../once-per-turn-injection-state'
+
+function turnArgs(ctx: {
+  opts: { conversationId?: string; assistantMessageId?: string }
+}): {
+  conversationId?: string
+  assistantMessageId?: string
+} {
+  return {
+    conversationId: ctx.opts.conversationId,
+    assistantMessageId: ctx.opts.assistantMessageId,
+  }
+}
 
 export const sandboxStructureInjector: AgentInjector = {
   id: 'sandbox-structure',
   order: INJECTOR_ORDER.SANDBOX_STRUCTURE,
-  applies() {
-    return true
+  applies({ ctx }) {
+    return shouldInjectOncePerTurn('sandbox-structure', turnArgs(ctx))
   },
   injectInstructions({ ctx }) {
     const block = ctx.sandbox.buildSandboxStructureBlock(ctx.stepInstanceKey)
@@ -21,6 +37,8 @@ export const sandboxStructureInjector: AgentInjector = {
       ? formatExistingSandboxArtifactsBlock(root, { conversationId, threadTag })
       : ''
     const combined = [block, artifacts].filter((part) => part?.trim()).join('\n\n')
-    return combined.trim() || null
+    if (!combined.trim()) return null
+    recordOncePerTurnInjection('sandbox-structure', turnArgs(ctx))
+    return combined.trim()
   },
 }

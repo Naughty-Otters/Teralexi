@@ -74,7 +74,7 @@ describe('formatToolHumanReadableAction', () => {
 
   it('describes workspace commands and plan mode tools', () => {
     expect(
-      formatToolHumanReadableAction('run_workspace_command', {
+      formatToolHumanReadableAction('shell', {
         command: ['npm', 'test'],
       }),
     ).toBe('Run command "npm test"')

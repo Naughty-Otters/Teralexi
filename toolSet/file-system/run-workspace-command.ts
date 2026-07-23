@@ -11,6 +11,12 @@ import {
   completeBackgroundTask,
 } from '@main/agent/background/background-task-manager'
 import { agentRunEnvFromScope } from '@main/agent/run/run-scope'
+import {
+  buildWorkspaceWriteFileChanges,
+  detectWorkspaceWrites,
+  SHELL_WORKSPACE_WRITE_HINT,
+  snapshotWorkspaceGuard,
+} from '../run-script-workspace-guard'
 
 function childProcessEnv(): NodeJS.ProcessEnv {
   return {
@@ -159,22 +165,23 @@ function resolveShellInvocation(commandStr: string): {
   }
 }
 
-export const runWorkspaceCommand: SkillTool = {
-  name: 'run_workspace_command',
+export const shell: SkillTool = {
+  name: 'shell',
   tags: [...FILE_SYSTEM_TAG, 'workspace'],
   description:
-    'Run a command in the user project folder. Requires a selected workspace; do not use for sandbox paths (output/, scripts/). ' +
-    'Default: argv via execFile, no shell (e.g. ["npm","test"] or a quoted string). ' +
-    'Set `shell: true` to run a full shell command string with pipes, &&, redirects, and globs (e.g. "npm run build && npm test 2>&1 | tail -50") — runs through the OS shell in the workspace. ' +
+    'Run a command in the user project folder (Cursor-style Shell). Requires a selected workspace; do not use for sandbox paths (output/, scripts/). ' +
+    'Default: argv via execFile, no OS shell (e.g. ["npm","test"] or a quoted string). ' +
+    'Set `use_shell: true` for pipes/&&/globs in the OS shell — not for rewriting project source (use `edit_files` so chat shows diffs). ' +
+    'Do not create or edit project files via redirects, `sed -i`, `tee`, or heredocs; prefer `edit_files`. ' +
     'Optional cwd is relative to the workspace root. Requires approval.',
   inputSchema: z.object({
     command: z.union([z.array(z.string().min(1)), z.string().min(1)]),
-    shell: z
+    use_shell: z
       .boolean()
       .optional()
       .default(false)
       .describe(
-        'Run `command` through the OS shell (supports pipes, &&, redirects, globs). `command` must be a string in shell mode.',
+        'Run `command` through the OS shell (supports pipes, &&, redirects, globs). `command` must be a string when use_shell is true. Do not use redirects/`sed` to edit project source — use `edit_files`.',
       ),
     cwd: z.string().optional(),
     timeoutMs: z
@@ -197,7 +204,8 @@ export const runWorkspaceCommand: SkillTool = {
     const ws = requireWorkspace()
     if (!ws.ok) return { error: ws.error }
 
-    const useShell = input['shell'] === true
+    const useShell =
+      input['use_shell'] === true || input['shell'] === true
     const timeoutMs =
       typeof input['timeoutMs'] === 'number' && input['timeoutMs'] > 0
         ? input['timeoutMs']
@@ -273,6 +281,10 @@ export const runWorkspaceCommand: SkillTool = {
       }
     }
 
+    const workspaceBefore = await snapshotWorkspaceGuard(ws.path, {
+      captureTextContent: true,
+    })
+
     const result = await runExecFile({
       executable,
       args,
@@ -280,6 +292,22 @@ export const runWorkspaceCommand: SkillTool = {
       timeoutMs,
       env: childProcessEnv(),
     })
+
+    const workspaceAfter = await snapshotWorkspaceGuard(ws.path)
+    const workspaceWrites = detectWorkspaceWrites({
+      workspaceRoot: ws.path,
+      before: workspaceBefore,
+      after: workspaceAfter,
+    })
+    const files =
+      workspaceWrites.length > 0
+        ? await buildWorkspaceWriteFileChanges({
+            workspaceRoot: ws.path,
+            before: workspaceBefore,
+            after: workspaceAfter,
+            relativeWrites: workspaceWrites,
+          })
+        : []
 
     const output = formatCommandOutput(result.stdout, result.stderr)
     return {
@@ -295,6 +323,16 @@ export const runWorkspaceCommand: SkillTool = {
       output,
       resultContent: output,
       ...(result.error ? { error: result.error } : {}),
+      ...(workspaceWrites.length > 0
+        ? {
+            workspaceWrites,
+            workspaceWriteWarning: SHELL_WORKSPACE_WRITE_HINT,
+          }
+        : {}),
+      ...(files.length > 0 ? { files } : {}),
     }
   },
 }
+
+/** @deprecated Prefer {@link shell}. */
+export const runWorkspaceCommand = shell

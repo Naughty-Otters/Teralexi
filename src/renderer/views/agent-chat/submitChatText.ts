@@ -10,7 +10,7 @@ export const SUBMIT_CHAT_TEXT_KEY: InjectionKey<SubmitChatTextFn> =
 export function buildParallelTodosPrompt(todos: readonly TrackedTodo[]): string {
   const lines = todos.map((t, i) => `${i + 1}. ${t.content.trim()}`)
   return [
-    'Run these independent todos in parallel using `invoke_agents` with `wait=false`, then `wait_for_sub_agent_runs`.',
+    'Run these independent todos in parallel using `invoke_agents` (one run per todo; waits for all).',
     'Prefer one specialist (or coding) agent per todo. File-mutating work should use isolated git worktrees.',
     '',
     ...lines,

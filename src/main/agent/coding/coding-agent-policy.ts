@@ -18,9 +18,7 @@ import {
 type ToolSpec = { needsApproval?: unknown; execute?: (input: unknown) => Promise<unknown> }
 
 const PLAN_MODE_EXTRA_TOOLS = new Set([
-  'write_file',
-  'edit_file',
-  'apply_patch',
+  'edit_files',
   ENTER_PLAN_MODE_TOOL_NAME,
   EXIT_PLAN_MODE_TOOL_NAME,
 ])

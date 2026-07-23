@@ -47,7 +47,7 @@ function toSubAgentTarget(agent: SubAgentTargetAgent): SubAgentTarget {
   }
 }
 
-/** Agents the caller may @-mention (same rules as invoke_agent targets). */
+/** Agents the caller may @-mention (same rules as invoke_agents targets). */
 export function resolveDelegatableSubAgentTargets(
   caller: SubAgentSettings & { id?: string },
   allAgents: readonly SubAgentTargetAgent[],

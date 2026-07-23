@@ -357,24 +357,24 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     color: '颜色',
     availableSet: 'AvailableSet',
     availableSetHint:
-      '每个 skill Agent 可使用完整 toolSet。默认启用全部工具；关闭此 Agent 不应运行的工具。',
+      '列出此 skill 目录中的工具。默认全部启用；关闭此 Agent 不应运行的工具。',
     availableAsSubAgent: '可作为子 Agent',
     availableAsSubAgentHint:
-      '启用后，其他 Agent 可通过 skill chain、invoke_skill 或 invoke_agent 委派给此 Agent。',
+      '启用后，其他 Agent 可通过 skill chain、invoke_skill 或 invoke_agents 委派给此 Agent。',
     delegateToolLoop: '在 tool loop 中委派',
     delegateToolLoopHint:
-      '此 Agent 运行 tool loop 时 invoke_skill 始终可用。启用后还可暴露受控的 invoke_agent 及可选白名单。',
+      '此 Agent 运行 tool loop 时 invoke_skill 始终可用。启用后还可暴露受控的 invoke_agents 及可选白名单。',
     allowedTargets: '允许的目标 Agent',
     allowedTargetsHint:
-      '默认允许所有可作为子 Agent 的目标。取消勾选以仅限制 invoke_agent。',
+      '默认允许所有可作为子 Agent 的目标。取消勾选以仅限制 invoke_agents。',
     noDelegatableAgents:
       '没有其他 Agent 标记为可用子 Agent。请先在其它 Agent 上启用「可作为子 Agent」。',
     noMcpServers: '未配置 MCP 服务器。请先在 设置 → MCP 中添加。',
     mcpServersHint: '启用此 Agent 运行时可调用的 MCP 服务器。',
     enableSubAgent: '启用子 Agent 可用性',
     disableSubAgent: '禁用子 Agent 可用性',
-    enableDelegate: '启用 invoke_agent 委派',
-    disableDelegate: '禁用 invoke_agent 委派',
+    enableDelegate: '启用 invoke_agents 委派',
+    disableDelegate: '禁用 invoke_agents 委派',
     workflowBadge: '工作流',
     allowTarget: '允许 {name}',
     removeTarget: '从白名单移除 {name}',

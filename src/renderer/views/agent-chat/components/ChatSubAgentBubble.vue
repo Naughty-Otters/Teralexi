@@ -14,8 +14,12 @@
         :aria-expanded="expanded"
         @click="expanded = !expanded"
       >
-        <UIcon name="i-lucide-bot" class="sub-agent-bubble__icon" aria-hidden="true" />
-        <span class="sub-agent-bubble__name">{{ node.agentName }}</span>
+        <UIcon
+          :name="displayIcon"
+          class="sub-agent-bubble__icon"
+          aria-hidden="true"
+        />
+        <span class="sub-agent-bubble__name">{{ displayName }}</span>
         <UIcon
           :name="expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
           class="sub-agent-bubble__chevron"
@@ -32,73 +36,36 @@
         {{ statusLabel }}
       </span>
     </header>
-    <p v-if="node.task" class="sub-agent-bubble__task">{{ node.task }}</p>
-    <p v-if="node.worktreeBranch && !worktreeResolved" class="sub-agent-bubble__worktree">
+    <p v-if="node.task && !isExploreProfile" class="sub-agent-bubble__task">
+      {{ node.task }}
+    </p>
+    <p v-if="node.worktreeBranch" class="sub-agent-bubble__worktree">
       <UIcon name="i-lucide-git-branch" class="sub-agent-bubble__worktree-icon" />
       <code>{{ node.worktreeBranch }}</code>
       <span v-if="node.detached" class="sub-agent-bubble__detached">detached</span>
     </p>
-    <p v-else-if="worktreeResolved && worktreeOutcome" class="sub-agent-bubble__worktree-resolved">
-      <UIcon :name="worktreeOutcomeIcon" class="sub-agent-bubble__worktree-icon" />
-      <span>{{ worktreeOutcome }}</span>
-    </p>
     <pre
-      v-if="expanded && node.worktreeDiffStat && !worktreeResolved"
+      v-if="expanded && node.worktreeDiffStat"
       class="sub-agent-bubble__diffstat"
     >{{ node.worktreeDiffStat }}</pre>
-    <div
-      v-if="showWorktreeActions"
-      class="sub-agent-bubble__actions"
-      role="group"
-      aria-label="Worktree actions"
-    >
-      <button
-        type="button"
-        class="sub-agent-bubble__action sub-agent-bubble__action--primary"
-        :disabled="!!actionBusy"
-        @click="runWorktreeAction('merge')"
-      >
-        <UIcon
-          v-if="actionBusy === 'merge'"
-          name="i-lucide-loader-circle"
-          class="sub-agent-bubble__action-spin"
-        />
-        <UIcon v-else name="i-lucide-git-merge" class="sub-agent-bubble__action-icon" />
-        Merge
-      </button>
-      <button
-        type="button"
-        class="sub-agent-bubble__action"
-        :disabled="!!actionBusy"
-        @click="runWorktreeAction('open_pr')"
-      >
-        <UIcon
-          v-if="actionBusy === 'open_pr'"
-          name="i-lucide-loader-circle"
-          class="sub-agent-bubble__action-spin"
-        />
-        <UIcon v-else name="i-lucide-git-pull-request" class="sub-agent-bubble__action-icon" />
-        Open PR
-      </button>
-      <button
-        type="button"
-        class="sub-agent-bubble__action sub-agent-bubble__action--danger"
-        :disabled="!!actionBusy"
-        @click="runWorktreeAction('discard')"
-      >
-        <UIcon
-          v-if="actionBusy === 'discard'"
-          name="i-lucide-loader-circle"
-          class="sub-agent-bubble__action-spin"
-        />
-        <UIcon v-else name="i-lucide-trash-2" class="sub-agent-bubble__action-icon" />
-        Discard
-      </button>
-    </div>
     <p v-if="!expanded && previewText" class="sub-agent-bubble__preview">
       {{ previewText }}
     </p>
     <p v-if="node.error" class="sub-agent-bubble__error">{{ node.error }}</p>
+
+    <div
+      v-if="exploreToolItems.length > 0"
+      class="sub-agent-bubble__explore-panel"
+    >
+      <ChatToolLoopPanel
+        :items="exploreToolItems"
+        :active="node.status === 'running'"
+        list-display="compact"
+        :title="explorePanelTitle"
+        :default-expanded="node.status === 'running'"
+      />
+    </div>
+
     <div v-if="expanded && runSections.length" class="sub-agent-bubble__body">
       <article
         v-for="section in runSections"
@@ -107,9 +74,10 @@
         :class="`sub-agent-bubble__section--${section.status}`"
       >
         <ChatBubblePdfExportButton
-          v-if="showPdfExportButtons"
+          v-if="showPdfExportButtons && sectionHasExportableBody(section)"
           corner
-          :markdown="section.bodyMarkdown"
+          :markdown="section.bodyPlainText ? null : section.bodyMarkdown"
+          :plain-text="section.bodyPlainText || null"
           :section-title="section.title"
           :section-id="section.id"
           :message-id="messageId"
@@ -119,8 +87,14 @@
         <header class="sub-agent-bubble__section-header">
           <span class="sub-agent-bubble__section-title">{{ section.title }}</span>
         </header>
+        <ConversationThinkingPlainBody
+          v-if="section.bodyPlainText"
+          class="sub-agent-bubble__section-body"
+          :text="section.bodyPlainText"
+          body-class="conversation-thinking-text"
+        />
         <div
-          v-if="section.bodyHtml"
+          v-else-if="section.bodyHtml"
           class="sub-agent-bubble__section-body msg-html"
           v-html="section.bodyHtml"
         />
@@ -138,6 +112,7 @@
         :markdown="markdown"
         :is-streaming="isStreaming"
         :message-id="messageId"
+        :message="message"
       />
     </div>
   </article>
@@ -145,7 +120,12 @@
 
 <script setup lang="ts">
 import type MarkdownIt from 'markdown-it'
-import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import type { UIMessage } from '@teralexi-ai'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
+import {
+  countExploreActivity,
+  formatExploreActivityStatus,
+} from '@shared/agent/explore-activity-summary'
 import {
   buildStructuredDebugViewFromStepProgress,
   type StepProgressPartInput,
@@ -155,16 +135,20 @@ import {
   SUB_AGENT_UI_MAX_DEPTH,
   type SubAgentRunNode,
 } from './chat/subAgentRunModel'
+import type { AssistantBubbleDescriptor } from './chat/assistantBubbleFramework'
+import {
+  getToolPartInput,
+  isTerminalCommandToolPart,
+  toolPartDisplayName,
+} from './chat/chatToolPartHelpers'
 import {
   chatUiBubbleTextKeepChars,
   limitBubbleTextForDisplay,
 } from '../chatUiSettings'
+import { toolPartsForRun } from '../toolRunScope'
 import { useI18n } from '@renderer/composables/useI18n'
-import {
-  markSubAgentWorktreeResolved,
-  subAgentWorktreeResolvedMap,
-  syncSubAgentWorktreeResolvedFromIpc,
-} from '../subAgentWorktreeState'
+import ChatToolLoopPanel from './ChatToolLoopPanel.vue'
+import ConversationThinkingPlainBody from './ConversationThinkingPlainBody.vue'
 
 const ChatBubblePdfExportButton = defineAsyncComponent(
   () => import('./ChatBubblePdfExportButton.vue'),
@@ -176,106 +160,20 @@ const props = defineProps<{
   markdown: MarkdownIt
   isStreaming?: boolean
   messageId: string
+  message?: UIMessage
 }>()
 
-const expanded = ref(false)
+const expanded = ref(props.node.status === 'running')
 const showPdfExportButtons = ref(false)
-const actionBusy = ref<'merge' | 'discard' | 'open_pr' | null>(null)
-const localOutcome = ref<'merged' | 'discarded' | null>(null)
 const { t } = useI18n()
 const toast = useToast()
 
-const worktreeResolved = computed(() => {
-  void subAgentWorktreeResolvedMap()[props.node.runId]
-  return Boolean(subAgentWorktreeResolvedMap()[props.node.runId])
-})
-
-const worktreeOutcome = computed(() => {
-  if (localOutcome.value === 'merged') return 'Merged into workspace'
-  if (localOutcome.value === 'discarded') return 'Worktree discarded'
-  if (worktreeResolved.value) return 'Worktree resolved'
-  return ''
-})
-
-const worktreeOutcomeIcon = computed(() =>
-  localOutcome.value === 'discarded'
-    ? 'i-lucide-trash-2'
-    : 'i-lucide-check-circle-2',
-)
-
-const showWorktreeActions = computed(
-  () =>
-    Boolean(props.node.worktreeBranch) &&
-    !worktreeResolved.value &&
-    props.node.status !== 'running' &&
-    props.node.status !== 'queued',
-)
-
-onMounted(() => {
-  if (props.node.worktreeBranch) {
-    void syncSubAgentWorktreeResolvedFromIpc(props.node.runId)
-  }
-})
-
 watch(
-  () => props.node.runId,
-  (runId) => {
-    if (props.node.worktreeBranch) {
-      void syncSubAgentWorktreeResolvedFromIpc(runId)
-    }
+  () => props.node.status,
+  (status) => {
+    if (status === 'running') expanded.value = true
   },
 )
-
-async function runWorktreeAction(
-  action: 'merge' | 'discard' | 'open_pr',
-): Promise<void> {
-  if (worktreeResolved.value && (action === 'merge' || action === 'discard')) {
-    return
-  }
-  const ch = window.ipcRendererChannel?.ResolveSubAgentWorktree
-  if (!ch?.invoke) {
-    toast.add({ title: 'Worktree actions unavailable', color: 'error' })
-    return
-  }
-  actionBusy.value = action
-  try {
-    const result = await ch.invoke({
-      runId: props.node.runId,
-      action,
-      title: `Sub-agent: ${props.node.agentName}`,
-      body: props.node.task || props.node.reportPreview || undefined,
-    })
-    if (!result?.ok) {
-      // Already resolved on the main process (e.g. remount after merge).
-      const missing =
-        /no isolated worktree/i.test(result?.error ?? '') ||
-        /not found/i.test(result?.error ?? '')
-      if (missing && (action === 'merge' || action === 'discard')) {
-        markSubAgentWorktreeResolved(props.node.runId)
-        localOutcome.value = action === 'merge' ? 'merged' : 'discarded'
-        return
-      }
-      toast.add({
-        title: result?.error || 'Worktree action failed',
-        color: 'error',
-      })
-      return
-    }
-    if (action === 'discard' || action === 'merge') {
-      markSubAgentWorktreeResolved(props.node.runId)
-      localOutcome.value = action === 'merge' ? 'merged' : 'discarded'
-    }
-    toast.add({
-      title:
-        action === 'open_pr'
-          ? result.url || result.message || 'PR created'
-          : result.message || 'Done',
-      color: 'success',
-    })
-  } finally {
-    actionBusy.value = null
-  }
-}
 
 watch(expanded, (isExpanded) => {
   if (!isExpanded) {
@@ -306,19 +204,61 @@ function onPdfExportFailed(error: string): void {
   })
 }
 
-const displayStatus = computed(() => {
-  if (worktreeResolved.value) {
-    if (localOutcome.value === 'discarded') return 'cancelled' as const
-    return 'completed' as const
-  }
-  return props.node.status
+const isExploreProfile = computed(() => {
+  const profile = props.node.profile?.trim().toLowerCase()
+  if (profile === 'explore') return true
+  const task = props.node.task?.trim() ?? ''
+  return task.startsWith('[Explore]')
 })
 
+const displayName = computed(() => {
+  if (isExploreProfile.value) return 'Explore'
+  const profile = props.node.profile?.trim()
+  if (profile) {
+    return profile.charAt(0).toUpperCase() + profile.slice(1)
+  }
+  return props.node.agentName
+})
+
+const displayIcon = computed(() =>
+  isExploreProfile.value ? 'i-lucide-compass' : 'i-lucide-bot',
+)
+
+const displayStatus = computed(() => props.node.status)
+
+const exploreToolParts = computed(() => {
+  if (!props.message) return []
+  return toolPartsForRun(props.message, props.node.runId)
+})
+
+const exploreToolItems = computed((): AssistantBubbleDescriptor[] =>
+  exploreToolParts.value.map((part, index) => ({
+    key: `${props.node.runId}-tool-${index}`,
+    kind: isTerminalCommandToolPart(part) ? 'terminal' : 'tool',
+    part,
+  })),
+)
+
+const exploreActivity = computed(() =>
+  countExploreActivity(
+    exploreToolParts.value.map((part) => ({
+      toolName: toolPartDisplayName(part),
+      input: getToolPartInput(part),
+    })),
+  ),
+)
+
+const explorePanelTitle = computed(() =>
+  isExploreProfile.value ? 'Explore' : 'Tools',
+)
+
 const statusLabel = computed(() => {
-  if (worktreeResolved.value) {
-    if (localOutcome.value === 'merged') return 'Merged'
-    if (localOutcome.value === 'discarded') return 'Discarded'
-    return 'Done'
+  if (isExploreProfile.value && exploreToolParts.value.length > 0) {
+    return formatExploreActivityStatus({
+      live: displayStatus.value === 'running',
+      toolCount: exploreActivity.value.toolCount,
+      fileCount: exploreActivity.value.fileCount,
+    })
   }
   switch (displayStatus.value) {
     case 'queued':
@@ -340,18 +280,12 @@ const statusLabel = computed(() => {
 
 const statusSpinning = computed(
   () =>
-    !worktreeResolved.value &&
-    (displayStatus.value === 'running' ||
-      displayStatus.value === 'queued' ||
-      displayStatus.value === 'awaiting_approval'),
+    displayStatus.value === 'running' ||
+    displayStatus.value === 'queued' ||
+    displayStatus.value === 'awaiting_approval',
 )
 
 const statusIcon = computed(() => {
-  if (worktreeResolved.value) {
-    return localOutcome.value === 'discarded'
-      ? 'i-lucide-circle-slash'
-      : 'i-lucide-check-circle-2'
-  }
   switch (displayStatus.value) {
     case 'queued':
     case 'running':
@@ -370,12 +304,21 @@ const statusIcon = computed(() => {
 
 const previewText = computed(() => {
   void chatUiBubbleTextKeepChars.value
-  const raw = props.node.reportPreview?.trim() || props.node.task?.trim() || ''
-  if (!raw) return ''
-  if (props.isStreaming && props.node.status === 'running') {
-    return limitBubbleTextForDisplay(raw)
+  if (isExploreProfile.value && exploreActivity.value.fileCount > 0) {
+    return formatExploreActivityStatus({
+      live: false,
+      toolCount: exploreActivity.value.toolCount,
+      fileCount: exploreActivity.value.fileCount,
+    })
   }
-  return raw
+  const report = props.node.reportPreview?.trim() || ''
+  if (!report) return ''
+  const task = props.node.task?.trim() || ''
+  if (task && (report === task || report.startsWith(task))) return ''
+  if (props.isStreaming && props.node.status === 'running') {
+    return limitBubbleTextForDisplay(report)
+  }
+  return report
 })
 
 const runSections = computed(() => {
@@ -385,6 +328,13 @@ const runSections = computed(() => {
   })
   return view?.sections ?? []
 })
+
+function sectionHasExportableBody(section: {
+  bodyMarkdown?: string
+  bodyPlainText?: string
+}): boolean {
+  return Boolean(section.bodyPlainText?.trim() || section.bodyMarkdown?.trim())
+}
 
 const visibleChildren = computed(() =>
   props.node.depth >= SUB_AGENT_UI_MAX_DEPTH ? [] : props.node.children,
@@ -398,6 +348,7 @@ export default {
 </script>
 
 <style scoped>
+
 .sub-agent-bubble {
   border: 1px solid color-mix(in srgb, var(--ui-primary) 22%, var(--ui-border));
   border-radius: 8px;
@@ -508,6 +459,10 @@ export default {
   color: var(--color-error-600, #dc2626);
 }
 
+.sub-agent-bubble__explore-panel {
+  margin-top: 8px;
+}
+
 .sub-agent-bubble__body {
   margin-top: 8px;
   display: flex;
@@ -563,16 +518,6 @@ export default {
   min-width: 0;
 }
 
-.sub-agent-bubble__worktree-resolved {
-  margin: 6px 0 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  color: color-mix(in srgb, var(--ui-primary) 75%, var(--ui-text));
-}
-
 .sub-agent-bubble__worktree code {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -605,76 +550,6 @@ export default {
   color: var(--ui-text-muted);
   max-height: 120px;
   overflow: auto;
-}
-
-.sub-agent-bubble__actions {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.sub-agent-bubble__action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 6px;
-  border: 1px solid var(--ui-border);
-  background: var(--ui-bg-elevated, var(--ui-bg));
-  color: var(--ui-text);
-  font-size: 11px;
-  font-weight: 550;
-  line-height: 1;
-  cursor: pointer;
-  transition:
-    background 0.12s ease,
-    border-color 0.12s ease,
-    color 0.12s ease;
-}
-
-.sub-agent-bubble__action:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--ui-text) 6%, var(--ui-bg-elevated, var(--ui-bg)));
-  border-color: color-mix(in srgb, var(--ui-border) 70%, var(--ui-text));
-}
-
-.sub-agent-bubble__action:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.sub-agent-bubble__action--primary {
-  border-color: color-mix(in srgb, var(--ui-primary) 35%, var(--ui-border));
-  background: color-mix(in srgb, var(--ui-primary) 12%, transparent);
-  color: color-mix(in srgb, var(--ui-primary) 85%, var(--ui-text));
-}
-
-.sub-agent-bubble__action--primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--ui-primary) 18%, transparent);
-  border-color: color-mix(in srgb, var(--ui-primary) 50%, var(--ui-border));
-}
-
-.sub-agent-bubble__action--danger {
-  color: color-mix(in srgb, var(--color-error-600, #dc2626) 85%, var(--ui-text));
-  border-color: color-mix(in srgb, var(--color-error-500, #dc2626) 25%, var(--ui-border));
-}
-
-.sub-agent-bubble__action--danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-error-500, #dc2626) 8%, transparent);
-}
-
-.sub-agent-bubble__action-icon,
-.sub-agent-bubble__action-spin {
-  width: 12px;
-  height: 12px;
-  flex-shrink: 0;
-}
-
-.sub-agent-bubble__action-spin {
-  animation: sub-agent-spin 0.8s linear infinite;
 }
 
 @keyframes sub-agent-spin {

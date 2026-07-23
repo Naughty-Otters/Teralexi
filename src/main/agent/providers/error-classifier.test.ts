@@ -151,6 +151,24 @@ describe('classifyLlmError — plain Error message patterns', () => {
     expect(result.category).toBe(ErrorCategory.RATE_LIMIT)
   })
 
+  it('classifies structured-output parse failures as INVALID_REQUEST (non-retryable)', () => {
+    const result = classifyLlmError(
+      plainError('No object generated: could not parse the response.'),
+    )
+    expect(result.category).toBe(ErrorCategory.INVALID_REQUEST)
+    expect(result.isRetryable).toBe(false)
+  })
+
+  it('classifies NoObjectGeneratedError by name as INVALID_REQUEST', () => {
+    const err = Object.assign(
+      new Error('No object generated'),
+      { name: 'AI_NoObjectGeneratedError' },
+    )
+    const result = classifyLlmError(err)
+    expect(result.category).toBe(ErrorCategory.INVALID_REQUEST)
+    expect(result.isRetryable).toBe(false)
+  })
+
   it('classifies context length message as CONTEXT_OVERFLOW', () => {
     const result = classifyLlmError(plainError('context length exceeded'))
     expect(result.category).toBe(ErrorCategory.CONTEXT_OVERFLOW)

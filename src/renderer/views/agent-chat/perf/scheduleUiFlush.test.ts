@@ -2,6 +2,8 @@ import { describe, expect, it, beforeEach, vi } from 'vitest'
 
 import {
   conversationIsCatchingUp,
+  flushAllUiForConversation,
+  namespacedFlushKey,
   recordIngressChunkForBackpressure,
   resetChatUiFlushState,
   scheduleUiFlush,
@@ -30,7 +32,7 @@ describe('scheduleUiFlush', () => {
     }
   })
 
-  it('coalesces normal flushes to one run per key per frame', () => {
+  it('coalesces normal flushes to one run per namespaced key per frame', () => {
     const fn = vi.fn()
     scheduleUiFlush('scroll', fn, {
       conversationId: 'conv-1',
@@ -43,6 +45,31 @@ describe('scheduleUiFlush', () => {
     ;(globalThis as { __flushRaf?: () => void }).__flushRaf?.()
     expect(fn).toHaveBeenCalledTimes(1)
     expect(getChatUiPerfCounters().uiFlushes).toBe(1)
+  })
+
+  it('keeps concurrent conversations from overwriting each other', () => {
+    const fnA = vi.fn()
+    const fnB = vi.fn()
+    setVisibleConversationForUiFlush(null)
+
+    scheduleUiFlush('messages-sync', fnA, {
+      conversationId: 'conv-a',
+      priority: 'normal',
+    })
+    scheduleUiFlush('messages-sync', fnB, {
+      conversationId: 'conv-b',
+      priority: 'normal',
+    })
+    ;(globalThis as { __flushRaf?: () => void }).__flushRaf?.()
+
+    expect(fnA).toHaveBeenCalledTimes(1)
+    expect(fnB).toHaveBeenCalledTimes(1)
+    expect(namespacedFlushKey('messages-sync', 'conv-a')).toBe(
+      'conv-a::messages-sync',
+    )
+    expect(namespacedFlushKey('messages-sync', 'conv-b')).toBe(
+      'conv-b::messages-sync',
+    )
   })
 
   it('runs immediate flushes without waiting for rAF', () => {
@@ -62,6 +89,26 @@ describe('scheduleUiFlush', () => {
     })
     ;(globalThis as { __flushRaf?: () => void }).__flushRaf?.()
     expect(fn).not.toHaveBeenCalled()
+  })
+
+  it('flushAllUiForConversation only runs that conversation’s pending jobs', () => {
+    const fnA = vi.fn()
+    const fnB = vi.fn()
+    scheduleUiFlush('messages-sync', fnA, {
+      conversationId: 'conv-a',
+      priority: 'normal',
+    })
+    scheduleUiFlush('messages-sync', fnB, {
+      conversationId: 'conv-b',
+      priority: 'normal',
+    })
+
+    flushAllUiForConversation('conv-a')
+    expect(fnA).toHaveBeenCalledTimes(1)
+    expect(fnB).not.toHaveBeenCalled()
+
+    flushAllUiForConversation('conv-b')
+    expect(fnB).toHaveBeenCalledTimes(1)
   })
 
   it('sets catching up when ingress backlog exceeds threshold', () => {

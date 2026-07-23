@@ -23,7 +23,8 @@ export function isStructuralUiChunkType(type: unknown): boolean {
 
 /**
  * Forward authoritative SDK {@link toUIMessageStream} chunks to the renderer.
- * Text/reasoning deltas are omitted — those are driven by `fullStream` → `onChunk`.
+ * Text/reasoning deltas are omitted — those are driven by `fullStream` → handlers
+ * so we never double-apply the same tokens from two consumers of a teed stream.
  */
 export async function forwardAgentUiMessageStream(args: {
   result: AgentStreamCollectSource

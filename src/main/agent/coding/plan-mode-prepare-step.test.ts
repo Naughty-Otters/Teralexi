@@ -58,7 +58,7 @@ describe('createPrepareStepFromInjectors (plan mode)', () => {
         },
         renderPreviousStepContextBlock: () => '',
       } as never,
-      ['read_file', 'write_file', 'update_todos', 'run_workspace_command'],
+      ['read_file', 'edit_files', 'update_todos', 'shell'],
     )
     expect(prepareStep).toBeDefined()
 
@@ -70,7 +70,7 @@ describe('createPrepareStepFromInjectors (plan mode)', () => {
       experimental_context: {},
     })
 
-    expect(result?.activeTools).toEqual(['read_file', 'write_file', 'update_todos'])
+    expect(result?.activeTools).toEqual(['read_file', 'edit_files', 'update_todos'])
     expect(result?.messages?.length).toBeGreaterThan(1)
     const injected = result?.messages?.at(-1)
     expect(injected?.role).toBe('user')
@@ -94,7 +94,7 @@ describe('createPrepareStepFromInjectors (plan mode)', () => {
         },
         renderPreviousStepContextBlock: () => '',
       } as never,
-      ['read_file', 'write_file', 'update_todos', 'enter_plan_mode'],
+      ['read_file', 'edit_files', 'update_todos', 'enter_plan_mode'],
     )
 
     const result = await prepareStep!({
@@ -131,7 +131,7 @@ describe('createPrepareStepFromInjectors (plan mode)', () => {
 
     expect(result?.activeTools).toEqual([
       'read_file',
-      'write_file',
+      'edit_files',
       'update_todos',
       'enter_plan_mode',
     ])

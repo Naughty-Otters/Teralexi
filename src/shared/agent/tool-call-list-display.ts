@@ -1,13 +1,15 @@
-export type ChatUiToolCallListDisplay = 'none' | 'all' | 'latest'
+export type ChatUiToolCallListDisplay = 'none' | 'compact' | 'all' | 'latest'
 
 export const CHAT_UI_TOOL_CALL_LIST_DISPLAY_VALUES = [
   'none',
+  'compact',
   'all',
   'latest',
 ] as const satisfies readonly ChatUiToolCallListDisplay[]
 
+/** Cursor-like collapsed Exploring accordion with slim tool rows. */
 export const DEFAULT_CHAT_UI_TOOL_CALL_LIST_DISPLAY: ChatUiToolCallListDisplay =
-  'none'
+  'compact'
 
 export function parseChatUiToolCallListDisplay(
   raw: string | undefined,
@@ -44,7 +46,7 @@ export function filterAssistantToolGroupBubbles<T extends BubbleKind>(
   bubbles: readonly T[],
   mode: ChatUiToolCallListDisplay,
 ): T[] {
-  if (mode === 'all') return [...bubbles]
+  if (mode === 'all' || mode === 'compact') return [...bubbles]
   if (mode === 'none') {
     return bubbles.filter((bubble) => bubble.kind !== 'tool-group')
   }
@@ -78,6 +80,7 @@ export function filterConversationToolResponseBubbles<T>(
   mode: ChatUiToolCallListDisplay,
 ): T[] {
   if (mode === 'none') return []
+  if (mode === 'compact' || mode === 'all') return [...bubbles]
   if (mode === 'latest' && bubbles.length > 1) {
     return [bubbles[bubbles.length - 1]!]
   }

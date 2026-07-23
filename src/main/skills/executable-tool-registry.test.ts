@@ -45,18 +45,18 @@ describe('executable tool registry', () => {
     const execute = vi.fn(async () => ({ ok: true }))
     loadToolSetTools.mockResolvedValue([
       {
-        name: 'run_workspace_command',
+        name: 'shell',
         description: 'Run a command',
         inputSchema: {},
         execute,
       },
     ])
 
-    const tool = await getExecutableTool('coding', 'run_workspace_command')
-    expect(tool.name).toBe('run_workspace_command')
+    const tool = await getExecutableTool('coding', 'shell')
+    expect(tool.name).toBe('shell')
     expect(loadToolSetTools).toHaveBeenCalledTimes(1)
 
-    await getExecutableTool('coding', 'run_workspace_command')
+    await getExecutableTool('coding', 'shell')
     expect(loadToolSetTools).toHaveBeenCalledTimes(1)
   })
 })

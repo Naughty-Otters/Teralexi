@@ -394,16 +394,20 @@ export function extractAttachmentsFromToolResult(
   const root = asRecord(result)
   if (!root || isToolErrorResult(root)) return []
 
-  if (isFileChangeToolName(toolName)) {
-    const fromChanges = attachmentsFromFileChanges(toolName, root, sandboxRoot)
-    if (fromChanges.length > 0) return dedupeStepAttachments(fromChanges)
-  }
+  const fromChanges = attachmentsFromFileChanges(toolName, root, sandboxRoot)
 
   if (toolName === 'run_script' || toolName === 'run_script_file') {
-    if (root.success !== true) return []
-    return dedupeStepAttachments(
-      attachmentsFromRunScript(toolName, root, sandboxRoot),
-    )
+    if (root.success !== true) {
+      return fromChanges.length > 0 ? dedupeStepAttachments(fromChanges) : []
+    }
+    return dedupeStepAttachments([
+      ...fromChanges,
+      ...attachmentsFromRunScript(toolName, root, sandboxRoot),
+    ])
+  }
+
+  if (fromChanges.length > 0) {
+    return dedupeStepAttachments(fromChanges)
   }
 
   const fromFiles = attachmentsFromFilesArray(toolName, root, sandboxRoot)
@@ -578,7 +582,8 @@ export function resolveFileChangePreviewsForAttachments(
       item.action === 'modify' ||
       item.action === 'delete' ||
       item.action === 'rename' ||
-      Boolean(item.toolName && isFileChangeToolName(item.toolName)),
+      Boolean(item.toolName && isFileChangeToolName(item.toolName)) ||
+      Boolean(item.diff?.trim()),
   )
   return looksLikeFileChanges ? [...toolFileChanges] : []
 }

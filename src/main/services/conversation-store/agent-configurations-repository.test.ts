@@ -167,4 +167,32 @@ describe('AgentConfigurationsRepository sub-agent settings', () => {
     expect(row?.allowSubAgents).toBe(true)
     expect(row?.subAgentIds).toEqual(['custom:helper'])
   })
+
+  it('appends Playwright Browser to explicit MCP allowlists', () => {
+    const db = createMigrationTestDatabase()
+    runMigrations(db)
+    const repo = new AgentConfigurationsRepository(db)
+
+    repo.upsert(
+      baseConfig({
+        agentId: 'skill:with-list',
+        availableMcpServers: ['ref-mcp-memory'],
+      }),
+    )
+    repo.upsert(
+      baseConfig({
+        agentId: 'skill:all',
+        availableMcpServers: null,
+      }),
+    )
+
+    repo.ensurePlaywrightMcpOnAllowlists('user-1')
+
+    const byId = new Map(repo.list('user-1').map((row) => [row.agentId, row]))
+    expect(byId.get('skill:with-list')?.availableMcpServers).toEqual([
+      'ref-mcp-memory',
+      'ref-mcp-playwright',
+    ])
+    expect(byId.get('skill:all')?.availableMcpServers).toBeNull()
+  })
 })

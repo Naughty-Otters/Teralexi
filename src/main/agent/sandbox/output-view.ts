@@ -466,3 +466,50 @@ export const navigateSandboxOutputView = traceFunction(
   'navigateSandboxOutputView',
   navigateSandboxOutputViewImpl,
 )
+
+/** Resolve the preview overlay for a window (browser session / tests). */
+export function getSandboxOutputView(
+  win: BrowserWindow,
+): WebContentsView | undefined {
+  return sandboxResultsViews.get(win.id)
+}
+
+/** Ensure a WebContentsView overlay exists for agent browser + preview. */
+export function ensureSandboxOutputView(win: BrowserWindow): WebContentsView {
+  let view = sandboxResultsViews.get(win.id)
+  if (view && !view.webContents.isDestroyed()) return view
+
+  view = new WebContentsView({
+    webPreferences: {
+      sandbox: false,
+      webSecurity: true,
+      contextIsolation: true,
+    },
+  })
+  view.setBackgroundColor('#ffffff')
+  sandboxResultsViews.set(win.id, view)
+  win.contentView.addChildView(view)
+  ensureClosedCleanup(win)
+  attachPreviewNavigationListeners(win, view)
+  return view
+}
+
+/** Navigate the preview overlay (http(s) or file) and remember the URL. */
+export async function loadUrlInSandboxOutputView(
+  win: BrowserWindow,
+  url: string,
+): Promise<void> {
+  const view = ensureSandboxOutputView(win)
+  const trimmed = url.trim()
+  if (!trimmed) return
+  await schedulePreviewLoad(win.id, async () => {
+    if (view.webContents.isDestroyed()) return
+    if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('about:')) {
+      await loadWebContentsUrl(view, trimmed)
+    } else {
+      await loadSandboxOutputPreview(view, trimmed, 'html')
+    }
+    lastLoadedPreview.set(win.id, { fileUrl: trimmed, markdownView: 'html' })
+    emitPreviewNavigationChanged(win, view)
+  })
+}

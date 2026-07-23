@@ -4,6 +4,7 @@ import {
   serializeStageLlmDocument,
   type AgentLlmRoutingMode,
 } from '@shared/agent/stage-llm-settings'
+import { PLAYWRIGHT_MCP_SERVER_ID } from '@shared/mcp/reference-mcp-servers'
 import {
   normalizeToolApprovalOverrides,
   parseJsonStringArray,
@@ -213,5 +214,44 @@ export class AgentConfigurationsRepository {
         'DELETE FROM agent_configurations WHERE agent_id = ? AND user_id = ?',
       )
       .run(agentId, userId)
+  }
+
+  /**
+   * Agents with an explicit MCP allowlist created before Playwright Browser
+   * shipped would otherwise never see it. Append the built-in id once; `null`
+   * allowlists already mean “all enabled servers”.
+   */
+  ensurePlaywrightMcpOnAllowlists(userId: string): void {
+    const rows = this.db
+      .prepare(
+        `SELECT agent_id, available_mcp_servers_json
+         FROM agent_configurations
+         WHERE user_id = ?`,
+      )
+      .all(userId) as Array<{
+      agent_id: string
+      available_mcp_servers_json: string
+    }>
+
+    const update = this.db.prepare(
+      `UPDATE agent_configurations
+       SET available_mcp_servers_json = ?, updated_at = ?
+       WHERE user_id = ? AND agent_id = ?`,
+    )
+    const now = new Date().toISOString()
+
+    for (const row of rows) {
+      const allowlist = parseJsonStringArrayOrNull(
+        row.available_mcp_servers_json,
+      )
+      if (allowlist == null) continue
+      if (allowlist.includes(PLAYWRIGHT_MCP_SERVER_ID)) continue
+      update.run(
+        JSON.stringify([...allowlist, PLAYWRIGHT_MCP_SERVER_ID]),
+        now,
+        userId,
+        row.agent_id,
+      )
+    }
   }
 }

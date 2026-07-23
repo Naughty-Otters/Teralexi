@@ -5,6 +5,7 @@ export {
   bubblePdfDefaultFileName,
   bubblePdfKindForSection,
   exportBubbleMarkdownAsPdf,
+  exportBubblePlainTextAsPdf,
 } from './bubblePdfExportHelpers'
 
 export function assistantTextPartMarkdown(

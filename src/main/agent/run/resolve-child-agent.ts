@@ -28,6 +28,7 @@ import { createSubAgentLlmDebugRunId } from '../llm/llm-debug-writer'
 import { resolveResponseLanguageForAgent } from '@main/i18n/resolve-response-language'
 import { StageModelRegistry } from '../providers/stage-model-registry'
 import { mergeSubFlowOutputText, resolveSubAgentSummaryText } from './sub-flow-output-text'
+import { filterMcpToolsForSubagentAccess } from '@toolSet/sub-agents/subagent-profiles'
 
 export {
   mergeSubFlowOutputText,
@@ -63,6 +64,20 @@ export type ResolveChildAgentParams = {
    * isolated git worktree for file-mutating parallel agents.
    */
   isolateGitWorktree?: boolean
+  /**
+   * When true (default), auto-merge the worktree into the parent checkout after
+   * a successful run that touched files. Set false for best-of-N (user picks).
+   * Empty worktrees are always discarded automatically.
+   */
+  autoMergeWorktree?: boolean
+  /** Appended to the child catalog system prompt (Cursor-style profile instructions). */
+  systemPromptAddendum?: string
+  /** Force slim seed context (Explore/Plan profiles). */
+  slimContext?: boolean
+  /** Restrict MCP tools for Cursor-style Explore/Bash/Browser profiles. */
+  mcpAccess?: 'none' | 'browser' | 'all'
+  /** Cursor-style profile id (`explore` | `bash` | …) for UI labeling. */
+  profile?: string
   /** Parent pipeline stage to record when the child pauses for HITL. */
   parentHitlPauseStageId?: FlowStageId
   onChunk?: AgentResponseOpts['onChunk']
@@ -80,6 +95,11 @@ export function buildContextEnvelope(
     conversationId?: string
     assistantMessageId?: string
     workspacePathOverride?: string
+    /** Restrict child tools — used to decide slim explore-style seed context. */
+    allowedToolNames?: string[] | 'all'
+    agentId?: string
+    /** Force slim when a Cursor-style Explore/Plan profile is applied. */
+    slimContext?: boolean
   },
 ): SubAgentContextEnvelope {
   const conversationId =
@@ -88,13 +108,21 @@ export function buildContextEnvelope(
     args.workspacePathOverride?.trim() ||
     (conversationId ? getWorkspacePath(conversationId) ?? undefined : undefined)
 
+  const readLedgerPaths = parentContext.toolReadCache?.listReadPaths?.() ?? []
+  const slimContext =
+    args.slimContext === true ||
+    shouldUseSlimSubAgentContext({
+      allowedToolNames: args.allowedToolNames,
+      agentId: args.agentId,
+    })
+
   return {
     rootRunId: args.rootRunId,
     parentRunId: args.parentRunId,
     conversationId,
     assistantMessageId:
       args.assistantMessageId?.trim() || parentContext.opts.assistantMessageId,
-    messages: [...parentContext.currentMessages],
+    messages: slimContext ? [] : [...parentContext.currentMessages],
     pipelineMessages: parentContext.buildPipelineContextMessages({
       thinking: true,
       planning: true,
@@ -104,7 +132,38 @@ export function buildContextEnvelope(
     }),
     workspacePath: workspacePath ?? undefined,
     delegationTask: args.task.trim(),
+    readLedgerPaths: readLedgerPaths.length > 0 ? readLedgerPaths : undefined,
+    slimContext: slimContext || undefined,
   }
+}
+
+const READ_ONLY_SUBAGENT_TOOLS = new Set([
+  'read_file',
+  'lsp',
+  'shell',
+  'web_search',
+  'web_scrape',
+  'read_todos',
+  'update_todos',
+])
+/** Explore / research children get a slim seed (Cursor-style), not the full parent thread. */
+export function shouldUseSlimSubAgentContext(args: {
+  allowedToolNames?: string[] | 'all'
+  agentId?: string
+}): boolean {
+  const id = args.agentId?.trim().toLowerCase() ?? ''
+  if (
+    id.includes('explore') ||
+    id.includes('research') ||
+    id.includes('architect') ||
+    id.includes('bash') ||
+    id.includes('browser')
+  ) {
+    return true
+  }
+  const allowed = args.allowedToolNames
+  if (!Array.isArray(allowed) || allowed.length === 0) return false
+  return allowed.every((name) => READ_ONLY_SUBAGENT_TOOLS.has(name))
 }
 
 function resolveSeedMessages(params: ResolveChildAgentParams): AgentMessage[] {
@@ -128,6 +187,9 @@ function resolveSeedMessages(params: ResolveChildAgentParams): AgentMessage[] {
       conversationId: params.parentOpts.conversationId,
       assistantMessageId: params.parentOpts.assistantMessageId,
       workspacePathOverride: params.workspacePathOverride,
+      allowedToolNames: params.allowedToolNames,
+      agentId: params.agentId,
+      slimContext: params.slimContext,
     })
     return trimContextMessages(mergeContextEnvelopeMessages(envelope))
   }
@@ -198,14 +260,23 @@ export async function buildChildAgentResponseOpts(
   const { provider, model: childModel, stageLlm } =
     resolveChildAgentLlmConfig(agent)
   const credentials = loadAgentRunCredentials()
-  const mcpTools = await loadMcpToolsForAgent(parentOpts.userId, agent)
+  let mcpTools = await loadMcpToolsForAgent(parentOpts.userId, agent)
+  if (params.mcpAccess && params.mcpAccess !== 'all') {
+    mcpTools = filterMcpToolsForSubagentAccess(mcpTools, params.mcpAccess)
+  }
   let enabledSkillTools = resolveEnabledSkillToolNames(agent)
+  let availableSetTouched = !!agent.availableSetTouched
   if (
     params.allowedToolNames &&
     params.allowedToolNames !== 'all'
   ) {
     const allowed = new Set(params.allowedToolNames)
-    enabledSkillTools = enabledSkillTools.filter((name) => allowed.has(name))
+    // Profile allowlists apply even when the parent skill has an untouched
+    // availableSet (undefined = full catalog). Restrict to the profile tools.
+    enabledSkillTools = Array.isArray(enabledSkillTools)
+      ? enabledSkillTools.filter((name) => allowed.has(name))
+      : [...params.allowedToolNames]
+    availableSetTouched = true
   }
 
   const messages: AgentMessage[] = seedHistory
@@ -215,11 +286,15 @@ export async function buildChildAgentResponseOpts(
     parentOpts.userId,
   )
 
+  const systemPrompt = [agent.systemPrompt?.trim(), params.systemPromptAddendum?.trim()]
+    .filter(Boolean)
+    .join('\n\n')
+
   const opts: AgentResponseOpts = {
     provider,
     model: childModel,
     stageLlm,
-    systemPrompt: agent.systemPrompt,
+    systemPrompt,
     responseLanguage: resolveResponseLanguageForAgent(
       agent.responseLanguage ?? parentOpts.responseLanguage,
     ),
@@ -236,15 +311,22 @@ export async function buildChildAgentResponseOpts(
     compiledArtifact: agent.compiledArtifact,
     agentId: agent.id,
     availableSet: enabledSkillTools,
-    availableSetTouched: !!agent.availableSetTouched,
+    availableSetTouched,
     toolNeedsApprovalOverrides: agent.toolNeedsApprovalOverrides ?? {},
     mcpTools,
     userId: parentOpts.userId,
     conversationId: parentOpts.conversationId,
     assistantMessageId: parentOpts.assistantMessageId,
     ...credentials,
+    // HITL resume payloads live on the parent turn; children must see them to
+    // continue after tool-approval / collect-form responses.
+    clientUiMessages: parentOpts.clientUiMessages,
+    // Keep child token text off the parent bubble unless explicitly wired.
     onChunk: params.onChunk,
-    onUIMessageChunk: params.onUIMessageChunk,
+    // Forward Chat UI chunks (tool-approval-request, collect-form, tool parts)
+    // so nested HITL is actionable instead of stuck on "Awaiting approval".
+    onUIMessageChunk:
+      params.onUIMessageChunk ?? parentOpts.onUIMessageChunk,
     onStepProgress: params.onStepProgress,
     onSubAgentRunEvent: params.onSubAgentRunEvent ?? parentOpts.onSubAgentRunEvent,
   }

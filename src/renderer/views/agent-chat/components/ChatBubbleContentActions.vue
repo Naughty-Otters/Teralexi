@@ -55,15 +55,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
-import {
-  bubblePdfDefaultFileName,
-  bubblePdfKindForSection,
-  type BubblePdfDocumentKind,
-} from '../bubblePdfExportHelpers'
+import type { BubblePdfDocumentKind } from '../bubblePdfExportHelpers'
 
 const props = withDefaults(
   defineProps<{
     markdown?: string | null
+    /** When set, copy/print/PDF skip markdown-it and use this literal text. */
+    plainText?: string | null
     sectionTitle: string
     sectionId?: string
     messageId: string
@@ -90,16 +88,22 @@ const exporting = ref(false)
 const copied = ref(false)
 let copiedResetTimer: ReturnType<typeof setTimeout> | undefined
 
-const hasContent = computed(() => Boolean(props.markdown?.trim()))
+const hasContent = computed(
+  () => Boolean(props.plainText?.trim() || props.markdown?.trim()),
+)
 
 async function onCopy(): Promise<void> {
+  if (copying.value) return
+  const plain = props.plainText?.trim()
   const markdown = props.markdown?.trim()
-  if (!markdown || copying.value) return
+  if (!plain && !markdown) return
 
   copying.value = true
   try {
-    const { copyBubbleMarkdownContent } = await import('../bubbleContentActions')
-    const ok = await copyBubbleMarkdownContent(markdown)
+    const actions = await import('../bubbleContentActions')
+    const ok = plain
+      ? await actions.copyBubblePlainTextContent(plain)
+      : await actions.copyBubbleMarkdownContent(markdown!)
     if (!ok) {
       emit('copyFailed')
       return
@@ -121,38 +125,57 @@ async function onCopy(): Promise<void> {
 }
 
 async function onPrint(): Promise<void> {
+  if (printing.value) return
+  const plain = props.plainText?.trim()
   const markdown = props.markdown?.trim()
-  if (!markdown || printing.value) return
+  if (!plain && !markdown) return
 
   printing.value = true
   try {
-    const { printBubbleMarkdownContent } = await import('../bubbleContentActions')
-    await printBubbleMarkdownContent({
-      markdown,
-      title: props.sectionTitle,
-    })
+    const actions = await import('../bubbleContentActions')
+    if (plain) {
+      await actions.printBubblePlainTextContent({
+        text: plain,
+        title: props.sectionTitle,
+      })
+    } else {
+      await actions.printBubbleMarkdownContent({
+        markdown: markdown!,
+        title: props.sectionTitle,
+      })
+    }
   } finally {
     printing.value = false
   }
 }
 
 async function onExport(): Promise<void> {
+  if (exporting.value) return
+  const plain = props.plainText?.trim()
   const markdown = props.markdown?.trim()
-  if (!markdown || exporting.value) return
+  if (!plain && !markdown) return
 
   exporting.value = true
   try {
-    const { exportBubbleMarkdownAsPdf } = await import('../bubblePdfExportHelpers')
-    const result = await exportBubbleMarkdownAsPdf({
-      markdown,
-      defaultFileName: bubblePdfDefaultFileName(
-        props.sectionTitle,
-        props.messageId,
-      ),
-      kind:
-        props.kind ??
-        bubblePdfKindForSection(props.sectionId?.trim() || 'generic'),
-    })
+    const helpers = await import('../bubblePdfExportHelpers')
+    const defaultFileName = helpers.bubblePdfDefaultFileName(
+      props.sectionTitle,
+      props.messageId,
+    )
+    const kind =
+      props.kind ??
+      helpers.bubblePdfKindForSection(props.sectionId?.trim() || 'generic')
+    const result = plain
+      ? await helpers.exportBubblePlainTextAsPdf({
+          text: plain,
+          defaultFileName,
+          kind,
+        })
+      : await helpers.exportBubbleMarkdownAsPdf({
+          markdown: markdown!,
+          defaultFileName,
+          kind,
+        })
     if (result.savedPath) {
       emit('exported', result.savedPath)
       return

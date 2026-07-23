@@ -37,6 +37,7 @@ import {
 import {
   runApprovedPlanTodoForeach,
   shouldRunPlanTodoForeach,
+  exitPlanModeOutputSucceeded,
 } from '../coding/plan-mode-execution-bridge'
 import { isPlanExecutionActive } from '../coding/plan-mode-state'
 import { nudgeExitPlanModeIfNeeded } from '../coding/plan-mode-exit-nudge'
@@ -178,7 +179,10 @@ export async function runStandaloneAgent(parentCtx: AgentStepContext): Promise<v
       outputText,
     )
     toolLoopCtx.clearToolLoopOutputScope()
-    if (!exitApprovalFinalized.error && exitApprovalFinalized.output != null) {
+    if (
+      !exitApprovalFinalized.error &&
+      exitPlanModeOutputSucceeded(exitApprovalFinalized.output)
+    ) {
       await runApprovedPlanTodoForeach(parentCtx)
     }
     return
@@ -428,7 +432,12 @@ export async function runStandaloneAgent(parentCtx: AgentStepContext): Promise<v
 
     if (!collected) return
 
-    if (collected.awaitingToolApproval) {
+    if (
+      collected.awaitingToolApproval ||
+      parentCtx.hitlAwaitingApproval ||
+      parentCtx.hitlAwaitingFormData ||
+      parentCtx.hitlAwaitingManualIntervention
+    ) {
       break
     }
 
@@ -473,8 +482,15 @@ export async function runStandaloneAgent(parentCtx: AgentStepContext): Promise<v
     return
   }
 
-  if (collected.awaitingToolApproval) {
-    parentCtx.hitlAwaitingApproval = true
+  const nestedHitlPaused =
+    parentCtx.hitlAwaitingApproval ||
+    parentCtx.hitlAwaitingFormData ||
+    parentCtx.hitlAwaitingManualIntervention
+
+  if (collected.awaitingToolApproval || nestedHitlPaused) {
+    if (collected.awaitingToolApproval) {
+      parentCtx.hitlAwaitingApproval = true
+    }
     parentCtx.setHitlPausedAtStage(TOOL_LOOP_STEP_ID)
     publishVisibleToolLoopAttachments(parentCtx)
     parentCtx.updateStepOutput(

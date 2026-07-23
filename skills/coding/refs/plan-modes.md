@@ -10,4 +10,4 @@ Runtime injects mode hints; this ref summarizes behavior for the agent.
 | **YOLO** | Tools run without per-call approval — work carefully. |
 | **Plan mode** | Active after `enter_plan_mode`. File writes go to the plan manifest until `exit_plan_mode`. Reuse `plans/manifest.json` — do not re-scan listed files. |
 
-When explore or plan mode is active, prefer `grep_files`, `glob_files`, `lsp`, and `read_file` before any edit.
+When explore or plan mode is active, prefer `lsp`, `read_file`, and read-only `shell` (`rg`/`find`/`git status|diff`) before any edit.

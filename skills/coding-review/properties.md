@@ -11,4 +11,4 @@ variant: review
 variant_label: Review
 group_order: 1
 variant_order: 2
-allowed_tools: read_file, grep_files, glob_files, list_files, lsp, git_status, git_diff, git_log, git_show, invoke_agent
+allowed_tools: read_file, lsp, shell, invoke_agents

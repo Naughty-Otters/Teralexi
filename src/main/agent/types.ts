@@ -299,6 +299,8 @@ export type SubAgentRunLifecycleEvent =
       agentName: string
       task: string
       waitMode: 'blocking' | 'background'
+      /** Cursor-style profile (`explore` | `bash` | …) when delegated via profile. */
+      profile?: string
       worktreePath?: string
       worktreeBranch?: string
       /** When true, parent finished while this run continues (detachable). */
@@ -312,6 +314,7 @@ export type SubAgentRunLifecycleEvent =
       agentId: string
       agentName: string
       status: SubAgentRunStatus
+      profile?: string
       reportPreview?: string
       error?: string
       worktreePath?: string

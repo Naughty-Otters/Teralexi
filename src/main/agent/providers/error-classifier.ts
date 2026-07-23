@@ -112,6 +112,18 @@ const CONTENT_POLICY_PATTERNS = [
   'blocked by',
 ]
 
+/** Structured-output / schema parse failures — same prompt will keep failing. */
+const STRUCTURED_OUTPUT_PARSE_PATTERNS = [
+  'no object generated',
+  'could not parse the response',
+  'failed to parse',
+  'invalid json',
+  'json parse',
+  'does not match schema',
+  'schema validation',
+  'type validation failed',
+]
+
 const TIMEOUT_PATTERNS = [
   'timeout',
   'timed out',
@@ -261,6 +273,9 @@ export function classifyLlmError(error: unknown): ClassifiedError {
     if (matchesAny(combined, CONTENT_POLICY_PATTERNS)) {
       return classified(ErrorCategory.CONTENT_POLICY, error, status)
     }
+    if (matchesAny(combined, STRUCTURED_OUTPUT_PARSE_PATTERNS)) {
+      return classified(ErrorCategory.INVALID_REQUEST, error, status)
+    }
 
     if (status != null) {
       return classifyByStatus(status, combined, error)
@@ -287,6 +302,15 @@ export function classifyLlmError(error: unknown): ClassifiedError {
   // 3. Generic Error — message pattern matching
   if (error instanceof Error) {
     const msg = error.message.toLowerCase()
+    const name = error.name.toLowerCase()
+
+    if (
+      matchesAny(msg, STRUCTURED_OUTPUT_PARSE_PATTERNS) ||
+      name.includes('noobjectgenerated') ||
+      name.includes('typevalidation')
+    ) {
+      return classified(ErrorCategory.INVALID_REQUEST, error)
+    }
 
     if (matchesAny(msg, CONTENT_POLICY_PATTERNS)) {
       return classified(ErrorCategory.CONTENT_POLICY, error)

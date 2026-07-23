@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isPlaywrightReferenceMcpServer,
   isReferenceMcpServer,
+  PLAYWRIGHT_MCP_SERVER_ID,
   REFERENCE_MCP_SERVER_DEFINITIONS,
 } from '@shared/mcp/reference-mcp-servers'
 
 describe('reference-mcp-servers', () => {
-  it('includes the six official reference servers', () => {
+  it('includes official reference servers plus Playwright Browser', () => {
     expect(REFERENCE_MCP_SERVER_DEFINITIONS.map((item) => item.name)).toEqual([
       'Everything',
       'Fetch',
@@ -13,6 +15,7 @@ describe('reference-mcp-servers', () => {
       'Memory',
       'Time',
       'Sequential Thinking',
+      'Playwright Browser',
     ])
   })
 
@@ -26,8 +29,24 @@ describe('reference-mcp-servers', () => {
     ])
   })
 
+  it('enables Playwright Browser by default', () => {
+    const playwright = REFERENCE_MCP_SERVER_DEFINITIONS.find(
+      (item) => item.id === PLAYWRIGHT_MCP_SERVER_ID,
+    )
+    expect(playwright).toMatchObject({
+      id: 'ref-mcp-playwright',
+      command: 'node',
+      args: ['@playwright/mcp'],
+      enabled: true,
+    })
+    expect(isPlaywrightReferenceMcpServer({ id: PLAYWRIGHT_MCP_SERVER_ID })).toBe(
+      true,
+    )
+  })
+
   it('identifies reference servers by id', () => {
     expect(isReferenceMcpServer({ id: 'ref-mcp-filesystem' })).toBe(true)
+    expect(isReferenceMcpServer({ id: 'ref-mcp-playwright' })).toBe(true)
     expect(isReferenceMcpServer({ id: 'custom-fs' })).toBe(false)
   })
 

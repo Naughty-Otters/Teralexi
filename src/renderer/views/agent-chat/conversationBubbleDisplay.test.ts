@@ -133,13 +133,13 @@ describe('filterVisibleConversationBubbles', () => {
     },
   ]
 
-  it('hides thinking and agentic run once final text started', () => {
+  it('keeps thinking but hides agentic run once final text started', () => {
     const visible = filterVisibleConversationBubbles(sections, {
       finalTextStarted: true,
       toolCallListDisplay: 'all',
     })
     expect(visible.some((s) => THINKING_CONVERSATION_SECTION_IDS.has(s.id))).toBe(
-      false,
+      true,
     )
     expect(
       visible.some((s) => AGENTIC_RUN_CONVERSATION_SECTION_IDS.has(s.id)),
@@ -245,11 +245,11 @@ describe('isTextResponseConversationSection', () => {
     )
   })
 
-  it('defaults text response sections to expanded', () => {
+  it('defaults text response and thinking sections to expanded', () => {
     expect(conversationSectionExpandedByDefault({ id: 'SummaryStep' })).toBe(true)
     expect(conversationSectionExpandedByDefault({ id: 'SearchStep' })).toBe(true)
     expect(conversationSectionExpandedByDefault({ id: 'ThinkingStep' })).toBe(
-      false,
+      true,
     )
     expect(
       conversationSectionExpandedByDefault({ id: 'SkillsToolExecutionStep' }),

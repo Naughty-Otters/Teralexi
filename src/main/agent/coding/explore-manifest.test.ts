@@ -229,6 +229,7 @@ describe('explore manifest builder', () => {
               {
                 url: 'https://example.com/api',
                 title: 'API Reference',
+                markdown: '# API\n\nGET /health returns ok',
                 html: '<h1>API</h1><p>GET /health returns ok</p>',
               },
             ],

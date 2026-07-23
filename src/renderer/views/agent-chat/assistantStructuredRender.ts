@@ -34,6 +34,34 @@ function renderMarkdownBody(
   return applyStatusBadges(markdown.render(prepared))
 }
 
+function escapeHtmlText(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/** Thinking stays plain text — never markdown-it. */
+function renderThinkingPlainBody(source: string): string {
+  const trimmed = source.replace(/\r\n/g, '\n').trim()
+  if (!trimmed) return ''
+  return `<pre class="conversation-thinking-text">${escapeHtmlText(trimmed)}</pre>`
+}
+
+function renderStepBodyHtml(
+  markdown: MarkdownIt,
+  step: AssistantSubStep,
+  stepContent: string,
+): string {
+  if (step.type === 'ThinkingStep') {
+    // Intentionally ignore markdown — thinking is never prepared/rendered as MD.
+    void markdown
+    return renderThinkingPlainBody(stepContent)
+  }
+  return renderMarkdownBody(markdown, stepContent)
+}
+
 export function applyStatusBadges(html: string): string {
   let out = html
   for (const [token, cls, label] of BADGE_MAP) {
@@ -240,7 +268,7 @@ function renderStructuredAssistantContent(
       const isActiveSubStep = activeSubStepType === step.type
       const disclosure = renderStepDisclosureHtml(
         renderStepLabel(step),
-        renderMarkdownBody(markdown, stepContent),
+        renderStepBodyHtml(markdown, step, stepContent),
         {
           open: isStreaming ? isActiveSubStep : false,
           active: isActiveSubStep,

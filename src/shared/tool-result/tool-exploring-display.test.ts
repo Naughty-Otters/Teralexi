@@ -98,7 +98,7 @@ describe('formatToolExploringResult extras', () => {
 
   it('surfaces terminal errors', () => {
     const result = formatToolExploringResult(
-      'run_workspace_command',
+      'shell',
       { command: 'npm test' },
       { success: false, exitCode: 1, error: 'Tests failed' },
     )

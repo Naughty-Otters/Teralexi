@@ -13,14 +13,14 @@
         :aria-expanded="expanded"
         @click="expanded = !expanded"
       >
-        <UIcon
-          :name="expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
-          class="conv-tool-response__chevron"
-          aria-hidden="true"
-        />
         <UIcon :name="presentation.icon" class="conv-tool-response__icon" aria-hidden="true" />
         <span class="conv-tool-response__title">
           <span class="conv-tool-response__tool">{{ toolName }}</span>
+          <UIcon
+            :name="expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+            class="conv-tool-response__chevron"
+            aria-hidden="true"
+          />
           <span class="conv-tool-response__sep" aria-hidden="true">·</span>
           <span class="conv-tool-response__badge">{{ presentation.label }}</span>
           <span class="conv-tool-response__sep" aria-hidden="true">·</span>
@@ -383,15 +383,6 @@ function guessLanguageFromPath(path: string): string {
   outline-offset: -2px;
 }
 
-.conv-tool-response__chevron {
-  width: 12px;
-  height: 12px;
-  margin-top: 2px;
-  flex-shrink: 0;
-  opacity: 0.75;
-  color: var(--ui-text-muted);
-}
-
 .conv-tool-response__icon {
   width: 13px;
   height: 13px;
@@ -405,9 +396,17 @@ function guessLanguageFromPath(path: string): string {
   flex: 1;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 4px 6px;
   font-size: 12px;
+}
+
+.conv-tool-response__chevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  opacity: 0.75;
+  color: var(--ui-text-muted);
 }
 
 .conv-tool-response__tool {

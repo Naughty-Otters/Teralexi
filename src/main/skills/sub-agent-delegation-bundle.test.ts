@@ -23,18 +23,36 @@ describe('sub-agent delegation across skill bundles', () => {
     resetSubAgentDelegationStack()
   })
 
-  it('bundled invoke_agent sees bind from the main process module', async () => {
+  it('bundled invoke_agents sees bind from the main process module', async () => {
     const tools = await loadToolSetTools()
-    const invoke = tools.find((t) => t.name === 'invoke_agent')
+    const invoke = tools.find((t) => t.name === 'invoke_agents')
     expect(invoke).toBeDefined()
 
-    const executeChildAndMerge = vi.fn().mockResolvedValue({
-      hitlPaused: false,
-      stepOutputs: { report: 'child output' },
-    })
+    const spawnChildRun = vi.fn(async (params: { agentId: string; task: string }) => ({
+      runId: `run-${params.agentId}`,
+      agentId: params.agentId,
+      agentName: params.agentId,
+    }))
+    const waitForChildRuns = vi.fn(async () => [
+      {
+        runId: 'run-skill:coding',
+        agentId: 'skill:coding',
+        agentName: 'skill:coding',
+        status: 'completed',
+        report: 'child output',
+        hitlPaused: false,
+        worktreeOutcome: 'discarded' as const,
+      },
+    ])
 
     bindSubAgentDelegation({
-      parentRun: { meta: { depth: 0 }, executeChildAndMerge },
+      parentRun: {
+        meta: { depth: 0, runId: 'parent' },
+        executeChildAndMerge: vi.fn(),
+        spawnChildRun,
+        waitForChildRuns,
+        remainingParallelSlots: () => 10,
+      },
       allowSubAgents: true,
       opts: {
         userId: 'default',
@@ -48,24 +66,28 @@ describe('sub-agent delegation across skill bundles', () => {
     })
 
     const result = await invoke!.execute({
-      agentId: 'coding',
-      task: 'List top-level folders',
+      runs: [{ agentId: 'coding', task: 'List top-level folders' }],
     })
 
-    expect(executeChildAndMerge).toHaveBeenCalledWith({
-      agentId: 'skill:coding',
-      parentOpts: expect.objectContaining({
-        userId: 'default',
-        conversationId: 'conv-1',
-      }),
-      task: 'List top-level folders',
-    })
+    expect(spawnChildRun).toHaveBeenCalledWith(
+      {
+        agentId: 'skill:coding',
+        parentOpts: expect.objectContaining({
+          userId: 'default',
+          conversationId: 'conv-1',
+        }),
+        task: 'List top-level folders',
+      },
+      { waitMode: 'background' },
+    )
     expect(result).toMatchObject({
-      status: 'completed',
-      summary: 'child output',
-      filesTouched: [],
-      openQuestions: [],
-      agentId: 'skill:coding',
+      results: [
+        expect.objectContaining({
+          status: 'completed',
+          summary: 'child output',
+          agentId: 'skill:coding',
+        }),
+      ],
     })
     clearSubAgentDelegation()
   })

@@ -24,17 +24,12 @@ export type FileChangePreviewResult =
   | { ok: false; error: string }
 
 export const FILE_CHANGE_TOOL_NAMES = [
-  'edit_file',
-  'write_file',
-  'apply_patch',
-  'delete_file',
-  'move_file',
-  'copy_file',
+  'edit_files',
   'promote_artifact',
 ] as const
 
 export type FileChangeToolName = (typeof FILE_CHANGE_TOOL_NAMES)[number]
 
-export function isFileChangeToolName(name: string): name is FileChangeToolName {
+export function isFileChangeToolName(name: string): boolean {
   return (FILE_CHANGE_TOOL_NAMES as readonly string[]).includes(name)
 }

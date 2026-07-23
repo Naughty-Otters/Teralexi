@@ -36,7 +36,7 @@ describe('applyRuntimePlanModeGate', () => {
           return { ok: true }
         },
       },
-      run_workspace_command: {
+      shell: {
         async execute() {
           return { ok: true }
         },
@@ -44,7 +44,7 @@ describe('applyRuntimePlanModeGate', () => {
     }
     applyRuntimePlanModeGate(toolSet, 'conv-1', 'coding', 0)
 
-    const blocked = await toolSet.run_workspace_command.execute({})
+    const blocked = await toolSet.shell.execute({})
     expect(blocked).toMatchObject({ error: expect.stringContaining('Explore mode') })
 
     const allowed = await toolSet.read_file.execute({})
@@ -54,14 +54,14 @@ describe('applyRuntimePlanModeGate', () => {
   it('passes through when plan mode is inactive', async () => {
     vi.mocked(isPlanModeActive).mockReturnValue(false)
     const toolSet = {
-      run_workspace_command: {
+      shell: {
         async execute() {
           return { ran: true }
         },
       },
     }
     applyRuntimePlanModeGate(toolSet, 'conv-1', 'coding', 0)
-    expect(await toolSet.run_workspace_command.execute({})).toEqual({ ran: true })
+    expect(await toolSet.shell.execute({})).toEqual({ ran: true })
   })
 
   it('blocks run_script during plan mode', async () => {

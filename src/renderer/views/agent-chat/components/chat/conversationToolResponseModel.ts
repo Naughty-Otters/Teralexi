@@ -26,6 +26,10 @@ import {
   type AgentStepProgressData,
 } from '../../stepProgressDisplay'
 import {
+  buildToolRunScopeIndex,
+  isSubAgentToolPart,
+} from '../../toolRunScope'
+import {
   messageHasToolLoopAgent,
   type AssistantBubbleDescriptor,
 } from './assistantBubbleFramework'
@@ -151,8 +155,17 @@ function tryBuildConversationToolBubble(
   message: UIMessage,
   index: number,
   part: UIMessagePart<any, UITools>,
+  scopeIndex: Map<string, { runId: string; parentRunId: string }>,
 ): ConversationToolResponseBubble | null {
   if (!isToolOrDynamicToolUIPart(part)) return null
+  // Nested sub-agent tools render under ChatSubAgentBubble, not root Exploring.
+  // HITL approvals still surface on the parent message via approval bubbles.
+  if (
+    isSubAgentToolPart(part, scopeIndex) &&
+    !toolPartNeedsApproval(part)
+  ) {
+    return null
+  }
   const viewer = classifyConversationToolViewer(part)
   if (!viewer) return null
   return {
@@ -166,6 +179,7 @@ function tryBuildConversationToolBubble(
 export function resolveConversationToolResponseBubbles(
   message: UIMessage,
 ): ConversationToolResponseBubble[] {
+  const scopeIndex = buildToolRunScopeIndex(message)
   const out: ConversationToolResponseBubble[] = []
 
   for (const [index, part] of message.parts.entries()) {
@@ -173,6 +187,7 @@ export function resolveConversationToolResponseBubbles(
       message,
       index,
       part as UIMessagePart<any, UITools>,
+      scopeIndex,
     )
     if (bubble) out.push(bubble)
   }
@@ -276,6 +291,7 @@ export function partitionToolsByToolLoopBoundaries(
   message: UIMessage,
   anchors: readonly ToolLoopProgressAnchor[],
 ): Map<string, ConversationToolResponseBubble[]> {
+  const scopeIndex = buildToolRunScopeIndex(message)
   const anchorKeys = new Set(anchors.map((anchor) => anchor.key))
   const buckets = new Map<string, ConversationToolResponseBubble[]>()
   for (const key of anchorKeys) buckets.set(key, [])
@@ -293,6 +309,7 @@ export function partitionToolsByToolLoopBoundaries(
       message,
       index,
       part as UIMessagePart<any, UITools>,
+      scopeIndex,
     )
     if (!bubble || !currentKey) continue
     buckets.get(currentKey)?.push(bubble)

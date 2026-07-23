@@ -8,22 +8,23 @@ import {
 describe('thinking-readonly-tools', () => {
   it('includes read-only plan mode tools', () => {
     expect(THINKING_READONLY_TOOL_NAMES.has('read_file')).toBe(true)
+    expect(THINKING_READONLY_TOOL_NAMES.has('lsp')).toBe(true)
     expect(THINKING_READONLY_TOOL_NAMES.has('web_search')).toBe(true)
-    expect(THINKING_READONLY_TOOL_NAMES.has('git_status')).toBe(true)
   })
 
   it('excludes mutating and plan control tools', () => {
-    expect(THINKING_READONLY_TOOL_NAMES.has('write_file')).toBe(false)
+    expect(THINKING_READONLY_TOOL_NAMES.has('edit_files')).toBe(false)
     expect(THINKING_READONLY_TOOL_NAMES.has('update_todos')).toBe(false)
     expect(THINKING_READONLY_TOOL_NAMES.has('enter_plan_mode')).toBe(false)
     expect(THINKING_READONLY_TOOL_NAMES.has('exit_plan_mode')).toBe(false)
     expect(THINKING_READONLY_TOOL_NAMES.has('run_script')).toBe(false)
+    expect(THINKING_READONLY_TOOL_NAMES.has('shell')).toBe(false)
   })
 
   it('filters tool names to readonly set', () => {
     const names = resolveThinkingReadonlyToolNames([
       'read_file',
-      'write_file',
+      'edit_files',
       'run_script',
       'web_search',
     ])

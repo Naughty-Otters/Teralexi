@@ -14,7 +14,7 @@
           [`conversation-bubble--${bubblePresentation(section).tone}`]: true,
           'conversation-bubble--attachments': isAttachmentsSection(section),
           'conversation-bubble--exportable':
-            !isAttachmentsSection(section) && Boolean(section.bodyMarkdown?.trim()),
+            !isAttachmentsSection(section) && sectionHasExportableBody(section),
           'conversation-bubble--running': section.status === 'running',
           'conversation-bubble--done': section.status === 'done',
           'conversation-bubble--compact': shouldShowCompactBubble(section, sectionIndex),
@@ -60,7 +60,7 @@
           </span>
         </header>
         <div
-          v-if="section.bodyMarkdown?.trim() || section.status === 'running'"
+          v-if="sectionHasExportableBody(section) || section.status === 'running'"
           class="conversation-bubble__toolbar"
         >
           <span
@@ -78,8 +78,15 @@
             </Transition>
           </span>
           <ChatBubbleContentActionsLazy
-            v-if="section.bodyMarkdown?.trim()"
-            :markdown="section.bodyMarkdown"
+            v-if="sectionHasExportableBody(section)"
+            :markdown="
+              isThinkingConversationSection(section) ? null : section.bodyMarkdown
+            "
+            :plain-text="
+              isThinkingConversationSection(section)
+                ? section.bodyPlainText
+                : null
+            "
             :section-title="section.title"
             :section-id="section.id"
             :message-id="props.message.id"
@@ -95,8 +102,16 @@
         class="conversation-bubble__preview"
         :file-url="section.previewFileUrl"
       />
+      <ConversationThinkingPlainBody
+        v-if="isThinkingConversationSection(section) && section.bodyPlainText"
+        :ref="(el) => registerThinkingPlainBody(sectionExpandKey(section, sectionIndex), el)"
+        class="conversation-bubble__body"
+        :class="`conversation-bubble__body--${bubblePresentation(section).tone}`"
+        :text="section.bodyPlainText"
+        body-class="conversation-thinking-text"
+      />
       <div
-        v-if="section.bodyHtml"
+        v-else-if="section.bodyHtml"
         :ref="(el) => registerCompactBodyEl(sectionExpandKey(section, sectionIndex), el)"
         class="conversation-bubble__body msg-html"
         :class="`conversation-bubble__body--${bubblePresentation(section).tone}`"
@@ -237,6 +252,7 @@
         :markdown="markdown"
         :is-streaming="isStreaming"
         :message-id="props.message.id"
+        :message="props.message"
       />
     </div>
   </div>
@@ -253,6 +269,7 @@
         :markdown="markdown"
         :is-streaming="isStreaming"
         :message-id="props.message.id"
+        :message="props.message"
       />
   </div>
   <template v-else-if="showExploringPanel && standaloneToolLoopPanelSlots.length">
@@ -324,6 +341,7 @@ import {
 } from '../useAssistantStructuredMessageView'
 import ChatConversationSnapshotPreview from './ChatConversationSnapshotPreview.vue'
 import ChatConversationToolResponseBubble from './ChatConversationToolResponseBubble.vue'
+import ConversationThinkingPlainBody from './ConversationThinkingPlainBody.vue'
 import AttachmentFileTypeIcon from './AttachmentFileTypeIcon.vue'
 import ChatSubAgentBubble from './ChatSubAgentBubble.vue'
 import { useBubbleActionToasts } from '../composables/useBubbleActionToasts'
@@ -389,6 +407,12 @@ function isBubbleExpanded(
   const tone = bubblePresentation(section).tone
   if (isTextResponseConversationSection(section)) return true
   if (tone === 'summary' || tone === 'report') return true
+
+  // Thinking: stay expanded so streamed / final content is readable (not a
+  // 70px clipped pane). User can still collapse via the title chevron.
+  if (section.id === 'ThinkingStep' || section.id === 'thinking') {
+    return true
+  }
 
   return conversationSectionExpandedByDefault(section, {
     isPrimaryReply: isPrimaryReplyConversationSection(
@@ -486,7 +510,7 @@ const useToolLoopPanel = computed(
 )
 
 const showExploringPanel = computed(
-  () => useToolLoopPanel.value && !messageFinalTextStarted(props.message),
+  () => useToolLoopPanel.value,
 )
 
 const frozenToolLoopPanelItemsByMessageId = ref(
@@ -582,6 +606,18 @@ function shouldShowLegacyToolResponsesAfter(sectionIndex: number): boolean {
 
 function isAttachmentsSection(section: StructuredDebugSection): boolean {
   return section.sectionKind === 'attachments'
+}
+
+function isThinkingConversationSection(section: StructuredDebugSection): boolean {
+  const id = section.id.trim()
+  return id === 'ThinkingStep' || id === 'thinking'
+}
+
+function sectionHasExportableBody(section: StructuredDebugSection): boolean {
+  if (isThinkingConversationSection(section)) {
+    return Boolean(section.bodyPlainText?.trim())
+  }
+  return Boolean(section.bodyMarkdown?.trim())
 }
 
 function openPreview(url: string | undefined): void {
@@ -743,6 +779,22 @@ function registerCompactBodyEl(sectionId: string, el: unknown): void {
   compactBodyStickToBottom.delete(sectionId)
 }
 
+function registerThinkingPlainBody(sectionId: string, el: unknown): void {
+  // Overflow / stick-to-bottom lives on the host (`.conversation-bubble__body`),
+  // not the imperative <pre> inside it.
+  if (!el || typeof el !== 'object') {
+    registerCompactBodyEl(sectionId, null)
+    return
+  }
+  const host =
+    '$el' in el && (el as { $el: unknown }).$el instanceof HTMLElement
+      ? ((el as { $el: HTMLElement }).$el as HTMLElement)
+      : el instanceof HTMLElement
+        ? el
+        : null
+  registerCompactBodyEl(sectionId, host)
+}
+
 function onCompactBodyScroll(sectionId: string, el: HTMLElement): void {
   compactBodyStickToBottom.set(
     sectionId,
@@ -754,6 +806,9 @@ function onCompactBodyScroll(sectionId: string, el: HTMLElement): void {
 function scrollCompactBodiesToEnd(): void {
   for (const [sectionIndex, section] of conversationSections.value.entries()) {
     if (isBubbleExpanded(section, sectionIndex)) continue
+    // Only follow the live tail while the step is still running. When done,
+    // keep the preview at the start so collapse/expand shows the same message.
+    if (section.status !== 'running') continue
     const key = sectionExpandKey(section, sectionIndex)
     const el = compactBodyEls.get(key)
     if (!el) continue
@@ -766,7 +821,10 @@ function scrollCompactBodiesToEnd(): void {
 watch(
   () =>
     conversationSections.value
-      .map((s) => `${s.id}:${s.bodyHtml.length}:${s.status}`)
+      .map(
+        (s) =>
+          `${s.id}:${s.bodyHtml.length}:${s.bodyPlainText?.length ?? 0}:${s.status}`,
+      )
       .join('|'),
   () => {
     void nextTick(scrollCompactBodiesToEnd)
@@ -786,9 +844,20 @@ function toggleBubbleView(
   }
   if (next) {
     compactBodyStickToBottom.delete(key)
-  } else {
+    void nextTick(() => {
+      const el = compactBodyEls.get(key)
+      if (el) el.scrollTop = 0
+    })
+  } else if (section.status === 'running') {
     compactBodyStickToBottom.set(key, true)
     void nextTick(scrollCompactBodiesToEnd)
+  } else {
+    // Collapsed preview of a finished bubble: first lines, same text as expanded.
+    compactBodyStickToBottom.set(key, false)
+    void nextTick(() => {
+      const el = compactBodyEls.get(key)
+      if (el) el.scrollTop = 0
+    })
   }
 }
 
@@ -1308,6 +1377,37 @@ function bubblePresentation(
     #000 100%
   );
   mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 100%);
+}
+
+/* Thinking: host scrolls; imperative <pre> inside is plain text only. */
+.conversation-bubble--thinking .conversation-bubble__body:not(.conversation-bubble__body--empty) {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ui-text-muted);
+  max-height: min(50vh, 360px);
+  overflow-y: auto;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.conversation-bubble--thinking .conversation-bubble__body :deep(.conversation-thinking-text),
+.conversation-bubble__body :deep(.conversation-thinking-text) {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0 10px 10px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.45;
+  font-family: var(--font-mono, ui-monospace, Menlo, monospace);
+  color: var(--ui-text-muted);
+  background: transparent;
+  border: none;
 }
 
 .conversation-bubble--compact .conversation-bubble__body:not(.conversation-bubble__body--empty)::-webkit-scrollbar {

@@ -1,5 +1,5 @@
 name: Coding
-description: Edits, tests, and verifies code in the user's workspace. Use when fixing bugs, implementing features, refactoring, running tests or lint, or working with git — not for general Q&A or document generation.
+description: Edits, tests, and verifies code in the user's project workspace. Use when fixing bugs, implementing features, refactoring, running tests or lint, or working with git — not for general Q&A or document generation.
 model: gemma4
 provider: ollama
 color: success
@@ -12,4 +12,4 @@ variant_label: Implement
 group_order: 1
 variant_order: 1
 group_primary: true
-allowed_tools: read_file, edit_file, write_file, apply_patch, delete_file, move_file, copy_file, promote_artifact, grep_files, glob_files, lsp, update_todos, read_todos, invoke_agent
+allowed_tools: read_file, edit_files, lsp, shell, run_script, run_script_file, web_search, web_scrape, browser_navigate, browser_snapshot, browser_click, browser_fill, browser_tabs, update_todos, read_todos, invoke_agents, enter_plan_mode, exit_plan_mode, promote_artifact

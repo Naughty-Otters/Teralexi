@@ -94,6 +94,18 @@ export function shouldShowApprovedFileChangePart(part: unknown): boolean {
   return parseToolFileChanges(getToolPartOutput(part)).length > 0
 }
 
+/**
+ * True when a completed tool result carries file-change previews — including
+ * incidental workspace writes from `shell` / `run_script` (no HITL required).
+ */
+export function shouldShowIncidentalFileChangePart(part: unknown): boolean {
+  if (toolPartNeedsApproval(part)) return false
+  const state = getToolPartState(part)
+  if (state !== 'output-available' && state !== 'output-error') return false
+  if (isFileChangeToolPart(part)) return false
+  return parseToolFileChanges(getToolPartOutput(part)).length > 0
+}
+
 export function formatToolInput(part: unknown): string {
   const p = part as UIMessagePart<any, UITools>
   if (!isToolOrDynamicToolUIPart(p)) return ''
@@ -204,7 +216,7 @@ export function isTerminalToolRunning(part: unknown): boolean {
 const TERMINAL_TOOL_NAMES = new Set([
   'run_script',
   'run_script_file',
-  'run_workspace_command',
+  'shell',
 ])
 
 /** Name-based check for command/terminal tools (usable before output exists). */
@@ -313,7 +325,7 @@ function extractTerminalCommand(
     const args = Array.isArray(input.scriptArgs) ? input.scriptArgs.join(' ') : ''
     return [input.scriptRelativePath, args].filter(Boolean).join(' ')
   }
-  // run_workspace_command: argv array or command + args.
+  // shell: argv array or command + args.
   if (Array.isArray(input.command)) return input.command.join(' ')
   if (typeof input.command === 'string') {
     const args = Array.isArray(input.args) ? input.args.join(' ') : ''

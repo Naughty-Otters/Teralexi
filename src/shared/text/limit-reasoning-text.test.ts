@@ -21,4 +21,16 @@ describe('appendReasoningDeltaWithCap', () => {
     expect(overflow.resetText).toContain(REASONING_TRUNCATION_MARKER)
     expect(overflow.resetText?.endsWith('90abcdef')).toBe(true)
   })
+
+  it('resets when the 2k-word ceiling reshapes the visible window', () => {
+    const state = createReasoningCapState()
+    const words = Array.from({ length: 2001 }, (_, i) => `w${i}`)
+    const first = words.slice(0, 2000).join(' ')
+    const last = words[2000]!
+    appendReasoningDeltaWithCap(state, first, 500_000)
+    const overflow = appendReasoningDeltaWithCap(state, ` ${last}`, 500_000)
+    expect(overflow.resetPart).toBe(true)
+    expect(overflow.resetText).toContain('…[earlier thinking omitted]')
+    expect(overflow.resetText?.endsWith(last)).toBe(true)
+  })
 })

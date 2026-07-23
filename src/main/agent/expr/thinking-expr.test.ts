@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { thinkingFlowStepDefinition } from './thinking-expr'
 
 vi.mock('./run-expression-llm', () => ({
-  runExpressionLlmObject: vi.fn(),
+  runExpressionLlmText: vi.fn(),
 }))
 
 vi.mock('./thinking-tool-loop', () => ({
@@ -21,13 +21,22 @@ vi.mock('../coding/plan-mode-state', () => ({
   planModeStorageOptionsFromEnv: vi.fn(() => ({ sandboxRoot: '/tmp/sb' })),
 }))
 
-import { runExpressionLlmObject } from './run-expression-llm'
+import { runExpressionLlmText } from './run-expression-llm'
 import {
   bootstrapPlanModeStorage,
   isPlanExecutionActive,
   isPlanModeActive,
   planModeFor,
 } from '../coding/plan-mode-state'
+
+function thinkingJson(fields: Record<string, unknown>): string {
+  return JSON.stringify({
+    context: [],
+    rationale: '',
+    response: '',
+    ...fields,
+  })
+}
 
 function makeStepCtx(overrides?: {
   userMessage?: string
@@ -52,6 +61,7 @@ function makeStepCtx(overrides?: {
     currentMessages: [{ role: 'user', content: overrides?.userMessage ?? 'Hello' }],
     config: { withResponseLanguageInstruction: (t: string) => t },
     emitStepProgress: vi.fn(),
+    setStepProgressContent: vi.fn(),
     beginStep,
     recordStepOutput,
     appendAssistantTurn,
@@ -80,12 +90,13 @@ describe('thinkingFlowStepDefinition', () => {
   })
 
   it('activates plan mode when routing to planning', async () => {
-    vi.mocked(runExpressionLlmObject).mockResolvedValue({
-      execution_mode: 'planning',
+    vi.mocked(runExpressionLlmText).mockResolvedValue(
+      thinkingJson({      execution_mode: 'planning',
       goal: 'Build auth',
       task: 'Plan authentication feature',
       context: [],
-    })
+}),
+    )
 
     const stepCtx = makeStepCtx()
     await thinkingFlowStepDefinition.run!(makeRun(stepCtx))
@@ -95,22 +106,27 @@ describe('thinkingFlowStepDefinition', () => {
       expect.objectContaining({ trigger: 'thinking:route_planning' }),
     )
     expect(bootstrapPlanModeStorage).toHaveBeenCalled()
-    expect(runExpressionLlmObject).toHaveBeenCalledWith(
+    expect(runExpressionLlmText).toHaveBeenCalledWith(
       stepCtx,
       expect.any(Object),
       expect.any(Array),
-      expect.objectContaining({ streamToProgress: true }),
+      expect.objectContaining({
+        streamToProgress: true,
+        pipeTextStreamToProgress: true,
+        replaceProgressWith: expect.any(Function),
+      }),
     )
   })
 
   it('appends direct answer response as primary turn', async () => {
-    vi.mocked(runExpressionLlmObject).mockResolvedValue({
-      execution_mode: 'direct_answer',
+    vi.mocked(runExpressionLlmText).mockResolvedValue(
+      thinkingJson({      execution_mode: 'direct_answer',
       goal: 'Explain',
       task: 'What is Rust?',
       context: [],
       response: 'Rust is a systems programming language.',
-    })
+}),
+    )
 
     const stepCtx = makeStepCtx({ userMessage: 'What is Rust?' })
     await thinkingFlowStepDefinition.run!(makeRun(stepCtx))
@@ -122,12 +138,13 @@ describe('thinkingFlowStepDefinition', () => {
 
   it('does not re-bootstrap plan mode when already active', async () => {
     vi.mocked(isPlanModeActive).mockReturnValue(true)
-    vi.mocked(runExpressionLlmObject).mockResolvedValue({
-      execution_mode: 'planning',
+    vi.mocked(runExpressionLlmText).mockResolvedValue(
+      thinkingJson({      execution_mode: 'planning',
       goal: 'Continue plan',
       task: 'Update plan',
       context: [],
-    })
+}),
+    )
 
     const stepCtx = makeStepCtx()
     await thinkingFlowStepDefinition.run!(makeRun(stepCtx))
@@ -137,12 +154,13 @@ describe('thinkingFlowStepDefinition', () => {
 
   it('does not activate explore mode while approved plan execution is active', async () => {
     vi.mocked(isPlanExecutionActive).mockReturnValue(true)
-    vi.mocked(runExpressionLlmObject).mockResolvedValue({
-      execution_mode: 'planning',
+    vi.mocked(runExpressionLlmText).mockResolvedValue(
+      thinkingJson({      execution_mode: 'planning',
       goal: 'Build auth',
       task: 'Plan authentication feature',
       context: [],
-    })
+}),
+    )
 
     const stepCtx = makeStepCtx()
     await thinkingFlowStepDefinition.run!(makeRun(stepCtx))
@@ -153,12 +171,13 @@ describe('thinkingFlowStepDefinition', () => {
 
   it('forces agent_call for sub-agent runs even when plan mode is active', async () => {
     vi.mocked(isPlanModeActive).mockReturnValue(true)
-    vi.mocked(runExpressionLlmObject).mockResolvedValue({
-      execution_mode: 'planning',
+    vi.mocked(runExpressionLlmText).mockResolvedValue(
+      thinkingJson({      execution_mode: 'planning',
       goal: 'Build auth',
       task: 'Plan authentication feature',
       context: [],
-    })
+}),
+    )
 
     const stepCtx = makeStepCtx({ agentRun: { meta: { depth: 1 } } })
     await thinkingFlowStepDefinition.run!(makeRun(stepCtx))
@@ -173,13 +192,14 @@ describe('thinkingFlowStepDefinition', () => {
 
   it('forces planning mode when plan mode is already active', async () => {
     vi.mocked(isPlanModeActive).mockReturnValue(true)
-    vi.mocked(runExpressionLlmObject).mockResolvedValue({
-      execution_mode: 'direct_answer',
+    vi.mocked(runExpressionLlmText).mockResolvedValue(
+      thinkingJson({      execution_mode: 'direct_answer',
       goal: 'Explain',
       task: 'What is Rust?',
       context: [],
       response: 'Rust is a systems programming language.',
-    })
+}),
+    )
 
     const stepCtx = makeStepCtx()
     await thinkingFlowStepDefinition.run!(makeRun(stepCtx))
@@ -196,13 +216,14 @@ describe('thinkingFlowStepDefinition', () => {
   })
 
   it('corrects direct_answer to agent_call when user asks for execution', async () => {
-    vi.mocked(runExpressionLlmObject).mockResolvedValue({
-      execution_mode: 'direct_answer',
+    vi.mocked(runExpressionLlmText).mockResolvedValue(
+      thinkingJson({      execution_mode: 'direct_answer',
       goal: 'Explain fix',
       task: 'Describe the fix',
       context: [],
       response: 'You could change the null check…',
-    })
+}),
+    )
 
     const stepCtx = makeStepCtx({
       userMessage: 'Fix the failing test in runtime.test.ts',
@@ -224,13 +245,14 @@ describe('thinkingFlowStepDefinition', () => {
   })
 
   it('corrects ambiguous direct_answer when tools are enabled', async () => {
-    vi.mocked(runExpressionLlmObject).mockResolvedValue({
-      execution_mode: 'direct_answer',
+    vi.mocked(runExpressionLlmText).mockResolvedValue(
+      thinkingJson({      execution_mode: 'direct_answer',
       goal: 'Advise',
       task: 'Suggest approach',
       context: [],
       response: 'You should split the module…',
-    })
+}),
+    )
 
     const stepCtx = makeStepCtx({
       userMessage: 'What is the best way to refactor the auth module?',
@@ -247,22 +269,24 @@ describe('thinkingFlowStepDefinition', () => {
   })
 
   it('downgrades agent_call for explain/plot and retries for direct_answer response', async () => {
-    vi.mocked(runExpressionLlmObject)
-      .mockResolvedValueOnce({
-        execution_mode: 'agent_call',
+    vi.mocked(runExpressionLlmText)
+      .mockResolvedValueOnce(
+        thinkingJson({        execution_mode: 'agent_call',
         goal: 'Explain sin',
         task: 'Describe sin(x)',
         context: [],
         response: '',
-      })
-      .mockResolvedValueOnce({
-        execution_mode: 'direct_answer',
+}),
+      )
+      .mockResolvedValueOnce(
+        thinkingJson({        execution_mode: 'direct_answer',
         goal: 'Explain sin',
         task: 'Describe sin(x)',
         context: [],
         response:
           'Sine is periodic.\n\n```diagram\n{"version":1,"layers":[{"type":"plot","fn":"sin(x)"}]}\n```',
-      })
+}),
+      )
 
     const stepCtx = makeStepCtx({
       userMessage: 'Explain sin(x)',
@@ -272,7 +296,7 @@ describe('thinkingFlowStepDefinition', () => {
 
     await thinkingFlowStepDefinition.run!(makeRun(stepCtx))
 
-    expect(runExpressionLlmObject).toHaveBeenCalledTimes(2)
+    expect(runExpressionLlmText).toHaveBeenCalledTimes(2)
     const recorded = stepCtx.recordStepOutput.mock.calls[0]?.[2] as {
       execution_mode?: string
       response?: string

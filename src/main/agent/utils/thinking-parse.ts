@@ -1,5 +1,6 @@
 import { jsonrepair } from 'jsonrepair'
 import { createLogger, traceFunction } from '@main/logger'
+import { limitThinkingBubbleWords } from '@shared/text/limit-thinking-bubble-words'
 import type { ThinkingExecutionMode } from '../types'
 
 export type { ThinkingExecutionMode }
@@ -172,7 +173,7 @@ export function formatThinkingMarkdown(
   if (thinking.rationale?.trim()) {
     lines.push('', `- Rationale: ${thinking.rationale.trim()}`)
   }
-  return lines.join('\n')
+  return limitThinkingBubbleWords(lines.join('\n'))
 }
 
 export function formatThinkingDigestForPlanning(
@@ -190,4 +191,40 @@ export function formatThinkingDigestForPlanning(
     lines.push(`rationale: ${thinking.rationale.trim()}`)
   }
   return lines.join('\n')
+}
+
+/**
+ * Best-effort live Thinking bubble body while JSON is still streaming.
+ * Prefer readable markdown once goal/task/rationale exist; otherwise show the
+ * raw token stream so the bubble fills character-by-character.
+ */
+export function formatPartialThinkingProgress(raw: string): string {
+  const trimmed = raw.replace(/\r\n/g, '\n').trim()
+  if (!trimmed) return ''
+
+  const candidates = new Set<string>([trimmed])
+  const start = trimmed.indexOf('{')
+  if (start >= 0) candidates.add(trimmed.slice(start))
+
+  for (const candidate of candidates) {
+    try {
+      const repaired = jsonrepair(candidate)
+      const parsed = JSON.parse(repaired)
+      const loose = parseAsObject(parsed)
+      if (!loose) continue
+      const normalized = normalizeThinkingOutputImpl(loose)
+      if (
+        normalized.goal.trim() ||
+        normalized.task.trim() ||
+        normalized.rationale?.trim() ||
+        normalized.response?.trim()
+      ) {
+        return formatThinkingMarkdown(normalized)
+      }
+    } catch {
+      // keep trying / fall through to raw
+    }
+  }
+
+  return limitThinkingBubbleWords(trimmed)
 }

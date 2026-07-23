@@ -33,6 +33,7 @@ const READ_TOOLS = new Set([
   'search_files',
 ])
 const WRITE_TOOLS = new Set([
+  'edit_files',
   'edit_file',
   'write_file',
   'apply_patch',
@@ -104,6 +105,15 @@ function recordToolCallFileOps(
       }
     }
     return
+  }
+  if (name === 'edit_files' && input && typeof input === 'object') {
+    const record = input as Record<string, unknown>
+    if (record.mode === 'patch' && typeof record.patch_text === 'string') {
+      for (const path of extractPathsFromPatchText(record.patch_text)) {
+        modified.add(path)
+      }
+      return
+    }
   }
   const path = pickPath(input)
   if (!path) return

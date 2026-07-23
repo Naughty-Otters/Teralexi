@@ -85,7 +85,7 @@ describe('deriveToolResultContent', () => {
 
   it('ignores empty capture markers', () => {
     expect(
-      deriveToolResultContent('run_workspace_command', {
+      deriveToolResultContent('shell', {
         output: '(no stdout/stderr)',
         stdout: 'real output',
       }),

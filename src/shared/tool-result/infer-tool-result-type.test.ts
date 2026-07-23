@@ -42,6 +42,12 @@ describe('inferToolResultType', () => {
       'file_change',
     )
     expect(inferToolResultType('read_file', { content: 'hello' })).toBe('query')
+    expect(
+      inferToolResultType('read_file', {
+        content: 'hello',
+        resultContent: 'hello',
+      }),
+    ).toBe('query')
     expect(inferToolResultType('github_create_pr', { stderr: 'denied' })).toBe(
       'terminal',
     )
@@ -50,5 +56,39 @@ describe('inferToolResultType', () => {
     expect(inferToolResultType('read_file', { error: 'x', content: 'body' })).toBe(
       'error',
     )
+  })
+
+  it('keeps shell/script terminal even when files[] diffs are attached', () => {
+    expect(
+      inferToolResultType('shell', {
+        stdout: 'ok',
+        exitCode: 0,
+        files: [
+          {
+            path: 'a.ts',
+            diff: '+x',
+            additions: 1,
+            deletions: 0,
+            action: 'create',
+            workspacePath: '/ws',
+          },
+        ],
+      }),
+    ).toBe('terminal')
+    expect(
+      inferToolResultType('run_script', {
+        success: true,
+        output: 'done',
+        files: [
+          {
+            path: 'polluted.txt',
+            diff: '+x',
+            additions: 1,
+            deletions: 0,
+            workspacePath: '/ws',
+          },
+        ],
+      }),
+    ).toBe('terminal')
   })
 })

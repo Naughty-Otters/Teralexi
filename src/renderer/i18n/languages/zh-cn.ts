@@ -149,8 +149,9 @@ export const lang: AppLocaleBundle = {
       '模型推理时，每个推理块最多保留最近这么多字符。更早的推理不会显示，也不会写入数据库。',
     showAgenticRunTitle: '工具调用气泡',
     showAgenticRunDesc:
-      '控制 Agent 运行期间的工具调用气泡。「显示全部」列出每次工具调用；「仅最新」只保留最近一次调用。表单与审批步骤始终显示。',
+      '控制 Agent 运行期间的 Exploring / 工具活动。「紧凑」（默认）为 Cursor 风格折叠手风琴与精简 Read/Grep/Shell 行。「显示全部」展开完整工具卡片。表单与审批步骤始终显示。',
     toolCallListNone: '不显示工具调用',
+    toolCallListCompact: '紧凑 Exploring 手风琴',
     toolCallListAll: '显示全部工具调用',
     toolCallListLatest: '仅显示最新工具调用',
     thinkingBubbleTitle: '思考气泡',
@@ -160,10 +161,11 @@ export const lang: AppLocaleBundle = {
     thinkingBubbleAll: '显示全部思考气泡',
     thinkingBubbleLatest: '仅显示最新思考气泡',
     defaultsFootnote:
-      '默认值：每端 {keepChars} 字符，{compactLines} 行紧凑高度，{contextMessages} 条上下文消息，推理 {reasoningMax} 字符，默认仅显示最新思考气泡、隐藏工具调用。',
+      '默认值：每端 {keepChars} 字符，{compactLines} 行紧凑高度，{contextMessages} 条上下文消息，推理 {reasoningMax} 字符，默认仅显示最新思考气泡、紧凑 Exploring 手风琴。',
   },
   chat: {
-    thoughtBubbleTitle: '稍作思考',
+    thoughtBubbleTitle: '思考',
+    thoughtBubbleStreaming: '思考中',
     exportBubblePdf: '导出为 PDF',
     exportBubblePdfSuccess: 'PDF 已保存',
     exportBubblePdfFailed: '无法导出 PDF',
@@ -176,6 +178,17 @@ export const lang: AppLocaleBundle = {
       '此技能需要先保存本地配置才能开始聊天。设置会写入 ~/.teralexi/config/config.properties，不会加入对话记录。',
     skillSetupSave: '保存并继续',
     skillSetupSaving: '保存中…',
+    deleteConversationDialog: {
+      title: '删除会话',
+      message:
+        '确定删除「{name}」？将移除该会话、全部消息以及沙箱数据，此操作无法撤销。',
+      messageChannel:
+        '确定删除「{name}」？将移除消息与沙箱数据。该渠道联系人的下一条消息会开启新会话。',
+      cancel: '取消',
+      confirm: '删除',
+      deleting: '删除中…',
+      failed: '无法删除会话',
+    },
   },
   monitor: {
     title: 'Token 监控',

@@ -1,4 +1,4 @@
-export type FileToolPermissionKey = 'read' | 'edit' | 'grep' | 'glob' | 'external_path'
+export type FileToolPermissionKey = 'read' | 'edit' | 'external_path'
 
 export type FileToolPermissionAction = 'allow' | 'ask' | 'deny'
 
@@ -9,20 +9,14 @@ export interface FileToolPermissionRule {
 
 export const FILE_TOOL_PERMISSION_KEYS: Record<string, FileToolPermissionRule> = {
   read_file: { key: 'read', defaultAction: 'allow' },
-  list_files: { key: 'read', defaultAction: 'allow' },
-  glob_files: { key: 'glob', defaultAction: 'allow' },
-  grep_files: { key: 'grep', defaultAction: 'allow' },
-  search_files: { key: 'grep', defaultAction: 'allow' },
-  file_status: { key: 'read', defaultAction: 'allow' },
-  storage_check: { key: 'read', defaultAction: 'allow' },
+  edit_files: { key: 'edit', defaultAction: 'ask' },
+  /** Internals used by edit_files — kept for preview/permission path extract. */
   write_file: { key: 'edit', defaultAction: 'ask' },
   edit_file: { key: 'edit', defaultAction: 'ask' },
   apply_patch: { key: 'edit', defaultAction: 'ask' },
   delete_file: { key: 'edit', defaultAction: 'ask' },
-  move_file: { key: 'edit', defaultAction: 'ask' },
-  copy_file: { key: 'edit', defaultAction: 'ask' },
   promote_artifact: { key: 'edit', defaultAction: 'ask' },
-  run_workspace_command: { key: 'external_path', defaultAction: 'ask' },
+  shell: { key: 'external_path', defaultAction: 'ask' },
 }
 
 export function resolveFileToolPermissionKey(
@@ -47,18 +41,14 @@ export function extractFileToolPaths(
     case 'write_file':
     case 'edit_file':
     case 'delete_file':
-    case 'file_status':
-    case 'list_files':
-    case 'grep_files':
-    case 'glob_files':
-    case 'search_files':
       add(input.path)
       break
-    case 'copy_file':
-    case 'move_file':
-      add(input.source)
-      add(input.destination)
+    case 'edit_files': {
+      const mode = typeof input.mode === 'string' ? input.mode : ''
+      if (mode === 'patch') break
+      add(input.path)
       break
+    }
     case 'promote_artifact':
       add(input.from)
       add(input.to)

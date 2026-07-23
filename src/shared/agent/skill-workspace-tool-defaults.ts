@@ -1,13 +1,14 @@
+import { isApprovalRequiredByDefault } from './mandatory-tools'
+
 /**
- * Default tool enablement + no-approval policy for shared toolSet categories.
- * Most skills receive file-system / git / workspace tools by default unless listed
+ * Default tool enablement + approval policy for shared toolSet categories.
+ * Most skills receive file-system / workspace tools by default unless listed
  * in {@link NO_TOOLSET_EXPANSION_SKILL_IDS}.
  */
 
 /** Shared toolSet tags enabled for most skills by default. */
 export const DEFAULT_SKILL_TOOLSET_TAGS = [
   'file-system',
-  'git',
   'workspace',
 ] as const
 
@@ -27,13 +28,12 @@ export const RESEARCH_SKILL_TOOLSET_TAGS = [
   ...DEFAULT_SKILL_TOOLSET_TAGS,
   'web',
   'research',
-  'scholar',
-  'shell-command',
 ] as const
 
 /** Skills whose catalog uses only explicit `allowed_tools` — no tag expansion. */
 export const NO_TOOLSET_EXPANSION_SKILL_IDS = [
   'default',
+  'coding',
   'coding-review',
   'coding-pr',
 ] as const
@@ -56,7 +56,7 @@ export function defaultToolsetTagsForSkill(skillId: string): readonly string[] {
     return RESEARCH_SKILL_TOOLSET_TAGS
   }
   if (skillId === 'coding') {
-    return CODING_SKILL_TOOLSET_TAGS
+    return []
   }
   if (skillId === 'coding-review' || skillId === 'coding-pr') {
     return []
@@ -151,6 +151,10 @@ export function resolveSkillWorkspaceApprovalOverrides<
 
   for (const tool of catalogTools) {
     if (!enabled.has(tool.name)) continue
+    if (isApprovalRequiredByDefault(tool.name)) {
+      overrides[tool.name] = true
+      continue
+    }
     if (!(tool.tags ?? []).some((tag) => tags.has(tag))) continue
     overrides[tool.name] = false
   }

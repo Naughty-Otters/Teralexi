@@ -50,16 +50,22 @@ export class ProviderContext {
   streamTextToStepProgress(
     stepCtx: AgentStepContext,
     params: StreamTextParams,
+    options?: Parameters<typeof streamLlmTextToStepProgress>[2],
   ): Promise<{ text: string }> {
-    return streamLlmTextToStepProgress(stepCtx, {
-      ...params,
-      model: params.model ?? this.model,
-    })
+    return streamLlmTextToStepProgress(
+      stepCtx,
+      {
+        ...params,
+        model: params.model ?? this.model,
+      },
+      options,
+    )
   }
 
   streamObjectToStepProgress<T>(
     stepCtx: AgentStepContext,
     streamParams: StreamTextParams,
+    options?: { replaceProgressWith?: (accumulatedText: string) => string },
   ): Promise<{ text: string; output: T }> {
     return streamLlmObjectToStepProgress<T>({
       ctx: stepCtx,
@@ -67,6 +73,7 @@ export class ProviderContext {
         ...streamParams,
         model: streamParams.model ?? this.model,
       },
+      replaceProgressWith: options?.replaceProgressWith,
     })
   }
 

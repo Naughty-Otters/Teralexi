@@ -31,6 +31,34 @@ export async function copyBubbleMarkdownContent(
   return true
 }
 
+/** Copy thinking / other plain bodies without markdown-it. */
+export async function copyBubblePlainTextContent(
+  text: string,
+): Promise<boolean> {
+  const plainText = text.replace(/\r\n/g, '\n').trim()
+  if (!plainText || !navigator.clipboard) return false
+
+  const html = `<pre>${escapeHtml(plainText)}</pre>`
+
+  if (typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/plain': new Blob([plainText], { type: 'text/plain' }),
+          'text/html': new Blob([html], { type: 'text/html' }),
+        }),
+      ])
+      return true
+    } catch {
+      // Fall back to plain text only.
+    }
+  }
+
+  if (!navigator.clipboard.writeText) return false
+  await navigator.clipboard.writeText(plainText)
+  return true
+}
+
 export async function printBubbleMarkdownContent(args: {
   markdown: string
   title?: string
@@ -40,6 +68,28 @@ export async function printBubbleMarkdownContent(args: {
 
   const title = args.title?.trim() || 'Message'
   const bodyHtml = await renderBasicMarkdown(markdown)
+  await printBubbleHtmlDocument({ title, bodyHtml })
+}
+
+/** Print thinking / other plain bodies without markdown-it. */
+export async function printBubblePlainTextContent(args: {
+  text: string
+  title?: string
+}): Promise<void> {
+  const plainText = args.text.replace(/\r\n/g, '\n').trim()
+  if (!plainText) return
+
+  const title = args.title?.trim() || 'Message'
+  const bodyHtml = `<pre style="white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.45;">${escapeHtml(plainText)}</pre>`
+  await printBubbleHtmlDocument({ title, bodyHtml })
+}
+
+async function printBubbleHtmlDocument(args: {
+  title: string
+  bodyHtml: string
+}): Promise<void> {
+  const title = args.title
+  const bodyHtml = args.bodyHtml
   const iframe = document.createElement('iframe')
   iframe.setAttribute('aria-hidden', 'true')
   iframe.style.cssText =

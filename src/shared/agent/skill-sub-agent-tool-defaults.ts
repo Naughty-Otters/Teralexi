@@ -1,6 +1,9 @@
 /** Tag applied to sub-agent delegation tools in the global toolSet catalog. */
 const SUB_AGENT_TOOL_TAGS = ['sub-agents'] as const
 
+/** Always-enabled sub-agent tools. */
+const UNIVERSAL_SUB_AGENT_NAMES = new Set(['invoke_agents'])
+
 function toolNamesMatchingTags<
   T extends { name: string; tags?: readonly string[] },
 >(catalogTools: readonly T[], tags: readonly string[]): string[] {
@@ -12,11 +15,14 @@ function toolNamesMatchingTags<
     .map((tool) => tool.name)
 }
 
-/** Union sub-agent delegation tools into the skill's enabled set (all skills by default). */
+/** Union core sub-agent delegation tools into the skill's enabled set (all skills by default). */
 export function expandSkillSubAgentAvailableSet<
   T extends { name: string; tags?: readonly string[] },
 >(catalogTools: readonly T[], availableSet: readonly string[]): string[] {
-  const subAgentNames = toolNamesMatchingTags(catalogTools, SUB_AGENT_TOOL_TAGS)
+  const subAgentNames = toolNamesMatchingTags(
+    catalogTools,
+    SUB_AGENT_TOOL_TAGS,
+  ).filter((name) => UNIVERSAL_SUB_AGENT_NAMES.has(name))
   return [...new Set([...availableSet, ...subAgentNames])]
 }
 

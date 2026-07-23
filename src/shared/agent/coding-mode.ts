@@ -36,32 +36,41 @@ export function codingModeLabel(mode: CodingMode): string {
 /** Tools allowed while in explore mode (read-only until user allows writes). */
 export const EXPLORE_MODE_ALLOWED_TOOLS = new Set([
   'read_file',
-  'grep_files',
-  'glob_files',
-  'list_files',
-  'search_files',
-  'file_status',
   'lsp',
-  'git_status',
-  'git_diff',
-  'git_log',
+  'shell',
+  'web_search',
+  'web_scrape',
   'read_todos',
-  'read_spreadsheet',
-  'run_script',
-  'run_script_file',
-  'delegate_subagent',
-  'dispatch_subagent',
 ])
 
 /** @deprecated Use {@link EXPLORE_MODE_ALLOWED_TOOLS} */
 export const PLAN_MODE_ALLOWED_TOOLS = EXPLORE_MODE_ALLOWED_TOOLS
 
-export type SubagentProfileType = 'explore' | 'architect' | 'coder'
+/**
+ * Sub-agent profile ids.
+ * Cursor built-ins: explore | bash | browser (priority for noisy work).
+ * Orchestration: architect (plan) | coder.
+ */
+export type SubagentProfileType =
+  | 'explore'
+  | 'bash'
+  | 'browser'
+  | 'architect'
+  | 'coder'
 
 export const SUBAGENT_PROFILE_TYPES: readonly SubagentProfileType[] = [
   'explore',
+  'bash',
+  'browser',
   'architect',
   'coder',
+] as const
+
+/** Cursor-equivalent built-ins — prefer these when the workload matches. */
+export const CURSOR_BUILTIN_SUBAGENT_PROFILES: readonly SubagentProfileType[] = [
+  'explore',
+  'bash',
+  'browser',
 ] as const
 
 /** Normalize subagent type; accepts legacy `plan` → `architect`. */
@@ -72,4 +81,10 @@ export function parseSubagentProfileType(raw: string): SubagentProfileType | nul
     return v as SubagentProfileType
   }
   return null
+}
+
+export function isCursorBuiltinSubagentProfile(
+  type: SubagentProfileType,
+): boolean {
+  return (CURSOR_BUILTIN_SUBAGENT_PROFILES as readonly string[]).includes(type)
 }

@@ -47,3 +47,25 @@ export async function exportBubbleMarkdownAsPdf(args: {
     kind: args.kind ?? 'default',
   })
 }
+
+/**
+ * Export plain thinking text as PDF without markdown emphasis/escapes mutating
+ * JSON-like content. Wrapped as a fenced text block for the markdown PDF path.
+ */
+export async function exportBubblePlainTextAsPdf(args: {
+  text: string
+  defaultFileName: string
+  kind?: BubblePdfDocumentKind
+}): Promise<{ savedPath: string | null; error?: string }> {
+  const text = args.text.replace(/\r\n/g, '\n').trim()
+  if (!text) {
+    return { savedPath: null, error: 'No content to export' }
+  }
+  const fence = '```'
+  const markdown = `${fence}text\n${text}\n${fence}`
+  return exportBubbleMarkdownAsPdf({
+    markdown,
+    defaultFileName: args.defaultFileName,
+    kind: args.kind,
+  })
+}

@@ -26,40 +26,20 @@ export { classifyToolFailure } from './tool-failure'
 /** Read-only tools: repeated same call → same result = no progress. */
 const IDEMPOTENT_TOOLS = new Set([
   'read_file',
-  'list_files',
-  'search_files',
-  'file_status',
-  'storage_check',
-  'git_status',
-  'git_diff',
-  'git_log',
-  'git_show',
+  'lsp',
   'web_search',
   'web_scrape',
-  'deep_research',
+  'read_todos',
 ])
 
 /** Write tools: never treated as idempotent no-progress (each call has side effects). */
 const MUTATING_TOOLS = new Set([
-  'write_file',
-  'move_file',
-  'copy_file',
+  'edit_files',
   'promote_artifact',
+  'shell',
   'run_script',
   'run_script_file',
-  'git_add',
-  'git_commit',
-  'git_push',
-  'git_pull',
-  'git_fetch',
-  'git_checkout',
-  'git_merge',
-  'git_rebase',
-  'git_reset',
-  'git_stash',
-  'git_branch',
-  'git_cherry_pick',
-  'git_revert',
+  'update_todos',
 ])
 
 // ---------------------------------------------------------------------------
@@ -465,6 +445,14 @@ function toolFailureRecoveryHint(toolName: string, count: number): string {
     `${toolName} failed ${count} times this execution. This looks like a loop. ` +
     'Do not switch to text-only replies — keep using tools, but diagnose before retrying. ' +
     'Inspect the latest error and verify your assumptions. '
+
+  if (toolName === 'shell') {
+    return (
+      common +
+      'Check exit code / stderr. Try a simpler diagnostic command first, ' +
+      'verify paths and permissions, or split the work into smaller shell steps.'
+    )
+  }
 
   if (toolName === 'run_script' || toolName === 'run_script_file') {
     return (

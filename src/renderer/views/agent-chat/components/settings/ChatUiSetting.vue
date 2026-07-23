@@ -111,6 +111,7 @@
           @change="onToolCallListDisplayChange"
         >
           <option value="none">{{ t.chatUi.toolCallListNone }}</option>
+          <option value="compact">{{ t.chatUi.toolCallListCompact }}</option>
           <option value="all">{{ t.chatUi.toolCallListAll }}</option>
           <option value="latest">{{ t.chatUi.toolCallListLatest }}</option>
         </select>

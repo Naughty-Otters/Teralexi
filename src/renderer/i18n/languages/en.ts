@@ -156,8 +156,9 @@ export const lang: AppLocaleBundle = {
       'While the model is reasoning, keep at most this many recent characters visible per reasoning block. Older reasoning is omitted from the UI and is not saved.',
     showAgenticRunTitle: 'Tool call bubbles',
     showAgenticRunDesc:
-      'Controls tool call bubbles during agent runs. “Show all” lists every tool invocation; “Show latest only” keeps the most recent call visible. Form and approval steps are always shown.',
+      'Controls Exploring / tool activity during agent runs. “Compact” (default) shows a Cursor-like collapsed accordion with slim Read/Grep/Shell rows. “Show all” expands full tool cards. Form and approval steps are always shown.',
     toolCallListNone: 'Hide tool calls',
+    toolCallListCompact: 'Compact exploring accordion',
     toolCallListAll: 'Show all tool calls',
     toolCallListLatest: 'Show latest tool call only',
     thinkingBubbleTitle: 'Thinking bubbles',
@@ -167,10 +168,11 @@ export const lang: AppLocaleBundle = {
     thinkingBubbleAll: 'Show all thinking bubbles',
     thinkingBubbleLatest: 'Show latest thinking bubble only',
     defaultsFootnote:
-      'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars, latest thinking bubble only, tool calls hidden.',
+      'Defaults: {keepChars} chars per end, {compactLines} compact lines, {contextMessages} context messages, {reasoningMax} reasoning chars, latest thinking bubble only, compact exploring accordion.',
   },
   chat: {
-    thoughtBubbleTitle: 'Thought briefly',
+    thoughtBubbleTitle: 'Thinking',
+    thoughtBubbleStreaming: 'Thinking',
     exportBubblePdf: 'Export as PDF',
     exportBubblePdfSuccess: 'PDF saved',
     exportBubblePdfFailed: 'Could not export PDF',
@@ -183,6 +185,17 @@ export const lang: AppLocaleBundle = {
       'This skill needs settings saved to your local config before you can chat. They are stored in ~/.teralexi/config/config.properties and are not added to the conversation.',
     skillSetupSave: 'Save and continue',
     skillSetupSaving: 'Saving…',
+    deleteConversationDialog: {
+      title: 'Delete conversation',
+      message:
+        'Delete "{name}"? This removes the conversation, all messages, and sandbox data. This cannot be undone.',
+      messageChannel:
+        'Delete "{name}"? Messages and sandbox data will be removed. The next message from this channel contact will start a fresh conversation.',
+      cancel: 'Cancel',
+      confirm: 'Delete',
+      deleting: 'Deleting…',
+      failed: 'Could not delete conversation',
+    },
   },
   monitor: {
     title: 'Token monitor',

@@ -9,7 +9,7 @@ import {
   formatSubAgentToolSuffix,
   hasSubAgentDelegationTool,
 } from './skill-routing-catalog'
-import { INVOKE_AGENT_TOOL_NAME } from '@toolSet/sub-agents/constants'
+import { INVOKE_AGENTS_TOOL_NAME } from '@toolSet/sub-agents/constants'
 
 vi.mock('@main/cache/app-cache', () => ({
   appCache: { getAgents: vi.fn() },
@@ -63,10 +63,10 @@ describe('skill-routing-catalog', () => {
 
   it('hasSubAgentDelegationTool detects sub-agent tools', () => {
     expect(hasSubAgentDelegationTool(['read_file'])).toBe(false)
-    expect(hasSubAgentDelegationTool([INVOKE_AGENT_TOOL_NAME])).toBe(true)
+    expect(hasSubAgentDelegationTool([INVOKE_AGENTS_TOOL_NAME])).toBe(true)
   })
 
-  it('includes skill-group sibling triggers without invoke_agent', () => {
+  it('includes skill-group sibling triggers without invoke_agents', () => {
     vi.mocked(appCache.getAgents).mockReturnValue([
       mockAgent({
         id: 'skill:coding',
@@ -95,10 +95,10 @@ describe('skill-routing-catalog', () => {
     const block = formatSkillRoutingBlock(catalog!, ['read_file'])
     expect(block).toContain('Review a PR or diff')
     expect(block).toContain('/skill:coding-review')
-    expect(block).not.toContain('invoke_agent')
+    expect(block).not.toContain('invoke_agents')
   })
 
-  it('applies subAgentIds allow-list for invoke_agent targets', () => {
+  it('applies subAgentIds allow-list for invoke_agents targets', () => {
     vi.mocked(appCache.getAgents).mockReturnValue([
       mockAgent({ id: 'skill:coding', name: 'Coding', skillId: 'coding' }),
       mockAgent({
@@ -119,12 +119,12 @@ describe('skill-routing-catalog', () => {
           },
         },
       }),
-      [INVOKE_AGENT_TOOL_NAME],
+      [INVOKE_AGENTS_TOOL_NAME],
     )
     expect(catalog?.invokeAgentTargets.map((t) => t.id)).toEqual(['skill:github'])
-    const block = formatSubAgentInstructionsBlock(catalog!, [INVOKE_AGENT_TOOL_NAME])
+    const block = formatSubAgentInstructionsBlock(catalog!, [INVOKE_AGENTS_TOOL_NAME])
     expect(block).toContain('Open pull requests')
-    expect(block).toContain('invoke_agent')
+    expect(block).toContain('invoke_agents')
   })
 
   it('formatSubAgentToolSuffix lists invoke targets with trigger summary', () => {
@@ -143,9 +143,9 @@ describe('skill-routing-catalog', () => {
           toolLoop: { allowSubAgents: true },
         },
       }),
-      [INVOKE_AGENT_TOOL_NAME],
+      [INVOKE_AGENTS_TOOL_NAME],
     )
-    const suffix = formatSubAgentToolSuffix(INVOKE_AGENT_TOOL_NAME, catalog!)
+    const suffix = formatSubAgentToolSuffix(INVOKE_AGENTS_TOOL_NAME, catalog!)
     expect(suffix).toContain('skill:github')
     expect(suffix).toContain('Open pull requests')
   })

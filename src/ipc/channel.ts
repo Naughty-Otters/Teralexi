@@ -1550,6 +1550,72 @@ export class IpcChannelMainClass {
     }
   > = null!
   /**
+   * Shared in-app browser session (Cursor-like panel): inspect mode + selection.
+   */
+  BrowserSessionGetState: IpcMainEventListener<
+    void,
+    {
+      url: string
+      title: string
+      canGoBack: boolean
+      canGoForward: boolean
+      inspectMode: boolean
+      selected: {
+        ref: string
+        tag: string
+        id?: string
+        className?: string
+        text?: string
+        testId?: string
+        selector: string
+        htmlSnippet: string
+        styles: Record<string, string>
+        bounds: { x: number; y: number; width: number; height: number }
+      } | null
+    }
+  > = null!
+  BrowserSessionSetInspectMode: IpcMainEventListener<
+    { enabled: boolean },
+    {
+      url: string
+      title: string
+      canGoBack: boolean
+      canGoForward: boolean
+      inspectMode: boolean
+      selected: {
+        ref: string
+        tag: string
+        id?: string
+        className?: string
+        text?: string
+        testId?: string
+        selector: string
+        htmlSnippet: string
+        styles: Record<string, string>
+        bounds: { x: number; y: number; width: number; height: number }
+      } | null
+    }
+  > = null!
+  BrowserSessionPollSelection: IpcMainEventListener<
+    void,
+    {
+      ref: string
+      tag: string
+      id?: string
+      className?: string
+      text?: string
+      testId?: string
+      selector: string
+      htmlSnippet: string
+      styles: Record<string, string>
+      bounds: { x: number; y: number; width: number; height: number }
+    } | null
+  > = null!
+  BrowserSessionFindInCodeKeys: IpcMainEventListener<
+    void,
+    { keys: string[]; selected: boolean }
+  > = null!
+  /**
    * Delete on-disk sandbox directories (validated under `~/.teralexi/workspace/sandbox/` or legacy tmpdir).
    */
   RemoveSandboxDirectories: IpcMainEventListener<{ paths: string[] }, void> =

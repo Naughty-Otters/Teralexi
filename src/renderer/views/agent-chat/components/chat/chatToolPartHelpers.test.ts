@@ -37,7 +37,7 @@ describe('classifyToolResult', () => {
     ).toBe('file')
   })
 
-  it('classifies run_script / run_workspace_command / git_* as terminal', () => {
+  it('classifies run_script / shell / git_* as terminal', () => {
     expect(
       classifyToolResult(
         toolPart('run_script', { output: { success: true, resultContent: 'hi' } }),
@@ -45,7 +45,7 @@ describe('classifyToolResult', () => {
     ).toBe('terminal')
     expect(
       classifyToolResult(
-        toolPart('run_workspace_command', { output: { stdout: 'ok', stderr: '', exitCode: 0 } }),
+        toolPart('shell', { output: { stdout: 'ok', stderr: '', exitCode: 0 } }),
       ),
     ).toBe('terminal')
     expect(
@@ -70,7 +70,7 @@ describe('isTerminalCommandToolPart', () => {
   it('is true for command tools and false for others', () => {
     expect(isTerminalCommandToolPart(toolPart('run_script'))).toBe(true)
     expect(isTerminalCommandToolPart(toolPart('git_commit'))).toBe(true)
-    expect(isTerminalCommandToolPart(toolPart('run_workspace_command'))).toBe(true)
+    expect(isTerminalCommandToolPart(toolPart('shell'))).toBe(true)
     expect(isTerminalCommandToolPart(toolPart('read_file'))).toBe(false)
     expect(isTerminalCommandToolPart(toolPart('edit_file'))).toBe(false)
   })
@@ -127,9 +127,9 @@ describe('extractTerminalView', () => {
     expect(v.success).toBe(true)
   })
 
-  it('joins argv for run_workspace_command and surfaces stdout/stderr + exit code', () => {
+  it('joins argv for shell and surfaces stdout/stderr + exit code', () => {
     const v = extractTerminalView(
-      toolPart('run_workspace_command', {
+      toolPart('shell', {
         input: { command: ['npm', 'test'] },
         output: { stdout: 'pass', stderr: 'warn', exitCode: 0 },
       }),

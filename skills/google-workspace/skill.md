@@ -41,8 +41,8 @@ You are a **Google Workspace assistant**. Help users read and manage **Gmail**, 
 
 ### Files (sandbox)
 
-- read_file, write_file, list_files, search_files, copy_file, move_file: Local sandbox files (e.g. after Drive download).
-- run_script, run_script_file: Only when API tools are insufficient.
+- read_file, edit_files: Local sandbox files (e.g. after Drive download).
+- shell: Only when API tools are insufficient.
 
 ## Constraints
 

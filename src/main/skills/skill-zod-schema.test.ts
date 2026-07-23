@@ -25,6 +25,39 @@ describe('serializeToolInputSchema', () => {
     }
     expect(out).toEqual(expect.objectContaining({ type: 'object' }))
   })
+
+  it('flattens discriminatedUnion oneOf into type:object for LLM providers', () => {
+    const schema = z.discriminatedUnion('mode', [
+      z.object({ mode: z.literal('a'), x: z.string() }),
+      z.object({ mode: z.literal('b'), y: z.number() }),
+    ])
+    const out = serializeToolInputSchema(schema) as {
+      type?: string
+      properties?: Record<string, unknown>
+      required?: string[]
+      oneOf?: unknown
+      anyOf?: unknown
+    }
+    expect(out.type).toBe('object')
+    expect(out.oneOf).toBeUndefined()
+    expect(out.anyOf).toBeUndefined()
+    expect(out.properties).toHaveProperty('mode')
+    expect(out.properties).toHaveProperty('x')
+    expect(out.properties).toHaveProperty('y')
+    expect(out.required).toEqual(['mode'])
+  })
+
+  it('keeps edit_files schema as a root object', async () => {
+    const { editFiles } = await import('../../../toolSet/file-system/edit-files')
+    const out = serializeToolInputSchema(editFiles.inputSchema as never) as {
+      type?: string
+      properties?: Record<string, unknown>
+      required?: string[]
+    }
+    expect(out.type).toBe('object')
+    expect(out.properties?.mode).toBeTruthy()
+    expect(out.required).toContain('mode')
+  })
 })
 
 function legacyZod(
