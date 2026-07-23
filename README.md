@@ -7,10 +7,10 @@
 
 | | |
 | --- | --- |
-| **Last successful build** | 2026-07-21T18:50:26Z |
+| **Last successful build** | 2026-07-23T22:12:28Z |
 | **Branch** | `main` |
-| **Commit** | [`4275d70`](https://github.com/Naughty-Otters/Teralexi/commit/4275d70c25e54b2249485decc7c84186e2353a57) |
-| **Workflow run** | [View logs](https://github.com/Naughty-Otters/Teralexi/actions/runs/29858065574) |
+| **Commit** | [`f5629aa`](https://github.com/Naughty-Otters/Teralexi/commit/f5629aa099d17573d787deba57b01807c863deb2) |
+| **Workflow run** | [View logs](https://github.com/Naughty-Otters/Teralexi/actions/runs/30048412686) |
 <!-- ci-status-end -->
 
 Local AI agent desktop — research, code, chat from your phone, extend with skills & MCP, pick any LLM, and build memory over time, all on your machine.
