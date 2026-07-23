@@ -10,27 +10,24 @@
       <UIcon :name="toolIcon" class="etr__pin" aria-hidden="true" />
       <div class="etr__head">
         <div class="etr__title">
-          <span
-            class="etr__tool"
-            :class="{ 'etr__tool--shimmer': running }"
-          >{{ kindLabel }}</span>
-          <span class="etr__toggles">
-            <button
-              type="button"
-              class="etr__toggle"
-              :class="{ 'etr__toggle--active': expanded }"
-              :aria-expanded="expanded"
-              :aria-label="expanded ? 'Hide details' : 'Show details'"
-              :title="expanded ? 'Hide details' : 'Show details'"
-              @click="expanded = !expanded"
-            >
-              <UIcon
-                :name="expanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-                class="etr__toggle-icon"
-                aria-hidden="true"
-              />
-            </button>
-          </span>
+          <button
+            type="button"
+            class="etr__fold"
+            :aria-expanded="expanded"
+            :aria-label="expanded ? 'Hide details' : 'Show details'"
+            :title="expanded ? 'Hide details' : 'Show details'"
+            @click="expanded = !expanded"
+          >
+            <span
+              class="etr__tool"
+              :class="{ 'etr__tool--shimmer': running }"
+            >{{ kindLabel }}</span>
+            <UIcon
+              :name="expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+              class="etr__chevron"
+              aria-hidden="true"
+            />
+          </button>
           <span v-if="brief" class="etr__sep" aria-hidden="true">·</span>
           <span v-if="brief" class="etr__brief" :title="brief">{{ brief }}</span>
           <span
@@ -279,6 +276,40 @@ const outputLanguage = computed(() =>
   word-break: break-word;
 }
 
+.etr__fold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.etr__fold:hover {
+  color: var(--ui-text);
+}
+
+.etr__fold:focus-visible {
+  outline: 2px solid var(--color-primary-500, #6366f1);
+  outline-offset: 2px;
+}
+
+.etr__chevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  opacity: 0.75;
+  color: var(--ui-text-muted);
+}
+
 @keyframes etr-shimmer {
   0% {
     background-position: -200% center;
@@ -335,44 +366,6 @@ const outputLanguage = computed(() =>
 }
 .etr__status--info {
   color: var(--color-primary-500, #6366f1);
-}
-
-.etr__toggles {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.etr__toggle {
-  margin: 0;
-  padding: 2px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--ui-text-muted);
-  font: inherit;
-  line-height: 0;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.etr__toggle:hover {
-  color: var(--ui-text);
-  background: color-mix(in srgb, var(--ui-text) 6%, transparent);
-}
-
-.etr__toggle--active {
-  color: var(--color-primary-500, #6366f1);
-}
-
-.etr__toggle-icon {
-  width: 14px;
-  height: 14px;
 }
 
 .etr__panel-label {

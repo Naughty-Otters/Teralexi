@@ -18,14 +18,14 @@
         aria-hidden="true"
       />
       <span class="exploring-panel__title">{{ panelTitle }}</span>
-      <span class="exploring-panel__status" aria-live="polite">
-        {{ statusText }}
-      </span>
       <UIcon
         :name="expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
         class="exploring-panel__chevron"
         aria-hidden="true"
       />
+      <span class="exploring-panel__status" aria-live="polite">
+        {{ statusText }}
+      </span>
     </button>
 
     <div

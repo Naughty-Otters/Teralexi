@@ -11,7 +11,7 @@ const props = defineProps<{
 const { t } = useI18n()
 
 const bodyEl = ref<HTMLElement | null>(null)
-/** Default collapsed; chevron expands to read from the top. */
+/** Default collapsed; chevron expands (right → down). */
 const userExpanded = ref(false)
 /**
  * Ignore scroll events caused by our own scrollTop writes. Layout shifts from
@@ -106,31 +106,29 @@ watch(
     }"
   >
     <header class="reasoning-bubble__header">
-      <UIcon
-        name="i-lucide-brain"
-        class="reasoning-bubble__icon"
-        aria-hidden="true"
-      />
-      <div class="reasoning-bubble__label">
+      <button
+        type="button"
+        class="reasoning-bubble__title"
+        :aria-expanded="!compact"
+        :aria-label="compact ? 'Expand thinking' : 'Collapse thinking'"
+        :title="compact ? 'Expand' : 'Collapse'"
+        @click="toggleExpanded"
+      >
+        <UIcon
+          name="i-lucide-brain"
+          class="reasoning-bubble__icon"
+          aria-hidden="true"
+        />
         <span
-          class="reasoning-bubble__title"
-          :class="{ 'reasoning-bubble__title--shimmer': streaming }"
+          class="reasoning-bubble__title-text"
+          :class="{ 'reasoning-bubble__title-text--shimmer': streaming }"
         >{{ title }}</span>
-        <button
-          type="button"
-          class="reasoning-bubble__toggle"
-          :aria-expanded="!compact"
-          :aria-label="compact ? 'Expand thinking' : 'Collapse thinking'"
-          :title="compact ? 'Expand' : 'Collapse'"
-          @click="toggleExpanded"
-        >
-          <UIcon
-            :name="compact ? 'i-lucide-chevron-down' : 'i-lucide-chevron-up'"
-            class="reasoning-bubble__toggle-icon"
-            aria-hidden="true"
-          />
-        </button>
-      </div>
+        <UIcon
+          :name="compact ? 'i-lucide-chevron-right' : 'i-lucide-chevron-down'"
+          class="reasoning-bubble__chevron"
+          aria-hidden="true"
+        />
+      </button>
     </header>
 
     <pre
@@ -169,7 +167,6 @@ watch(
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 6px;
   padding: 8px 10px;
   box-sizing: border-box;
   width: 100%;
@@ -177,29 +174,47 @@ watch(
   flex-shrink: 0;
 }
 
-.reasoning-bubble__icon {
+.reasoning-bubble__title {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ui-text-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.reasoning-bubble__title:hover {
+  color: var(--ui-text);
+}
+
+.reasoning-bubble__title:focus-visible {
+  outline: 2px solid var(--color-primary-500, #6366f1);
+  outline-offset: 2px;
+}
+
+.reasoning-bubble__icon,
+.reasoning-bubble__chevron {
   width: 14px;
   height: 14px;
   flex: 0 0 auto;
   opacity: 0.75;
-  color: var(--ui-text-muted);
+  color: currentColor;
 }
 
-.reasoning-bubble__label {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  flex: 0 1 auto;
-}
-
-.reasoning-bubble__title {
+.reasoning-bubble__title-text {
   flex: 0 1 auto;
   min-width: 0;
   font-size: 12px;
   font-weight: 600;
-  color: var(--ui-text-muted);
 }
 
 @keyframes reasoning-shimmer {
@@ -211,7 +226,7 @@ watch(
   }
 }
 
-.reasoning-bubble__title--shimmer {
+.reasoning-bubble__title-text--shimmer {
   background: linear-gradient(
     90deg,
     var(--ui-text-muted) 25%,
@@ -224,31 +239,6 @@ watch(
   -webkit-text-fill-color: transparent;
   color: transparent;
   animation: reasoning-shimmer 1.6s linear infinite;
-}
-
-.reasoning-bubble__toggle {
-  flex: 0 0 auto;
-  margin: 0;
-  padding: 2px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--ui-text-muted);
-  line-height: 0;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.reasoning-bubble__toggle:hover {
-  color: var(--ui-text);
-  background: color-mix(in srgb, var(--ui-text) 6%, transparent);
-}
-
-.reasoning-bubble__toggle-icon {
-  width: 14px;
-  height: 14px;
 }
 
 .reasoning-bubble__body {
