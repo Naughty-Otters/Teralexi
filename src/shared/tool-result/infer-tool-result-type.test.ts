@@ -42,6 +42,12 @@ describe('inferToolResultType', () => {
       'file_change',
     )
     expect(inferToolResultType('read_file', { content: 'hello' })).toBe('query')
+    expect(
+      inferToolResultType('read_file', {
+        content: 'hello',
+        resultContent: 'hello',
+      }),
+    ).toBe('query')
     expect(inferToolResultType('github_create_pr', { stderr: 'denied' })).toBe(
       'terminal',
     )

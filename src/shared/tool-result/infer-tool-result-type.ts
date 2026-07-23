@@ -20,7 +20,6 @@ function hasTerminalShape(record: Record<string, unknown>): boolean {
     'stdout' in record ||
     'stderr' in record ||
     'exitCode' in record ||
-    'resultContent' in record ||
     'captureAbsolutePath' in record ||
     (typeof record.output === 'string' && record.output.trim().length > 0)
   )
@@ -96,8 +95,8 @@ export function inferToolResultType(
     return 'file_change'
   }
 
-  // Shell/script stays terminal even when incidental `files[]` diffs are attached.
-  if (isTerminalToolName(toolName) || hasTerminalShape(record)) {
+  // Named shell/git tools stay terminal even when incidental files[] exist.
+  if (isTerminalToolName(toolName)) {
     return 'terminal'
   }
 
@@ -109,8 +108,14 @@ export function inferToolResultType(
     return 'todo'
   }
 
+  // Query tools before terminal-shape heuristics: enrich stamps `resultContent`
+  // on read/list/grep payloads too, which must not flip them to terminal.
   if (QUERY_TOOL_NAMES.has(toolName) || hasQueryShape(record)) {
     return 'query'
+  }
+
+  if (hasTerminalShape(record)) {
+    return 'terminal'
   }
 
   return 'raw'
