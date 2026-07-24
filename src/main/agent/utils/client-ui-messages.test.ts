@@ -287,6 +287,28 @@ describe('flattenMultipartTextLikeModelMessages', () => {
     ])
     expect(out[0]).toMatchObject({ role: 'assistant', content: 'answer' })
   })
+
+  it('preserves user file parts while joining text', () => {
+    const filePart = {
+      type: 'file',
+      mediaType: 'image/png',
+      data: new Uint8Array([1, 2, 3]),
+    }
+    const out = flattenMultipartTextLikeModelMessages([
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'see this' },
+          { type: 'text', text: 'please' },
+          filePart,
+        ],
+      } as never,
+    ])
+    expect(out[0]).toMatchObject({
+      role: 'user',
+      content: [{ type: 'text', text: 'see this\nplease' }, filePart],
+    })
+  })
 })
 
 describe('cloneClientUiMessages', () => {

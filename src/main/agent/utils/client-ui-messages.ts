@@ -276,15 +276,35 @@ export function flattenMultipartTextLikeModelMessages(
       const c = m.content
       if (typeof c === 'string') return m
       if (!Array.isArray(c)) return m
-      const lines: string[] = []
+
+      const textLines: string[] = []
+      const preservedParts: unknown[] = []
       for (const p of c) {
         if (!p || typeof p !== 'object') continue
-        const txt = (p as { text?: unknown }).text
-        if (typeof txt !== 'string' || txt.length === 0) continue
-        lines.push(txt)
+        const part = p as { type?: string; text?: unknown }
+        if (part.type === 'file' || part.type === 'image' || part.type === 'reasoning-file') {
+          preservedParts.push(p)
+          continue
+        }
+        if (typeof part.text === 'string' && part.text.length > 0) {
+          textLines.push(part.text)
+        }
       }
-      if (lines.length === 0) return m
-      return { ...m, role: 'user', content: lines.join('\n').trim() } as ModelMessage
+
+      if (preservedParts.length === 0) {
+        if (textLines.length === 0) return m
+        return {
+          ...m,
+          role: 'user',
+          content: textLines.join('\n').trim(),
+        } as ModelMessage
+      }
+
+      const content: unknown[] = []
+      const joined = textLines.join('\n').trim()
+      if (joined) content.push({ type: 'text', text: joined })
+      content.push(...preservedParts)
+      return { ...m, role: 'user', content } as ModelMessage
     }
     if (m.role === 'assistant') {
       const c = m.content

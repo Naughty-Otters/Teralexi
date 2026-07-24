@@ -30,6 +30,13 @@ import { isPlanModeActive } from '../coding/plan-mode-state'
 import { resolveAgentToolChoice } from '../providers/tool-choice-policy'
 import type { ProviderType } from '../types'
 import {
+  buildLlmCallReasoningFields,
+  resolveAiSdkProviderOptions,
+} from '@shared/agent/llm-provider-options'
+import { withDefaultLlmTimeout } from '../llm/default-request-options'
+import { buildCatchAllToolApproval } from '../tool-approval-policy'
+import { getToolApprovalSecret } from '../tool-approval-secret'
+import {
   resolvePlannedTodoItem,
   resolveTodoReferenceScripts,
   sanitizePlanningField,
@@ -490,6 +497,15 @@ export type CreateAgentParams = {
   providerOptions?: Record<string, Record<string, unknown>>
   /** Per-step plan mode refresh (activeTools + injections after enter/exit). */
   prepareStep?: import('ai').PrepareStepFunction
+  /**
+   * Override AI SDK toolApproval. Default is a catch-all that requires
+   * user-approval for tools with needsApproval / dynamic tools.
+   */
+  toolApproval?: unknown
+  /** Override HMAC secret; default comes from {@link getToolApprovalSecret}. */
+  experimental_toolApprovalSecret?: string
+  /** When false, skip injecting HMAC secret (tests). Default true. */
+  enableToolApprovalSigning?: boolean
 }
 
 /** Builds an {@link Agent} for tool-loop pipeline steps. */
@@ -507,8 +523,37 @@ export function createAgent(params: CreateAgentParams): Agent {
     modelId,
     providerOptions,
     prepareStep,
+    toolApproval,
+    experimental_toolApprovalSecret,
+    enableToolApprovalSigning = true,
   } = params
   const effectiveToolChoice = resolveAgentToolChoice(toolChoice, provider, modelId)
+  const reasoningFields = provider
+    ? buildLlmCallReasoningFields(provider, providerOptions)
+    : {
+        providerOptions: resolveAiSdkProviderOptions(providerOptions),
+      }
+  const resolvedToolApproval =
+    toolApproval !== undefined ? toolApproval : buildCatchAllToolApproval()
+  const approvalSecret =
+    experimental_toolApprovalSecret ??
+    (enableToolApprovalSigning ? getToolApprovalSecret() : undefined)
+  const modelSettings = withDefaultLlmTimeout({
+    toolChoice: effectiveToolChoice,
+    stopWhen,
+    ...(reasoningFields.providerOptions
+      ? { providerOptions: reasoningFields.providerOptions }
+      : {}),
+    ...(reasoningFields.reasoning
+      ? { reasoning: reasoningFields.reasoning }
+      : {}),
+    ...(prepareStep ? { prepareStep } : {}),
+    ...(abortSignal != null ? { abortSignal } : {}),
+    toolApproval: resolvedToolApproval,
+    ...(approvalSecret
+      ? { experimental_toolApprovalSecret: approvalSecret }
+      : {}),
+  })
   return new Agent({
     name,
     model: model as LanguageModel,
@@ -518,13 +563,7 @@ export function createAgent(params: CreateAgentParams): Agent {
     // @ai-sdk-tools/agents defaults to stepCountIs(maxTurns||10) then spreads
     // modelSettings — pass both so the ToolLoopAgent always has a hard bound.
     ...(typeof maxTurns === 'number' ? { maxTurns } : {}),
-    modelSettings: {
-      toolChoice: effectiveToolChoice,
-      stopWhen,
-      ...(providerOptions ? { providerOptions } : {}),
-      ...(prepareStep ? { prepareStep } : {}),
-      ...(abortSignal != null ? { abortSignal } : {}),
-    },
+    modelSettings,
   })
 }
 

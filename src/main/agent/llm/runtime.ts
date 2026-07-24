@@ -26,6 +26,7 @@ import {
   type AgentCollectResult,
   type AgentStreamCollectSource,
 } from './ui-message-projector'
+import { withDefaultLlmTimeout } from './default-request-options'
 
 const log = createLogger('agent.llm.runtime')
 
@@ -130,7 +131,8 @@ export async function runLlmStream(
   log.debug('LLM stream starting', { mode })
 
   try {
-    validateStreamTextParamsForLlm(params.streamParams, {
+    const streamParams = withDefaultLlmTimeout(params.streamParams)
+    validateStreamTextParamsForLlm(streamParams, {
       label: 'runLlmStream',
       ...params.validationContext,
     })
@@ -149,12 +151,12 @@ export async function runLlmStream(
       debugCtx,
       buildStreamTextDebugRequest(
         debugCtx,
-        params.streamParams,
+        streamParams,
         debugLabel,
       ),
     )
 
-    const result = streamText(params.streamParams)
+    const result = streamText(streamParams)
     const pipeTextStreamToProgress =
       params.pipeTextStreamToProgress === true &&
       mode === 'progress' &&

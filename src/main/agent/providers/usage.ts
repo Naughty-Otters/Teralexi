@@ -117,57 +117,7 @@ function hasTokenCounts(usage: LanguageModelUsage | undefined | null): boolean {
   )
 }
 
-function sumUsage(usages: LanguageModelUsage[]): LanguageModelUsage {
-  let inputTokens = 0
-  let outputTokens = 0
-  for (const u of usages) {
-    inputTokens += Number(u.inputTokens ?? 0)
-    outputTokens += Number(u.outputTokens ?? 0)
-  }
-  return {
-    inputTokens,
-    outputTokens,
-    totalTokens: inputTokens + outputTokens,
-    inputTokenDetails: {
-      noCacheTokens: undefined,
-      cacheReadTokens: undefined,
-      cacheWriteTokens: undefined,
-    },
-    outputTokenDetails: {
-      textTokens: undefined,
-      reasoningTokens: undefined,
-    },
-  }
-}
-
-export async function readStreamTextUsage(result: {
-  totalUsage?: PromiseLike<LanguageModelUsage>
-  usage: PromiseLike<LanguageModelUsage>
-  steps?: PromiseLike<Array<{ usage?: LanguageModelUsage }>>
-}): Promise<LanguageModelUsage> {
-  try {
-    if (result.totalUsage) {
-      const total = await result.totalUsage
-      if (hasTokenCounts(total)) return total
-    }
-    const last = await result.usage
-    if (hasTokenCounts(last)) return last
-  } catch {
-    /* fall through to step aggregation */
-  }
-
-  if (result.steps) {
-    try {
-      const steps = await result.steps
-      const stepUsages = steps
-        .map((step) => step.usage)
-        .filter((usage): usage is LanguageModelUsage => hasTokenCounts(usage))
-      if (stepUsages.length > 0) return sumUsage(stepUsages)
-    } catch {
-      /* ignore */
-    }
-  }
-
+function emptyUsage(): LanguageModelUsage {
   return {
     inputTokens: 0,
     outputTokens: 0,
@@ -184,15 +134,143 @@ export async function readStreamTextUsage(result: {
   }
 }
 
+function sumUsage(usages: LanguageModelUsage[]): LanguageModelUsage {
+  let inputTokens = 0
+  let outputTokens = 0
+  for (const u of usages) {
+    inputTokens += Number(u.inputTokens ?? 0)
+    outputTokens += Number(u.outputTokens ?? 0)
+  }
+  return {
+    ...emptyUsage(),
+    inputTokens,
+    outputTokens,
+    totalTokens: inputTokens + outputTokens,
+  }
+}
+
+type StepPerformanceLike = {
+  stepTimeMs?: number
+  responseTimeMs?: number
+  timeToFirstOutputMs?: number
+  toolExecutionMs?: Readonly<Record<string, number>> | Record<string, number>
+  outputTokensPerSecond?: number
+  inputTokensPerSecond?: number
+  effectiveOutputTokensPerSecond?: number
+  effectiveTotalTokensPerSecond?: number
+}
+
+type UsageWithPerformance = LanguageModelUsage & Record<string, unknown>
+
+function mergePerformanceIntoUsage(
+  usage: LanguageModelUsage,
+  performance: StepPerformanceLike | undefined,
+): LanguageModelUsage {
+  if (!performance) return usage
+  const merged: UsageWithPerformance = { ...usage }
+  const copyNumber = (key: keyof StepPerformanceLike) => {
+    const value = performance[key]
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      merged[key] = value
+    }
+  }
+  copyNumber('stepTimeMs')
+  copyNumber('responseTimeMs')
+  copyNumber('timeToFirstOutputMs')
+  copyNumber('outputTokensPerSecond')
+  copyNumber('inputTokensPerSecond')
+  copyNumber('effectiveOutputTokensPerSecond')
+  copyNumber('effectiveTotalTokensPerSecond')
+  if (
+    performance.toolExecutionMs &&
+    typeof performance.toolExecutionMs === 'object'
+  ) {
+    merged.toolExecutionMs = { ...performance.toolExecutionMs }
+  }
+  return merged
+}
+
+async function readResultPerformance(result: {
+  finalStep?: PromiseLike<{ performance?: StepPerformanceLike }>
+  steps?: PromiseLike<Array<{ performance?: StepPerformanceLike }>>
+}): Promise<StepPerformanceLike | undefined> {
+  if (result.finalStep) {
+    try {
+      const step = await result.finalStep
+      if (step?.performance) return step.performance
+    } catch {
+      /* fall through */
+    }
+  }
+  if (result.steps) {
+    try {
+      const steps = await result.steps
+      for (let i = steps.length - 1; i >= 0; i--) {
+        if (steps[i]?.performance) return steps[i]!.performance
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return undefined
+}
+
+export async function readStreamTextUsage(result: {
+  totalUsage?: PromiseLike<LanguageModelUsage>
+  usage: PromiseLike<LanguageModelUsage>
+  finalStep?: PromiseLike<{
+    usage?: LanguageModelUsage
+    performance?: StepPerformanceLike
+  }>
+  steps?: PromiseLike<
+    Array<{ usage?: LanguageModelUsage; performance?: StepPerformanceLike }>
+  >
+}): Promise<LanguageModelUsage> {
+  let usage = emptyUsage()
+  try {
+    if (result.totalUsage) {
+      const total = await result.totalUsage
+      if (hasTokenCounts(total)) usage = total
+    }
+    if (!hasTokenCounts(usage)) {
+      const last = await result.usage
+      if (hasTokenCounts(last)) usage = last
+    }
+  } catch {
+    /* fall through to step aggregation */
+  }
+
+  if (!hasTokenCounts(usage) && result.steps) {
+    try {
+      const steps = await result.steps
+      const stepUsages = steps
+        .map((step) => step.usage)
+        .filter((stepUsage): stepUsage is LanguageModelUsage =>
+          hasTokenCounts(stepUsage),
+        )
+      if (stepUsages.length > 0) usage = sumUsage(stepUsages)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const performance = await readResultPerformance(result)
+  return mergePerformanceIntoUsage(usage, performance)
+}
+
 export async function readAgentTotalUsage(result: {
   totalUsage?: PromiseLike<LanguageModelUsage>
   usage?: PromiseLike<LanguageModelUsage>
+  finalStep?: PromiseLike<{ performance?: StepPerformanceLike }>
+  steps?: PromiseLike<Array<{ performance?: StepPerformanceLike }>>
 }): Promise<LanguageModelUsage | undefined> {
+  let usage: LanguageModelUsage | undefined
   if (result.totalUsage) {
-    return result.totalUsage
+    usage = await result.totalUsage
+  } else if (result.usage) {
+    usage = await result.usage
   }
-  if (result.usage) {
-    return result.usage
-  }
-  return undefined
+  if (!usage) return undefined
+  const performance = await readResultPerformance(result)
+  return mergePerformanceIntoUsage(usage, performance)
 }

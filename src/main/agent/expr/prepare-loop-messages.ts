@@ -10,6 +10,7 @@ import {
 } from './thread-context-builder'
 import { injectMessages } from '../injection'
 import { sanitizeModelMessagesForAgent } from '../utils/client-ui-messages'
+import { appendNativeFilePartsToTrailingUserMessage } from '../llm/attachment-file-parts'
 
 const log = createLogger('agent.expr.prepare-loop-messages')
 
@@ -71,8 +72,23 @@ export async function prepareLoopMessages(
     })
   }
 
-  return sanitizeModelMessagesForAgent(
-    await injectMessages(ctx, prunedMessages, opts.loopStep ?? 0),
-    { label: 'prepareLoopMessages' },
-  )
+  const injected = await injectMessages(ctx, prunedMessages, opts.loopStep ?? 0)
+
+  // Only on the first loop step — later steps shouldn't re-upload attachments.
+  const withFiles =
+    (opts.loopStep ?? 0) === 0
+      ? await appendNativeFilePartsToTrailingUserMessage({
+          messages: injected,
+          conversationId: ctx.opts.conversationId,
+          provider: ctx.opts.provider,
+          creds: ctx.opts,
+          attachments: ctx.opts.userAttachments,
+          latestUserMessageId: undefined,
+          pendingUserMessageId: ctx.opts.pendingUserMessage?.id,
+        })
+      : injected
+
+  return sanitizeModelMessagesForAgent(withFiles, {
+    label: 'prepareLoopMessages',
+  })
 }

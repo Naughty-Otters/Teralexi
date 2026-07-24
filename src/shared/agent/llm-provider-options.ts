@@ -434,3 +434,85 @@ export function writeReasoningUiValues(
   applyReasoningUiToSdkSlice(provider, nextSlice, values)
   return setProviderOptionsSlice(provider, nextSlice)
 }
+
+/** Levels accepted by AI SDK 7 top-level `reasoning` (excludes OpenFDE-only `max`). */
+export const AI_SDK_TOP_LEVEL_REASONING_LEVELS = [
+  'none',
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+] as const satisfies readonly LlmReasoningLevel[]
+
+export type AiSdkTopLevelReasoningLevel =
+  (typeof AI_SDK_TOP_LEVEL_REASONING_LEVELS)[number]
+
+export function isAiSdkTopLevelReasoningLevel(
+  value: unknown,
+): value is AiSdkTopLevelReasoningLevel {
+  return (
+    typeof value === 'string' &&
+    (AI_SDK_TOP_LEVEL_REASONING_LEVELS as readonly string[]).includes(value)
+  )
+}
+
+/**
+ * Remove provider-native *level* keys that would override top-level `reasoning`.
+ * Keeps budget / includeThoughts / think / reasoningSummary extras.
+ */
+export function stripOverlappingReasoningLevelKeys(
+  provider: ProviderType,
+  providerOptions: AgentLlmProviderOptions | undefined,
+): AgentLlmProviderOptions | undefined {
+  if (isEmptyProviderOptions(providerOptions)) return undefined
+  const ns = aiSdkProviderOptionsNamespace(provider)
+  const out: AgentLlmProviderOptions = {}
+
+  for (const [namespace, slice] of Object.entries(providerOptions!)) {
+    const next = { ...slice }
+    if (namespace === ns) {
+      delete next.reasoningEffort
+      delete next.thinkingLevel
+      delete next.effort
+      const thinkingConfig = asRecord(next.thinkingConfig)
+      if (thinkingConfig) {
+        const { thinkingLevel: _removed, ...rest } = thinkingConfig
+        if (Object.keys(rest).length > 0) next.thinkingConfig = rest
+        else delete next.thinkingConfig
+      }
+    }
+    if (Object.keys(next).length > 0) out[namespace] = next
+  }
+
+  return Object.keys(out).length > 0 ? out : undefined
+}
+
+export type LlmCallReasoningFields = {
+  /** AI SDK 7 provider-agnostic reasoning effort, when applicable. */
+  reasoning?: AiSdkTopLevelReasoningLevel
+  providerOptions?: AgentLlmProviderOptions
+}
+
+/**
+ * Build send-time reasoning fields for `streamText` / Agent.
+ * Prefer top-level `reasoning` for standard levels; keep providerOptions for
+ * budget / thoughts / OpenFDE-only `max`.
+ */
+export function buildLlmCallReasoningFields(
+  provider: ProviderType,
+  providerOptions: AgentLlmProviderOptions | undefined,
+): LlmCallReasoningFields {
+  const cleaned = resolveAiSdkProviderOptions(providerOptions)
+  const ui = readReasoningUiValues(provider, providerOptions)
+
+  if (isAiSdkTopLevelReasoningLevel(ui.level)) {
+    return {
+      reasoning: ui.level,
+      providerOptions: stripOverlappingReasoningLevelKeys(provider, cleaned),
+    }
+  }
+
+  return cleaned ? { providerOptions: cleaned } : {}
+}
+
