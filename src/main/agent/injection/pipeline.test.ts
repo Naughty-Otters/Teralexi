@@ -3,13 +3,35 @@ import {
   DEEP_THINKING_BEFORE_MARKER,
   MULTIPLE_BRANCH_THINKING_MARKER,
 } from './deep-thinking-blocks'
-import { assembleInstructions, injectUserMessages } from './pipeline'
-import {
-  clearDatetimeInjectionState,
-  recordDatetimeInjection,
-} from './conversation-injection-state'
-import { clearDeepThinkingInjectionState } from './deep-thinking-injection-state'
-import { clearOncePerTurnInjectionState } from './once-per-turn-injection-state'
+
+vi.mock('@main/services/conversation-store', () => ({
+  getConversationStore: vi.fn(() => ({
+    getMessages: vi.fn(() => []),
+    getUserProperty: vi.fn(() => null),
+  })),
+}))
+
+vi.mock('../memory/agent-memory-store', () => ({
+  loadAgentPersonaSnapshot: vi.fn(() => null),
+  loadPersonaMemorySnapshot: vi.fn(() => null),
+}))
+
+vi.mock('@shared/agent/project-rules', () => ({
+  loadProjectRules: vi.fn(() => []),
+  formatProjectRulesBlock: vi.fn(() => ''),
+}))
+
+vi.mock('../delegation/skill-routing-catalog', () => ({
+  buildSkillRoutingCatalog: vi.fn(() => null),
+  formatSkillRoutingBlock: vi.fn(() => ''),
+  hasSkillRoutingTargets: vi.fn(() => false),
+  hasSubAgentDelegationTool: vi.fn(() => false),
+}))
+
+vi.mock('../coding/plan-mode-injection-content', () => ({
+  resolvePlanModeInstructionBlock: vi.fn(() => null),
+  resolvePlanModeInjectionMessage: vi.fn(() => null),
+}))
 
 vi.mock('../coding/plan-mode-state', () => ({
   isPlanModeActive: vi.fn(() => false),
@@ -68,6 +90,13 @@ vi.mock('@config/system-prop', () => ({
   })),
 }))
 
+import { assembleInstructions, injectUserMessages } from './pipeline'
+import {
+  clearDatetimeInjectionState,
+  recordDatetimeInjection,
+} from './conversation-injection-state'
+import { clearDeepThinkingInjectionState } from './deep-thinking-injection-state'
+import { clearOncePerTurnInjectionState } from './once-per-turn-injection-state'
 import { appCache } from '@main/cache/app-cache'
 
 function makeToolLoopCtx(overrides: Record<string, unknown> = {}) {
