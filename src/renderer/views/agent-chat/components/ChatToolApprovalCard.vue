@@ -84,9 +84,9 @@
       </UButton>
       <UButton
         size="sm"
-        color="neutral"
+        color="primary"
         variant="soft"
-        class="cp-btn-secondary cp-btn-sm"
+        class="cp-btn-primary-soft cp-btn-sm"
         :title="`Always approve ${displayName} for this conversation`"
         @click="respond(true, true)"
       >
@@ -94,9 +94,9 @@
       </UButton>
       <UButton
         size="sm"
-        color="neutral"
-        variant="outline"
-        class="cp-btn-secondary cp-btn-sm"
+        color="error"
+        variant="soft"
+        class="cp-btn-danger cp-btn-sm"
         @click="onDenyClick"
       >
         {{ showDenyFeedback ? 'Confirm deny' : 'Deny' }}

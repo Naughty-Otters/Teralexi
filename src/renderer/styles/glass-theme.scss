@@ -56,7 +56,10 @@ html.glass {
   .chat-composer,
   .footer-btn,
   .cp-tab,
-  .cp-icon-btn {
+  .cp-icon-btn,
+  .cp-btn-primary-soft,
+  .cp-btn-secondary,
+  .cp-btn-danger {
     @include glass-backdrop;
     box-shadow: var(--glass-shadow);
   }

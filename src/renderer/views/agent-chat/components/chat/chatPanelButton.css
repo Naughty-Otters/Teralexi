@@ -124,7 +124,11 @@
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-primary-500) 28%, transparent);
 }
 
-/* Primary / danger text buttons (Nuxt UI UButton — class on root) */
+/*
+ * Text buttons for chat HITL (tool approve/deny, forms).
+ * Own fill/border/text from --ui-* / --color-primary-* so solid, dark, and
+ * glass appearances stay consistent (Nuxt UButton classes alone miss glass).
+ */
 .chat-panel .cp-btn-primary {
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -132,15 +136,27 @@
   min-height: 38px;
   padding-left: 18px !important;
   padding-right: 18px !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: color-mix(
+    in srgb,
+    var(--ui-primary, var(--color-primary-500, #22c55e)) 72%,
+    transparent
+  ) !important;
+  color: var(--ui-text-inverted, #fff) !important;
+  background: var(--ui-primary, var(--color-primary-500, #22c55e)) !important;
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--color-primary-600, var(--color-primary-500)) 35%, transparent),
     0 2px 8px color-mix(in srgb, var(--color-primary-500) 22%, transparent) !important;
   transition:
+    border-color 0.14s ease,
+    background 0.14s ease,
     box-shadow 0.14s ease,
     transform 0.1s ease !important;
 }
 
 .chat-panel .cp-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.05);
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--color-primary-600, var(--color-primary-500)) 45%, transparent),
     0 4px 14px color-mix(in srgb, var(--color-primary-500) 28%, transparent) !important;
@@ -148,6 +164,7 @@
 
 .chat-panel .cp-btn-primary:active:not(:disabled) {
   transform: translateY(1px);
+  filter: brightness(0.97);
 }
 
 .chat-panel .cp-btn-secondary {
@@ -158,18 +175,101 @@
   padding-left: 16px !important;
   padding-right: 16px !important;
   border-width: 1px !important;
+  border-style: solid !important;
   border-color: color-mix(in srgb, var(--ui-border) 75%, var(--ui-text) 10%) !important;
+  color: var(--ui-text) !important;
   background: color-mix(in srgb, var(--ui-bg-elevated) 88%, transparent) !important;
+  box-shadow: none !important;
   transition:
     border-color 0.14s ease,
     background 0.14s ease,
-    box-shadow 0.14s ease !important;
+    box-shadow 0.14s ease,
+    color 0.14s ease !important;
 }
 
 .chat-panel .cp-btn-secondary:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--ui-text) 22%, var(--ui-border)) !important;
+  color: var(--ui-text) !important;
   background: color-mix(in srgb, var(--ui-text) 6%, var(--ui-bg-elevated)) !important;
   box-shadow: 0 1px 4px color-mix(in srgb, var(--ui-text) 8%, transparent) !important;
+}
+
+/* Soft primary — “Approve for session” / secondary affirmative */
+.chat-panel .cp-btn-primary-soft {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: 10px !important;
+  min-height: 36px;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: color-mix(
+    in srgb,
+    var(--ui-primary, var(--color-primary-500, #22c55e)) 42%,
+    var(--ui-border)
+  ) !important;
+  color: var(--color-primary-700, var(--ui-primary, #16a34a)) !important;
+  background: color-mix(
+    in srgb,
+    var(--ui-primary, var(--color-primary-500, #22c55e)) 14%,
+    var(--ui-bg-elevated)
+  ) !important;
+  box-shadow: none !important;
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease,
+    color 0.14s ease !important;
+}
+
+.chat-panel .cp-btn-primary-soft:hover:not(:disabled) {
+  border-color: color-mix(
+    in srgb,
+    var(--ui-primary, var(--color-primary-500, #22c55e)) 58%,
+    var(--ui-border)
+  ) !important;
+  background: color-mix(
+    in srgb,
+    var(--ui-primary, var(--color-primary-500, #22c55e)) 22%,
+    var(--ui-bg-elevated)
+  ) !important;
+}
+
+html.dark .chat-panel .cp-btn-primary-soft {
+  color: var(--ui-primary, #4ade80) !important;
+}
+
+/* Deny / destructive */
+.chat-panel .cp-btn-danger {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: 10px !important;
+  min-height: 36px;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: color-mix(in srgb, var(--ui-error, #ef4444) 45%, var(--ui-border)) !important;
+  color: var(--ui-error, #ef4444) !important;
+  background: color-mix(
+    in srgb,
+    var(--ui-error, #ef4444) 10%,
+    var(--ui-bg-elevated)
+  ) !important;
+  box-shadow: none !important;
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease,
+    color 0.14s ease !important;
+}
+
+.chat-panel .cp-btn-danger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--ui-error, #ef4444) 65%, var(--ui-border)) !important;
+  background: color-mix(
+    in srgb,
+    var(--ui-error, #ef4444) 18%,
+    var(--ui-bg-elevated)
+  ) !important;
 }
 
 .chat-panel .cp-btn-sm {
