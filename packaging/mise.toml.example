@@ -1,0 +1,10 @@
+# Example mise tool definition (future)
+# mise use -g ubi:Naughty-Otters/Teralexi[exe=teralexi]
+#
+# Or once a mise backend / asdf plugin exists:
+# [tools]
+# teralexi = "0.0.5"
+
+[tools]
+# Placeholder — prefer npm until GitHub Release binaries are published:
+#   npm i -g teralexi-ai@latest

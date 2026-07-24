@@ -19,7 +19,30 @@ Local AI agent desktop — research, code, chat from your phone, extend with ski
 
 ## Download
 
+### Desktop app
+
 Prefer a ready-made installer? Get macOS and Windows builds from **[teralexi.com](https://www.teralexi.com/)** — no build required.
+
+### CLI (headless companion)
+
+```bash
+# YOLO (GitHub-hosted installer; also mirror at teralexi.com/install when configured)
+curl -fsSL https://raw.githubusercontent.com/Naughty-Otters/Teralexi/main/install/install.sh | bash
+
+# Package managers
+npm i -g teralexi-ai@latest        # or bun / pnpm / yarn
+# brew tap Naughty-Otters/tap && brew install teralexi
+# scoop install teralexi
+# choco install teralexi
+```
+
+```bash
+teralexi --version
+teralexi doctor
+teralexi open    # launch desktop app if installed
+```
+
+Details: [docs/CLI-DISTRIBUTION.md](./docs/CLI-DISTRIBUTION.md).
 
 This repository is for running and contributing from source.
 

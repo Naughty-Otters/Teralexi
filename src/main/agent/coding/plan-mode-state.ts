@@ -8,6 +8,7 @@ import { planModeFor } from './plan-mode-state-machine'
 import {
   clearPlanModeTodoArtifacts,
   planModeStorageOptionsFromEnv,
+  type PlanModeStorageOptions,
 } from './plan-mode-storage-impl'
 
 export {
@@ -94,13 +95,16 @@ export function hasPendingPlanExecution(
   return planModeFor(id).hasPendingExecuteReminder()
 }
 
-export function clearPlanMode(conversationId: string): PlanModeView {
+export function clearPlanMode(
+  conversationId: string,
+  options?: PlanModeStorageOptions,
+): PlanModeView {
   const view = planModeFor(conversationId).resetToIdle({
     trigger: 'api:clearPlanMode',
   })
   clearPlanModeTodoArtifacts(
     conversationId,
-    planModeStorageOptionsFromEnv(conversationId),
+    options ?? planModeStorageOptionsFromEnv(conversationId),
   )
   return view
 }

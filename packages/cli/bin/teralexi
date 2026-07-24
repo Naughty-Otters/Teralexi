@@ -1,0 +1,64 @@
+#!/usr/bin/env node
+/**
+ * npm/global entry. Prefer a cached native binary when present (curl|bash /
+ * brew installs); otherwise run the Node CLI bundled in this package.
+ */
+import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { platform as osPlatform } from 'node:os'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const forwarded = ['SIGINT', 'SIGTERM', 'SIGHUP']
+
+function run(target, args) {
+  const child = spawn(target, args, {
+    stdio: 'inherit',
+    env: process.env,
+  })
+  const forwarders = {}
+  for (const signal of forwarded) {
+    forwarders[signal] = () => {
+      try {
+        child.kill(signal)
+      } catch {
+        // child may have exited
+      }
+    }
+    process.on(signal, forwarders[signal])
+  }
+  child.on('error', (err) => {
+    console.error(err.message)
+    process.exit(1)
+  })
+  child.on('exit', (code, signal) => {
+    for (const s of forwarded) process.removeListener(s, forwarders[s])
+    if (signal) {
+      process.kill(process.pid, signal)
+      return
+    }
+    process.exit(typeof code === 'number' ? code : 0)
+  })
+}
+
+const envBin = process.env.TERALEXI_BIN_PATH?.trim()
+if (envBin && existsSync(envBin)) {
+  run(envBin, process.argv.slice(2))
+} else {
+  const isWin = osPlatform() === 'win32'
+  const nativeName = isWin ? 'teralexi.exe' : 'teralexi'
+  const cached = join(__dirname, '.teralexi', nativeName)
+  if (existsSync(cached)) {
+    run(cached, process.argv.slice(2))
+  } else {
+    const entry = join(__dirname, '..', 'dist', 'cli.js')
+    if (!existsSync(entry)) {
+      console.error(
+        'Teralexi CLI is not built. From packages/cli run: npm run build',
+      )
+      process.exit(1)
+    }
+    run(process.execPath, [entry, ...process.argv.slice(2)])
+  }
+}

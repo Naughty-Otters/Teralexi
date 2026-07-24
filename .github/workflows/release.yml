@@ -155,11 +155,76 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  cli:
+    name: Build CLI archives
+    needs: select-platforms
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Build CLI package archives
+        run: |
+          node scripts/sync-cli-version.mjs --check
+          npm run cli:release-artifacts
+          ls -la build/cli
+
+      - name: Upload CLI archives
+        uses: actions/upload-artifact@v5
+        with:
+          name: teralexi-cli
+          path: |
+            build/cli/*.zip
+            build/cli/*.tar.gz
+            build/cli/checksums.json
+            packaging/homebrew/teralexi.rb
+            packaging/scoop/teralexi.json
+            packaging/chocolatey/**
+          retention-days: 14
+          if-no-files-found: error
+
+  npm-publish-cli:
+    name: Publish teralexi-ai to npm
+    needs: cli
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.x
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Sync version, build, publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NODE_AUTH_TOKEN}" ]; then
+            echo "::warning::NPM_TOKEN not set — skipping npm publish for teralexi-ai"
+            exit 0
+          fi
+          node scripts/sync-cli-version.mjs
+          npm --prefix packages/cli run build
+          cd packages/cli
+          npm publish --access public
+
   github-release:
     name: Publish GitHub release
-    needs: release
+    needs: [release, cli]
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: write
 
@@ -167,9 +232,17 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
-      - name: Create GitHub release from package.json version
+      - name: Download CLI archives
+        uses: actions/download-artifact@v5
+        with:
+          name: teralexi-cli
+          path: build/cli
+
+      - name: Create GitHub release (attach CLI assets)
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
-        run: node .github/scripts/create-github-release.mjs
+        run: |
+          ls -la build/cli
+          node .github/scripts/create-github-release.mjs

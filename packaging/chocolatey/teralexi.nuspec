@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chocolatey package — hashes via node scripts/update-cli-package-hashes.mjs -->
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>teralexi</id>
+    <version>0.0.5</version>
+    <title>Teralexi CLI</title>
+    <authors>Naughty-Otters</authors>
+    <owners>Naughty-Otters</owners>
+    <projectUrl>https://www.teralexi.com/</projectUrl>
+    <licenseUrl>https://github.com/Naughty-Otters/Teralexi/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/Naughty-Otters/Teralexi</projectSourceUrl>
+    <docsUrl>https://www.teralexi.com/</docsUrl>
+    <bugTrackerUrl>https://github.com/Naughty-Otters/Teralexi/issues</bugTrackerUrl>
+    <tags>teralexi ai agent cli</tags>
+    <summary>Local-first AI agent CLI</summary>
+    <description>Headless Teralexi CLI. Desktop app: https://www.teralexi.com/</description>
+    <dependencies>
+      <dependency id="nodejs" version="[22.0.0,)" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const { GITHUB_SHA, GITHUB_REF_NAME, GH_TOKEN, GITHUB_TOKEN } = process.env
@@ -21,6 +21,7 @@ if (!version) {
 }
 
 const tag = `v${version}`
+const cliDir = join(process.cwd(), 'build', 'cli')
 
 function gh(args, { allowFailure = false } = {}) {
   try {
@@ -36,23 +37,45 @@ function gh(args, { allowFailure = false } = {}) {
   }
 }
 
-const existing = gh(['release', 'view', tag], { allowFailure: true })
-if (existing !== null) {
-  console.log(
-    `GitHub release ${tag} already exists (triggered from ${GITHUB_REF_NAME ?? 'unknown'}); leaving it unchanged.`,
-  )
-  process.exit(0)
+function listCliAssets() {
+  if (!existsSync(cliDir)) return []
+  return readdirSync(cliDir)
+    .filter(
+      (name) =>
+        /^teralexi-.*\.(zip|tar\.gz)$/.test(name) || name === 'checksums.json',
+    )
+    .map((name) => join(cliDir, name))
 }
 
-gh([
-  'release',
-  'create',
-  tag,
-  '--title',
-  tag,
-  '--generate-notes',
-  '--target',
-  GITHUB_SHA,
-])
+const assets = listCliAssets()
+const existing = gh(['release', 'view', tag], { allowFailure: true })
 
-console.log(`Created GitHub release ${tag} at ${GITHUB_SHA}`)
+if (existing === null) {
+  const createArgs = [
+    'release',
+    'create',
+    tag,
+    '--title',
+    tag,
+    '--generate-notes',
+    '--target',
+    GITHUB_SHA,
+    ...assets,
+  ]
+  gh(createArgs)
+  console.log(
+    `Created GitHub release ${tag} at ${GITHUB_SHA}` +
+      (assets.length ? ` with ${assets.length} CLI asset(s)` : ''),
+  )
+} else {
+  console.log(
+    `GitHub release ${tag} already exists (triggered from ${GITHUB_REF_NAME ?? 'unknown'}).`,
+  )
+  if (assets.length > 0) {
+    // Upload/replace CLI archives on an existing release (idempotent-ish).
+    gh(['release', 'upload', tag, ...assets, '--clobber'])
+    console.log(`Uploaded ${assets.length} CLI asset(s) to ${tag}`)
+  } else {
+    console.log('No CLI assets in build/cli; leaving release assets unchanged.')
+  }
+}

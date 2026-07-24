@@ -43,6 +43,34 @@ vi.mock('@main/services/conversation-store', () => ({
   })),
 }))
 
+// Avoid ~/.teralexi sandbox resolution on Windows CI (can hang under antivirus).
+vi.mock('@config/teralexi-home', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { join } = require('node:path') as typeof import('node:path')
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { tmpdir } = require('node:os') as typeof import('node:os')
+  const dir = join(tmpdir(), 'plan-state-mock-sandbox')
+  return {
+    getTeralexiSandboxDir: () => dir,
+  }
+})
+
+vi.mock('../sandbox/registry', () => ({
+  peekSandboxRootForConversation: vi.fn(() => null),
+}))
+
+vi.mock('../sandbox/run-context', () => ({
+  getAgentRunSandboxRoot: vi.fn(() => null),
+}))
+
+vi.mock('@toolSet/sandbox-paths', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@toolSet/sandbox-paths')>()
+  return {
+    ...actual,
+    getSandboxRootFromEnv: vi.fn(() => null),
+  }
+})
+
 import {
   bootstrapPlanModeStorage,
   clearPlanMode,
@@ -203,9 +231,19 @@ describe('plan-mode storage', () => {
   })
 
   it('clears plan mode and removes stored artifacts', () => {
-    bootstrapPlanModeStorage('conv-clear', 'clear-me', { sandboxRoot })
-    const view = clearPlanMode('conv-clear')
+    const storage = bootstrapPlanModeStorage('conv-clear', 'clear-me', {
+      sandboxRoot,
+    })
+    expect(storage).not.toBeNull()
+    writePlanModeTodoList(
+      'conv-clear',
+      replaceTodos([{ content: 'Clear me', status: 'pending' }]),
+      { sandboxRoot },
+    )
+
+    const view = clearPlanMode('conv-clear', { sandboxRoot })
     expect(view.status).toBe('tool_execute')
     expect(planState.planSlug).toBeNull()
+    expect(readPlanModeTodoList('conv-clear', { sandboxRoot }).todos).toEqual([])
   })
 })

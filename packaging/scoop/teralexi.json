@@ -1,0 +1,29 @@
+{
+  "version": "0.0.5",
+  "description": "Teralexi CLI — local-first AI agent",
+  "homepage": "https://www.teralexi.com/",
+  "license": "Apache-2.0",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/Naughty-Otters/Teralexi/releases/download/v0.0.5/teralexi-windows-x64.zip",
+      "hash": "0aa239f10a8cbc17c3e3f6484ff32bddf7e9d78d24d5ec489ff03dbd1b3df7d6"
+    }
+  },
+  "bin": [
+    [
+      "teralexi.cmd",
+      "teralexi"
+    ]
+  ],
+  "depends": "nodejs-lts",
+  "checkver": {
+    "github": "https://github.com/Naughty-Otters/Teralexi"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/Naughty-Otters/Teralexi/releases/download/v$version/teralexi-windows-x64.zip"
+      }
+    }
+  }
+}

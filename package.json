@@ -56,7 +56,12 @@
     "release:mac": "npm run icons:generate && tsx .electron-vite/build.ts -m prod && tsx scripts/run-electron-builder.ts -m prod -c build.json --mac --publish never",
     "release:win": "npm run icons:generate && tsx .electron-vite/build.ts -m prod && tsx scripts/run-electron-builder.ts -m prod -c build.json --win --x64 --publish never",
     "release:upload-s3": "node .github/scripts/upload-release-to-s3.mjs build",
-    "verify:mac-update": "node .github/scripts/verify-mac-update-manifest.mjs build"
+    "verify:mac-update": "node .github/scripts/verify-mac-update-manifest.mjs build",
+    "cli:build": "npm --prefix packages/cli run build",
+    "cli:pack": "bash scripts/pack-cli-archive.sh",
+    "cli:sync-version": "node scripts/sync-cli-version.mjs",
+    "cli:hashes": "node scripts/update-cli-package-hashes.mjs",
+    "cli:release-artifacts": "npm run cli:sync-version && npm run cli:pack && npm run cli:hashes"
   },
   "dependencies": {
     "@ai-sdk-tools/agents": "^1.2.0",

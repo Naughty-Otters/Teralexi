@@ -108,9 +108,53 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
+  cli:
+    name: CLI archives
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Build and pack CLI
+        run: |
+          node scripts/sync-cli-version.mjs --check
+          npm run cli:release-artifacts
+          node ./packages/cli/bin/teralexi --version
+          node ./packages/cli/bin/teralexi doctor
+          test -f build/cli/teralexi-darwin-arm64.zip
+          test -f build/cli/teralexi-darwin-x64.zip
+          test -f build/cli/teralexi-linux-x64.tar.gz
+          test -f build/cli/teralexi-linux-arm64.tar.gz
+          test -f build/cli/teralexi-windows-x64.zip
+          test -f build/cli/checksums.json
+          ls -la build/cli
+          # npm pack dry-run (publish readiness for teralexi-ai only)
+          (cd packages/cli && npm pack --dry-run)
+
+      - name: Upload CLI archives
+        uses: actions/upload-artifact@v5
+        with:
+          name: teralexi-cli-${{ github.run_number }}-${{ github.sha }}
+          path: |
+            build/cli/*.zip
+            build/cli/*.tar.gz
+            build/cli/checksums.json
+            packaging/homebrew/teralexi.rb
+            packaging/scoop/teralexi.json
+            packaging/chocolatey/**
+          retention-days: 14
+          if-no-files-found: error
+
   update-readme:
     name: Update README
-    needs: [unit-tests, build]
+    needs: [unit-tests, build, cli]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
