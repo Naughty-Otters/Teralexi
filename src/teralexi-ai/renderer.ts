@@ -14,7 +14,6 @@ export {
   Output,
   stepCountIs,
   isToolUIPart,
+  isToolUIPart as isToolOrDynamicToolUIPart,
 } from 'ai'
 
-/** @deprecated Use `isToolUIPart` (AI SDK 7). */
-export { isToolUIPart as isToolOrDynamicToolUIPart } from 'ai'
