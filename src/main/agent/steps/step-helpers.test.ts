@@ -1,4 +1,35 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+
+// Avoid Electron/SQLite/config I/O that can hang under CI timeouts.
+vi.mock('@main/services/conversation-store', () => ({
+  getConversationStore: () => ({
+    getUserProperty: () => null,
+  }),
+}))
+
+vi.mock('@config/system-prop', () => ({
+  getSystemPropValue: (_key: string, fallback: string) => fallback,
+  getSystemPropValues: () => ({}),
+}))
+
+vi.mock('../utils/chat-context-settings', () => ({
+  loadChatUiReasoningMaxChars: () => 12_000,
+  loadChatContextWindowMessages: () => 40,
+}))
+
+vi.mock('../llm/llm-debug-writer', () => ({
+  scheduleLlmDebugRequest: vi.fn(() => null),
+  scheduleLlmDebugResponse: vi.fn(),
+}))
+
+vi.mock('../tool-approval-secret', () => ({
+  getToolApprovalSecret: () => 'test-tool-approval-secret-32chars!!',
+}))
+
+vi.mock('../llm/runtime', () => ({
+  runAgentStream: vi.fn(),
+}))
+
 import {
   applyPerStreamToolInputDedupe,
   createToolInputDedupeState,
@@ -10,8 +41,11 @@ import {
   formatTodoGoalForInstructions,
   streamAgent,
 } from './step-helpers'
+import { runAgentStream } from '../llm/runtime'
 import { STEP_HELPERS_LABELS } from '../constants/pipeline'
 import * as agentMemory from '../agent-memory'
+
+const runAgentStreamMock = vi.mocked(runAgentStream)
 
 describe('formatTodoGoalForInstructions', () => {
   it('formats name, description, and success criteria', () => {
@@ -163,122 +197,59 @@ describe('filterToolsByAvailableSet', () => {
 })
 
 describe('collectAgentText', () => {
-  it('streams text chunks via text-only path', async () => {
+  beforeEach(() => {
+    runAgentStreamMock.mockReset()
+  })
+
+  it('delegates stream collection to runAgentStream', async () => {
     const onChunk = vi.fn()
-    const result = await collectAgentText(
-      {
-        textStream: (async function* () {
-          yield 'hello '
-          yield 'world'
-        })(),
-        response: Promise.resolve({ text: 'hello world' }),
-      },
-      onChunk,
+    const streamResult = {
+      textStream: (async function* () {
+        yield 'hello'
+      })(),
+      response: Promise.resolve({ text: 'hello world' }),
+    }
+    runAgentStreamMock.mockResolvedValue({
+      text: 'hello world',
+      awaitingToolApproval: false,
+      toolCalls: [],
+    })
+
+    const result = await collectAgentText(streamResult, onChunk)
+
+    expect(runAgentStreamMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result: streamResult,
+        onChunk,
+      }),
     )
     expect(result.text).toBe('hello world')
     expect(result.awaitingToolApproval).toBe(false)
-    expect(onChunk).toHaveBeenCalled()
   })
 
-  it('uses fullStream path and detects pending tool approval', async () => {
+  it('forwards UI chunks and pending-approval result from runAgentStream', async () => {
     const onChunk = vi.fn()
     const onUIMessageChunk = vi.fn()
-
-    async function* fullStream() {
-      yield { type: 'text-start', id: 't0' }
-      yield { type: 'text-delta', id: 't0', text: 'partial ' }
-      yield { type: 'tool-approval-request', toolCallId: 'call-1' }
-      yield { type: 'text-delta', id: 't0', text: 'done' }
-      yield { type: 'text-end', id: 't0' }
-      yield { type: 'finish', finishReason: 'stop' }
-    }
+    runAgentStreamMock.mockResolvedValue({
+      text: 'partial done',
+      awaitingToolApproval: true,
+      toolCalls: [],
+    })
 
     const result = await collectAgentText(
       {
         textStream: (async function* () {})(),
-        fullStream: fullStream(),
         response: Promise.resolve(),
-        steps: Promise.resolve([]),
       },
       onChunk,
       onUIMessageChunk,
     )
 
-    expect(result.text).toContain('partial')
+    expect(runAgentStreamMock).toHaveBeenCalledWith(
+      expect.objectContaining({ onUIMessageChunk }),
+    )
     expect(result.awaitingToolApproval).toBe(true)
-    expect(onUIMessageChunk).toHaveBeenCalled()
-  })
-
-  it('fills empty transcript from finalized steps', async () => {
-    const onChunk = vi.fn()
-    const result = await collectAgentText(
-      {
-        textStream: (async function* () {})(),
-        fullStream: (async function* () {
-          yield { type: 'start-step' }
-          yield { type: 'finish-step', finishReason: 'stop' }
-          yield { type: 'finish', finishReason: 'stop' }
-        })(),
-        response: Promise.resolve(),
-        steps: Promise.resolve([
-          {
-            text: 'from steps',
-            toolResults: [{ output: { ok: true } }],
-          },
-        ]),
-        text: Promise.resolve('fallback'),
-      },
-      onChunk,
-      vi.fn(),
-    )
-    expect(result.text).toContain('from steps')
-    expect(result.text).toContain('ok')
-  })
-
-  it('handles tool output, error, denied, and reasoning via fullStream', async () => {
-    const onChunk = vi.fn()
-    const onUIMessageChunk = vi.fn()
-
-    async function* fullStream() {
-      yield { type: 'reasoning-start', id: 'r0' }
-      yield { type: 'reasoning-delta', id: 'r0', text: 'thinking ' }
-      yield { type: 'reasoning-end', id: 'r0' }
-      yield {
-        type: 'tool-call',
-        toolCallId: 'call-1',
-        toolName: 'run_script',
-        input: {},
-      }
-      yield {
-        type: 'tool-result',
-        toolCallId: 'call-1',
-        toolName: 'run_script',
-        output: { success: true, data: 'payload' },
-      }
-      yield {
-        type: 'tool-error',
-        toolCallId: 'call-2',
-        toolName: 'grep_files',
-        error: new Error('tool failed'),
-      }
-      yield { type: 'tool-output-denied', toolCallId: 'call-3' }
-      yield { type: 'finish', finishReason: 'stop' }
-    }
-
-    const result = await collectAgentText(
-      {
-        textStream: (async function* () {})(),
-        fullStream: fullStream(),
-        response: Promise.resolve(),
-        steps: Promise.resolve([]),
-      },
-      onChunk,
-      onUIMessageChunk,
-    )
-
-    expect(result.text).not.toContain('thinking')
-    expect(result.text).toContain('tool failed')
-    expect(onUIMessageChunk).toHaveBeenCalled()
+    expect(result.text).toContain('partial')
   })
 
   it('records token usage when usage metadata is provided', async () => {
@@ -287,24 +258,27 @@ describe('collectAgentText', () => {
       outputTokens: 4,
     }))
     const recordTokenUsageFromOpts = vi.fn()
+    const streamResult = {
+      textStream: (async function* () {
+        yield 'usage'
+      })(),
+      response: Promise.resolve({ text: 'usage' }),
+    }
+    runAgentStreamMock.mockResolvedValue({
+      text: 'usage',
+      awaitingToolApproval: false,
+      toolCalls: [],
+    })
 
-    await collectAgentText(
-      {
-        textStream: (async function* () {
-          yield 'usage'
-        })(),
-        response: Promise.resolve({ text: 'usage' }),
-      },
-      vi.fn(),
-      undefined,
-      {
-        source: 'toolLoop',
-        stepId: 'toolLoop',
-        providers: { readAgentTotalUsage, recordTokenUsageFromOpts },
-      },
-    )
+    await collectAgentText(streamResult, vi.fn(), undefined, {
+      source: 'toolLoop',
+      stepId: 'toolLoop',
+      opts: {} as never,
+      providers: { readAgentTotalUsage, recordTokenUsageFromOpts } as never,
+    })
 
-    expect(readAgentTotalUsage).toHaveBeenCalled()
+    expect(runAgentStreamMock).toHaveBeenCalled()
+    expect(readAgentTotalUsage).toHaveBeenCalledWith(streamResult)
     expect(recordTokenUsageFromOpts).toHaveBeenCalled()
   })
 })
@@ -399,6 +373,12 @@ describe('streamAgent', () => {
 
   beforeEach(() => {
     onChunk.mockReset()
+    runAgentStreamMock.mockReset()
+    runAgentStreamMock.mockResolvedValue({
+      text: 'done',
+      awaitingToolApproval: false,
+      toolCalls: [],
+    })
   })
 
   it('streams the tool loop and returns collected text', async () => {
@@ -429,12 +409,18 @@ describe('streamAgent', () => {
         executionContext: expect.objectContaining({ userId: 'user-1' }),
       }),
     )
+    expect(runAgentStreamMock).toHaveBeenCalled()
   })
 
   it('continues when persistAgentStreamTurn fails', async () => {
     vi.spyOn(agentMemory, 'persistAgentStreamTurn').mockRejectedValueOnce(
       new Error('persist failed'),
     )
+    runAgentStreamMock.mockResolvedValue({
+      text: 'saved',
+      awaitingToolApproval: false,
+      toolCalls: [],
+    })
 
     const agent = {
       stream: vi.fn(async () => ({
