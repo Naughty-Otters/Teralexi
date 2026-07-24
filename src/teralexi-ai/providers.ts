@@ -3,7 +3,7 @@
  */
 export { createAnthropic } from '@ai-sdk/anthropic'
 export { createOpenAI } from '@ai-sdk/openai'
-export { createGoogleGenerativeAI } from '@ai-sdk/google'
+export { createGoogle } from '@ai-sdk/google'
 export { createDeepSeek, deepseek } from '@ai-sdk/deepseek'
 export { createZhipu } from 'zhipu-ai-provider'
 export { createOllama } from 'ollama-ai-provider-v2'

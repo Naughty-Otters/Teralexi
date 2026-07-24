@@ -3,7 +3,7 @@ import {
   createAnthropic,
   createDeepSeek,
   createFireworks,
-  createGoogleGenerativeAI,
+  createGoogle,
   createHuggingFace,
   createMoonshotAI,
   createOllama,
@@ -64,7 +64,7 @@ export class AnthropicAdapter extends ProviderAdapter {
 
 export class GeminiAdapter extends ProviderAdapter {
   createModel(modelId: string, creds: ProviderCredentials) {
-    return createGoogleGenerativeAI({
+    return createGoogle({
       apiKey: creds.geminiApiKey,
       baseURL: creds.geminiBaseURL,
     })(modelId)

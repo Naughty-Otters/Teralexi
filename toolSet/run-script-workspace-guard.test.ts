@@ -66,7 +66,9 @@ describe('run-script-workspace-guard', () => {
     const before = await snapshotWorkspaceGuard(dir, { captureTextContent: true })
     expect(before.get(join(dir, 'src', 'a.ts'))?.content).toBe('old\n')
 
-    await writeFile(join(dir, 'src', 'a.ts'), 'new\n', 'utf8')
+    // Different byte length so findChangedFiles still detects the edit when
+    // mtime resolution is coarse (common on Windows CI runners).
+    await writeFile(join(dir, 'src', 'a.ts'), 'new-content\n', 'utf8')
     await writeFile(join(dir, 'src', 'b.ts'), 'created\n', 'utf8')
     const after = await snapshotWorkspaceGuard(dir)
     const writes = detectWorkspaceWrites({
@@ -74,6 +76,7 @@ describe('run-script-workspace-guard', () => {
       before,
       after,
     })
+    expect(writes.sort()).toEqual(['src/a.ts', 'src/b.ts'])
     const files = await buildWorkspaceWriteFileChanges({
       workspaceRoot: dir,
       before,
@@ -86,7 +89,7 @@ describe('run-script-workspace-guard', () => {
     const created = files.find((f) => f.path === 'src/b.ts')
     expect(modified?.action).toBe('modify')
     expect(modified?.diff).toContain('-old')
-    expect(modified?.diff).toContain('+new')
+    expect(modified?.diff).toContain('+new-content')
     expect(modified?.workspacePath).toBe(dir)
     expect(created?.action).toBe('create')
     expect(created?.diff).toContain('+created')

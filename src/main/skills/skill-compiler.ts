@@ -364,7 +364,7 @@ async function runCompileLlm(
     },
     streamParams: {
       model,
-      system: COMPILE_SYSTEM,
+      instructions: COMPILE_SYSTEM,
       messages,
       maxOutputTokens: 8192,
     },

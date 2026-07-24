@@ -46,7 +46,7 @@ function mapInputTokenDetails(
   const mapped = pickDefined({
     cacheReadTokens:
       asInt(details?.cacheReadTokens) ??
-      asInt(usage.cachedInputTokens) ??
+      asInt(readUsageField(usage, 'cachedInputTokens')) ??
       asInt(readUsageField(usage, 'cacheReadTokens')),
     cacheWriteTokens:
       asInt(details?.cacheWriteTokens) ??
@@ -65,7 +65,6 @@ function mapOutputTokenDetails(
   const mapped = pickDefined({
     reasoningTokens:
       asInt(details?.reasoningTokens) ??
-      asInt(usage.reasoningTokens) ??
       asInt(readUsageField(usage, 'reasoningTokens')),
     textTokens:
       asInt(details?.textTokens) ?? asInt(readUsageField(usage, 'textTokens')),

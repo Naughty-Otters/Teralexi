@@ -1,5 +1,5 @@
 import type { AgentLlmStage } from '@shared/agent/stage-llm-settings'
-import { resolveAiSdkProviderOptions } from '@shared/agent/llm-provider-options'
+import { buildLlmCallReasoningFields } from '@shared/agent/llm-provider-options'
 import type { AgentMessage } from '../types'
 import type { AgentStepContext } from '../context'
 import type { StepExpressionPlan } from './expression-plan'
@@ -13,7 +13,7 @@ import {
 } from '../providers/stream'
 
 /**
- * Expression LLM phase: `system_msg` → `streamText({ instructions, system, messages })`.
+ * Expression LLM phase: `system_msg` → `streamText({ instructions, messages })`.
  */
 export type RunExpressionLlmOptions = {
   maxOutputTokens?: number
@@ -50,14 +50,21 @@ function expressionLlmCallExtras(
   stage: AgentLlmStage | undefined,
 ): {
   model: unknown
-  providerOptions?: ReturnType<typeof resolveAiSdkProviderOptions>
+  reasoning?: string
+  providerOptions?: ReturnType<
+    typeof buildLlmCallReasoningFields
+  >['providerOptions']
 } {
   const choice = stage
     ? ctx.resolveStageChoice(stage)
     : ctx.resolveDefaultLlmChoice()
-  const providerOptions = resolveAiSdkProviderOptions(choice.providerOptions)
+  const { reasoning, providerOptions } = buildLlmCallReasoningFields(
+    choice.provider,
+    choice.providerOptions,
+  )
   return {
     model: stage ? ctx.resolveStageModel(stage) : ctx.model,
+    ...(reasoning ? { reasoning } : {}),
     ...(providerOptions ? { providerOptions } : {}),
   }
 }
@@ -82,7 +89,7 @@ export async function runExpressionLlmText(
 
   const streamParams = {
     ...expressionLlmCallExtras(ctx, options?.stage),
-    ...(instructions ? { instructions, system: instructions } : {}),
+    ...(instructions ? { instructions } : {}),
     messages: llmParams.messages,
     abortSignal: ctx.opts.abortSignal,
     ...(options?.maxOutputTokens != null
@@ -130,7 +137,7 @@ export async function runExpressionLlmObject<T>(
 
   const streamParams = {
     ...expressionLlmCallExtras(ctx, options.stage),
-    ...(instructions ? { instructions, system: instructions } : {}),
+    ...(instructions ? { instructions } : {}),
     messages: llmParams.messages,
     output: options.output,
     abortSignal: ctx.opts.abortSignal,

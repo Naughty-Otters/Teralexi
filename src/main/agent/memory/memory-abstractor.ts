@@ -109,7 +109,7 @@ function allBlocksForSessionPrompt(blocks: AgentMemoryBlock[]): string {
 
 async function runAbstractLlm<T>(params: {
   model: unknown
-  system: string
+  instructions: string
   userContent: string
   schema: z.ZodType<T>
   abortSignal?: AbortSignal
@@ -126,7 +126,7 @@ async function runAbstractLlm<T>(params: {
     logMeta: params.logMeta,
     streamParams: {
       model: params.model,
-      system: params.system,
+      instructions: params.instructions,
       messages: [{ role: 'user', content: params.userContent }],
       output: outputSpec,
       abortSignal: params.abortSignal,
@@ -303,7 +303,7 @@ export async function abstractSessionMemory(params: {
   try {
     const parsed = await runAbstractLlm({
       model: params.model,
-      system: new ConfigContext(() => params.responseLanguage).withResponseLanguageInstruction(
+      instructions: new ConfigContext(() => params.responseLanguage).withResponseLanguageInstruction(
         MEMORY_ABSTRACTOR_LLM.SESSION_SYSTEM,
         params.responseLanguage,
       ),
@@ -382,7 +382,7 @@ export async function abstractAgentPersonaMemory(params: {
   try {
     const parsed = await runAbstractLlm({
       model: params.model,
-      system: new ConfigContext(() => params.responseLanguage).withResponseLanguageInstruction(
+      instructions: new ConfigContext(() => params.responseLanguage).withResponseLanguageInstruction(
         MEMORY_ABSTRACTOR_LLM.AGENT_PERSONA_SYSTEM,
         params.responseLanguage,
       ),
@@ -441,7 +441,7 @@ export async function abstractUserPersonaMemory(params: {
   try {
     const parsed = await runAbstractLlm({
       model: params.model,
-      system: new ConfigContext(() => params.responseLanguage).withResponseLanguageInstruction(
+      instructions: new ConfigContext(() => params.responseLanguage).withResponseLanguageInstruction(
         MEMORY_ABSTRACTOR_LLM.USER_PERSONA_SYSTEM,
         params.responseLanguage,
       ),

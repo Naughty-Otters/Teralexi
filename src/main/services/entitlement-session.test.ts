@@ -1,5 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { mkdirSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EntitlementCache } from '@shared/subscription/entitlement-types'
+
+const accountsDir = join(process.cwd(), '.tmp-entitlement-session-test')
 
 const {
   loadStoredAccount,
@@ -54,6 +58,10 @@ vi.mock('@main/services/google-account-notify', () => ({
   notifyGoogleAccountChanged,
 }))
 
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiAccountsDir: () => accountsDir,
+}))
+
 import {
   clearEntitlementSession,
   getEntitlementUiSnapshot,
@@ -62,7 +70,10 @@ import {
   resetEntitlementSessionForTests,
 } from './entitlement-session'
 import { isEntitlementVerificationConfigured } from './entitlement-config'
-import { saveEntitlementCache } from './entitlement-store'
+import {
+  resetEntitlementStoreForTests,
+  saveEntitlementCache,
+} from './entitlement-store'
 
 const sampleCache: EntitlementCache = {
   plan: 'base',
@@ -78,12 +89,27 @@ const sampleCache: EntitlementCache = {
   expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
 }
 
+function resetEntitlementTestMocks(): void {
+  vi.mocked(isEntitlementVerificationConfigured).mockReturnValue(true)
+  checkTeralexiServerSession.mockResolvedValue({ ok: true })
+  verifyCachedEntitlementLocally.mockResolvedValue(null)
+  fetchAndVerifyEntitlementFromNetwork.mockResolvedValue(null)
+}
+
 describe('refreshAuthAndEntitlement', () => {
+  beforeEach(() => {
+    resetEntitlementSessionForTests()
+    resetEntitlementStoreForTests()
+    mkdirSync(accountsDir, { recursive: true })
+    resetEntitlementTestMocks()
+  })
+
   afterEach(() => {
     resetEntitlementSessionForTests()
+    resetEntitlementStoreForTests()
+    rmSync(accountsDir, { recursive: true, force: true })
     vi.clearAllMocks()
-    vi.mocked(isEntitlementVerificationConfigured).mockReturnValue(true)
-    checkTeralexiServerSession.mockResolvedValue({ ok: true })
+    resetEntitlementTestMocks()
   })
 
   it('clears entitlement when user is signed out', async () => {

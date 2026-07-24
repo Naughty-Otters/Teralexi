@@ -205,7 +205,7 @@ export abstract class AgentStep {
       })
     }
     const { text } = await this.ctx.providers.streamTextToStepProgress(this.ctx, {
-      system,
+      instructions: system,
       messages,
       abortSignal: this.ctx.opts.abortSignal,
     } as StreamTextParams)

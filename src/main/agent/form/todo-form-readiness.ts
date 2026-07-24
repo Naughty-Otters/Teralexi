@@ -168,7 +168,7 @@ export async function assessTodoFormReadiness(
       collectViaForm?: boolean
       reason?: string
     }>(ctx, {
-      system: ctx.config.withResponseLanguageInstruction(
+      instructions: ctx.config.withResponseLanguageInstruction(
         `You assess whether an agent todo step has enough **user-facing** information to execute without a form.
 
 User-facing inputs: document type, file paths the user must provide, titles, preferences, data the user owns.

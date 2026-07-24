@@ -26,12 +26,24 @@ import {
   type AgentCollectResult,
   type AgentStreamCollectSource,
 } from './ui-message-projector'
+import { withDefaultLlmTimeout } from './default-request-options'
 
 const log = createLogger('agent.llm.runtime')
 
 export type StreamTextParams = Parameters<typeof streamText>[0]
 
 export type StreamTextResult = Awaited<ReturnType<typeof streamText>>
+
+/** AI SDK 7 renamed `fullStream` → `stream`; keep reading the deprecated alias. */
+function resolveEventStream(
+  result: StreamTextResult | AgentStreamCollectSource,
+): AsyncIterable<unknown> | undefined {
+  const r = result as {
+    stream?: AsyncIterable<unknown>
+    fullStream?: AsyncIterable<unknown>
+  }
+  return r.stream ?? r.fullStream
+}
 
 export type RunLlmStreamParams = {
   streamParams: StreamTextParams
@@ -93,14 +105,15 @@ async function drainStreamResult(
     processor.processEvent(event, ctx)
   }
 
-  const eventDrain = result.fullStream
-    ? drainFullStreamToLlmEvents(result.fullStream, onEvent)
+  const eventStream = resolveEventStream(result)
+  const eventDrain = eventStream
+    ? drainFullStreamToLlmEvents(eventStream, onEvent)
     : drainTextStreamToLlmEvents(result.textStream, onEvent)
 
-  // Only when fullStream exists — otherwise eventDrain already consumes textStream.
+  // Only when the event stream exists — otherwise eventDrain already consumes textStream.
   const progressDrain =
     opts?.pipeTextStreamToProgress &&
-    result.fullStream &&
+    eventStream &&
     result.textStream &&
     ctx.emitStepProgress
       ? pipeTextStreamToStepProgress(result.textStream, ctx.emitStepProgress)
@@ -118,7 +131,8 @@ export async function runLlmStream(
   log.debug('LLM stream starting', { mode })
 
   try {
-    validateStreamTextParamsForLlm(params.streamParams, {
+    const streamParams = withDefaultLlmTimeout(params.streamParams)
+    validateStreamTextParamsForLlm(streamParams, {
       label: 'runLlmStream',
       ...params.validationContext,
     })
@@ -137,17 +151,17 @@ export async function runLlmStream(
       debugCtx,
       buildStreamTextDebugRequest(
         debugCtx,
-        params.streamParams,
+        streamParams,
         debugLabel,
       ),
     )
 
-    const result = streamText(params.streamParams)
+    const result = streamText(streamParams)
     const pipeTextStreamToProgress =
       params.pipeTextStreamToProgress === true &&
       mode === 'progress' &&
       typeof params.processorCtx?.emitStepProgress === 'function' &&
-      Boolean(result.fullStream) &&
+      Boolean(resolveEventStream(result)) &&
       Boolean(result.textStream)
 
     const processor = new LlmProcessor()
@@ -189,8 +203,9 @@ export async function runLlmStream(
       const instructions =
         typeof params.streamParams.instructions === 'string'
           ? params.streamParams.instructions
-          : typeof params.streamParams.system === 'string'
-            ? params.streamParams.system
+          : typeof (params.streamParams as { system?: unknown }).system ===
+              'string'
+            ? (params.streamParams as { system: string }).system
             : undefined
       const messagesBefore = Array.isArray(params.streamParams.messages)
         ? params.streamParams.messages

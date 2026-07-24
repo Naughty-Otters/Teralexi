@@ -203,7 +203,7 @@ export async function generateFormSchemaFromContext(
       options?: Array<{ value: string; label: string }>
     }>
   }>(ctx, {
-    system: ctx.config.withResponseLanguageInstruction(
+    instructions: ctx.config.withResponseLanguageInstruction(
       `You are a UI form schema generator. Collect only **user-facing** inputs the end user must supply (files, choices, titles, data sources, preferences).
 
 NEVER add form fields for agent/system concerns, including:

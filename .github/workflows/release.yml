@@ -84,7 +84,7 @@ jobs:
         run: npm ci
 
       - name: Install platform-native optional deps
-        run: npm install --include=optional sharp lightningcss @tailwindcss/oxide
+        run: npm install --include=optional @rolldown/binding-win32-x64-msvc @rolldown/binding-darwin-arm64 @rolldown/binding-darwin-x64 @rolldown/binding-linux-x64-gnu sharp lightningcss @tailwindcss/oxide
 
       - name: Run unit tests
         run: npm run test:unit

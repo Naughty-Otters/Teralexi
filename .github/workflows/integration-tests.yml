@@ -29,5 +29,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install platform-native optional deps
+        run: npm install --include=optional @rolldown/binding-linux-x64-gnu @rolldown/binding-win32-x64-msvc @rolldown/binding-darwin-arm64 @rolldown/binding-darwin-x64 sharp lightningcss @tailwindcss/oxide
+
       - name: Run UI integration tests
         run: npm run test:integration:ui

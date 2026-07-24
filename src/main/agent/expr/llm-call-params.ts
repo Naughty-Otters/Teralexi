@@ -4,7 +4,7 @@ import type { StepExpressionPlan } from './expression-plan'
 /**
  * Build AI SDK `streamText` / `generateText` params from an expression plan.
  *
- * - `system_msg` → `instructions` (and `system` for streamText compatibility in this codebase)
+ * - `system_msg` → `instructions`
  * - `prompt` → final user message in `messages`
  */
 export function buildExpressionLlmCallParams(
@@ -12,7 +12,6 @@ export function buildExpressionLlmCallParams(
   baseMessages: AgentMessage[],
 ): {
   instructions: string | undefined
-  system: string | undefined
   messages: AgentMessage[]
 } {
   const instructions = plan.instructions?.trim() || undefined
@@ -22,7 +21,6 @@ export function buildExpressionLlmCallParams(
   }
   return {
     instructions,
-    system: instructions,
     messages,
   }
 }

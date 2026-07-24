@@ -18,6 +18,24 @@ vi.mock('../workspace/conversation-workspace', () => ({
   getWorkspacePath: vi.fn(() => '/tmp/test-workspace'),
 }))
 
+// Avoid real provider SDK construction (can hang under CI timeouts).
+vi.mock('../providers/adapters', () => ({
+  createModelForProvider: vi.fn(
+    (provider: string, model: string) => ({ provider, model }),
+  ),
+}))
+
+// createSubAgentLlmDebugRunId may call isLlmDebugEnabled → conversation store.
+vi.mock('@main/services/conversation-store', () => ({
+  getConversationStore: () => ({
+    getUserProperty: () => null,
+  }),
+}))
+
+vi.mock('@config/system-prop', () => ({
+  getSystemPropValue: (_key: string, fallback: string) => fallback,
+}))
+
 import {
   buildChildAgentResponseOpts,
   buildContextEnvelope,

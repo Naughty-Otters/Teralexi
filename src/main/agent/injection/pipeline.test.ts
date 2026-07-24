@@ -3,29 +3,123 @@ import {
   DEEP_THINKING_BEFORE_MARKER,
   MULTIPLE_BRANCH_THINKING_MARKER,
 } from './deep-thinking-blocks'
-import { assembleInstructions, injectUserMessages } from './pipeline'
-import {
-  clearDatetimeInjectionState,
-  recordDatetimeInjection,
-} from './conversation-injection-state'
-import { clearDeepThinkingInjectionState } from './deep-thinking-injection-state'
-import { clearOncePerTurnInjectionState } from './once-per-turn-injection-state'
+
+const { testHome, noopInstructionInjector } = vi.hoisted(() => {
+  const { join } = require('node:path') as typeof import('node:path')
+  return {
+    testHome: join(process.cwd(), '.tmp-pipeline-injection-test'),
+    noopInstructionInjector: (id: string, order: number) => ({
+      id,
+      order,
+      applies: () => false,
+      injectInstructions: () => null,
+    }),
+  }
+})
+
+vi.mock('@config/teralexi-home', () => ({
+  getTeralexiHome: () => testHome,
+  getTeralexiRulesDir: () => `${testHome}/rules`,
+  getTeralexiMemoryDir: () => `${testHome}/memory`,
+  getTeralexiAccountsDir: () => `${testHome}/accounts`,
+}))
+
+vi.mock('./injector-cache', () => ({
+  createMtimeKeyedCache: () => ({
+    getOrCompute: (_keyParts: string[], compute: () => string) => compute(),
+    clear: () => {},
+  }),
+  pathMtimeKey: (filePath: string | null | undefined) => filePath?.trim() || 'missing',
+}))
+
+vi.mock('./injectors/sub-agents', () => ({
+  subAgentsInjector: noopInstructionInjector('sub-agents', 55),
+}))
+
+vi.mock('./injectors/memory-persona', () => ({
+  memoryPersonaInjector: noopInstructionInjector('memory-persona', 40),
+}))
+
+vi.mock('./injectors/project-rules', () => ({
+  projectRulesInjector: noopInstructionInjector('project-rules', 45),
+}))
+
+vi.mock('./injectors/git-status', () => ({
+  gitStatusInjector: noopInstructionInjector('git-status', 80),
+  clearGitStatusCacheForTests: () => {},
+  MAX_GIT_STATUS_LINES: 40,
+}))
+
+vi.mock('./injectors/workspace-open-files', () => ({
+  workspaceOpenFilesInjector: noopInstructionInjector('workspace-open-files', 75),
+  MAX_OPEN_FILES_LISTED: 30,
+}))
+
+vi.mock('./injectors/explore-manifest', () => ({
+  exploreManifestInjector: {
+    id: 'explore-manifest',
+    order: 95,
+    applies: ({ profile, ctx }: { profile: { isCodingAgent: boolean; stage: string }; ctx: { opts: { conversationId?: string } } }) =>
+      profile.isCodingAgent &&
+      (profile.stage === 'toolLoop' || profile.stage === 'todoExecution') &&
+      Boolean(ctx.opts.conversationId?.trim()),
+    injectInstructions: () => '## Explore manifest\n- `src/a.ts`',
+  },
+}))
+
+vi.mock('../expr/thread-context-builder', () => ({
+  resolveEffectiveThreadTag: () => 'general',
+}))
+
+vi.mock('../sandbox/step-output-links', () => ({
+  formatExistingSandboxArtifactsBlock: () => '',
+}))
+
+vi.mock('../lsp/editor-lsp-bridge', () => ({
+  getEditorLspBridge: () => ({
+    listOpenDocumentsForWorkspace: () => [],
+  }),
+  relativePathFromAbs: () => null,
+}))
+
+vi.mock('@main/services/conversation-store', () => ({
+  getConversationStore: vi.fn(() => ({
+    getMessages: vi.fn(() => []),
+    getUserProperty: vi.fn(() => null),
+  })),
+}))
+
+vi.mock('../memory/agent-memory-store', () => ({
+  loadAgentPersonaSnapshot: vi.fn(() => null),
+  loadPersonaMemorySnapshot: vi.fn(() => null),
+}))
+
+vi.mock('../memory/memory-persona-injection', () => ({
+  buildMemoryPersonaInstructionBlock: vi.fn(() => ''),
+}))
+
+vi.mock('@shared/agent/project-rules', () => ({
+  loadProjectRules: vi.fn(() => []),
+  formatProjectRulesBlock: vi.fn(() => ''),
+}))
+
+vi.mock('../delegation/skill-routing-catalog', () => ({
+  buildSkillRoutingCatalog: vi.fn(() => null),
+  formatSkillRoutingBlock: vi.fn(() => ''),
+  hasSkillRoutingTargets: vi.fn(() => false),
+  hasSubAgentDelegationTool: vi.fn(() => false),
+}))
+
+vi.mock('../coding/plan-mode-injection-content', () => ({
+  resolvePlanModeInstructionBlock: vi.fn(() => null),
+  resolvePlanModeInjectionMessage: vi.fn(() => null),
+}))
 
 vi.mock('../coding/plan-mode-state', () => ({
   isPlanModeActive: vi.fn(() => false),
   isPlanExecutionActive: vi.fn(() => false),
   planModeStorageOptionsFromEnv: vi.fn(() => ({})),
 }))
-
-vi.mock('node:fs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('node:fs')>()
-  return {
-    ...actual,
-    existsSync: vi.fn((path: string) =>
-      String(path).includes('manifest.json'),
-    ),
-  }
-})
 
 vi.mock('../coding/plan-mode-storage-impl', () => ({
   resolvePlanModeStorage: vi.fn(() => ({
@@ -68,6 +162,13 @@ vi.mock('@config/system-prop', () => ({
   })),
 }))
 
+import { assembleInstructions, injectUserMessages } from './pipeline'
+import {
+  clearDatetimeInjectionState,
+  recordDatetimeInjection,
+} from './conversation-injection-state'
+import { clearDeepThinkingInjectionState } from './deep-thinking-injection-state'
+import { clearOncePerTurnInjectionState } from './once-per-turn-injection-state'
 import { appCache } from '@main/cache/app-cache'
 
 function makeToolLoopCtx(overrides: Record<string, unknown> = {}) {

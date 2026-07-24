@@ -138,6 +138,38 @@ describe('readStreamTextUsage', () => {
     })
     expect(out.totalTokens).toBe(8)
   })
+
+  it('merges finalStep.performance into usage for metrics', async () => {
+    const out = await readStreamTextUsage({
+      totalUsage: Promise.resolve({
+        inputTokens: 5,
+        outputTokens: 3,
+        totalTokens: 8,
+      }),
+      usage: Promise.resolve({ inputTokens: 0, outputTokens: 0, totalTokens: 0 }),
+      finalStep: Promise.resolve({
+        performance: {
+          stepTimeMs: 1200,
+          responseTimeMs: 900,
+          timeToFirstOutputMs: 150,
+          outputTokensPerSecond: 12.5,
+          toolExecutionMs: { 'call-1': 400 },
+        },
+      }),
+    })
+    expect(out).toEqual(
+      expect.objectContaining({
+        inputTokens: 5,
+        outputTokens: 3,
+        totalTokens: 8,
+        stepTimeMs: 1200,
+        responseTimeMs: 900,
+        timeToFirstOutputMs: 150,
+        outputTokensPerSecond: 12.5,
+        toolExecutionMs: { 'call-1': 400 },
+      }),
+    )
+  })
 })
 
 describe('readAgentTotalUsage', () => {
@@ -150,6 +182,26 @@ describe('readAgentTotalUsage', () => {
       readAgentTotalUsage({ usage: Promise.resolve(usage) }),
     ).resolves.toEqual(usage)
     await expect(readAgentTotalUsage({})).resolves.toBeUndefined()
+  })
+
+  it('merges performance from finalStep', async () => {
+    const out = await readAgentTotalUsage({
+      usage: Promise.resolve({
+        inputTokens: 1,
+        outputTokens: 2,
+        totalTokens: 3,
+      }),
+      finalStep: Promise.resolve({
+        performance: { timeToFirstOutputMs: 80, responseTimeMs: 500 },
+      }),
+    })
+    expect(out).toEqual(
+      expect.objectContaining({
+        totalTokens: 3,
+        timeToFirstOutputMs: 80,
+        responseTimeMs: 500,
+      }),
+    )
   })
 })
 

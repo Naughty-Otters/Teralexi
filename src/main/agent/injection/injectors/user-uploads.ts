@@ -40,7 +40,7 @@ export function formatUserUploadsInstructionBlock(
 
   const lines = [
     USER_UPLOADS_INJECTOR_MARKER,
-    'The user attached the following files to this message. Text files are included inline; other files are available in the sandbox by path.',
+    'The user attached the following files to this message. Text files are included inline; images/PDFs may also be sent as native multimodal parts when the model supports them; other files are available in the sandbox by path.',
   ]
 
   for (const item of attachments) {
