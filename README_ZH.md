@@ -4,9 +4,54 @@
 
 [English](./README.md) · [产品官网](https://www.teralexi.com/)
 
-## 下载安装包
+## 下载安装
 
-不想从源码构建？请直接从 **[teralexi.com](https://www.teralexi.com/)** 下载 macOS / Windows 安装包。
+### 一键安装（推荐）
+
+安装 **CLI**；在 macOS / Windows 上还会从 [stable 渠道](https://api.teralexi.com/desktop/releases/stable) 安装 **桌面应用**：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Naughty-Otters/Teralexi/main/install/install.sh | bash
+# 站点镜像就绪后可改用: curl -fsSL https://www.teralexi.com/install | bash
+```
+
+常用参数：
+
+```bash
+curl -fsSL …/install.sh | bash -s -- --cli-only       # 仅 CLI
+curl -fsSL …/install.sh | bash -s -- --desktop-only   # 仅桌面应用
+curl -fsSL …/install.sh | bash -s -- --version 0.0.5
+```
+
+### 仅桌面应用
+
+也可从 **[teralexi.com](https://www.teralexi.com/)** 下载 DMG / NSIS，或从 [api.teralexi.com/desktop/releases/stable](https://api.teralexi.com/desktop/releases/stable) 取同一批产物。
+
+### 用包管理器装 CLI
+
+`teralexi-ai` 只提供 **`teralexi` 可执行入口**（npm 包不含桌面应用）：
+
+```bash
+npm i -g teralexi-ai@latest        # bun / pnpm / yarn 同样可用
+```
+
+Homebrew tap 发布后：
+
+```bash
+brew tap Naughty-Otters/tap
+brew install teralexi                 # CLI
+brew install --cask teralexi-desktop  # 桌面 .app（sha256 由 release 流水线写入）
+```
+
+Scoop / Chocolatey 见 [docs/CLI-DISTRIBUTION.md](./docs/CLI-DISTRIBUTION.md)。
+
+### 安装后
+
+```bash
+teralexi --version
+teralexi doctor
+teralexi open
+```
 
 本仓库用于从源码运行与贡献。
 
@@ -97,6 +142,7 @@ npm run test:unit    # 单元测试
 | [BUILD-AND-RELEASE.md](./BUILD-AND-RELEASE.md) | 环境、本地构建、CI 与发布 |
 | [CODING.md](./CODING.md) | 贡献者 UI / IPC 说明 |
 | [skills/SKILL-DEVELOPMENT.md](./skills/SKILL-DEVELOPMENT.md) | 编写 Agent Skills |
+| [docs/CLI-DISTRIBUTION.md](./docs/CLI-DISTRIBUTION.md) | curl\|bash、npm、Homebrew、Scoop、Chocolatey |
 | [docs/](./docs/) | 发布、签名、支持上传、App Store 说明 |
 | [CHANGELOG.md](./CHANGELOG.md) | 版本历史 |
 | [NOTICE](./NOTICE) | 商标与第三方说明 |

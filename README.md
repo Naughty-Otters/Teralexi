@@ -19,31 +19,53 @@ Local AI agent desktop — research, code, chat from your phone, extend with ski
 
 ## Download
 
-### Desktop app
+### One-liner (recommended)
 
-Prefer a ready-made installer? Get macOS and Windows builds from **[teralexi.com](https://www.teralexi.com/)** — no build required.
-
-### CLI (headless companion)
+Installs the **CLI** and, on macOS/Windows, the **desktop app** from the [stable release channel](https://api.teralexi.com/desktop/releases/stable):
 
 ```bash
-# YOLO — CLI + desktop on macOS/Windows (use --cli-only for bin only)
 curl -fsSL https://raw.githubusercontent.com/Naughty-Otters/Teralexi/main/install/install.sh | bash
-
-# Package managers (CLI bin only)
-npm i -g teralexi-ai@latest        # or bun / pnpm / yarn
-# brew tap Naughty-Otters/tap && brew install teralexi
-# brew install --cask teralexi-desktop   # desktop .app; sha256 from release pipeline
-# scoop install teralexi
-# choco install teralexi
+# Prefer: curl -fsSL https://www.teralexi.com/install | bash   # when the site mirrors install.sh
 ```
+
+Useful flags:
+
+```bash
+curl -fsSL …/install.sh | bash -s -- --cli-only       # CLI only
+curl -fsSL …/install.sh | bash -s -- --desktop-only   # desktop app only
+curl -fsSL …/install.sh | bash -s -- --version 0.0.5
+```
+
+### Desktop app only
+
+Ready-made installers (DMG / NSIS) also on **[teralexi.com](https://www.teralexi.com/)**, or the same artifacts under [api.teralexi.com/desktop/releases/stable](https://api.teralexi.com/desktop/releases/stable).
+
+### CLI via package managers
+
+`teralexi-ai` installs the **`teralexi` bin only** (no desktop binary inside the npm package):
+
+```bash
+npm i -g teralexi-ai@latest        # also works with bun / pnpm / yarn
+```
+
+After the Homebrew tap is published:
+
+```bash
+brew tap Naughty-Otters/tap
+brew install teralexi                 # CLI formula
+brew install --cask teralexi-desktop  # desktop .app (sha256 filled by release pipeline)
+```
+
+Also planned: `scoop install teralexi` / `choco install teralexi` (see [docs/CLI-DISTRIBUTION.md](./docs/CLI-DISTRIBUTION.md)).
+
+### After install
 
 ```bash
 teralexi --version
-teralexi doctor
-teralexi open    # launch desktop app if installed
+teralexi doctor          # Node, ~/.teralexi, desktop path
+teralexi open            # launch desktop if installed
+# Optional: export TERALEXI_APP=/path/to/Teralexi.app
 ```
-
-Details: [docs/CLI-DISTRIBUTION.md](./docs/CLI-DISTRIBUTION.md).
 
 This repository is for running and contributing from source.
 
@@ -134,6 +156,7 @@ npm run test:unit    # unit tests
 | [BUILD-AND-RELEASE.md](./BUILD-AND-RELEASE.md) | Env modes, local builds, CI & release |
 | [CODING.md](./CODING.md) | Contributor UI / IPC notes |
 | [skills/SKILL-DEVELOPMENT.md](./skills/SKILL-DEVELOPMENT.md) | Authoring agent skills |
+| [docs/CLI-DISTRIBUTION.md](./docs/CLI-DISTRIBUTION.md) | curl\|bash, npm, Homebrew, Scoop, Chocolatey |
 | [docs/](./docs/) | Releases, code signing, support upload, App Store notes |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |
 | [NOTICE](./NOTICE) | Third-party / trademark notes |
