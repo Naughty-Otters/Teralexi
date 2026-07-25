@@ -117,6 +117,23 @@ jobs:
         if: matrix.platform == 'mac'
         run: node .github/scripts/verify-mac-update-manifest.mjs build
 
+      - name: Update Homebrew desktop cask sha256 (from build zips)
+        if: matrix.platform == 'mac'
+        run: |
+          node scripts/update-desktop-cask-hashes.mjs --build-dir build
+          mkdir -p packaging-out
+          cp packaging/homebrew/teralexi-desktop.rb packaging-out/
+          cp build/desktop-cask-checksums.json packaging-out/
+
+      - name: Upload desktop cask packaging artifact
+        if: matrix.platform == 'mac'
+        uses: actions/upload-artifact@v5
+        with:
+          name: teralexi-desktop-cask
+          path: packaging-out/
+          retention-days: 14
+          if-no-files-found: error
+
       - name: Debug OIDC claims (safe)
         env:
           OIDC_AUDIENCE: sts.amazonaws.com

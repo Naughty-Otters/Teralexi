@@ -9,7 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir, platform, arch, release } from 'node:os'
 import { join } from 'node:path'
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
@@ -74,14 +74,43 @@ function ensureHome() {
   }
 }
 
+const DESKTOP_BUNDLE_ID = 'app.teralexi.desktop'
+const DESKTOP_DOWNLOAD = 'https://www.teralexi.com/'
+
+function resolveFromEnv() {
+  const fromEnv = process.env.TERALEXI_APP?.trim()
+  if (fromEnv && existsSync(fromEnv)) return fromEnv
+  return null
+}
+
+/** macOS: Launch Services path for our bundle id (covers non-/Applications installs). */
+function findMacAppByBundleId() {
+  const r = spawnSync(
+    'mdfind',
+    [`kMDItemCFBundleIdentifier == '${DESKTOP_BUNDLE_ID}'`],
+    { encoding: 'utf8' },
+  )
+  if (r.status !== 0 || !r.stdout) return null
+  const hit = r.stdout
+    .split('\n')
+    .map((l) => l.trim())
+    .find((l) => l.endsWith('.app') && existsSync(l))
+  return hit ?? null
+}
+
 function findDesktopApp() {
+  const fromEnv = resolveFromEnv()
+  if (fromEnv) return fromEnv
+
   const p = platform()
   if (p === 'darwin') {
     const candidates = [
       '/Applications/Teralexi.app',
       join(homedir(), 'Applications', 'Teralexi.app'),
     ]
-    return candidates.find((c) => existsSync(c)) ?? null
+    const known = candidates.find((c) => existsSync(c))
+    if (known) return known
+    return findMacAppByBundleId()
   }
   if (p === 'win32') {
     const local = process.env.LOCALAPPDATA
@@ -107,6 +136,9 @@ function cmdDoctor() {
   ]
   const desktop = findDesktopApp()
   lines.push(`Desktop     ${desktop ? desktop : 'not found (optional)'}`)
+  if (!desktop && process.env.TERALEXI_APP) {
+    lines.push(`             TERALEXI_APP=${process.env.TERALEXI_APP} (path missing)`)
+  }
   const configProps = join(HOME, 'config', 'config.properties')
   lines.push(
     `Config      ${existsSync(configProps) ? configProps : 'not created yet'}`,
@@ -117,13 +149,35 @@ function cmdDoctor() {
 
 function cmdOpen() {
   const desktop = findDesktopApp()
+  const p = platform()
+
+  // Prefer launching by bundle id on macOS — works even when path lookup fails.
+  if (p === 'darwin' && !desktop) {
+    const byId = spawnSync('open', ['-b', DESKTOP_BUNDLE_ID], {
+      encoding: 'utf8',
+    })
+    if (byId.status === 0) {
+      console.log(`Launching ${DESKTOP_BUNDLE_ID}`)
+      return 0
+    }
+  }
+
   if (!desktop) {
-    console.error(
-      'Teralexi desktop app not found. Download from https://www.teralexi.com/',
-    )
+    console.error(`Teralexi desktop app not found.
+
+The CLI (teralexi-ai) does not include the desktop app.
+Install the desktop build, then retry:
+
+  1. Download: ${DESKTOP_DOWNLOAD}
+  2. Move Teralexi.app to /Applications (macOS)
+  3. Or point the CLI at a local build:
+       export TERALEXI_APP=/path/to/Teralexi.app
+       teralexi open
+
+Check: teralexi doctor`)
     return 1
   }
-  const p = platform()
+
   if (p === 'darwin') {
     spawn('open', [desktop], { detached: true, stdio: 'ignore' }).unref()
   } else if (p === 'win32') {

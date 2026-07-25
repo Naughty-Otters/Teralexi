@@ -26,12 +26,13 @@ Prefer a ready-made installer? Get macOS and Windows builds from **[teralexi.com
 ### CLI (headless companion)
 
 ```bash
-# YOLO (GitHub-hosted installer; also mirror at teralexi.com/install when configured)
+# YOLO — CLI + desktop on macOS/Windows (use --cli-only for bin only)
 curl -fsSL https://raw.githubusercontent.com/Naughty-Otters/Teralexi/main/install/install.sh | bash
 
-# Package managers
+# Package managers (CLI bin only)
 npm i -g teralexi-ai@latest        # or bun / pnpm / yarn
 # brew tap Naughty-Otters/tap && brew install teralexi
+# brew install --cask teralexi-desktop   # desktop .app; sha256 from release pipeline
 # scoop install teralexi
 # choco install teralexi
 ```

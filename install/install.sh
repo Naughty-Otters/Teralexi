@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# Teralexi CLI installer — OpenCode-style curl|bash entry.
+# Teralexi installer — CLI (+ optional desktop app).
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/Naughty-Otters/Teralexi/main/install/install.sh | bash
-#   curl -fsSL https://www.teralexi.com/install | bash   # once site mirrors this file
+#   curl -fsSL … | bash -s -- --cli-only
+#   curl -fsSL … | bash -s -- --desktop-only
 #   curl -fsSL … | bash -s -- --version 0.0.5
 set -euo pipefail
 
 APP=teralexi
 REPO="${TERALEXI_REPO:-Naughty-Otters/Teralexi}"
 INSTALL_BASE="${TERALEXI_INSTALL_DIR:-}"
+DESKTOP_API="${TERALEXI_DESKTOP_API:-https://api.teralexi.com/desktop/releases/stable}"
 MUTED=$'\033[0;2m'
 RED=$'\033[0;31m'
 GREEN=$'\033[0;32m'
@@ -23,18 +25,29 @@ Usage: install.sh [options]
 Options:
     -h, --help              Show help
     -v, --version <ver>     Install a specific version (e.g. 0.0.5)
+        --desktop           Also install the desktop app (default on macOS/Windows)
+        --no-desktop        Skip desktop app (CLI only)
+        --cli-only          Alias for --no-desktop
+        --desktop-only      Install desktop app only (skip CLI)
         --no-modify-path    Do not append PATH exports to shell rc files
         --npm-fallback      Prefer npm i -g teralexi-ai when no binary asset
 
+Desktop builds are fetched from:
+    ${DESKTOP_API}
+
 Examples:
     curl -fsSL https://raw.githubusercontent.com/Naughty-Otters/Teralexi/main/install/install.sh | bash
-    curl -fsSL https://www.teralexi.com/install | bash -s -- --version 0.0.5
+    curl -fsSL … | bash -s -- --cli-only
+    curl -fsSL … | bash -s -- --version 0.0.5 --desktop
 EOF
 }
 
 requested_version="${VERSION:-}"
 no_modify_path=false
 npm_fallback=true
+install_cli=true
+# Desktop on by default for platforms that ship a GUI build; Linux has no AppImage yet.
+install_desktop="${TERALEXI_INSTALL_DESKTOP:-auto}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -44,6 +57,9 @@ while [[ $# -gt 0 ]]; do
       requested_version="$2"
       shift 2
       ;;
+    --desktop) install_desktop=true; shift ;;
+    --no-desktop|--cli-only) install_desktop=false; shift ;;
+    --desktop-only) install_cli=false; install_desktop=true; shift ;;
     --no-modify-path) no_modify_path=true; shift ;;
     --npm-fallback) npm_fallback=true; shift ;;
     --no-npm-fallback) npm_fallback=false; shift ;;
@@ -97,6 +113,14 @@ case "$combo" in
     ;;
 esac
 
+if [[ "$install_desktop" == "auto" ]]; then
+  if [[ "$os" == "darwin" || "$os" == "windows" ]]; then
+    install_desktop=true
+  else
+    install_desktop=false
+  fi
+fi
+
 archive_ext=".zip"
 [[ "$os" == "linux" ]] && archive_ext=".tar.gz"
 filename="${APP}-${combo}${archive_ext}"
@@ -117,6 +141,129 @@ resolve_version() {
   echo "$tag"
 }
 
+# Highest semver present in the desktop channel JSON for this platform.
+resolve_desktop_version() {
+  if [[ -n "$requested_version" ]]; then
+    echo "${requested_version#v}"
+    return
+  fi
+  local json
+  json=$(curl -fsSL "${DESKTOP_API}" 2>/dev/null || true)
+  if [[ -z "$json" ]]; then
+    echo ""
+    return
+  fi
+  local pattern
+  if [[ "$os" == "darwin" && "$arch" == "arm64" ]]; then
+    pattern='Teralexi-([0-9]+\.[0-9]+\.[0-9]+)-arm64-mac\.zip'
+  elif [[ "$os" == "darwin" ]]; then
+    pattern='Teralexi-([0-9]+\.[0-9]+\.[0-9]+)-mac\.zip'
+  elif [[ "$os" == "windows" ]]; then
+    pattern='Teralexi Setup ([0-9]+\.[0-9]+\.[0-9]+)\.exe'
+  else
+    echo ""
+    return
+  fi
+  echo "$json" \
+    | grep -oE "$pattern" \
+    | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' \
+    | sort -t. -k1,1n -k2,2n -k3,3n \
+    | tail -1
+}
+
+desktop_artifact_for_version() {
+  local version="$1"
+  if [[ "$os" == "darwin" && "$arch" == "arm64" ]]; then
+    echo "Teralexi-${version}-arm64-mac.zip"
+  elif [[ "$os" == "darwin" ]]; then
+    echo "Teralexi-${version}-mac.zip"
+  elif [[ "$os" == "windows" ]]; then
+    echo "Teralexi Setup ${version}.exe"
+  else
+    echo ""
+  fi
+}
+
+install_desktop_app() {
+  if [[ "$install_desktop" != "true" ]]; then
+    return 0
+  fi
+
+  if [[ "$os" == "linux" ]]; then
+    echo -e "${MUTED}Desktop AppImage not published yet — skipping GUI install on Linux.${NC}"
+    echo -e "${MUTED}See ${DESKTOP_API}${NC}"
+    return 0
+  fi
+
+  local version
+  version=$(resolve_desktop_version)
+  if [[ -z "$version" ]]; then
+    echo -e "${RED}Could not resolve desktop version from ${DESKTOP_API}${NC}"
+    return 1
+  fi
+
+  local artifact
+  artifact=$(desktop_artifact_for_version "$version")
+  # URL-encode spaces for Windows Setup filenames
+  local encoded
+  encoded=$(printf '%s' "$artifact" | sed 's/ /%20/g')
+  local url="${DESKTOP_API}/${encoded}"
+  local tmp
+  tmp=$(mktemp -d)
+
+  echo -e "${MUTED}Downloading desktop${NC} ${artifact} ${MUTED}(v${version})${NC}"
+  local http
+  http=$(curl -sI -o /dev/null -w "%{http_code}" -L "$url" || true)
+  if [[ "$http" != "200" && "$http" != "302" && "$http" != "301" ]]; then
+    echo -e "${RED}Desktop download failed (${http}): ${url}${NC}"
+    rm -rf "$tmp"
+    return 1
+  fi
+
+  curl -fsSL -L -o "$tmp/$artifact" "$url"
+
+  if [[ "$os" == "darwin" ]]; then
+    unzip -q "$tmp/$artifact" -d "$tmp/extract"
+    local app_src
+    app_src=$(find "$tmp/extract" -maxdepth 3 -type d -name 'Teralexi.app' | head -1)
+    if [[ -z "$app_src" ]]; then
+      echo -e "${RED}Zip did not contain Teralexi.app${NC}"
+      rm -rf "$tmp"
+      return 1
+    fi
+    local dest="/Applications/Teralexi.app"
+    if [[ ! -w "/Applications" ]]; then
+      dest="$HOME/Applications/Teralexi.app"
+      mkdir -p "$HOME/Applications"
+    fi
+    echo -e "${MUTED}Installing to${NC} $dest"
+    rm -rf "$dest"
+    ditto "$app_src" "$dest"
+    # Drop Gatekeeper quarantine so first launch is smoother for curl|bash installs.
+    xattr -dr com.apple.quarantine "$dest" 2>/dev/null || true
+    rm -rf "$tmp"
+    echo -e "${GREEN}Desktop installed.${NC} Open with: open \"$dest\"  or  teralexi open"
+    return 0
+  fi
+
+  if [[ "$os" == "windows" ]]; then
+    local setup="$tmp/$artifact"
+    echo -e "${MUTED}Running NSIS setup (silent)…${NC}"
+    # electron-builder NSIS: /S = silent
+    if cmd.exe //c "start /wait \"\" \"$setup\" /S" 2>/dev/null \
+      || "$setup" /S; then
+      rm -rf "$tmp"
+      echo -e "${GREEN}Desktop installer finished.${NC} Launch from Start Menu or: teralexi open"
+      return 0
+    fi
+    echo -e "${RED}Silent install failed. Run the installer manually:${NC} $setup"
+    return 1
+  fi
+
+  rm -rf "$tmp"
+  return 1
+}
+
 install_via_npm() {
   if ! command -v npm >/dev/null 2>&1; then
     echo -e "${RED}npm not found. Install Node.js 22+ or download a desktop build from https://www.teralexi.com/${NC}"
@@ -128,7 +275,7 @@ install_via_npm() {
   fi
   echo -e "${MUTED}Installing via npm:${NC} $spec"
   npm i -g "$spec"
-  echo -e "${GREEN}Installed.${NC} Try: teralexi --version && teralexi doctor"
+  echo -e "${GREEN}CLI installed.${NC} Try: teralexi --version && teralexi doctor"
 }
 
 download_and_install_binary() {
@@ -136,12 +283,12 @@ download_and_install_binary() {
   local url="https://github.com/${REPO}/releases/download/v${version}/${filename}"
   local tmp
   tmp=$(mktemp -d)
-  trap 'rm -rf "$tmp"' EXIT
 
-  echo -e "${MUTED}Downloading${NC} $filename ${MUTED}(v${version})${NC}"
+  echo -e "${MUTED}Downloading CLI${NC} $filename ${MUTED}(v${version})${NC}"
   local http
   http=$(curl -sI -o /dev/null -w "%{http_code}" -L "$url" || true)
   if [[ "$http" != "200" && "$http" != "302" && "$http" != "301" ]]; then
+    rm -rf "$tmp"
     return 1
   fi
 
@@ -157,6 +304,7 @@ download_and_install_binary() {
   bin_src=$(find "$tmp" -type f \( -name teralexi -o -name teralexi.exe -o -name teralexi.cmd \) | head -1)
   if [[ -z "$bin_src" ]]; then
     echo -e "${RED}Archive did not contain a teralexi binary${NC}"
+    rm -rf "$tmp"
     return 1
   fi
 
@@ -177,7 +325,8 @@ download_and_install_binary() {
   fi
   mv "$bin_src" "$dest"
   chmod 755 "$dest" 2>/dev/null || true
-  echo -e "${GREEN}Installed${NC} $dest"
+  rm -rf "$tmp"
+  echo -e "${GREEN}CLI installed${NC} $dest"
   return 0
 }
 
@@ -207,20 +356,35 @@ append_path_hint() {
   echo -e "${MUTED}Restart your shell or: source ${rc}${NC}"
 }
 
-version=$(resolve_version)
+cli_ok=false
+desktop_ok=false
 
-if [[ -n "$version" ]] && download_and_install_binary "$version"; then
-  append_path_hint
-  echo -e "${GREEN}Done.${NC} Run: teralexi doctor"
+if [[ "$install_cli" == true ]]; then
+  version=$(resolve_version)
+  if [[ -n "$version" ]] && download_and_install_binary "$version"; then
+    append_path_hint
+    cli_ok=true
+  elif [[ "$npm_fallback" == true ]]; then
+    echo -e "${MUTED}No platform CLI binary for this release yet — falling back to npm.${NC}"
+    install_via_npm
+    cli_ok=true
+  else
+    echo -e "${RED}Could not install Teralexi CLI.${NC}"
+    echo -e "${MUTED}Publish release assets named like ${filename}, or use: npm i -g teralexi-ai${NC}"
+  fi
+fi
+
+if [[ "$install_desktop" == true ]]; then
+  if install_desktop_app; then
+    desktop_ok=true
+  else
+    echo -e "${MUTED}Desktop install skipped/failed. Download manually: https://www.teralexi.com/${NC}"
+  fi
+fi
+
+if [[ "$cli_ok" == true || "$desktop_ok" == true ]]; then
+  echo -e "${GREEN}Done.${NC} Run: teralexi doctor${install_desktop:+ && teralexi open}"
   exit 0
 fi
 
-if [[ "$npm_fallback" == true ]]; then
-  echo -e "${MUTED}No platform binary for this release yet — falling back to npm.${NC}"
-  install_via_npm
-  exit 0
-fi
-
-echo -e "${RED}Could not install Teralexi CLI.${NC}"
-echo -e "${MUTED}Publish release assets named like ${filename}, or use: npm i -g teralexi-ai${NC}"
 exit 1
