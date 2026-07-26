@@ -1,6 +1,6 @@
 {
   "name": "teralexi-ai",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Teralexi CLI — local-first AI agent (headless companion to the Teralexi desktop app)",
   "license": "Apache-2.0",
   "author": "Naughty-Otters",
