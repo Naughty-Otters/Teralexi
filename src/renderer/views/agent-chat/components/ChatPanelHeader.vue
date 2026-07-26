@@ -140,13 +140,13 @@ const contextRingOffset = computed(() => {
 }
 
 .chat-header-context-ring__track {
-  stroke: color-mix(in srgb, var(--ui-border) 85%, transparent);
+  stroke: color-mix(in srgb, var(--ui-text-muted) 35%, transparent);
 }
 
 .chat-header-context-ring__fill {
-  stroke: var(--color-primary-500, #6366f1);
+  stroke: var(--color-primary-500);
   stroke-linecap: round;
-  transition: stroke-dashoffset 0.2s ease, stroke 0.2s ease;
+  transition: stroke-dashoffset 0.2s ease;
 }
 
 .chat-header-context-ring--warn .chat-header-context-ring__fill {
@@ -164,24 +164,16 @@ const contextRingOffset = computed(() => {
   align-items: center;
   justify-content: center;
   font-size: 8px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  font-weight: 600;
   line-height: 1;
   color: var(--ui-text-muted);
-  pointer-events: none;
-}
-
-.chat-header-context-ring--warn .chat-header-context-ring__label,
-.chat-header-context-ring--over .chat-header-context-ring__label {
-  color: var(--ui-text);
 }
 
 .chat-header-agent-name {
   margin: 0;
+  font-size: 14px;
   font-weight: 600;
-  min-width: 0;
-  max-width: min(360px, 68vw);
-  text-align: center;
+  color: var(--ui-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -189,30 +181,24 @@ const contextRingOffset = computed(() => {
 
 .chat-header-center-meta {
   margin: 0;
-  font-size: 12px;
-  color: var(--ui-text-muted, #64748b);
-  display: flex;
-  gap: 6px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  max-width: 100%;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ui-text-muted);
 }
 
 .status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--ui-border);
+  background: var(--ui-text-muted);
+  flex-shrink: 0;
 }
 
 .status-dot--streaming {
-  background: var(--ui-primary);
-  animation: pulse 1.2s infinite;
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.45;
-  }
+  background: var(--color-primary-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-500) 25%, transparent);
 }
 </style>

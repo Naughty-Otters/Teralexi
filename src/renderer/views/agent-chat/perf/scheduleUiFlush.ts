@@ -31,7 +31,10 @@ const pendingByKey = new Map<string, PendingJob>()
 const ingressBacklogByConversation = new Map<string, number>()
 const catchingUpByConversation = new Map<string, Ref<boolean>>()
 
+/** Focused conversation — used for backpressure interval sampling. */
 let visibleConversationId: string | null = null
+/** All on-screen pane conversations (includes focused). */
+let visibleConversationIds = new Set<string>()
 let rafHandle: number | null = null
 let timeoutHandle: number | null = null
 let lastNormalFlushAt = 0
@@ -42,6 +45,15 @@ function currentMinFlushIntervalMs(): number {
   return backlog > BACKLOG_FAST_FORWARD_THRESHOLD
     ? BACKLOG_MIN_INTERVAL_MS
     : NORMAL_MIN_INTERVAL_MS
+}
+
+function isVisibleConversation(conversationId: string): boolean {
+  if (visibleConversationIds.size === 0) {
+    // Legacy / unset: treat focused-only visibility, or allow all when unset.
+    if (!visibleConversationId) return true
+    return conversationId === visibleConversationId
+  }
+  return visibleConversationIds.has(conversationId)
 }
 
 type RafFn = (cb: FrameRequestCallback) => number
@@ -97,15 +109,46 @@ export function setVisibleConversationForUiFlush(
   conversationId: string | null,
 ): void {
   visibleConversationId = conversationId?.trim() || null
+  if (visibleConversationId) {
+    visibleConversationIds = new Set([visibleConversationId])
+  } else {
+    visibleConversationIds = new Set()
+  }
+}
+
+/**
+ * Mark all on-screen pane conversations as visible for UI flushes.
+ * `focusedConversationId` remains the backpressure sampling target.
+ */
+export function setVisibleConversationIdsForUiFlush(
+  conversationIds: readonly string[],
+  focusedConversationId?: string | null,
+): void {
+  const next = new Set<string>()
+  for (const raw of conversationIds) {
+    const id = raw?.trim()
+    if (id) next.add(id)
+  }
+  visibleConversationIds = next
+  const focused = focusedConversationId?.trim() || null
+  if (focused && next.has(focused)) {
+    visibleConversationId = focused
+  } else {
+    visibleConversationId = next.values().next().value ?? null
+  }
+}
+
+export function getVisibleConversationIdsForUiFlush(): string[] {
+  if (visibleConversationIds.size > 0) return [...visibleConversationIds]
+  return visibleConversationId ? [visibleConversationId] : []
 }
 
 function shouldRunJob(job: PendingJob): boolean {
   if (job.force) return true
   const cid = job.conversationId?.trim()
   if (!cid) return true
-  if (!visibleConversationId) return true
   if (job.priority === 'immediate') return true
-  return cid === visibleConversationId
+  return isVisibleConversation(cid)
 }
 
 function getCatchingUpRef(conversationId: string): Ref<boolean> {
@@ -228,7 +271,7 @@ export function scheduleUiFlush(
   }
 
   if (options.visibleConversationId !== undefined) {
-    visibleConversationId = options.visibleConversationId?.trim() || null
+    setVisibleConversationForUiFlush(options.visibleConversationId)
   }
 
   pendingByKey.set(mapKey, job)
@@ -259,6 +302,7 @@ export function resetChatUiFlushState(): void {
   ingressBacklogByConversation.clear()
   catchingUpByConversation.clear()
   visibleConversationId = null
+  visibleConversationIds = new Set()
   clearScheduledWake()
   lastNormalFlushAt = 0
 }

@@ -1443,6 +1443,11 @@ onBeforeUnmount(() => {
 })
 
 async function openConversation(conversationId: string, agentId: string) {
+  const { useConversationLayoutStore } = await import(
+    '@store/conversation-layout'
+  )
+  const layoutStore = useConversationLayoutStore()
+  layoutStore.openConversation(conversationId)
   await agentStore.selectConversation(conversationId)
   emit('navigate-chat')
 }
@@ -1450,6 +1455,10 @@ async function openConversation(conversationId: string, agentId: string) {
 async function startNewSession() {
   const conv = await agentStore.createNewConversation(undefined, { mode: 'fresh' })
   if (!conv) return
+  const { useConversationLayoutStore } = await import(
+    '@store/conversation-layout'
+  )
+  useConversationLayoutStore().openConversation(conv.id)
   await agentStore.selectConversation(conv.id)
   emit('navigate-chat')
 }
@@ -1463,6 +1472,10 @@ async function startSessionWithWorkspace(workspacePath: string) {
     workspacePath: path,
   })
   if (!conv) return
+  const { useConversationLayoutStore } = await import(
+    '@store/conversation-layout'
+  )
+  useConversationLayoutStore().openConversation(conv.id)
   await agentStore.selectConversation(conv.id)
   emit('navigate-chat')
 }

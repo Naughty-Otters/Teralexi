@@ -296,19 +296,40 @@ export function createSettingsInitActions(
     isLoadingInitialConversations.value = true
     try {
       await loadAllConversationLists()
-      if (!focusedConversationId.value) {
-        const persistedId = readPersistedConversationId()
+
+      const existingIds = new Set<string>()
+      for (const convs of Object.values(conversationList.value)) {
+        for (const conv of convs) existingIds.add(conv.id)
+      }
+
+      const { useConversationLayoutStore } = await import(
+        '@store/conversation-layout'
+      )
+      const layoutStore = useConversationLayoutStore()
+      const persistedId = readPersistedConversationId()
+      const hydratedId = layoutStore.hydrateFromStorage(
+        existingIds,
+        persistedId,
+      )
+
+      if (hydratedId) {
+        await selectConversation(hydratedId)
+      } else if (!focusedConversationId.value) {
         const persisted = persistedId
           ? findConversationMeta(persistedId)
           : undefined
         if (persisted) {
+          layoutStore.ensureLayout(persisted.id)
           await selectConversation(persisted.id)
         } else {
           const recent = mostRecentConversation()
           if (recent) {
+            layoutStore.ensureLayout(recent.id)
             await selectConversation(recent.id)
           }
         }
+      } else if (focusedConversationId.value) {
+        layoutStore.ensureLayout(focusedConversationId.value)
       }
       hasLoadedInitialConversations.value = true
     } finally {

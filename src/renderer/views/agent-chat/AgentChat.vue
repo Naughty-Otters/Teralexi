@@ -100,6 +100,7 @@ import { useRouter } from 'vue-router'
 import { useAgentStore } from '@store/agent'
 import { useWorkspaceStore } from '@store/workspace'
 import { useWorkspaceNavigationStore } from '@store/workspace-navigation'
+import { useConversationLayoutStore } from '@store/conversation-layout'
 import { isBoundSessionId } from '@shared/conversation/session-id'
 import { useHorizontalPanelResize } from '@renderer/composables/useHorizontalPanelResize'
 import {
@@ -320,9 +321,17 @@ watchEffect(() => {
     activeAgentModel: '',
     showReportPanel: false,
     isBusy: false,
+    canSplitPane: false,
+    canClosePane: false,
+    conversationId: null,
+    conversationOptions: [],
     onToggleReportPanel: null,
     onStop: null,
     onNewSession: null,
+    onSplitRight: null,
+    onSplitDown: null,
+    onClosePane: null,
+    onSelectConversation: null,
   })
 })
 
@@ -426,8 +435,15 @@ onMounted(() => {
    * Pinia conversation rows back persistence, sidebar, and non-visible streams.
    * Live UI for the visible conversation is owned by Chat SDK (`IpcAgentChatTransport`).
    */
+  const layoutStore = useConversationLayoutStore()
   initStoreStreamSync({
     getVisibleConversationId: () => agentStore.currentConversationId,
+    getVisibleConversationIds: () => {
+      const ids = layoutStore.visibleConversationIdList
+      if (ids.length > 0) return ids
+      const focused = agentStore.currentConversationId
+      return focused ? [focused] : []
+    },
     getConversations: () => agentStore.conversations,
   })
 
