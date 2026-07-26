@@ -18,7 +18,7 @@ import {
   type StoreMessage,
 } from '@test/renderer/wire-agent-stream-listeners'
 import { flushPromises } from '@test/renderer/mount-app'
-import { flushStoreStreamSync } from '@renderer/views/agent-chat/perf/storeStreamSync'
+import { flushStoreStreamSync, flushStoreStreamSyncForConversation, resetStoreStreamSync } from '@renderer/views/agent-chat/perf/storeStreamSync'
 
 const CONVERSATION_ID = 'conv-stream'
 const ASSISTANT_ID = 'assistant-stream-1'
@@ -88,6 +88,7 @@ describe('chat stream reactions (UI integration)', () => {
     teardownFlush?.()
     teardownListeners = null
     teardownFlush = null
+    resetStoreStreamSync()
   })
 
   it('applies UI message text deltas to the Pinia-backed store', async () => {
@@ -146,6 +147,9 @@ describe('chat stream reactions (UI integration)', () => {
     backgroundDriver.pushTextDelta('Background update')
     await flushPromises()
 
+    // Background deltas coalesce until activate / explicit flush.
+    expect(store.conversations[backgroundId][1].content).toBe('')
+    flushStoreStreamSyncForConversation(backgroundId)
     expect(store.conversations[backgroundId][1].content).toBe('Background update')
     expect(store.conversations[CONVERSATION_ID][1].content).toBe('')
   })

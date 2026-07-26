@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fakeRepo, pathEndsWith } from '@test-paths'
+import { fakeRepo } from '@test-paths'
 
 vi.mock('node:fs', () => ({
   existsSync: vi.fn(),
@@ -21,7 +21,7 @@ import {
   parseEnvFile,
   resetEnvOverridesForTests,
   resolveBuildTimeEnvFilePaths,
-  stripEnvValue,
+  setPackagedRuntimeForTests,
   systemPropKeyToEnvName,
 } from './env-overrides'
 
@@ -32,12 +32,18 @@ const KNOWN_KEYS = [
   'settings.telegram.botToken',
 ]
 
+const REPO_ROOT = fakeRepo()
+const DEV_ENV_PATH = join(REPO_ROOT, 'env', '.dev.env')
+const DOT_ENV_PATH = join(REPO_ROOT, 'env', '.env')
+const DEV_LOCAL_ENV_PATH = join(REPO_ROOT, 'env', '.dev.local.env')
+
 describe('env-overrides', () => {
   beforeEach(() => {
     resetEnvOverridesForTests()
     vi.mocked(existsSync).mockReset()
     vi.mocked(readFileSync).mockReset()
     electronMock.app.isPackaged = false
+    vi.mocked(existsSync).mockReturnValue(false)
   })
 
   it('maps system prop keys to env var names', () => {
@@ -77,45 +83,45 @@ APP_DEV_PORT=3000
 
   it('resolveBuildTimeEnvFilePaths uses only repo env files', () => {
     expect(
-      resolveBuildTimeEnvFilePaths(fakeRepo(), { TERALEXI_BUILD_ENV: 'sit' }),
-    ).toEqual([join(fakeRepo(), 'env', '.sit.env')])
+      resolveBuildTimeEnvFilePaths(REPO_ROOT, { TERALEXI_BUILD_ENV: 'sit' }),
+    ).toEqual([join(REPO_ROOT, 'env', '.sit.env')])
     expect(
-      resolveBuildTimeEnvFilePaths(fakeRepo(), { TERALEXI_BUILD_ENV: 'prod' }),
-    ).toEqual([join(fakeRepo(), 'env', '.prod.env')])
+      resolveBuildTimeEnvFilePaths(REPO_ROOT, { TERALEXI_BUILD_ENV: 'prod' }),
+    ).toEqual([join(REPO_ROOT, 'env', '.prod.env')])
     expect(
-      resolveBuildTimeEnvFilePaths(fakeRepo(), { TERALEXI_BUILD_ENV: 'dev' }),
-    ).toEqual([
-      join(fakeRepo(), 'env', '.dev.env'),
-      join(fakeRepo(), 'env', '.env'),
-      join(fakeRepo(), 'env', '.dev.local.env'),
-    ])
+      resolveBuildTimeEnvFilePaths(REPO_ROOT, { TERALEXI_BUILD_ENV: 'dev' }),
+    ).toEqual([DEV_ENV_PATH, DOT_ENV_PATH, DEV_LOCAL_ENV_PATH])
   })
 
   it('loads dev env file when unpackaged', () => {
-    vi.mocked(existsSync).mockImplementation((target) =>
-      pathEndsWith(String(target), 'env/.dev.env'),
+    setPackagedRuntimeForTests(false)
+    vi.mocked(existsSync).mockImplementation(
+      (target) => String(target) === DEV_ENV_PATH,
     )
-    vi.mocked(readFileSync).mockReturnValue(
-      "BASE_API = 'https://api.teralexi.com/'\n",
-    )
+    vi.mocked(readFileSync).mockImplementation((target) => {
+      expect(String(target)).toBe(DEV_ENV_PATH)
+      return "BASE_API = 'https://api.teralexi.com/'\n"
+    })
 
     const overrides = loadEnvOverrides({
       knownKeys: ['app.base.apiUrl'],
-      searchRoots: ['/Users/tester/code/Teralexi'],
+      searchRoots: [REPO_ROOT],
+      // Isolate from ambient BASE_API / other process env that would mask file loads.
       processEnv: { TERALEXI_BUILD_ENV: 'dev' },
     })
 
+    expect(vi.mocked(existsSync)).toHaveBeenCalledWith(DEV_ENV_PATH)
+    expect(vi.mocked(readFileSync)).toHaveBeenCalledWith(DEV_ENV_PATH, 'utf-8')
     expect(overrides.get('app.base.apiUrl')).toBe('https://api.teralexi.com/')
   })
 
   it('merges env/.env over env/.dev.env when present', () => {
     vi.mocked(existsSync).mockImplementation(
       (target) =>
-        pathEndsWith(String(target), 'env/.dev.env') ||
-        pathEndsWith(String(target), 'env/.env'),
+        String(target) === DEV_ENV_PATH || String(target) === DOT_ENV_PATH,
     )
     vi.mocked(readFileSync).mockImplementation((target) => {
-      if (pathEndsWith(String(target), 'env/.env')) {
+      if (String(target) === DOT_ENV_PATH) {
         return "BASE_API = 'http://localhost:8000'\n"
       }
       return "BASE_API = 'https://api.teralexi.com/'\n"
@@ -123,7 +129,7 @@ APP_DEV_PORT=3000
 
     const overrides = loadEnvOverrides({
       knownKeys: ['app.base.apiUrl'],
-      searchRoots: ['/Users/tester/code/Teralexi'],
+      searchRoots: [REPO_ROOT],
       processEnv: { TERALEXI_BUILD_ENV: 'dev' },
     })
 
@@ -133,15 +139,15 @@ APP_DEV_PORT=3000
   it('merges env/.dev.local.env over env/.env when present', () => {
     vi.mocked(existsSync).mockImplementation(
       (target) =>
-        pathEndsWith(String(target), 'env/.dev.env') ||
-        pathEndsWith(String(target), 'env/.env') ||
-        pathEndsWith(String(target), 'env/.dev.local.env'),
+        String(target) === DEV_ENV_PATH ||
+        String(target) === DOT_ENV_PATH ||
+        String(target) === DEV_LOCAL_ENV_PATH,
     )
     vi.mocked(readFileSync).mockImplementation((target) => {
-      if (pathEndsWith(String(target), 'env/.dev.local.env')) {
+      if (String(target) === DEV_LOCAL_ENV_PATH) {
         return "BASE_API = 'http://127.0.0.1:9000'\n"
       }
-      if (pathEndsWith(String(target), 'env/.env')) {
+      if (String(target) === DOT_ENV_PATH) {
         return "BASE_API = 'http://localhost:8000'\n"
       }
       return "BASE_API = 'https://api.teralexi.com/'\n"
@@ -149,7 +155,7 @@ APP_DEV_PORT=3000
 
     const overrides = loadEnvOverrides({
       knownKeys: ['app.base.apiUrl'],
-      searchRoots: ['/Users/tester/code/Teralexi'],
+      searchRoots: [REPO_ROOT],
       processEnv: { TERALEXI_BUILD_ENV: 'dev' },
     })
 
@@ -159,11 +165,11 @@ APP_DEV_PORT=3000
   it('merges env/.dev.local.env over env/.dev.env when present', () => {
     vi.mocked(existsSync).mockImplementation(
       (target) =>
-        pathEndsWith(String(target), 'env/.dev.env') ||
-        pathEndsWith(String(target), 'env/.dev.local.env'),
+        String(target) === DEV_ENV_PATH ||
+        String(target) === DEV_LOCAL_ENV_PATH,
     )
     vi.mocked(readFileSync).mockImplementation((target) => {
-      if (pathEndsWith(String(target), 'env/.dev.local.env')) {
+      if (String(target) === DEV_LOCAL_ENV_PATH) {
         return "BASE_API = 'http://localhost:8000'\n"
       }
       return "BASE_API = 'https://api.teralexi.com/'\n"
@@ -171,7 +177,7 @@ APP_DEV_PORT=3000
 
     const overrides = loadEnvOverrides({
       knownKeys: ['app.base.apiUrl'],
-      searchRoots: ['/Users/tester/code/Teralexi'],
+      searchRoots: [REPO_ROOT],
       processEnv: { TERALEXI_BUILD_ENV: 'dev' },
     })
 
@@ -179,7 +185,7 @@ APP_DEV_PORT=3000
   })
 
   it('uses baked values when packaged', () => {
-    electronMock.app.isPackaged = true
+    setPackagedRuntimeForTests(true)
 
     const overrides = loadEnvOverrides({
       knownKeys: ['app.base.apiUrl'],
@@ -187,7 +193,7 @@ APP_DEV_PORT=3000
     })
 
     expect(overrides.get('app.base.apiUrl')).toBe('https://staging.example.com/')
-    electronMock.app.isPackaged = false
+    expect(vi.mocked(existsSync)).not.toHaveBeenCalled()
   })
 })
 

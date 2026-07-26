@@ -11,8 +11,11 @@ const TERALEXI_ENV_PREFIX = 'TERALEXI_'
 
 let cachedEnvOverrides: Map<string, string> | null = null
 let envOverridesInitialized = false
+/** Test-only override for {@link isPackagedRuntime}; `null` = use Electron. */
+let packagedRuntimeOverride: boolean | null = null
 
 export function isPackagedRuntime(): boolean {
+  if (packagedRuntimeOverride != null) return packagedRuntimeOverride
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { app } = require('electron') as typeof import('electron')
@@ -20,6 +23,11 @@ export function isPackagedRuntime(): boolean {
   } catch {
     return false
   }
+}
+
+/** @internal Test helper — prefer over brittle Electron module mocks. */
+export function setPackagedRuntimeForTests(value: boolean | null): void {
+  packagedRuntimeOverride = value
 }
 
 export function systemPropKeyToEnvName(key: string): string {
@@ -203,4 +211,5 @@ export function getEnvOverrides(): Map<string, string> {
 export function resetEnvOverridesForTests(): void {
   cachedEnvOverrides = null
   envOverridesInitialized = false
+  packagedRuntimeOverride = null
 }

@@ -467,6 +467,9 @@ function createIpcUIMessageReadableStream(opts: {
 
   async function finishOk(releaseHitlQueue: boolean) {
     if (finished) return
+    // Drain queued UI chunks before closing so late text-deltas are not dropped.
+    await writeQueue
+    if (finished) return
     finished = true
     // UI cleanup must never prevent finish/close — otherwise Chat status stays
     // submitted/streaming and every later user message only queues.
@@ -493,11 +496,15 @@ function createIpcUIMessageReadableStream(opts: {
     if (
       !shouldInjectAssistantFinalContent(trimmed) ||
       legacyTextStartSent ||
+      preferUiChunks ||
       sawToolApprovalRequestChunk ||
       sawCollectFormRequestChunk
     ) {
       return
     }
+    // Stay behind any in-flight UI chunk writes so final text cannot interleave.
+    await writeQueue
+    if (finished || legacyTextStartSent || preferUiChunks) return
     legacyTextStartSent = true
     await writer
       .write({ type: 'text-start', id: opts.textPartId })
@@ -512,6 +519,8 @@ function createIpcUIMessageReadableStream(opts: {
   }
 
   async function finishError(text: string) {
+    if (finished) return
+    await writeQueue
     if (finished) return
     finished = true
     try {
@@ -591,9 +600,12 @@ function createIpcUIMessageReadableStream(opts: {
       const hitlPaused = Boolean(result.hitlPaused)
       if (!hitlPaused) {
         const finalText = result.finalContent.trim()
+        // UI-chunk streams already delivered text; do not inject main's finalContent
+        // (legacyTextStartSent stays false when preferUiChunks short-circuits ensureLegacyTextStart).
         if (
           shouldInjectAssistantFinalContent(finalText) &&
           !legacyTextStartSent &&
+          !preferUiChunks &&
           !sawToolApprovalRequestChunk &&
           !sawCollectFormRequestChunk
         ) {
