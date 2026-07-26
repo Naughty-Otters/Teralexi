@@ -51,6 +51,7 @@ const log = createLogger('renderer.agent-store')
 export const useAgentStore = defineStore('agent', () => {
   const inFlightConversations = new Set<string>()
   const uiChatInFlightConversations = new Set<string>()
+  const uiChatInFlightEpoch = ref(0)
   const inFlightWaiters = new Map<string, Array<() => void>>()
   const pendingAgentConfigSaves = new Map<string, Promise<void>>()
 
@@ -198,6 +199,7 @@ export const useAgentStore = defineStore('agent', () => {
     log,
     inFlightConversations,
     uiChatInFlightConversations,
+    uiChatInFlightEpoch,
     inFlightWaiters,
     pendingAgentConfigSaves,
     agents,

@@ -130,6 +130,30 @@ export type SettingsPanelLabels = {
     llmDebugDesc: string
     enableLlmDebug: string
     disableLlmDebug: string
+    stressTitle: string
+    stressDesc: string
+    stressWarning: string
+    stressScenario: string
+    stressScenarioAll: string
+    stressScenarioNone: string
+    stressDuration: string
+    stressCustom: string
+    stressCustomDuration: string
+    stressInputMode: string
+    stressModeHybrid: string
+    stressModeCycle: string
+    stressModeAi: string
+    stressConcurrency: string
+    stressConcurrencySequential: string
+    stressConcurrencyConcurrent: string
+    stressStart: string
+    stressStop: string
+    stressRunning: string
+    stressOpenReport: string
+    stressElapsed: string
+    stressSkill: string
+    stressTurn: string
+    stressLatency: string
   }
   googleWorkspace: {
     intro: string

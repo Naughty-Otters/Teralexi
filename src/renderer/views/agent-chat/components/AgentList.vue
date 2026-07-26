@@ -302,12 +302,14 @@
             class="agent-item"
             :class="{
               'agent-item--active': isActiveConversation(conv.id),
+              'agent-item--running': isConversationRunning(conv.id),
               'agent-item--collapsed': collapsed,
               'agent-item--nested': showGroupHeaders,
             }"
             role="button"
             tabindex="0"
             :aria-current="isActiveConversation(conv.id) ? 'true' : undefined"
+            :aria-busy="isConversationRunning(conv.id) ? 'true' : undefined"
             @click="openConversation(conv.id, conv.agentId)"
             @keydown.enter.prevent="openConversation(conv.id, conv.agentId)"
             @keydown.space.prevent="openConversation(conv.id, conv.agentId)"
@@ -322,7 +324,49 @@
               :ui="{ fallback: 'font-bold text-xs' }"
             />
             <div v-if="!collapsed" class="agent-item-info">
-              <p class="agent-item-name">{{ conv.title }}</p>
+              <p class="agent-item-name">
+                <span class="agent-item-name__text">{{ conv.title }}</span>
+                <span
+                  v-if="isConversationRunning(conv.id) && contextUsageById[conv.id]"
+                  class="agent-item-context"
+                  :class="{
+                    'agent-item-context--warn':
+                      contextUsageById[conv.id]!.atCapacity,
+                    'agent-item-context--over':
+                      contextUsageById[conv.id]!.overCapacity,
+                  }"
+                  :title="contextUsageTitle(conv.id)"
+                  role="progressbar"
+                  :aria-valuenow="contextUsageById[conv.id]!.used"
+                  :aria-valuemin="0"
+                  :aria-valuemax="contextUsageById[conv.id]!.capacity"
+                  :aria-label="`Context ${contextPercent(conv.id)}%`"
+                >
+                  <svg
+                    class="agent-item-context__svg"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      class="agent-item-context__track"
+                      cx="12"
+                      cy="12"
+                      :r="CONTEXT_RING_RADIUS"
+                    />
+                    <circle
+                      class="agent-item-context__fill"
+                      cx="12"
+                      cy="12"
+                      :r="CONTEXT_RING_RADIUS"
+                      :stroke-dasharray="CONTEXT_RING_CIRCUMFERENCE"
+                      :stroke-dashoffset="contextRingOffset(conv.id)"
+                    />
+                  </svg>
+                  <span class="agent-item-context__pct" aria-hidden="true">
+                    {{ contextPercent(conv.id) }}%
+                  </span>
+                </span>
+              </p>
               <p
                 v-if="conversationMetaById[conv.id]"
                 class="agent-item-desc"
@@ -330,6 +374,38 @@
                 {{ conversationMetaById[conv.id] }}
               </p>
             </div>
+            <span
+              v-else-if="isConversationRunning(conv.id) && contextUsageById[conv.id]"
+              class="agent-item-context agent-item-context--collapsed"
+              :class="{
+                'agent-item-context--warn':
+                  contextUsageById[conv.id]!.atCapacity,
+                'agent-item-context--over':
+                  contextUsageById[conv.id]!.overCapacity,
+              }"
+              :title="contextUsageTitle(conv.id)"
+              aria-hidden="true"
+            >
+              <svg
+                class="agent-item-context__svg"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="agent-item-context__track"
+                  cx="12"
+                  cy="12"
+                  :r="CONTEXT_RING_RADIUS"
+                />
+                <circle
+                  class="agent-item-context__fill"
+                  cx="12"
+                  cy="12"
+                  :r="CONTEXT_RING_RADIUS"
+                  :stroke-dasharray="CONTEXT_RING_CIRCUMFERENCE"
+                  :stroke-dashoffset="contextRingOffset(conv.id)"
+                />
+              </svg>
+            </span>
             <span v-if="msgCount(conv.id) > 0 && !collapsed" class="msg-badge">
               {{ msgCount(conv.id) }}
             </span>
@@ -442,8 +518,13 @@ import {
   type ConversationListItemLabels,
   type ConversationListLabelField,
 } from '../lib/conversation-list-item-labels'
-import { clearConversationSession } from '../conversation-chat-session'
+import { clearConversationSession, getConversationChat } from '../conversation-chat-session'
+import { computeContextWindowUsage } from '@shared/agent/context-window-usage'
+import { chatUiContextWindowMessages } from '../chatUiSettings'
 import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
+
+const CONTEXT_RING_RADIUS = 9
+const CONTEXT_RING_CIRCUMFERENCE = 2 * Math.PI * CONTEXT_RING_RADIUS
 
 const emit = defineEmits<{ 'navigate-chat': [] }>()
 const props = defineProps<{ collapsed?: boolean }>()
@@ -459,6 +540,9 @@ const deleteDialogTitleId = 'conversation-delete-dialog-title'
 const deleteDialogMessageId = 'conversation-delete-dialog-message'
 const groupByMenuOpen = ref(false)
 const groupByTriggerRef = ref<HTMLButtonElement | null>(null)
+/** Bumps while any conversation is streaming so live Chat message counts refresh. */
+const contextLiveTick = ref(0)
+let contextLiveTimer: ReturnType<typeof setInterval> | null = null
 const groupByMenuEl = ref<HTMLElement | null>(null)
 const groupByMenuStyle = ref<Record<string, string>>({})
 const workspaceMenuOpen = ref(false)
@@ -615,6 +699,56 @@ function isActiveConversation(conversationId: string): boolean {
   return agentStore.currentConversationId === conversationId
 }
 
+function isConversationRunning(conversationId: string): boolean {
+  return agentStore.isConversationStreamActive(conversationId)
+}
+
+function conversationMessageCount(conversationId: string): number {
+  const live = getConversationChat(conversationId)?.messages?.length
+  if (typeof live === 'number') return live
+  return agentStore.conversations?.[conversationId]?.length ?? 0
+}
+
+const contextUsageById = computed(() => {
+  // Recompute when streams start/end, message arrays change, or live poll ticks.
+  void contextLiveTick.value
+  for (const conv of conversationItems.value) {
+    void agentStore.isConversationStreamActive(conv.id)
+  }
+  void agentStore.conversations
+  void chatUiContextWindowMessages.value
+  const capacity = chatUiContextWindowMessages.value
+  const out: Record<
+    string,
+    ReturnType<typeof computeContextWindowUsage>
+  > = {}
+  for (const conv of conversationItems.value) {
+    out[conv.id] = computeContextWindowUsage({
+      messageCount: conversationMessageCount(conv.id),
+      capacity,
+    })
+  }
+  return out
+})
+
+function contextPercent(conversationId: string): number {
+  const usage = contextUsageById.value[conversationId]
+  if (!usage) return 0
+  return Math.round(usage.fillRatio * 100)
+}
+
+function contextRingOffset(conversationId: string): number {
+  const usage = contextUsageById.value[conversationId]
+  if (!usage) return CONTEXT_RING_CIRCUMFERENCE
+  return CONTEXT_RING_CIRCUMFERENCE * (1 - usage.fillRatio)
+}
+
+function contextUsageTitle(conversationId: string): string {
+  const usage = contextUsageById.value[conversationId]
+  if (!usage) return 'Running'
+  return `Context ${usage.used}/${usage.capacity} messages (${contextPercent(conversationId)}%)`
+}
+
 async function scrollActiveConversationIntoView(): Promise<void> {
   const activeId = agentStore.currentConversationId
   if (!activeId || props.collapsed) return
@@ -751,6 +885,12 @@ onMounted(() => {
   window.addEventListener('resize', onWindowReposition)
   window.addEventListener('scroll', onWindowReposition, true)
   void scrollActiveConversationIntoView()
+  contextLiveTimer = setInterval(() => {
+    const anyRunning = conversationItems.value.some((conv) =>
+      agentStore.isConversationStreamActive(conv.id),
+    )
+    if (anyRunning) contextLiveTick.value++
+  }, 800)
 })
 
 watch(
@@ -782,6 +922,10 @@ onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onDocumentPointerDown, true)
   window.removeEventListener('resize', onWindowReposition)
   window.removeEventListener('scroll', onWindowReposition, true)
+  if (contextLiveTimer) {
+    clearInterval(contextLiveTimer)
+    contextLiveTimer = null
+  }
 })
 
 async function openConversation(conversationId: string, agentId: string) {
@@ -1260,18 +1404,105 @@ const conversationTooltipModelById = computed(
     0 0 0 2px var(--ui-bg),
     0 0 0 3px var(--color-primary-500, var(--ui-primary));
 }
-.agent-item-info {
-  flex: 1;
-  min-width: 0;
-}
 .agent-item-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 500;
   color: var(--ui-text);
+  margin: 0 0 1px;
+  min-width: 0;
+}
+.agent-item-name__text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin: 0 0 1px;
+  min-width: 0;
+}
+.agent-item-context {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  animation: agent-item-context-breathe 1.6s ease-in-out infinite;
+}
+.agent-item-context--collapsed {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  gap: 0;
+}
+.agent-item-context__svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+}
+.agent-item-context--collapsed .agent-item-context__svg {
+  width: 14px;
+  height: 14px;
+}
+.agent-item-context--collapsed .agent-item-context__pct {
+  display: none;
+}
+.agent-item-context__track,
+.agent-item-context__fill {
+  fill: none;
+  stroke-width: 3;
+}
+.agent-item-context__track {
+  stroke: color-mix(in srgb, var(--ui-border) 85%, transparent);
+}
+.agent-item-context__fill {
+  stroke: var(--color-primary-500, var(--ui-primary));
+  stroke-linecap: round;
+  transition:
+    stroke-dashoffset 0.2s ease,
+    stroke 0.2s ease;
+}
+.agent-item-context--warn .agent-item-context__fill {
+  stroke: var(--color-warning-500, #f59e0b);
+}
+.agent-item-context--over .agent-item-context__fill {
+  stroke: var(--color-error-500, #ef4444);
+}
+.agent-item-context__pct {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--ui-text-muted);
+  white-space: nowrap;
+}
+.agent-item-context--warn .agent-item-context__pct {
+  color: var(--color-warning-500, #f59e0b);
+}
+.agent-item-context--over .agent-item-context__pct {
+  color: var(--color-error-500, #ef4444);
+}
+.agent-item--running:not(.agent-item--active) {
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary-500, var(--ui-primary)) 22%,
+    var(--ui-border)
+  );
+}
+@keyframes agent-item-context-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+.agent-item-info {
+  flex: 1;
+  min-width: 0;
 }
 .agent-item-desc {
   font-size: 11px;

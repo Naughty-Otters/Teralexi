@@ -1,13 +1,32 @@
-/** Dev-only performance marks for chat UI hot paths. */
+/** Dev-only performance marks for chat UI hot paths — also active during stress runs. */
 
-const ENABLED =
+let stressMode = false
+
+const DEV_ENABLED =
   typeof import.meta !== 'undefined' &&
   Boolean(import.meta.env?.DEV) &&
   typeof performance !== 'undefined' &&
   typeof performance.mark === 'function'
 
+function marksEnabled(): boolean {
+  return (
+    (DEV_ENABLED || stressMode) &&
+    typeof performance !== 'undefined' &&
+    typeof performance.mark === 'function'
+  )
+}
+
+/** Enable chat UI counters outside DEV while a stress soak is running. */
+export function setChatUiPerfStressMode(enabled: boolean): void {
+  stressMode = enabled
+}
+
+export function isChatUiPerfStressMode(): boolean {
+  return stressMode
+}
+
 export function chatUiPerfMark(name: string): void {
-  if (!ENABLED) return
+  if (!marksEnabled()) return
   performance.mark(`chat:${name}`)
 }
 
@@ -16,7 +35,7 @@ export function chatUiPerfMeasure(
   startMark: string,
   endMark?: string,
 ): void {
-  if (!ENABLED) return
+  if (!marksEnabled()) return
   try {
     performance.measure(`chat:${name}`, `chat:${startMark}`, endMark ?? `chat:${name}:end`)
   } catch {
@@ -29,7 +48,7 @@ export function chatUiPerfMarkEnd(name: string): void {
   chatUiPerfMeasure(name, name)
 }
 
-/** Stress-harness counters (dev / tests). */
+/** Stress-harness counters (dev / stress runs). */
 let ingressChunkCount = 0
 let uiFlushCount = 0
 

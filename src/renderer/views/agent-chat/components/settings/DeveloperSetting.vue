@@ -28,6 +28,13 @@
         </label>
       </div>
     </div>
+
+    <div v-if="stressEnabled" class="sp-card stress-card">
+      <StressTestPanel
+        :labels="stressLabels"
+        :default-duration-ms="stressDefaultDurationMs"
+      />
+    </div>
   </section>
 </template>
 
@@ -40,6 +47,7 @@ import {
   llmDebugModeToString,
   parseLlmDebugMode,
 } from '@shared/agent/llm-debug'
+import StressTestPanel from './StressTestPanel.vue'
 import './sp-shared.css'
 
 const { t } = useI18n()
@@ -47,6 +55,35 @@ const p = computed(() => t.value.settings.panels)
 const loading = ref(true)
 const saving = ref(false)
 const enabled = ref(false)
+const stressEnabled = ref(false)
+const stressDefaultDurationMs = ref(10 * 60 * 60 * 1000)
+
+const stressLabels = computed(() => ({
+  title: p.value.developer.stressTitle,
+  desc: p.value.developer.stressDesc,
+  warning: p.value.developer.stressWarning,
+  scenario: p.value.developer.stressScenario,
+  scenarioAll: p.value.developer.stressScenarioAll,
+  scenarioNone: p.value.developer.stressScenarioNone,
+  duration: p.value.developer.stressDuration,
+  custom: p.value.developer.stressCustom,
+  customDuration: p.value.developer.stressCustomDuration,
+  inputMode: p.value.developer.stressInputMode,
+  modeHybrid: p.value.developer.stressModeHybrid,
+  modeCycle: p.value.developer.stressModeCycle,
+  modeAi: p.value.developer.stressModeAi,
+  concurrency: p.value.developer.stressConcurrency,
+  concurrencySequential: p.value.developer.stressConcurrencySequential,
+  concurrencyConcurrent: p.value.developer.stressConcurrencyConcurrent,
+  start: p.value.developer.stressStart,
+  stop: p.value.developer.stressStop,
+  running: p.value.developer.stressRunning,
+  openReport: p.value.developer.stressOpenReport,
+  elapsed: p.value.developer.stressElapsed,
+  skill: p.value.developer.stressSkill,
+  turn: p.value.developer.stressTurn,
+  latency: p.value.developer.stressLatency,
+}))
 
 async function loadSetting(): Promise<void> {
   loading.value = true
@@ -63,6 +100,23 @@ async function loadSetting(): Promise<void> {
     enabled.value = parseLlmDebugMode(row?.propertyValue)
   } finally {
     loading.value = false
+  }
+}
+
+async function loadStressAvailability(): Promise<void> {
+  const ch = window.ipcRendererChannel?.GetStressTestAvailability
+  if (!ch?.invoke) {
+    stressEnabled.value = false
+    return
+  }
+  try {
+    const result = await ch.invoke()
+    stressEnabled.value = Boolean(result?.enabled)
+    if (typeof result?.defaultDurationMs === 'number') {
+      stressDefaultDurationMs.value = result.defaultDurationMs
+    }
+  } catch {
+    stressEnabled.value = false
   }
 }
 
@@ -84,6 +138,7 @@ async function onToggle(next: boolean): Promise<void> {
 
 onMounted(() => {
   void loadSetting()
+  void loadStressAvailability()
 })
 </script>
 
@@ -119,5 +174,8 @@ onMounted(() => {
   font-size: 12px;
   line-height: 1.45;
   color: var(--ui-text-muted);
+}
+.stress-card {
+  margin-top: 16px;
 }
 </style>

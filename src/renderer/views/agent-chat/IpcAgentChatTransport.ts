@@ -47,7 +47,8 @@ export type IpcAgentRunContext = {
 }
 
 export type IpcAgentChatTransportOptions = {
-  getRunContext: () => IpcAgentRunContext | null
+  /** Resolve run context; prefer `conversationId` when the Chat SDK passes chatId. */
+  getRunContext: (conversationId?: string) => IpcAgentRunContext | null
   persistUserMessage: (args: {
     id: string
     conversationId: string
@@ -525,11 +526,18 @@ function createIpcUIMessageReadableStream(opts: {
     }
     await cleanupListeners()
     const message = text.trim() || 'Agent failed'
-    transportLog.error('Agent run failed in chat transport', {
-      conversationId: opts.conversationId,
-      assistantMessageId: opts.assistantMessageId,
-      errorMessage: message,
-    })
+    if (message === 'Aborted') {
+      transportLog.warn('Agent run aborted in chat transport', {
+        conversationId: opts.conversationId,
+        assistantMessageId: opts.assistantMessageId,
+      })
+    } else {
+      transportLog.error('Agent run failed in chat transport', {
+        conversationId: opts.conversationId,
+        assistantMessageId: opts.assistantMessageId,
+        errorMessage: message,
+      })
+    }
     const errorPartId = `${opts.textPartId}-error`
     const body = `\n\n${AGENT_ERROR_TEXT_PREFIX} ${message}\n\n`
     await writer
@@ -631,7 +639,9 @@ export class IpcAgentChatTransport implements ChatTransport<UIMessage> {
     abortSignal,
     body,
   }: Parameters<ChatTransport<UIMessage>['sendMessages']>[0]) {
-    const ctx = this.options.getRunContext()
+    const chatId =
+      typeof _chatId === 'string' && _chatId.trim() ? _chatId.trim() : undefined
+    const ctx = this.options.getRunContext(chatId)
     if (!ctx) throw new Error('No active agent conversation')
 
     const assistantMessageId = pickAssistantStreamMessageId(

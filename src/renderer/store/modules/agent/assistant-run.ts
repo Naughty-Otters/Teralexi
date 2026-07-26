@@ -30,6 +30,7 @@ export function createAssistantRunActions(
     connectionStatus,
     activeStreamState,
     inFlightConversations,
+    uiChatInFlightEpoch,
     channelConversationIds,
     currentConversationId,
   } = ctx
@@ -76,6 +77,7 @@ export function createAssistantRunActions(
       return null
     }
     inFlightConversations.add(conversationId)
+    uiChatInFlightEpoch.value++
     log.info('Conversation marked in flight', {
       conversationId,
       inFlightCount: inFlightConversations.size,
@@ -253,6 +255,7 @@ export function createAssistantRunActions(
       return null
     } finally {
       inFlightConversations.delete(conversationId)
+      uiChatInFlightEpoch.value++
       notifyNextConversationWaiter(conversationId)
       log.info('Conversation removed from in-flight set', {
         conversationId,

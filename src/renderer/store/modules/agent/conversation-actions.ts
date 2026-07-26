@@ -47,6 +47,7 @@ export function createConversationActions(
     activeStreamState,
     inFlightConversations,
     uiChatInFlightConversations,
+    uiChatInFlightEpoch,
     conversationSandboxRuns,
     sandboxSelectedRunIdByConversation,
     currentConversationId,
@@ -134,9 +135,12 @@ export function createConversationActions(
     if (!conversationId.trim()) return
     if (inFlight) uiChatInFlightConversations.add(conversationId)
     else uiChatInFlightConversations.delete(conversationId)
+    uiChatInFlightEpoch.value++
   }
 
   function isConversationStreamActive(conversationId: string): boolean {
+    // Depend on epoch so Vue computeds/templates re-evaluate when in-flight changes.
+    void uiChatInFlightEpoch.value
     return (
       inFlightConversations.has(conversationId) ||
       uiChatInFlightConversations.has(conversationId) ||

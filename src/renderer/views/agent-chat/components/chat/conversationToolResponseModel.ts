@@ -239,6 +239,8 @@ function latestToolLoopShellAnchor(
   for (const part of parts) {
     const data = part.data ?? {}
     if (agentStepProgressStepId(data) !== 'toolLoop') continue
+    // Skip parent shells that never got content — they are not real panels.
+    if (isStaleEmptyToolLoopShell(data)) continue
     const key = stepProgressPartKey(part)
     if (!key) continue
     const candidate: ToolLoopProgressAnchor = {
@@ -451,7 +453,9 @@ export function resolveConversationToolLoopPanelSlots(args: {
         liveBubbles.some((bubble) => toolBubbleLooksInFlight(bubble.part))) &&
       anchor.status !== 'completed'
 
-    if (items.length === 0 && !live) return []
+    // Never show an empty Exploring shell — "Looking around…" with no tools
+    // appears on every turn even when the agent answers without tool calls.
+    if (items.length === 0) return []
 
     return [
       {

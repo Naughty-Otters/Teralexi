@@ -297,6 +297,11 @@ import {
   type QueuedUserMessage,
 } from '../conversation-chat-session'
 import {
+  registerStressChatDriver,
+  type StressChatSendResult,
+  type StressSendOptions,
+} from '../stress/stressChatBridge'
+import {
   UI_CHAT_CONVERSATION_MODE_ONLY,
   resolveUiChatBoxDisplayMode,
   usesStructuredAssistantRendering,
@@ -823,12 +828,24 @@ function scheduleScrollToBottom(behavior: ScrollBehavior = 'auto'): void {
 }
 
 const transport = new IpcAgentChatTransport({
-  getRunContext: () => {
-    const agentId = agentStore.selectedAgentId
-    const conversationId = agentStore.currentConversationId ?? undefined
-    if (!agentId || !conversationId) return null
+  getRunContext: (conversationId) => {
+    const cid =
+      conversationId?.trim() ||
+      agentStore.currentConversationId?.trim() ||
+      undefined
+    if (!cid) return null
+    let agentId: string | null = null
+    for (const convs of Object.values(agentStore.conversationList)) {
+      const hit = convs.find((c) => c.id === cid)
+      if (hit) {
+        agentId = hit.agentId
+        break
+      }
+    }
+    agentId = agentId ?? agentStore.selectedAgentId
+    if (!agentId) return null
     return {
-      conversationId,
+      conversationId: cid,
       agentId,
       userId: DEFAULT_USER_ID,
     }
@@ -973,6 +990,132 @@ const chatStatus = computed(() => {
   }
   return c?.state?.statusRef?.value ?? 'ready'
 })
+
+function readChatStatusFor(chat: InstanceType<typeof Chat> | null | undefined): string {
+  const c = chat as unknown as {
+    state?: { statusRef?: { value: string } }
+  }
+  return c?.state?.statusRef?.value ?? 'ready'
+}
+
+function extractLastAssistantTextFrom(
+  chat: InstanceType<typeof Chat> | null | undefined,
+): string {
+  const messages = chat?.messages ?? []
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i] as UIMessage
+    if (msg.role !== 'assistant') continue
+    const parts = (msg.parts ?? []) as Array<{ type?: string; text?: string }>
+    const text = parts
+      .filter((p) => p.type === 'text' && typeof p.text === 'string')
+      .map((p) => p.text!.trim())
+      .filter(Boolean)
+      .join('\n')
+      .trim()
+    if (text) return text
+  }
+  return ''
+}
+
+function readChatStatus(): string {
+  return readChatStatusFor(chatInst.value)
+}
+
+function extractLastAssistantText(): string {
+  return extractLastAssistantTextFrom(chatInst.value)
+}
+
+async function stressSendAndWait(
+  text: string,
+  opts?: StressSendOptions,
+): Promise<StressChatSendResult> {
+  const conversationId =
+    opts?.conversationId?.trim() ||
+    agentStore.currentConversationId?.trim() ||
+    ''
+  const chat =
+    (conversationId ? getConversationChat(conversationId) : null) ??
+    chatInst.value
+  if (!chat || !conversationId) {
+    return { ok: false, error: 'Chat not ready' }
+  }
+  const isAborted = () => opts?.isAborted?.() === true
+
+  const abortTurn = (): StressChatSendResult => {
+    agentStore.markUiChatInFlight(conversationId, false)
+    void chat.stop()
+    void window.ipcRendererChannel?.StopAgentForConversation?.invoke?.({
+      conversationId,
+    })
+    return {
+      ok: false,
+      aborted: true,
+      error: 'Stopped',
+      assistantText: extractLastAssistantTextFrom(chat),
+    }
+  }
+
+  if (isAborted()) return abortTurn()
+
+  try {
+    // Race so Settings → Stop can interrupt a hung sendMessage.
+    const sendPromise = chat.sendMessage({ text }).then(
+      () => 'ok' as const,
+      (err: unknown) => {
+        throw err
+      },
+    )
+    while (true) {
+      if (isAborted()) return abortTurn()
+      const raced = await Promise.race([
+        sendPromise.then(() => 'done' as const),
+        new Promise<'tick'>((resolve) => setTimeout(() => resolve('tick'), 120)),
+      ])
+      if (raced === 'done') break
+    }
+  } catch (err) {
+    if (isAborted()) return abortTurn()
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }
+  }
+
+  const deadline = Date.now() + 30 * 60 * 1000
+  while (Date.now() < deadline) {
+    if (isAborted()) return abortTurn()
+    const status = readChatStatusFor(chat)
+    const busy = status === 'submitted' || status === 'streaming'
+    const inFlight = agentStore.isConversationStreamActive(conversationId)
+    if (!busy && !inFlight) break
+    await new Promise((r) => setTimeout(r, 120))
+  }
+
+  if (isAborted()) return abortTurn()
+
+  if (conversationHitlBlocksQueue(conversationId)) {
+    return {
+      ok: false,
+      hitlPaused: true,
+      error: 'Paused for HITL (form or tool approval)',
+      assistantText: extractLastAssistantTextFrom(chat),
+    }
+  }
+
+  const status = readChatStatusFor(chat)
+  if (status === 'error') {
+    // Title-bar stop aborts the chat without stress abort — treat as turn end.
+    return {
+      ok: false,
+      error: 'Chat status error',
+      assistantText: extractLastAssistantTextFrom(chat),
+    }
+  }
+  return {
+    ok: true,
+    assistantText: extractLastAssistantTextFrom(chat),
+  }
+}
 
 const isBusy = computed(() =>
   ['submitted', 'streaming'].includes(chatStatus.value),
@@ -1679,6 +1822,31 @@ onMounted(() => {
     agentStore.recordSandboxOutput(payload)
   })
   applyPendingWorkspaceSplitOpen()
+  registerStressChatDriver({
+    isReady: () => Boolean(chatInst.value && agentStore.currentConversationId),
+    sendAndWait: stressSendAndWait,
+    stopCurrentTurn: () => {
+      const conversationId =
+        agentStore.currentConversationId?.trim() ||
+        (typeof chatInst.value?.id === 'string' ? chatInst.value.id.trim() : '')
+      if (!conversationId) return
+      agentStore.markUiChatInFlight(conversationId, false)
+      const chat = getConversationChat(conversationId) ?? chatInst.value
+      void chat?.stop()
+      void window.ipcRendererChannel?.StopAgentForConversation?.invoke?.({
+        conversationId,
+      })
+    },
+    stopConversation: (conversationId: string) => {
+      const cid = conversationId.trim()
+      if (!cid) return
+      agentStore.markUiChatInFlight(cid, false)
+      void getConversationChat(cid)?.stop()
+      void window.ipcRendererChannel?.StopAgentForConversation?.invoke?.({
+        conversationId: cid,
+      })
+    },
+  })
 })
 
 watch(
@@ -1728,6 +1896,7 @@ onUnmounted(() => {
     onConversationFollowUpsChanged,
   )
   window.ipcRendererChannel?.AgentSandboxOutput?.removeAllListeners?.()
+  registerStressChatDriver(null)
 })
 
 async function onCollectFormSubmit(payload: {
@@ -2569,11 +2738,18 @@ function onSelectAgent(agentId: string) {
 }
 
 function onStop() {
-  const cid = chatInst.value?.id
-  if (typeof cid === 'string' && cid.trim()) {
-    agentStore.markUiChatInFlight(cid.trim(), false)
-  }
-  void chatInst.value?.stop()
+  const conversationId =
+    agentStore.currentConversationId?.trim() ||
+    (typeof chatInst.value?.id === 'string' ? chatInst.value.id.trim() : '')
+  if (!conversationId) return
+
+  // Stop only the focused conversation — never broadcast to other sessions.
+  agentStore.markUiChatInFlight(conversationId, false)
+  const chat = getConversationChat(conversationId) ?? chatInst.value
+  void chat?.stop()
+  void window.ipcRendererChannel?.StopAgentForConversation?.invoke?.({
+    conversationId,
+  })
 }
 
 function toggleSidebar() {

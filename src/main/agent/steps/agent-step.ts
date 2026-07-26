@@ -16,6 +16,7 @@ import { applyRunScopedReadCache } from '../expr/tool-read-cache'
 import { applyReadFileLedgerGate } from '../expr/read-file-ledger-gate'
 import { applySessionToolApprovals } from '../session-tool-approval'
 import { applyCodingAgentPolicy } from '../coding/coding-agent-policy'
+import { applyStressAutoApproveToolCalls } from '@main/stress/stress-auto-approve'
 import { PLAN_MODE_TOOL_NAMES } from '@toolSet/planning'
 import { SUB_AGENT_TOOL_NAMES } from '@toolSet/sub-agents'
 import { appendLinkedMarkdownReferenceSections } from './step-reference-link-expand'
@@ -148,16 +149,17 @@ export abstract class AgentStep {
       state: runCtx.agentFlow.toolInputDedupeState,
       pathContext,
     })
-    applySessionToolApprovals(toolSet, runCtx.opts.conversationId)
-    applyCodingAgentPolicy(
-      toolSet,
-      runCtx.opts.conversationId,
-      runCtx.opts.skillId,
-      runCtx.agentRun?.meta?.depth,
-    )
+  applySessionToolApprovals(toolSet, runCtx.opts.conversationId)
+  applyCodingAgentPolicy(
+    toolSet,
+    runCtx.opts.conversationId,
+    runCtx.opts.skillId,
+    runCtx.agentRun?.meta?.depth,
+  )
+  applyStressAutoApproveToolCalls(toolSet)
 
-    return toolSet
-  }
+  return toolSet
+}
 
   /** `stopWhen` conditions for {@link Agent}, honoring `maxIterations`. */
   protected getAgentStopWhen() {

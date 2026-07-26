@@ -43,6 +43,13 @@ vi.mock('@main/services/conversation-store', () => ({
     upsertConversationSandboxRun: vi.fn(),
     getMessageAttachmentsForMessage: vi.fn(() => []),
     getMessages: vi.fn(() => []),
+    getConversation: vi.fn((id: string) => ({
+      id,
+      agentId: 'skill:demo',
+      title: 'Test',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })),
     getConversationHooks: vi.fn(() => ({ hooks: [] })),
     getConversationLlmOverride: getConversationLlmOverrideMock,
   })),

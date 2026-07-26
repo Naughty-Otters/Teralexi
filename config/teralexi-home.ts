@@ -21,6 +21,8 @@ const TERALEXI_APP_DIRS = [
   'toolSet',
   'workflows',
   'rules',
+  'stress-runs',
+  'stress-workspace',
 ] as const
 
 /** Channel session/data dirs under `~/.teralexi/channels/`. */
@@ -168,6 +170,20 @@ export function getWorkflowSandboxDir(workflowId: string, runId: string): string
 
 export function getTeralexiLogsDir(): string {
   const dir = join(getTeralexiHome(), 'logs')
+  ensureDir(dir)
+  return dir
+}
+
+/** Stress-harness report roots (`~/.teralexi/stress-runs/<run-id>/`). */
+export function getTeralexiStressRunsDir(): string {
+  const dir = join(getTeralexiHome(), 'stress-runs')
+  ensureDir(dir)
+  return dir
+}
+
+/** Scratch project folder for coding/website soak runs. */
+export function getTeralexiStressWorkspaceDir(): string {
+  const dir = join(getTeralexiHome(), 'stress-workspace')
   ensureDir(dir)
   return dir
 }
