@@ -10,10 +10,8 @@ import {
 const markdown = createStandardMarkdownItEager()
 
 /** Full HTML document wrapping rendered markdown (for PDF export). */
-export async function renderMarkdownToHtmlDocument(
-  markdownBody: string,
-): Promise<string> {
-  const bodyHtml = await resolveDiagramBlocksInHtml(markdown.render(markdownBody))
+export function renderMarkdownToHtmlDocument(markdownBody: string): string {
+  const bodyHtml = resolveDiagramBlocksInHtml(markdown.render(markdownBody))
   return buildHtmlDocument(bodyHtml)
 }
 

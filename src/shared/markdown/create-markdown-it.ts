@@ -40,15 +40,6 @@ export function applyDiagramFencePlugin(md: MarkdownIt): void {
   }
 }
 
-/**
- * Replace pending diagram placeholders with rendered SVG.
- * Lazy-loads katex/mathjs/dagre via dynamic import (kept in the production build).
- */
-export async function resolveDiagramBlocksInHtml(html: string): Promise<string> {
-  const { resolveDiagramBlocksInHtml: resolve } = await import('./resolve-diagram-blocks')
-  return resolve(html)
-}
-
 export function configureStandardMarkdownIt(
   MarkdownItCtor: typeof import('markdown-it').default,
 ): MarkdownIt {

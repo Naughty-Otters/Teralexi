@@ -30,10 +30,10 @@ describe('diagram fence markdown plugin', () => {
     expect(html).not.toContain('diagram-block')
   })
 
-  it('resolveDiagramBlocksInHtml renders SVG', async () => {
+  it('resolveDiagramBlocksInHtml renders SVG', () => {
     const md = createStandardMarkdownItEager()
     const html = md.render(`\`\`\`diagram\n${sampleSpec}\n\`\`\``)
-    const resolved = await resolveDiagramBlocksInHtml(html)
+    const resolved = resolveDiagramBlocksInHtml(html)
     expect(resolved).toContain('diagram-block--ready')
     expect(resolved).toContain('<svg')
     expect(resolved).toContain('Hello diagram')

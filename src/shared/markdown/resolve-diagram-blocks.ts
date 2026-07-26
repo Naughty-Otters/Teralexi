@@ -1,3 +1,4 @@
+import { tryRenderDiagramSpecJsonToSvg } from '@shared/diagram/render-diagram-spec'
 import { escapeAttr } from '@shared/diagram/svg-utils'
 
 const DIAGRAM_BLOCK_PENDING_RE =
@@ -17,27 +18,18 @@ function diagramReadyHtml(svg: string): string {
 
 /**
  * Replace pending diagram placeholders with rendered SVG.
- * Dynamically imports the diagram renderer so katex/mathjs/dagre stay out of
- * the cold markdown path but remain in the production bundle.
+ * Used by main-process PDF/HTML export (static import — asar-safe).
+ * Renderer chat leaves placeholders and hydrates via {@link hydrateDiagramBlocks}.
  */
-export async function resolveDiagramBlocksInHtml(html: string): Promise<string> {
+export function resolveDiagramBlocksInHtml(html: string): string {
   if (!html.includes('diagram-block--pending')) return html
 
-  const { tryRenderDiagramSpecJsonToSvg } = await import(
-    '@shared/diagram/render-diagram-spec'
-  )
-
-  const re = new RegExp(DIAGRAM_BLOCK_PENDING_RE.source, 'g')
-  const parts: string[] = []
-  let lastIndex = 0
-  for (const match of html.matchAll(re)) {
-    const index = match.index ?? 0
-    parts.push(html.slice(lastIndex, index))
-    const raw = decodeDiagramSpec(match[1]!)
-    const result = await tryRenderDiagramSpecJsonToSvg(raw)
-    parts.push(result.ok ? diagramReadyHtml(result.svg) : diagramErrorHtml(result.error))
-    lastIndex = index + match[0].length
-  }
-  parts.push(html.slice(lastIndex))
-  return parts.join('')
+  return html.replace(DIAGRAM_BLOCK_PENDING_RE, (_match, encoded: string) => {
+    const raw = decodeDiagramSpec(encoded)
+    const result = tryRenderDiagramSpecJsonToSvg(raw)
+    if (result.ok) {
+      return diagramReadyHtml(result.svg)
+    }
+    return diagramErrorHtml(result.error)
+  })
 }
