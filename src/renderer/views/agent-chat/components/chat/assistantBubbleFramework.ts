@@ -7,9 +7,9 @@ import {
 import { isCollectFormRequestPart } from './collectFormTypes'
 import {
   classifyToolResult,
-  formatToolOutput,
   getToolPartErrorText,
   getToolPartInput,
+  getToolPartOutput,
   getToolPartState,
   isFileChangeToolPart,
   isRunningState,
@@ -25,6 +25,7 @@ import {
   isLlmErrorProgressText,
   LLM_ERROR_PROGRESS_MARKER,
 } from '@shared/agent/llm-error-ui'
+import { extractToolCallId } from '@shared/agent/tool-run-scope'
 import {
   buildToolRunScopeIndex,
   isSubAgentToolPart,
@@ -274,14 +275,43 @@ function asPlanningStepProgressContent(part: unknown): string {
   return ''
 }
 
+/** True when a value would produce non-empty display text without formatting it. */
+function hasNonEmptyToolPayloadValue(value: unknown): boolean {
+  if (value === undefined || value === null) return false
+  if (typeof value === 'string') return value.trim().length > 0
+  if (typeof value === 'number' || typeof value === 'boolean') return true
+  if (Array.isArray(value)) return value.length > 0
+  if (typeof value === 'object') return Object.keys(value as object).length > 0
+  return true
+}
+
+/**
+ * Visibility gate only — never call formatToolOutput here.
+ * Formatting is reserved for rows that actually render the payload.
+ */
 function hasRenderableToolPayload(part: unknown): boolean {
   const input = getToolPartInput(part)
-  const output = formatToolOutput(part)
-  const errorText = getToolPartErrorText(part)
+  // Any present input is enough to show the row (matches prior gate).
   if (input !== undefined && input !== null) return true
-  if (output.trim().length > 0) return true
-  if (errorText.trim().length > 0) return true
+  if (hasNonEmptyToolPayloadValue(getToolPartOutput(part))) return true
+  if (getToolPartErrorText(part).trim().length > 0) return true
   return false
+}
+
+function bubbleKeyForPart(
+  messageId: string,
+  index: number,
+  part: unknown,
+): string {
+  const toolCallId = extractToolCallId(part)
+  if (toolCallId) return `${messageId}-tool-${toolCallId}`
+  if (part && typeof part === 'object') {
+    const id = (part as { id?: unknown }).id
+    if (typeof id === 'string' && id.trim()) {
+      return `${messageId}-id-${id.trim()}`
+    }
+  }
+  return `${messageId}-p-${index}`
 }
 
 /** A tool part renders as a terminal bubble when its result is terminal-shaped. */
@@ -337,8 +367,11 @@ function collapseToolLoopBubbles(
 
   const flushBatch = () => {
     if (batch.length === 0) return
+    const first = batch[0]!
+    const groupId =
+      extractToolCallId(first.part) || first.key.replace(/^.*-tool-/, '')
     out.push({
-      key: `tool-group-${batch[0]!.key}`,
+      key: `tool-group-${groupId}`,
       kind: 'tool-group',
       part: null,
       payload: { items: batch } satisfies AssistantToolGroupPayload,
@@ -394,7 +427,7 @@ export function resolveAssistantBubbles(
   const scopeIndex = buildToolRunScopeIndex(message)
 
   for (const [index, part] of message.parts.entries()) {
-    const key = `${message.id}-p-${index}`
+    const key = bubbleKeyForPart(message.id, index, part)
 
     if (isReasoningUIPartWithContent(part)) {
       out.push({ key, kind: 'reasoning', part })

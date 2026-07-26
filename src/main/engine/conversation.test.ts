@@ -28,9 +28,15 @@ const {
 vi.mock('@main/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
+    debug: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
-    child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
+    child: () => ({
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    }),
   }),
   instrumentObjectMethods: <T>(o: T) => o,
   instrumentInstanceMethods: <T>(o: T) => o,

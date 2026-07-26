@@ -3,11 +3,15 @@ import type MarkdownIt from 'markdown-it'
 import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
 import { rewriteSandboxPreviewLinksInHtml } from '@shared/markdown/sandbox-preview-links'
 import { renderAssistantMessageHtml } from '../../assistantStructuredRender'
+import { chatUiPerfMark, chatUiPerfMarkEnd } from '../../perf/chatUiPerf'
+import {
+  isChatUiWorkerAvailable,
+  workerRenderMarkdown,
+} from '../../perf/chatUiWorkerClient'
 import {
   getCachedAssistantHtml,
   setCachedAssistantHtml,
 } from './assistantHtmlCache'
-import { chatUiPerfMark, chatUiPerfMarkEnd } from '../../perf/chatUiPerf'
 
 export function isAssistantMessageStreaming(m: UIMessage): boolean {
   if (m.role !== 'assistant') return false
@@ -50,6 +54,10 @@ export function createAssistantTextPartHtmlRenderer(opts: {
     if (!streaming) {
       const partIndex = msg.parts.indexOf(textPart)
       setCachedAssistantHtml(msg.id, partIndex, text, html)
+      // Off-thread basic markdown for plain settled text (non-structured path).
+      if (!opts.getStructuredDebug() && isChatUiWorkerAvailable() && text.length > 400) {
+        void workerRenderMarkdown(text)
+      }
     }
     return html
   }

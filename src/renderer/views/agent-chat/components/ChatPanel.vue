@@ -287,6 +287,7 @@ import {
   clearConversationChatCache,
   clearConversationSession,
   conversationHitlBlocksQueue,
+  evictIdleConversationChats,
   getConversationChat,
   setConversationHitlBlocksQueue,
   getConversationQueue,
@@ -317,10 +318,16 @@ import {
   setVisibleConversationForUiFlush,
   conversationIsCatchingUp,
 } from '../perf/scheduleUiFlush'
+import { flushStoreStreamSyncForConversation } from '../perf/storeStreamSync'
+import {
+  isChatUiWorkerAvailable,
+  syncIncrementalSyncChatMessages,
+  syncNormalizeChatMessages,
+  workerNormalizeChatMessages,
+} from '../perf/chatUiWorkerClient'
 import { registerConversationStoreUiSync } from '../conversationStoreUiSync'
 import { createAssistantTextPartHtmlRenderer } from './chat/chatAssistantRender'
 import {
-  incrementalSyncChatMessages,
   mergeLiveChatMessagesWithStore,
   normalizeChatMessagesForDisplay,
 } from './chat/chatMessageNormalize'
@@ -756,11 +763,19 @@ const isCatchingUp = computed(() => {
 })
 
 function scheduleSnapshot(conversationId: string, immediate = false): void {
-  scheduleUiFlush('snapshot', () => syncConversationSnapshot(conversationId), {
-    conversationId,
-    priority: immediate ? 'immediate' : 'normal',
-    force: immediate,
-  })
+  scheduleUiFlush(
+    'snapshot',
+    () =>
+      syncConversationSnapshot(conversationId, {
+        // Soft during stream coalesce; deep clone on end / switch / force.
+        clone: immediate,
+      }),
+    {
+      conversationId,
+      priority: immediate ? 'immediate' : 'normal',
+      force: immediate,
+    },
+  )
 }
 
 function shouldPreserveReactiveMessagesWhenChatEmpty(): boolean {
@@ -796,10 +811,24 @@ function syncReactiveMessagesFromChat(
   }
 
   chatUiPerfMark('normalize')
-  reactiveMessages.value =
-    opts?.full || reactiveMessages.value.length === 0
-      ? normalizeChatMessagesForDisplay(raw)
-      : incrementalSyncChatMessages(raw, reactiveMessages.value)
+  const useFull = Boolean(opts?.full || reactiveMessages.value.length === 0)
+  if (useFull) {
+    // Sync paint first so the frame is not empty; optionally refine via worker.
+    reactiveMessages.value = syncNormalizeChatMessages(raw)
+    if (isChatUiWorkerAvailable()) {
+      const gen = ++normalizeGeneration
+      void workerNormalizeChatMessages(raw).then((next) => {
+        if (gen !== normalizeGeneration) return
+        if (agentStore.currentConversationId == null) return
+        reactiveMessages.value = next
+      })
+    }
+  } else {
+    reactiveMessages.value = syncIncrementalSyncChatMessages(
+      raw,
+      reactiveMessages.value,
+    )
+  }
   chatUiPerfMarkEnd('normalize')
 
   clearHitlQueueBlockIfMessagesResolved(reactiveMessages.value)
@@ -853,6 +882,7 @@ const transport = new IpcAgentChatTransport({
   onStreamLifecycle(conversationId, phase) {
     agentStore.markUiChatInFlight(conversationId, phase === 'start')
     if (phase === 'end') {
+      flushStoreStreamSyncForConversation(conversationId)
       flushAllUiForConversation(conversationId)
       scheduleSnapshot(conversationId, true)
       streamingTextBuffer.flushNow()
@@ -877,10 +907,17 @@ const transport = new IpcAgentChatTransport({
       )
       void refreshPlanModeState(conversationId)
       void loadFollowUpSuggestions(conversationId)
+      evictIdleConversationChats({
+        isStreamActive: (id) => agentStore.isConversationStreamActive(id),
+      })
     }
   },
   onStreamUiChunk(conversationId, meta) {
-    scheduleSnapshot(conversationId, meta?.immediate)
+    const isVisible = agentStore.currentConversationId === conversationId
+    // Background: keep Chat SDK hot; snapshot only on end / leave (not per chunk).
+    if (isVisible) {
+      scheduleSnapshot(conversationId, meta?.immediate)
+    }
     scheduleUiFlush(
       'messages-sync',
       () => {
@@ -888,8 +925,7 @@ const transport = new IpcAgentChatTransport({
           getConversationChat(conversationId) ??
           (chatInst.value?.id === conversationId ? chatInst.value : null)
         if (!chat) return
-        // Background streams keep Chat + snapshot fresh; only the visible
-        // conversation paints into reactiveMessages.
+        // Background streams keep Chat fresh; only the visible conversation paints.
         if (agentStore.currentConversationId !== conversationId) return
         syncReactiveMessagesFromChat(
           (
@@ -1262,6 +1298,7 @@ const canSend = computed(() => {
 })
 
 const reactiveMessages = ref<UIMessage[]>([])
+let normalizeGeneration = 0
 
 const showAgentGuide = computed(
   () =>
@@ -1730,11 +1767,13 @@ watch(
   () => agentStore.currentConversationId,
   (conversationId, previousId) => {
     if (previousId) {
+      flushStoreStreamSyncForConversation(previousId)
       flushAllUiForConversation(previousId)
       scheduleSnapshot(previousId, true)
     }
     setVisibleConversationForUiFlush(conversationId)
     if (conversationId) {
+      flushStoreStreamSyncForConversation(conversationId)
       // Run any namespaced jobs that were deferred while this chat was background.
       flushAllUiForConversation(conversationId)
     }

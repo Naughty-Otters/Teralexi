@@ -245,7 +245,7 @@ export class AgentFlowBase {
     ) {
       return null
     }
-    log.info('Agent flow paused for user interaction', {
+    log.debug('Agent flow paused for user interaction', {
       conversationId: this.ctx.opts.conversationId,
       assistantMessageId: this.ctx.opts.assistantMessageId,
       awaitingApproval: this.ctx.hitlAwaitingApproval,
@@ -314,7 +314,7 @@ export class AgentFlowBase {
       deletePendingExecution(options.releasePendingExecutionKey)
     }
 
-    log.info('HITL continuation completed pipeline', {
+    log.debug('HITL continuation completed pipeline', {
       conversationId: this.ctx.opts.conversationId,
       assistantMessageId: this.ctx.opts.assistantMessageId,
       stages: this.resolvedPipelineStages(),
@@ -334,7 +334,7 @@ export class AgentFlowBase {
     this.ensurePipelineForRun()
     const result = await this.executePipelineWithPlanContinuations()
 
-    log.info('Agent flow completed', {
+    log.debug('Agent flow completed', {
       conversationId: this.ctx.opts.conversationId,
       assistantMessageId: this.ctx.opts.assistantMessageId,
       stages: this.resolvedPipelineStages(),
@@ -422,7 +422,7 @@ export class AgentFlowBase {
     }
 
     const frame = stack[stack.length - 1]!
-    log.info('Resuming nested sub-agent run from pending stack', {
+    log.debug('Resuming nested sub-agent run from pending stack', {
       runId: frame.runId,
       agentId: frame.agentId,
       pausedStageId: frame.pausedStageId,
@@ -489,7 +489,7 @@ export class AgentFlowBase {
     pending: PendingAgentExecution,
     formValues: Record<string, unknown>,
   ): Promise<string> {
-    log.info('Resuming agent flow after form submission', {
+    log.debug('Resuming agent flow after form submission', {
       conversationId: this.ctx.opts.conversationId,
       assistantMessageId: this.ctx.opts.assistantMessageId,
       nextTodoIndex: pending.nextTodoIndex,
@@ -516,7 +516,7 @@ export class AgentFlowBase {
     }
     const resumeTodoIndex = pending?.nextTodoIndex ?? 0
 
-    log.info('Resuming agent flow after approval response', {
+    log.debug('Resuming agent flow after approval response', {
       conversationId: this.ctx.opts.conversationId,
       assistantMessageId: this.ctx.opts.assistantMessageId,
       resumeTodoIndex,
@@ -527,7 +527,7 @@ export class AgentFlowBase {
     this.ctx.approvalResumeTodoIndex = pending?.nextTodoIndex
     this.ctx.resumeTodoIndex = resumeTodoIndex
     if (typeof pending?.pendingApprovalTodoId === 'number') {
-      log.info('Tool approval resume scoped to todo', {
+      log.debug('Tool approval resume scoped to todo', {
         resumeTodoIndex: pending.nextTodoIndex,
         pendingApprovalTodoId: pending.pendingApprovalTodoId,
       })
@@ -567,7 +567,7 @@ export class AgentFlowBase {
       this.ctx.opts.messages,
     )
 
-    log.info('Resuming agent flow after manual intervention follow-up', {
+    log.debug('Resuming agent flow after manual intervention follow-up', {
       conversationId: this.ctx.opts.conversationId,
       assistantMessageId: this.ctx.opts.assistantMessageId,
       resumeTodoIndex: pending.nextTodoIndex,

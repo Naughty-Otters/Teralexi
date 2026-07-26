@@ -148,14 +148,13 @@ import ChatToolLoopPanel from './ChatToolLoopPanel.vue'
 import {
   type AssistantListBubbleData,
   resolveAssistantBubbles,
-  resolveHitlBubbles,
   extractVisibleLlmErrorsFromMessage,
   agentErrorTextFromPart,
   type AssistantBubbleDescriptor,
   type AssistantToolGroupPayload,
   toolGroupHasRunningItem,
 } from './chat/assistantBubbleFramework'
-import { contentHash } from './chat/assistantHtmlCache'
+import { messagePartsRevision } from './chat/assistantHtmlCache'
 import { injectCodeCopyButtons } from './chat/streamingMarkdown'
 import { useAgentStore } from '@store/agent'
 import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
@@ -246,19 +245,19 @@ const visibleAgentErrors = computed(() =>
 )
 
 const resolvedBubbles = computed<AssistantBubbleDescriptor[]>(() => {
-  if (UI_CHAT_CONVERSATION_MODE_ONLY) return []
+  // One resolve shared by brief + reasoning filters (was resolved twice per tick).
+  const structured = usesStructuredAssistantLayoutForMessage.value
   return resolveAssistantBubbles(props.message, {
-    structuredLayoutEnabled: showTimelineViewForMessage(props.message),
-    shouldShowStepProgress: shouldShowAgentStepProgressPart,
+    structuredLayoutEnabled: structured,
+    shouldShowStepProgress: structured
+      ? () => false
+      : shouldShowAgentStepProgressPart,
   })
 })
 
-const reasoningBubbles = computed(() => {
-  return resolveAssistantBubbles(props.message, {
-    structuredLayoutEnabled: false,
-    shouldShowStepProgress: () => false,
-  }).filter((bubble) => bubble.kind === 'reasoning')
-})
+const reasoningBubbles = computed(() =>
+  resolvedBubbles.value.filter((bubble) => bubble.kind === 'reasoning'),
+)
 
 const visibleReasoningBubbles = computed(() =>
   filterAssistantReasoningBubbles(
@@ -290,7 +289,9 @@ const briefModeBubbles = computed(() => {
 /** Conversation/timeline modes: forms and approvals render outside structured views. */
 const structuredHitlBubbles = computed(() =>
   usesStructuredAssistantLayoutForMessage.value
-    ? resolveHitlBubbles(props.message)
+    ? resolvedBubbles.value.filter(
+        (bubble) => bubble.kind === 'form' || bubble.kind === 'approval',
+      )
     : [],
 )
 
@@ -527,37 +528,31 @@ async function refreshOutputLinkPreviews(): Promise<void> {
   await hydrateStepOutputLinkPreviews(assistantMsgPartsEl.value)
 }
 
-let lastCodeCopySourceHash = ''
+let lastPartsRevision = ''
 
-function messageHtmlSourceHash(): string {
-  return contentHash(JSON.stringify(props.message.parts))
-}
-
-function maybeInjectCodeCopyButtons(): void {
-  const hash = messageHtmlSourceHash()
-  if (hash === lastCodeCopySourceHash) return
-  lastCodeCopySourceHash = hash
+function maybeRefreshDomEnhancements(): void {
+  const revision = messagePartsRevision(props.message)
+  if (revision === lastPartsRevision) return
+  lastPartsRevision = revision
+  void refreshOutputLinkPreviews()
   if (assistantMsgPartsEl.value) {
     injectCodeCopyButtons(assistantMsgPartsEl.value)
   }
 }
 
 onMounted(() => {
-  void refreshOutputLinkPreviews()
-  maybeInjectCodeCopyButtons()
+  maybeRefreshDomEnhancements()
 })
 
 onUpdated(() => {
-  void refreshOutputLinkPreviews()
-  maybeInjectCodeCopyButtons()
+  maybeRefreshDomEnhancements()
 })
 
 watch(
-  () => props.message.parts,
+  () => messagePartsRevision(props.message),
   () => {
-    void refreshOutputLinkPreviews()
+    maybeRefreshDomEnhancements()
   },
-  { deep: true },
 )
 
 function onFormSubmit(payload: {

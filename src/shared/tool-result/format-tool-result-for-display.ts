@@ -10,6 +10,11 @@ import type { ToolResultType } from './types'
 export type FormatToolResultOpts = {
   toolName?: string
   toolInput?: unknown
+  /**
+   * When true, unknown/raw JSON fallbacks render a short stub instead of
+   * pretty-printing the full payload (streaming / collapsed UI).
+   */
+  deferRawJson?: boolean
 }
 
 export { stripTerminalCaptureHeaders } from './terminal-capture'
@@ -354,7 +359,20 @@ function formatErrorBlock(record: Record<string, unknown>): string {
   return `**Error**\n\n${msg}`
 }
 
-function formatRawJson(record: Record<string, unknown>): string {
+function formatRawJsonStub(record: Record<string, unknown>): string {
+  const keys = Object.keys(record)
+  const resultType =
+    typeof record.resultType === 'string' && record.resultType.trim()
+      ? record.resultType.trim()
+      : 'json'
+  return `_(${resultType} · ${keys.length} fields)_`
+}
+
+function formatRawJson(
+  record: Record<string, unknown>,
+  opts?: FormatToolResultOpts,
+): string {
+  if (opts?.deferRawJson) return formatRawJsonStub(record)
   try {
     const s = JSON.stringify(record, null, 2)
     if (s.length <= DISPLAY_JSON_MAX) return s
@@ -377,6 +395,7 @@ export function formatToolResultForDisplay(
 
   const record = asRecord(value)
   if (!record) {
+    if (opts?.deferRawJson) return '_(json)_'
     try {
       return JSON.stringify(value, null, 2)
     } catch {
@@ -405,6 +424,6 @@ export function formatToolResultForDisplay(
     case 'error':
       return formatErrorBlock(record)
     default:
-      return formatRawJson(record)
+      return formatRawJson(record, opts)
   }
 }

@@ -53,12 +53,23 @@ const visible = computed(() => Boolean(rawText.value || streaming.value))
 
 const title = computed(() => t.value.chat.thoughtBubbleTitle)
 
+/** Cached so streaming paints do not force layout via repeated scrollHeight reads. */
+let cachedScrollHeight = 0
+let cachedClientHeight = 0
+let compactScrollRaf: number | null = null
+
+function refreshCachedScrollMetrics(el: HTMLElement): void {
+  cachedScrollHeight = el.scrollHeight
+  cachedClientHeight = el.clientHeight
+}
+
 function onBodyScroll() {
   if (!compact.value || programmaticScroll.value) return
   const el = plainPre.getPre()
   if (!el) return
+  refreshCachedScrollMetrics(el)
   stickToBottom.value =
-    el.scrollHeight - el.scrollTop - el.clientHeight < 8
+    cachedScrollHeight - el.scrollTop - cachedClientHeight < 8
 }
 
 const plainPre = useImperativePlainPre({
@@ -78,11 +89,26 @@ function computeDisplayText(): string {
 function syncCompactScrollNow() {
   const el = plainPre.getPre()
   if (!el || !compact.value || !stickToBottom.value) return
-  programmaticScroll.value = true
-  el.scrollTop = compactPaneScrollTop(el.scrollHeight, el.clientHeight)
-  requestAnimationFrame(() => {
-    programmaticScroll.value = false
-  })
+  if (compactScrollRaf != null) return
+  const run = () => {
+    compactScrollRaf = null
+    const latest = plainPre.getPre()
+    if (!latest || !compact.value || !stickToBottom.value) return
+    programmaticScroll.value = true
+    refreshCachedScrollMetrics(latest)
+    latest.scrollTop = compactPaneScrollTop(
+      cachedScrollHeight,
+      cachedClientHeight,
+    )
+    requestAnimationFrame(() => {
+      programmaticScroll.value = false
+    })
+  }
+  if (typeof requestAnimationFrame !== 'function') {
+    run()
+    return
+  }
+  compactScrollRaf = requestAnimationFrame(run)
 }
 
 function paintBodyText(next: string) {
@@ -147,6 +173,10 @@ onBeforeUnmount(() => {
   if (displayFlushTimer != null) {
     clearTimeout(displayFlushTimer)
     displayFlushTimer = null
+  }
+  if (compactScrollRaf != null && typeof cancelAnimationFrame === 'function') {
+    cancelAnimationFrame(compactScrollRaf)
+    compactScrollRaf = null
   }
 })
 

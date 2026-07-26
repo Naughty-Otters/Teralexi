@@ -63,7 +63,7 @@ export async function runAgent(
     let anyToolApplied = false
 
     for (const tool of tools) {
-      legacyToolLog.info('legacy runAgent tool call start', {
+      legacyToolLog.debug('legacy runAgent tool call start', {
         toolName: tool.name,
         source: 'legacy',
         input: serializeForToolLog(context),
@@ -76,7 +76,7 @@ export async function runAgent(
             result: serializeForToolLog(result),
           })
         } else {
-          legacyToolLog.info('legacy runAgent tool call completed', {
+          legacyToolLog.debug('legacy runAgent tool call completed', {
             toolName: tool.name,
             result: serializeForToolLog(result),
           })

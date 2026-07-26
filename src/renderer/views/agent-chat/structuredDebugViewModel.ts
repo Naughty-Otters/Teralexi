@@ -404,6 +404,47 @@ function thinkingSectionBodyFields(
   }
 }
 
+/** LRU of rendered section HTML — settled sections are rebuilt every stream tick. */
+const SECTION_HTML_CACHE_MAX = 96
+const sectionHtmlCache = new Map<string, string>()
+const sectionHtmlOrder: string[] = []
+
+function hashSectionMarkdown(text: string): string {
+  let h = 0
+  for (let i = 0; i < text.length; i++) {
+    h = (Math.imul(31, h) + text.charCodeAt(i)) | 0
+  }
+  return `${text.length}:${h}`
+}
+
+function cachedSectionBodyHtml(
+  markdown: MarkdownIt,
+  bodyMarkdown: string,
+): string {
+  const key = hashSectionMarkdown(bodyMarkdown)
+  const hit = sectionHtmlCache.get(key)
+  if (hit !== undefined) {
+    const idx = sectionHtmlOrder.indexOf(key)
+    if (idx >= 0) sectionHtmlOrder.splice(idx, 1)
+    sectionHtmlOrder.push(key)
+    return hit
+  }
+  const html = applyStatusBadges(markdown.render(bodyMarkdown))
+  sectionHtmlCache.set(key, html)
+  sectionHtmlOrder.push(key)
+  while (sectionHtmlOrder.length > SECTION_HTML_CACHE_MAX) {
+    const evict = sectionHtmlOrder.shift()
+    if (evict) sectionHtmlCache.delete(evict)
+  }
+  return html
+}
+
+/** Test helper — clears the section HTML LRU. */
+export function clearStructuredSectionHtmlCacheForTests(): void {
+  sectionHtmlCache.clear()
+  sectionHtmlOrder.length = 0
+}
+
 function sectionBodyFields(
   markdown: MarkdownIt | null,
   text: string,
@@ -422,7 +463,7 @@ function sectionBodyFields(
   }
   return {
     bodyMarkdown,
-    bodyHtml: applyStatusBadges(markdown.render(bodyMarkdown)),
+    bodyHtml: cachedSectionBodyHtml(markdown, bodyMarkdown),
     bodyPlainText: '',
   }
 }

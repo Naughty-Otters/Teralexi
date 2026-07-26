@@ -13,23 +13,50 @@ import {
 import { getChatUiPerfCounters, resetChatUiPerfCounters } from './chatUiPerf'
 
 describe('scheduleUiFlush', () => {
+  const rafQueue: FrameRequestCallback[] = []
+  const timeoutQueue: Array<{ cb: () => void; ms: number }> = []
+  let now = 0
+
+  function flushRaf(): void {
+    const jobs = [...rafQueue]
+    rafQueue.length = 0
+    for (const job of jobs) job(now)
+  }
+
+  function flushTimeouts(): void {
+    const jobs = [...timeoutQueue]
+    timeoutQueue.length = 0
+    for (const job of jobs) {
+      now += job.ms
+      job.cb()
+    }
+  }
+
   beforeEach(() => {
     resetChatUiFlushState()
     resetChatUiPerfCounters()
     setVisibleConversationForUiFlush('conv-1')
-    const rafQueue: FrameRequestCallback[] = []
+    rafQueue.length = 0
+    timeoutQueue.length = 0
+    now = 1000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
     setChatUiFlushSchedulers({
       raf: (cb) => {
         rafQueue.push(cb)
         return rafQueue.length
       },
+      cancelRaf: () => {
+        rafQueue.length = 0
+      },
+      timeout: (cb, ms) => {
+        timeoutQueue.push({ cb, ms })
+        return timeoutQueue.length
+      },
+      clearTimeout: () => {
+        timeoutQueue.length = 0
+      },
       microtask: (cb) => cb(),
     })
-    ;(globalThis as { __flushRaf?: () => void }).__flushRaf = () => {
-      const jobs = [...rafQueue]
-      rafQueue.length = 0
-      for (const job of jobs) job(0)
-    }
   })
 
   it('coalesces normal flushes to one run per namespaced key per frame', () => {
@@ -42,9 +69,32 @@ describe('scheduleUiFlush', () => {
       conversationId: 'conv-1',
       priority: 'normal',
     })
-    ;(globalThis as { __flushRaf?: () => void }).__flushRaf?.()
+    flushRaf()
     expect(fn).toHaveBeenCalledTimes(1)
     expect(getChatUiPerfCounters().uiFlushes).toBe(1)
+  })
+
+  it('waits with timeout instead of empty rAF when inside min interval', () => {
+    const fn = vi.fn()
+    scheduleUiFlush('messages-sync', fn, {
+      conversationId: 'conv-1',
+      priority: 'normal',
+    })
+    flushRaf()
+    expect(fn).toHaveBeenCalledTimes(1)
+
+    scheduleUiFlush('messages-sync', fn, {
+      conversationId: 'conv-1',
+      priority: 'normal',
+    })
+    // Still inside 32ms window — should schedule timeout, not another empty rAF spin.
+    expect(rafQueue).toHaveLength(0)
+    expect(timeoutQueue.length).toBeGreaterThan(0)
+    expect(fn).toHaveBeenCalledTimes(1)
+
+    flushTimeouts()
+    flushRaf()
+    expect(fn).toHaveBeenCalledTimes(2)
   })
 
   it('keeps concurrent conversations from overwriting each other', () => {
@@ -60,7 +110,7 @@ describe('scheduleUiFlush', () => {
       conversationId: 'conv-b',
       priority: 'normal',
     })
-    ;(globalThis as { __flushRaf?: () => void }).__flushRaf?.()
+    flushRaf()
 
     expect(fnA).toHaveBeenCalledTimes(1)
     expect(fnB).toHaveBeenCalledTimes(1)
@@ -87,7 +137,7 @@ describe('scheduleUiFlush', () => {
       conversationId: 'conv-bg',
       priority: 'normal',
     })
-    ;(globalThis as { __flushRaf?: () => void }).__flushRaf?.()
+    flushRaf()
     expect(fn).not.toHaveBeenCalled()
   })
 

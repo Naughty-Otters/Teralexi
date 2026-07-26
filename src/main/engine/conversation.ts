@@ -201,7 +201,7 @@ function persistIncomingUserMessage(args: {
       createdAt: row.createdAt,
       threadTag,
     })
-    log.info(ConfigContext.ENGINE_LOG.PERSIST_USER_OK, {
+    log.debug(ConfigContext.ENGINE_LOG.PERSIST_USER_OK, {
       conversationId: args.conversationId,
       agentId: args.agentId,
       messageId: row.id,
@@ -454,7 +454,7 @@ async function executeAgentForConversation(
   const mcpTools = await loadMcpToolsForAgent(userId, agent)
   const enabledSkillTools = resolveEnabledSkillToolNames(agent)
 
-  log.info(ConfigContext.ENGINE_LOG.PREPARED_CONTEXT, {
+  log.debug(ConfigContext.ENGINE_LOG.PREPARED_CONTEXT, {
     conversationId,
     agentId,
     provider: agent.provider,
@@ -531,7 +531,7 @@ async function executeAgentForConversation(
       finalContent = streamResult.structuredContent
       shouldPersistMemory = streamResult.shouldPersistMemory
       hitlPaused = streamResult.hitlPaused
-      log.info(ConfigContext.ENGINE_LOG.COMPLETED, {
+      log.debug(ConfigContext.ENGINE_LOG.COMPLETED, {
         conversationId,
         agentId,
         assistantMessageId,
@@ -601,7 +601,7 @@ async function executeAgentForConversation(
             createdAt: new Date().toISOString(),
             threadTag,
           })
-          log.info(ConfigContext.ENGINE_LOG.PERSIST_ASSISTANT_OK, {
+          log.debug(ConfigContext.ENGINE_LOG.PERSIST_ASSISTANT_OK, {
             conversationId,
             agentId,
             assistantMessageId,
@@ -627,7 +627,7 @@ async function executeAgentForConversation(
                 uiMessages,
                 pendingUserMessage: args.pendingUserMessage,
               })
-              log.info(
+              log.debug(
                 `${ConfigContext.ENGINE_LOG.MEMORY_RECORD_ENQUEUED} conversationId=${conversationId} agentId=${agentId} assistantMessageId=${assistantMessageId}`,
               )
             } catch (memErr) {
@@ -638,7 +638,7 @@ async function executeAgentForConversation(
               )
             }
           } else {
-            log.info(
+            log.debug(
               `Skipped agent memory persistence conversationId=${conversationId} agentId=${agentId} assistantMessageId=${assistantMessageId}`,
             )
           }
@@ -895,7 +895,7 @@ async function executeSubAgentMentionDelegation(
     hitlPaused = childResult.hitlPaused
     finalContent = resolveSubAgentSummaryText(childResult.stepOutputs)
 
-    log.info('Sub-agent mention delegation completed', {
+    log.debug('Sub-agent mention delegation completed', {
       conversationId,
       agentId,
       targetAgentId: targetId,

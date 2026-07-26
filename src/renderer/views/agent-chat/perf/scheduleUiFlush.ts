@@ -24,6 +24,7 @@ type PendingJob = {
 
 const BACKLOG_FAST_FORWARD_THRESHOLD = 100
 const NORMAL_MIN_INTERVAL_MS = 32
+const BACKLOG_MIN_INTERVAL_MS = 64
 const GLOBAL_FLUSH_NAMESPACE = '_'
 
 const pendingByKey = new Map<string, PendingJob>()
@@ -32,15 +33,39 @@ const catchingUpByConversation = new Map<string, Ref<boolean>>()
 
 let visibleConversationId: string | null = null
 let rafHandle: number | null = null
+let timeoutHandle: number | null = null
 let lastNormalFlushAt = 0
 
+function currentMinFlushIntervalMs(): number {
+  if (!visibleConversationId) return NORMAL_MIN_INTERVAL_MS
+  const backlog = ingressBacklogByConversation.get(visibleConversationId) ?? 0
+  return backlog > BACKLOG_FAST_FORWARD_THRESHOLD
+    ? BACKLOG_MIN_INTERVAL_MS
+    : NORMAL_MIN_INTERVAL_MS
+}
+
 type RafFn = (cb: FrameRequestCallback) => number
+type CancelRafFn = (id: number) => void
+type TimeoutFn = (cb: () => void, ms: number) => number
+type ClearTimeoutFn = (id: number) => void
 type MicrotaskFn = (cb: () => void) => void
 
 let scheduleRaf: RafFn =
   typeof requestAnimationFrame === 'function'
     ? requestAnimationFrame
     : (cb) => setTimeout(() => cb(performance.now()), 16) as unknown as number
+
+let cancelRaf: CancelRafFn =
+  typeof cancelAnimationFrame === 'function'
+    ? cancelAnimationFrame
+    : (id) => clearTimeout(id)
+
+let scheduleTimeout: TimeoutFn = (cb, ms) =>
+  setTimeout(cb, ms) as unknown as number
+
+let clearTimeoutFn: ClearTimeoutFn = (id) => {
+  clearTimeout(id)
+}
 
 let scheduleMicrotask: MicrotaskFn = (cb) => queueMicrotask(cb)
 
@@ -53,12 +78,18 @@ export function namespacedFlushKey(
   return `${cid}::${kind}`
 }
 
-/** Test hook: replace rAF / microtask schedulers. */
+/** Test hook: replace rAF / timeout / microtask schedulers. */
 export function setChatUiFlushSchedulers(opts: {
   raf?: RafFn
+  cancelRaf?: CancelRafFn
+  timeout?: TimeoutFn
+  clearTimeout?: ClearTimeoutFn
   microtask?: MicrotaskFn
 }): void {
   if (opts.raf) scheduleRaf = opts.raf
+  if (opts.cancelRaf) cancelRaf = opts.cancelRaf
+  if (opts.timeout) scheduleTimeout = opts.timeout
+  if (opts.clearTimeout) clearTimeoutFn = opts.clearTimeout
   if (opts.microtask) scheduleMicrotask = opts.microtask
 }
 
@@ -118,11 +149,43 @@ function runPendingJob(mapKey: string, job: PendingJob): void {
   pendingByKey.delete(mapKey)
 }
 
+function clearScheduledWake(): void {
+  if (rafHandle != null) {
+    cancelRaf(rafHandle)
+    rafHandle = null
+  }
+  if (timeoutHandle != null) {
+    clearTimeoutFn(timeoutHandle)
+    timeoutHandle = null
+  }
+}
+
+function wakeOnAnimationFrame(): void {
+  if (rafHandle != null) return
+  rafHandle = scheduleRaf(() => {
+    rafHandle = null
+    flushNormalJobs()
+  })
+}
+
+/**
+ * If still inside the min interval, sleep with setTimeout for the remainder
+ * instead of spinning empty rAFs every display frame.
+ */
+function scheduleWakeAfterInterval(minIntervalMs: number, now: number): void {
+  if (timeoutHandle != null || rafHandle != null) return
+  const wait = Math.max(1, minIntervalMs - (now - lastNormalFlushAt))
+  timeoutHandle = scheduleTimeout(() => {
+    timeoutHandle = null
+    wakeOnAnimationFrame()
+  }, wait)
+}
+
 function flushNormalJobs(): void {
-  rafHandle = null
   const now = performance.now()
-  if (now - lastNormalFlushAt < NORMAL_MIN_INTERVAL_MS) {
-    rafHandle = scheduleRaf(flushNormalJobs)
+  const minInterval = currentMinFlushIntervalMs()
+  if (now - lastNormalFlushAt < minInterval) {
+    scheduleWakeAfterInterval(minInterval, now)
     return
   }
   lastNormalFlushAt = now
@@ -134,8 +197,14 @@ function flushNormalJobs(): void {
 }
 
 function scheduleNormalFlush(): void {
-  if (rafHandle != null) return
-  rafHandle = scheduleRaf(flushNormalJobs)
+  if (rafHandle != null || timeoutHandle != null) return
+  const now = performance.now()
+  const minInterval = currentMinFlushIntervalMs()
+  if (lastNormalFlushAt > 0 && now - lastNormalFlushAt < minInterval) {
+    scheduleWakeAfterInterval(minInterval, now)
+    return
+  }
+  wakeOnAnimationFrame()
 }
 
 /**
@@ -190,9 +259,6 @@ export function resetChatUiFlushState(): void {
   ingressBacklogByConversation.clear()
   catchingUpByConversation.clear()
   visibleConversationId = null
-  if (rafHandle != null && typeof cancelAnimationFrame === 'function') {
-    cancelAnimationFrame(rafHandle)
-  }
-  rafHandle = null
+  clearScheduledWake()
   lastNormalFlushAt = 0
 }

@@ -312,7 +312,7 @@ export class AgentRun {
     })
 
     const sandboxRoot = this.context.getSandboxRoot() ?? ''
-    log.info('Sub-agent sandbox initialized', {
+    log.debug('Sub-agent sandbox initialized', {
       runId: this.meta.runId,
       agentId,
       depth: this.meta.depth,
@@ -334,7 +334,7 @@ export class AgentRun {
       this.context.opts.skillId,
     )
     const sandboxRoot = this.context.getSandboxRoot() ?? ''
-    log.info('Sandbox initialized for agent run', {
+    log.debug('Sandbox initialized for agent run', {
       runId: this.meta.runId,
       depth: this.meta.depth,
       conversationId: this.context.opts.conversationId,

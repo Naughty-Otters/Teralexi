@@ -1,6 +1,15 @@
-/** Dev-only performance marks for chat UI hot paths — also active during stress runs. */
+/**
+ * Chat UI performance helpers.
+ *
+ * Counters work in DEV / stress mode. Timeline marks are opt-in so clean Perf
+ * traces are not dominated by `performance.mark` itself.
+ *
+ * Enable marks: `localStorage.setItem('teralexi.chatUiPerfMarks', '1')` then reload,
+ * or call {@link setChatUiPerfMarksEnabled}(true).
+ */
 
 let stressMode = false
+let marksOptIn = readMarksOptIn()
 
 const DEV_ENABLED =
   typeof import.meta !== 'undefined' &&
@@ -8,9 +17,23 @@ const DEV_ENABLED =
   typeof performance !== 'undefined' &&
   typeof performance.mark === 'function'
 
+function readMarksOptIn(): boolean {
+  try {
+    if (typeof localStorage === 'undefined') return false
+    return localStorage.getItem('teralexi.chatUiPerfMarks') === '1'
+  } catch {
+    return false
+  }
+}
+
+function countersEnabled(): boolean {
+  return DEV_ENABLED || stressMode
+}
+
 function marksEnabled(): boolean {
   return (
-    (DEV_ENABLED || stressMode) &&
+    marksOptIn &&
+    countersEnabled() &&
     typeof performance !== 'undefined' &&
     typeof performance.mark === 'function'
   )
@@ -25,6 +48,22 @@ export function isChatUiPerfStressMode(): boolean {
   return stressMode
 }
 
+/** Opt into noisy timeline marks (normalize/snapshot/ipc). Off by default. */
+export function setChatUiPerfMarksEnabled(enabled: boolean): void {
+  marksOptIn = enabled
+  try {
+    if (typeof localStorage === 'undefined') return
+    if (enabled) localStorage.setItem('teralexi.chatUiPerfMarks', '1')
+    else localStorage.removeItem('teralexi.chatUiPerfMarks')
+  } catch {
+    // Ignore quota / private mode.
+  }
+}
+
+export function isChatUiPerfMarksEnabled(): boolean {
+  return marksOptIn
+}
+
 export function chatUiPerfMark(name: string): void {
   if (!marksEnabled()) return
   performance.mark(`chat:${name}`)
@@ -37,7 +76,11 @@ export function chatUiPerfMeasure(
 ): void {
   if (!marksEnabled()) return
   try {
-    performance.measure(`chat:${name}`, `chat:${startMark}`, endMark ?? `chat:${name}:end`)
+    performance.measure(
+      `chat:${name}`,
+      `chat:${startMark}`,
+      endMark ?? `chat:${name}:end`,
+    )
   } catch {
     // Marks may be missing when a path short-circuits.
   }
@@ -58,11 +101,13 @@ export function resetChatUiPerfCounters(): void {
 }
 
 export function recordIngressChunk(): void {
+  if (!countersEnabled()) return
   ingressChunkCount++
   chatUiPerfMark('ipc.chunk.received')
 }
 
 export function recordUiFlush(): void {
+  if (!countersEnabled()) return
   uiFlushCount++
 }
 

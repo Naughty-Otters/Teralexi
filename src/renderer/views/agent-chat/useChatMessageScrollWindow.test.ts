@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { ref, nextTick } from 'vue'
-import { useChatMessageScrollWindow } from './useChatMessageScrollWindow'
+import {
+  CHAT_MESSAGE_WINDOW_MAX,
+  useChatMessageScrollWindow,
+} from './useChatMessageScrollWindow'
 
 function mockScrollEl(opts: {
   scrollTop: number
@@ -24,7 +27,21 @@ function makeMessages(count: number) {
 }
 
 describe('useChatMessageScrollWindow', () => {
-  it('renders all in-memory messages', async () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      (cb: FrameRequestCallback) => {
+        cb(0)
+        return 1
+      },
+    )
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('windows to the trailing messages while stuck to bottom', async () => {
     const messages = ref(makeMessages(60))
     const scrollEl = ref<HTMLElement | null>(null)
     const { visibleMessages, resetWindow } = useChatMessageScrollWindow(
@@ -35,8 +52,10 @@ describe('useChatMessageScrollWindow', () => {
     resetWindow(true)
     await nextTick()
 
-    expect(visibleMessages.value).toHaveLength(60)
-    expect(visibleMessages.value[0]?.id).toBe('m1')
+    expect(visibleMessages.value).toHaveLength(CHAT_MESSAGE_WINDOW_MAX)
+    expect(visibleMessages.value[0]?.id).toBe(
+      `m${60 - CHAT_MESSAGE_WINDOW_MAX + 1}`,
+    )
     expect(visibleMessages.value.at(-1)?.id).toBe('m60')
   })
 
@@ -110,6 +129,42 @@ describe('useChatMessageScrollWindow', () => {
     expect(loadCount).toBe(1)
   })
 
+  it('expands local window before server fetch when history is trimmed', async () => {
+    const messages = ref(makeMessages(80))
+    const scrollEl = ref<HTMLElement | null>(null)
+    let loadCount = 0
+    const { resetWindow, onScroll, visibleMessages } = useChatMessageScrollWindow(
+      messages,
+      scrollEl,
+      {
+        onLoadOlder: async () => {
+          loadCount += 1
+          return true
+        },
+        hasOlderOnServer: () => true,
+      },
+    )
+
+    resetWindow(true)
+    await nextTick()
+    expect(visibleMessages.value).toHaveLength(CHAT_MESSAGE_WINDOW_MAX)
+
+    scrollEl.value = mockScrollEl({
+      scrollTop: 10,
+      scrollHeight: 2_000,
+      clientHeight: 600,
+    })
+    await onScroll()
+    expect(loadCount).toBe(0)
+    expect(visibleMessages.value).toHaveLength(80)
+
+    scrollEl.value.scrollTop = 500
+    await onScroll()
+    scrollEl.value.scrollTop = 5
+    await onScroll()
+    expect(loadCount).toBe(1)
+  })
+
   it('pins scroll to the top when loading older messages from the physical top', async () => {
     const messages = ref(makeMessages(40))
     const scrollEl = ref<HTMLElement | null>(null)
@@ -120,7 +175,7 @@ describe('useChatMessageScrollWindow', () => {
     })
     scrollEl.value = el
 
-    const { resetWindow, onScroll } = useChatMessageScrollWindow(
+    const { resetWindow, onScroll, onWheel } = useChatMessageScrollWindow(
       messages,
       scrollEl,
       {
@@ -134,6 +189,9 @@ describe('useChatMessageScrollWindow', () => {
 
     resetWindow(true)
     await nextTick()
+    onWheel({ deltaY: -1 } as WheelEvent)
+    await onScroll()
+    el.scrollTop = 0
     await onScroll()
 
     expect(el.scrollTop).toBe(0)
@@ -194,5 +252,37 @@ describe('useChatMessageScrollWindow', () => {
 
     armStickToBottom()
     expect(stickToBottom.value).toBe(true)
+  })
+
+  it('coalesces stick-to-bottom scrolls onto one animation frame', async () => {
+    let rafCount = 0
+    const callbacks: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      rafCount += 1
+      callbacks.push(cb)
+      return rafCount
+    })
+
+    const messages = ref(makeMessages(3))
+    const el = mockScrollEl({
+      scrollTop: 0,
+      scrollHeight: 1_000,
+      clientHeight: 400,
+    })
+    const scrollEl = ref<HTMLElement | null>(el)
+    const { resetWindow, scrollToBottomIfStuck } = useChatMessageScrollWindow(
+      messages,
+      scrollEl,
+    )
+    resetWindow(true)
+
+    const p1 = scrollToBottomIfStuck('auto')
+    const p2 = scrollToBottomIfStuck('auto')
+    const p3 = scrollToBottomIfStuck('auto')
+    await Promise.all([p1, p2, p3])
+    expect(rafCount).toBe(1)
+
+    callbacks[0]?.(0)
+    expect(el.scrollTop).toBe(600)
   })
 })

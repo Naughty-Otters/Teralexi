@@ -518,7 +518,7 @@ import {
   type ConversationListItemLabels,
   type ConversationListLabelField,
 } from '../lib/conversation-list-item-labels'
-import { clearConversationSession, getConversationChat } from '../conversation-chat-session'
+import { clearConversationSession } from '../conversation-chat-session'
 import { computeContextWindowUsage } from '@shared/agent/context-window-usage'
 import { chatUiContextWindowMessages } from '../chatUiSettings'
 import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
@@ -704,13 +704,12 @@ function isConversationRunning(conversationId: string): boolean {
 }
 
 function conversationMessageCount(conversationId: string): number {
-  const live = getConversationChat(conversationId)?.messages?.length
-  if (typeof live === 'number') return live
+  // Prefer Pinia store length — avoid touching live Chat SDK on the sidebar hot path.
   return agentStore.conversations?.[conversationId]?.length ?? 0
 }
 
 const contextUsageById = computed(() => {
-  // Recompute when streams start/end, message arrays change, or live poll ticks.
+  // Recompute when streams start/end (epoch inside isConversationStreamActive) or store changes.
   void contextLiveTick.value
   for (const conv of conversationItems.value) {
     void agentStore.isConversationStreamActive(conv.id)
@@ -890,7 +889,7 @@ onMounted(() => {
       agentStore.isConversationStreamActive(conv.id),
     )
     if (anyRunning) contextLiveTick.value++
-  }, 800)
+  }, 1000)
 })
 
 watch(

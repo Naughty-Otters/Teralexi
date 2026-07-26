@@ -39,7 +39,9 @@ export async function runLoggedToolExecute(
   fn: () => Promise<unknown>,
 ): Promise<unknown> {
   const startedAt = Date.now()
-  log.info('tool call start', {
+  // start/completed are debug: every tool call serializes input/result and was a
+  // dominant main-thread cost under the default `info` logger level.
+  log.debug('tool call start', {
     ...meta,
     input: serializeForToolLog(input, MAX_INPUT_LOG_CHARS),
   })
@@ -56,7 +58,7 @@ export async function runLoggedToolExecute(
         result: serializeForToolLog(result),
       })
     } else {
-      log.info('tool call completed', {
+      log.debug('tool call completed', {
         ...meta,
         durationMs,
         result: serializeForToolLog(result),

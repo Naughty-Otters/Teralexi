@@ -6,7 +6,7 @@
   >
     <template
       v-for="(section, sectionIndex) in conversationSections"
-      :key="`${section.id}-${sectionIndex}`"
+      :key="sectionExpandKey(section, sectionIndex)"
     >
       <article
         class="conversation-bubble"
@@ -389,7 +389,12 @@ function sectionExpandKey(
   section: StructuredDebugSection,
   sectionIndex: number,
 ): string {
-  return `${section.id}-${sectionIndex}`
+  const progressKey = section.progressPartKey?.trim()
+  if (progressKey) return progressKey
+  // Prefer stable ids so inserting/removing a peer section does not remount
+  // every later bubble (index-suffixed keys remounted the whole list).
+  if (section.id.trim()) return section.id
+  return `section-${sectionIndex}`
 }
 
 /** Conversation bubbles default expanded; user toggle always wins. */
