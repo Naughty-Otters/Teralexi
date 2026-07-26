@@ -185,6 +185,13 @@ export const lang: AppLocaleBundle = {
       'This skill needs settings saved to your local config before you can chat. They are stored in ~/.teralexi/config/config.properties and are not added to the conversation.',
     skillSetupSave: 'Save and continue',
     skillSetupSaving: 'Saving…',
+    conversationMenu: {
+      moreOptions: 'Conversation options',
+      deleteThis: 'Delete conversation',
+      deleteOthers: 'Delete other conversations',
+      color: 'Color',
+      clearColor: 'Default',
+    },
     deleteConversationDialog: {
       title: 'Delete conversation',
       message:
@@ -195,6 +202,15 @@ export const lang: AppLocaleBundle = {
       confirm: 'Delete',
       deleting: 'Deleting…',
       failed: 'Could not delete conversation',
+    },
+    deleteOthersDialog: {
+      title: 'Delete other conversations',
+      message:
+        'Delete {count} other conversation(s)? This removes those conversations, all messages, and sandbox data. This cannot be undone.',
+      cancel: 'Cancel',
+      confirm: 'Delete others',
+      deleting: 'Deleting…',
+      failed: 'Could not delete other conversations',
     },
   },
   monitor: {

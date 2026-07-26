@@ -19,6 +19,8 @@ export const LAYOUT_PREF_KEYS = {
     'teralexi.agent.conversationListCollapsedGroups',
   /** Which meta fields show under each conversation title (type / agent / date). */
   conversationListItemLabels: 'teralexi.agent.conversationListItemLabels',
+  /** Per-conversation sidebar tint colors (`conversationId` → hex). */
+  conversationListItemColors: 'teralexi.agent.conversationListItemColors',
 } as const
 
 export type WorkspaceEditorSession = {

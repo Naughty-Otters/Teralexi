@@ -169,10 +169,25 @@ export type AppLabels = {
     skillSetupIntro: string
     skillSetupSave: string
     skillSetupSaving: string
+    conversationMenu: {
+      moreOptions: string
+      deleteThis: string
+      deleteOthers: string
+      color: string
+      clearColor: string
+    }
     deleteConversationDialog: {
       title: string
       message: string
       messageChannel: string
+      cancel: string
+      confirm: string
+      deleting: string
+      failed: string
+    }
+    deleteOthersDialog: {
+      title: string
+      message: string
       cancel: string
       confirm: string
       deleting: string

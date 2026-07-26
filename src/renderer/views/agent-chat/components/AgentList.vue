@@ -1,28 +1,18 @@
 <template>
-  <div v-if="!collapsed" class="sidebar-actions">
-    <button
-      type="button"
-      class="new-session-btn"
-      title="Start a new blank session"
-      @click="startNewSession"
-    >
-      <UIcon name="i-lucide-square-plus" class="new-session-btn__icon" />
-      <span>New blank session</span>
-    </button>
-  </div>
-  <button
-    v-else
-    type="button"
-    class="new-session-btn new-session-btn--collapsed"
-    title="Start a new blank session"
-    aria-label="Start a new blank session"
-    @click="startNewSession"
-  >
-    <UIcon name="i-lucide-square-plus" class="new-session-btn__icon" />
-  </button>
   <div v-if="!collapsed" class="sidebar-section-header">
     <div class="sidebar-section-label">Conversations</div>
     <div class="sidebar-section-actions">
+      <div class="conversation-groupby">
+        <button
+          type="button"
+          class="conversation-groupby-btn"
+          title="Start a new blank session"
+          aria-label="Start a new blank session"
+          @click="startNewSession"
+        >
+          <UIcon name="i-lucide-plus" class="conversation-groupby-btn__icon" />
+        </button>
+      </div>
       <div class="conversation-groupby">
         <button
           ref="workspaceTriggerRef"
@@ -58,6 +48,16 @@
       </div>
     </div>
   </div>
+  <button
+    v-else
+    type="button"
+    class="conversation-groupby-btn conversation-groupby-btn--collapsed-new"
+    title="Start a new blank session"
+    aria-label="Start a new blank session"
+    @click="startNewSession"
+  >
+    <UIcon name="i-lucide-plus" class="conversation-groupby-btn__icon" />
+  </button>
   <Teleport to="body">
     <div
       v-if="workspaceMenuOpen"
@@ -188,6 +188,83 @@
         {{ option.label }}
       </button>
     </div>
+    <div
+      v-if="itemMenuOpen"
+      ref="itemMenuEl"
+      class="conversation-groupby-menu conversation-item-menu"
+      :style="itemMenuStyle"
+      role="menu"
+      :aria-label="t.chat.conversationMenu.moreOptions"
+      @pointerdown.stop
+      @keydown="onItemMenuKeydown"
+    >
+      <button
+        v-if="itemMenuCanDelete"
+        type="button"
+        class="conversation-groupby-menu__option conversation-groupby-menu__option--danger"
+        role="menuitem"
+        @click="onItemMenuDeleteThis"
+      >
+        <UIcon
+          name="i-lucide-trash-2"
+          class="conversation-groupby-menu__check"
+        />
+        {{ t.chat.conversationMenu.deleteThis }}
+      </button>
+      <button
+        v-if="itemMenuCanDeleteOthers"
+        type="button"
+        class="conversation-groupby-menu__option conversation-groupby-menu__option--danger"
+        role="menuitem"
+        @click="onItemMenuDeleteOthers"
+      >
+        <UIcon
+          name="i-lucide-trash"
+          class="conversation-groupby-menu__check"
+        />
+        {{ t.chat.conversationMenu.deleteOthers }}
+      </button>
+      <div
+        v-if="itemMenuCanDelete || itemMenuCanDeleteOthers"
+        class="conversation-groupby-menu__divider"
+        role="separator"
+        aria-hidden="true"
+      />
+      <div class="conversation-groupby-menu__section-label">
+        {{ t.chat.conversationMenu.color }}
+      </div>
+      <div class="conversation-color-palette" role="group" :aria-label="t.chat.conversationMenu.color">
+        <button
+          type="button"
+          class="conversation-color-swatch conversation-color-swatch--clear"
+          :class="{
+            'conversation-color-swatch--active': !itemMenuColor,
+          }"
+          role="menuitemradio"
+          :aria-checked="!itemMenuColor"
+          :title="t.chat.conversationMenu.clearColor"
+          :aria-label="t.chat.conversationMenu.clearColor"
+          @click="setConversationColor(itemMenuConversationId, null)"
+        >
+          <UIcon name="i-lucide-ban" class="conversation-color-swatch__icon" />
+        </button>
+        <button
+          v-for="swatch in CONVERSATION_COLOR_PALETTE"
+          :key="swatch"
+          type="button"
+          class="conversation-color-swatch"
+          :class="{
+            'conversation-color-swatch--active': itemMenuColor === swatch,
+          }"
+          :style="{ '--swatch-color': swatch }"
+          role="menuitemradio"
+          :aria-checked="itemMenuColor === swatch"
+          :title="swatch"
+          :aria-label="`Color ${swatch}`"
+          @click="setConversationColor(itemMenuConversationId, swatch)"
+        />
+      </div>
+    </div>
   </Teleport>
   <ul
     v-if="isConversationListLoading"
@@ -305,7 +382,9 @@
               'agent-item--running': isConversationRunning(conv.id),
               'agent-item--collapsed': collapsed,
               'agent-item--nested': showGroupHeaders,
+              'agent-item--tinted': Boolean(conversationColors[conv.id]),
             }"
+            :style="conversationItemStyle(conv.id)"
             role="button"
             tabindex="0"
             :aria-current="isActiveConversation(conv.id) ? 'true' : undefined"
@@ -410,18 +489,41 @@
               {{ msgCount(conv.id) }}
             </span>
             <div
-              v-if="!collapsed && canDelete(conv.id)"
+              v-if="!collapsed && (canDelete(conv.id) || isActiveConversation(conv.id))"
               class="agent-item-actions"
               role="toolbar"
               aria-label="Conversation actions"
               @click.stop
+              @pointerdown.stop
             >
               <button
+                v-if="isActiveConversation(conv.id)"
+                type="button"
+                class="agent-item-action-btn"
+                :class="{
+                  'agent-item-action-btn--active':
+                    itemMenuOpen && itemMenuConversationId === conv.id,
+                }"
+                :title="t.chat.conversationMenu.moreOptions"
+                :aria-label="t.chat.conversationMenu.moreOptions"
+                aria-haspopup="menu"
+                :aria-expanded="
+                  itemMenuOpen && itemMenuConversationId === conv.id
+                "
+                @click="toggleItemMenu(conv, $event)"
+              >
+                <UIcon
+                  name="i-lucide-ellipsis"
+                  class="agent-item-action-btn__icon"
+                />
+              </button>
+              <button
+                v-if="canDelete(conv.id)"
                 type="button"
                 class="agent-item-action-btn agent-item-action-btn--danger"
                 title="Delete conversation"
                 aria-label="Delete conversation"
-                @click="openDeleteDialog(conv)"
+                @click="openDeleteDialog(conv, 'single')"
               >
                 <UIcon
                   name="i-lucide-trash-2"
@@ -446,14 +548,17 @@
       @click.self="closeDeleteDialog"
     >
       <div
+        ref="deleteDialogEl"
         class="conversation-delete-dialog"
         role="alertdialog"
         aria-modal="true"
+        tabindex="-1"
         :aria-labelledby="deleteDialogTitleId"
         :aria-describedby="deleteDialogMessageId"
+        @keydown="onDeleteDialogKeydown"
       >
         <h3 :id="deleteDialogTitleId" class="conversation-delete-dialog__title">
-          {{ t.chat.deleteConversationDialog.title }}
+          {{ deleteDialogTitle }}
         </h3>
         <p
           :id="deleteDialogMessageId"
@@ -463,12 +568,13 @@
         </p>
         <div class="conversation-delete-dialog__actions">
           <button
+            ref="deleteCancelBtnRef"
             type="button"
             class="conversation-delete-dialog__btn"
             :disabled="deletingConversation"
             @click="closeDeleteDialog"
           >
-            {{ t.chat.deleteConversationDialog.cancel }}
+            {{ deleteDialogCancelLabel }}
           </button>
           <button
             type="button"
@@ -476,11 +582,7 @@
             :disabled="deletingConversation"
             @click="confirmDeleteConversation"
           >
-            {{
-              deletingConversation
-                ? t.chat.deleteConversationDialog.deleting
-                : t.chat.deleteConversationDialog.confirm
-            }}
+            {{ deleteDialogConfirmLabel }}
           </button>
         </div>
       </div>
@@ -498,8 +600,10 @@ import {
   LAYOUT_PREF_KEYS,
   readStoredBooleanMap,
   readStoredString,
+  readStoredStringMap,
   writeStoredBooleanMap,
   writeStoredString,
+  writeStoredStringMap,
 } from '@renderer/lib/layout-preferences'
 import {
   groupConversations,
@@ -526,6 +630,20 @@ import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
 const CONTEXT_RING_RADIUS = 9
 const CONTEXT_RING_CIRCUMFERENCE = 2 * Math.PI * CONTEXT_RING_RADIUS
 
+/** Soft tint colors for conversation list items. */
+const CONVERSATION_COLOR_PALETTE = [
+  '#f87171',
+  '#fb923c',
+  '#fbbf24',
+  '#a3e635',
+  '#34d399',
+  '#22d3ee',
+  '#60a5fa',
+  '#a78bfa',
+  '#f472b6',
+  '#94a3b8',
+] as const
+
 const emit = defineEmits<{ 'navigate-chat': [] }>()
 const props = defineProps<{ collapsed?: boolean }>()
 
@@ -536,6 +654,14 @@ const conversationItemRefs = new Map<string, HTMLElement>()
 const showDeleteDialog = ref(false)
 const deletingConversation = ref(false)
 const deleteTarget = ref<Conversation | null>(null)
+const deleteMode = ref<'single' | 'others'>('single')
+const deleteOthersTargets = ref<Conversation[]>([])
+const deleteDialogEl = ref<HTMLElement | null>(null)
+const deleteCancelBtnRef = ref<HTMLButtonElement | null>(null)
+/** Conversation that was active when the delete dialog opened (focus restore target). */
+const deleteDialogRestoreConversationId = ref<string | null>(null)
+/** Fallback focus target if the conversation row is gone. */
+const deleteDialogRestoreEl = ref<HTMLElement | null>(null)
 const deleteDialogTitleId = 'conversation-delete-dialog-title'
 const deleteDialogMessageId = 'conversation-delete-dialog-message'
 const groupByMenuOpen = ref(false)
@@ -549,6 +675,14 @@ const workspaceMenuOpen = ref(false)
 const workspaceTriggerRef = ref<HTMLButtonElement | null>(null)
 const workspaceMenuEl = ref<HTMLElement | null>(null)
 const workspaceMenuStyle = ref<Record<string, string>>({})
+const itemMenuOpen = ref(false)
+const itemMenuConversationId = ref<string | null>(null)
+const itemMenuTriggerRef = ref<HTMLElement | null>(null)
+const itemMenuEl = ref<HTMLElement | null>(null)
+const itemMenuStyle = ref<Record<string, string>>({})
+const conversationColors = ref<Record<string, string>>(
+  readStoredStringMap(LAYOUT_PREF_KEYS.conversationListItemColors),
+)
 const groupByMode = ref<ConversationListGroupBy>(
   parseConversationListGroupBy(
     readStoredString(LAYOUT_PREF_KEYS.conversationListGroupBy),
@@ -644,6 +778,14 @@ watch(
       LAYOUT_PREF_KEYS.conversationListItemLabels,
       serializeConversationListItemLabels(value),
     )
+  },
+  { deep: true },
+)
+
+watch(
+  conversationColors,
+  (value) => {
+    writeStoredStringMap(LAYOUT_PREF_KEYS.conversationListItemColors, value)
   },
   { deep: true },
 )
@@ -764,16 +906,21 @@ function positionFloatingMenu(
   trigger: HTMLElement | null,
   width: number,
 ): Record<string, string> {
-  if (!trigger) return {}
+  if (!(trigger instanceof HTMLElement)) return {}
   const rect = trigger.getBoundingClientRect()
   const gap = 4
   let left = rect.left
   if (left + width > window.innerWidth - 8) {
     left = Math.max(8, window.innerWidth - width - 8)
   }
+  let top = rect.bottom + gap
+  const estimatedHeight = 220
+  if (top + estimatedHeight > window.innerHeight - 8) {
+    top = Math.max(8, rect.top - estimatedHeight - gap)
+  }
   return {
     position: 'fixed',
-    top: `${rect.bottom + gap}px`,
+    top: `${top}px`,
     left: `${left}px`,
     width: `${width}px`,
     zIndex: '10050',
@@ -791,8 +938,124 @@ function positionWorkspaceMenu() {
   )
 }
 
+function positionItemMenu() {
+  itemMenuStyle.value = positionFloatingMenu(itemMenuTriggerRef.value, 240)
+}
+
+const itemMenuConversation = computed(() => {
+  const id = itemMenuConversationId.value
+  if (!id) return null
+  return conversationItems.value.find((c) => c.id === id) ?? null
+})
+
+const itemMenuCanDelete = computed(() => {
+  const id = itemMenuConversationId.value
+  return Boolean(id && canDelete(id))
+})
+
+const itemMenuCanDeleteOthers = computed(() => {
+  const id = itemMenuConversationId.value
+  if (!id) return false
+  return deletableOtherConversations(id).length > 0
+})
+
+const itemMenuColor = computed(() => {
+  const id = itemMenuConversationId.value
+  if (!id) return null
+  return conversationColors.value[id] ?? null
+})
+
+function deletableOtherConversations(keepId: string): Conversation[] {
+  return conversationItems.value.filter(
+    (c) => c.id !== keepId && canDelete(c.id),
+  )
+}
+
+function conversationItemStyle(
+  conversationId: string,
+): Record<string, string> | undefined {
+  const color = conversationColors.value[conversationId]
+  if (!color) return undefined
+  return { '--conv-item-tint': color }
+}
+
+function clearConversationColor(conversationId: string) {
+  if (!(conversationId in conversationColors.value)) return
+  const next = { ...conversationColors.value }
+  delete next[conversationId]
+  conversationColors.value = next
+}
+
+function setConversationColor(
+  conversationId: string | null,
+  color: string | null,
+) {
+  if (!conversationId) return
+  if (!color) {
+    clearConversationColor(conversationId)
+    return
+  }
+  conversationColors.value = {
+    ...conversationColors.value,
+    [conversationId]: color,
+  }
+}
+
+function closeItemMenu() {
+  itemMenuOpen.value = false
+  itemMenuConversationId.value = null
+}
+
+async function toggleItemMenu(conv: Conversation, event?: MouseEvent) {
+  groupByMenuOpen.value = false
+  workspaceMenuOpen.value = false
+  const trigger =
+    event?.currentTarget instanceof HTMLElement
+      ? event.currentTarget
+      : null
+  if (
+    itemMenuOpen.value &&
+    itemMenuConversationId.value === conv.id
+  ) {
+    closeItemMenu()
+    return
+  }
+  if (trigger) itemMenuTriggerRef.value = trigger
+  itemMenuConversationId.value = conv.id
+  itemMenuOpen.value = true
+  await nextTick()
+  positionItemMenu()
+  // Re-position after the teleported menu mounts and layout settles.
+  await nextTick()
+  positionItemMenu()
+}
+
+function onItemMenuDeleteThis() {
+  const conv = itemMenuConversation.value
+  closeItemMenu()
+  if (!conv) return
+  openDeleteDialog(conv, 'single')
+}
+
+function onItemMenuDeleteOthers() {
+  const conv = itemMenuConversation.value
+  closeItemMenu()
+  if (!conv) return
+  openDeleteDialog(conv, 'others')
+}
+
+function onItemMenuKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    closeItemMenu()
+    void nextTick(() => itemMenuTriggerRef.value?.focus())
+  }
+}
+
 async function toggleGroupByMenu() {
   workspaceMenuOpen.value = false
+  closeItemMenu()
   if (groupByMenuOpen.value) {
     groupByMenuOpen.value = false
     return
@@ -804,6 +1067,7 @@ async function toggleGroupByMenu() {
 
 async function toggleWorkspaceMenu() {
   groupByMenuOpen.value = false
+  closeItemMenu()
   if (workspaceMenuOpen.value) {
     workspaceMenuOpen.value = false
     return
@@ -830,14 +1094,51 @@ function onDocumentPointerDown(event: PointerEvent) {
     const inMenu = workspaceMenuEl.value?.contains(target)
     if (!inTrigger && !inMenu) workspaceMenuOpen.value = false
   }
+  if (itemMenuOpen.value) {
+    const trigger = itemMenuTriggerRef.value
+    const inTrigger =
+      trigger instanceof HTMLElement ? trigger.contains(target) : false
+    const inMenu = itemMenuEl.value?.contains(target) ?? false
+    if (!inTrigger && !inMenu) closeItemMenu()
+  }
 }
 
 function onWindowReposition() {
   if (groupByMenuOpen.value) positionGroupByMenu()
   if (workspaceMenuOpen.value) positionWorkspaceMenu()
+  if (itemMenuOpen.value) positionItemMenu()
 }
 
+const deleteDialogTitle = computed(() =>
+  deleteMode.value === 'others'
+    ? t.value.chat.deleteOthersDialog.title
+    : t.value.chat.deleteConversationDialog.title,
+)
+
+const deleteDialogCancelLabel = computed(() =>
+  deleteMode.value === 'others'
+    ? t.value.chat.deleteOthersDialog.cancel
+    : t.value.chat.deleteConversationDialog.cancel,
+)
+
+const deleteDialogConfirmLabel = computed(() => {
+  if (deletingConversation.value) {
+    return deleteMode.value === 'others'
+      ? t.value.chat.deleteOthersDialog.deleting
+      : t.value.chat.deleteConversationDialog.deleting
+  }
+  return deleteMode.value === 'others'
+    ? t.value.chat.deleteOthersDialog.confirm
+    : t.value.chat.deleteConversationDialog.confirm
+})
+
 const deleteDialogMessage = computed(() => {
+  if (deleteMode.value === 'others') {
+    return t.value.chat.deleteOthersDialog.message.replace(
+      '{count}',
+      String(deleteOthersTargets.value.length),
+    )
+  }
   const conv = deleteTarget.value
   if (!conv) return ''
   const name = conv.title?.trim() || 'Untitled'
@@ -848,26 +1149,123 @@ const deleteDialogMessage = computed(() => {
   return template.replace('{name}', name)
 })
 
-function openDeleteDialog(conv: Conversation) {
+function focusConversationItem(conversationId: string | null | undefined): boolean {
+  if (!conversationId) return false
+  const host = conversationItemRefs.get(conversationId)
+  const item = host?.querySelector<HTMLElement>('.agent-item[role="button"]')
+  if (!item) return false
+  item.focus()
+  return true
+}
+
+function restoreFocusAfterDeleteDialog() {
+  const preferredId = deleteDialogRestoreConversationId.value
+  deleteDialogRestoreConversationId.value = null
+  const fallbackEl = deleteDialogRestoreEl.value
+  deleteDialogRestoreEl.value = null
+
+  if (focusConversationItem(preferredId)) return
+  if (focusConversationItem(agentStore.currentConversationId)) return
+  fallbackEl?.focus?.()
+}
+
+function openDeleteDialog(
+  conv: Conversation,
+  mode: 'single' | 'others' = 'single',
+) {
+  deleteDialogRestoreConversationId.value = agentStore.currentConversationId
+  const active = document.activeElement
+  deleteDialogRestoreEl.value = active instanceof HTMLElement ? active : null
+  deleteMode.value = mode
   deleteTarget.value = conv
+  deleteOthersTargets.value =
+    mode === 'others' ? deletableOtherConversations(conv.id) : []
+  if (mode === 'others' && deleteOthersTargets.value.length === 0) return
   showDeleteDialog.value = true
+  void nextTick(() => {
+    ;(deleteCancelBtnRef.value ?? deleteDialogEl.value)?.focus()
+  })
 }
 
 function closeDeleteDialog() {
   if (deletingConversation.value) return
   showDeleteDialog.value = false
   deleteTarget.value = null
+  deleteOthersTargets.value = []
+  deleteMode.value = 'single'
+  void nextTick(() => restoreFocusAfterDeleteDialog())
+}
+
+function onDeleteDialogKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    closeDeleteDialog()
+    return
+  }
+  if (event.key !== 'Tab') return
+  const root = deleteDialogEl.value
+  if (!root) return
+  const focusables = Array.from(
+    root.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((el) => !el.hasAttribute('disabled') && el.tabIndex >= 0)
+  if (focusables.length === 0) {
+    event.preventDefault()
+    root.focus()
+    return
+  }
+  const first = focusables[0]!
+  const last = focusables[focusables.length - 1]!
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
 }
 
 async function confirmDeleteConversation() {
+  if (deletingConversation.value) return
+  if (deleteMode.value === 'others') {
+    const targets = [...deleteOthersTargets.value]
+    if (targets.length === 0) return
+    deletingConversation.value = true
+    try {
+      for (const conv of targets) {
+        clearConversationSession(conv.id)
+        clearConversationColor(conv.id)
+        await agentStore.deleteConversation(conv.id)
+      }
+      showDeleteDialog.value = false
+      deleteTarget.value = null
+      deleteOthersTargets.value = []
+      deleteMode.value = 'single'
+      void nextTick(() => restoreFocusAfterDeleteDialog())
+    } catch (err) {
+      toast.add({
+        title: t.value.chat.deleteOthersDialog.failed,
+        description: err instanceof Error ? err.message : String(err),
+        color: 'error',
+      })
+    } finally {
+      deletingConversation.value = false
+    }
+    return
+  }
+
   const conv = deleteTarget.value
-  if (!conv || deletingConversation.value) return
+  if (!conv) return
   deletingConversation.value = true
   try {
     clearConversationSession(conv.id)
+    clearConversationColor(conv.id)
     await agentStore.deleteConversation(conv.id)
     showDeleteDialog.value = false
     deleteTarget.value = null
+    void nextTick(() => restoreFocusAfterDeleteDialog())
   } catch (err) {
     toast.add({
       title: t.value.chat.deleteConversationDialog.failed,
@@ -895,6 +1293,7 @@ onMounted(() => {
 watch(
   () => agentStore.currentConversationId,
   () => {
+    closeItemMenu()
     void scrollActiveConversationIntoView()
   },
 )
@@ -1024,40 +1423,6 @@ const conversationTooltipModelById = computed(
 </script>
 
 <style scoped>
-.sidebar-actions {
-  padding: 8px 12px 4px;
-}
-.new-session-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 5px 10px;
-  border: 1px dashed var(--ui-border);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ui-text);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
-}
-.new-session-btn:hover {
-  background: var(--ui-bg-accented);
-  border-color: var(--color-primary-500);
-}
-.new-session-btn--collapsed {
-  width: 32px;
-  height: 32px;
-  margin: 6px auto 4px;
-  padding: 0;
-  border-style: solid;
-}
-.new-session-btn__icon {
-  width: 16px;
-  height: 16px;
-}
 .sidebar-section-header {
   display: flex;
   align-items: center;
@@ -1100,6 +1465,10 @@ const conversationTooltipModelById = computed(
 .conversation-groupby-btn--active {
   background: color-mix(in srgb, var(--ui-text) 10%, transparent);
   color: var(--ui-text);
+}
+.conversation-groupby-btn--collapsed-new {
+  display: flex;
+  margin: 6px auto 4px;
 }
 .conversation-groupby-btn__icon {
   width: 14px;
@@ -1153,6 +1522,50 @@ const conversationTooltipModelById = computed(
 .conversation-groupby-menu__option:hover,
 .conversation-groupby-menu__option--active {
   background: color-mix(in srgb, var(--ui-text) 8%, transparent);
+}
+.conversation-groupby-menu__option--danger {
+  color: var(--color-error-600, #dc2626);
+}
+.conversation-groupby-menu__option--danger:hover {
+  background: color-mix(in srgb, var(--color-error-500, #ef4444) 12%, transparent);
+  color: var(--color-error-700, #b91c1c);
+}
+.conversation-item-menu {
+  min-width: 220px;
+}
+.conversation-color-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 10px 10px;
+}
+.conversation-color-swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--swatch-color);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.conversation-color-swatch:hover {
+  transform: scale(1.08);
+}
+.conversation-color-swatch--active {
+  border-color: var(--ui-text);
+  box-shadow: 0 0 0 1px var(--ui-bg);
+}
+.conversation-color-swatch--clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ui-bg-accented);
+  color: var(--ui-text-muted);
+}
+.conversation-color-swatch__icon {
+  width: 12px;
+  height: 12px;
 }
 .conversation-groupby-menu__check {
   width: 14px;
@@ -1385,6 +1798,27 @@ const conversationTooltipModelById = computed(
 .agent-item--active:hover {
   background: color-mix(in srgb, var(--color-primary-500, var(--ui-primary)) 18%, var(--ui-bg));
 }
+.agent-item--tinted {
+  background: color-mix(in srgb, var(--conv-item-tint) 22%, var(--ui-bg));
+  border-color: color-mix(in srgb, var(--conv-item-tint) 34%, var(--ui-border));
+}
+.agent-item--tinted:hover {
+  background: color-mix(in srgb, var(--conv-item-tint) 28%, var(--ui-bg));
+}
+.agent-item--tinted.agent-item--active {
+  background: color-mix(in srgb, var(--conv-item-tint) 30%, var(--ui-bg));
+  border-color: color-mix(in srgb, var(--conv-item-tint) 42%, var(--ui-border));
+  box-shadow: inset 3px 0 0 var(--conv-item-tint);
+}
+.agent-item--tinted.agent-item--active:hover {
+  background: color-mix(in srgb, var(--conv-item-tint) 36%, var(--ui-bg));
+}
+.agent-item--tinted.agent-item--active .agent-item-name {
+  color: var(--ui-text);
+}
+.agent-item--tinted.agent-item--active .agent-item-desc {
+  color: var(--ui-text-muted);
+}
 .agent-item--active .agent-item-name {
   color: var(--color-primary-500, var(--ui-primary));
   font-weight: 600;
@@ -1538,7 +1972,8 @@ const conversationTooltipModelById = computed(
 }
 
 .agent-item:hover .agent-item-actions,
-.agent-item:focus-within .agent-item-actions {
+.agent-item:focus-within .agent-item-actions,
+.agent-item--active .agent-item-actions {
   opacity: 1;
   pointer-events: auto;
 }
@@ -1556,7 +1991,8 @@ const conversationTooltipModelById = computed(
   cursor: pointer;
 }
 
-.agent-item-action-btn:hover {
+.agent-item-action-btn:hover,
+.agent-item-action-btn--active {
   background: color-mix(in srgb, var(--ui-text) 10%, transparent);
   color: var(--ui-text);
 }
