@@ -1,5 +1,5 @@
 <template>
-  <ShikiDiffView
+  <DiffHighlightView
     :diff="diff"
     :file-path="filePath"
     :compact="compact"
@@ -8,11 +8,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue'
-
-const ShikiDiffView = defineAsyncComponent(
-  () => import('@renderer/components/code/ShikiDiffView.vue'),
-)
+import DiffHighlightView from '@renderer/components/code/DiffHighlightView.vue'
 
 withDefaults(
   defineProps<{

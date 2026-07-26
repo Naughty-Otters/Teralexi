@@ -157,7 +157,6 @@ import {
 import { messagePartsRevision } from './chat/assistantHtmlCache'
 import { injectCodeCopyButtons } from './chat/streamingMarkdown'
 import { useAgentStore } from '@store/agent'
-import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
 import { useLazyStandardMarkdown } from '@renderer/composables/useLazyStandardMarkdown'
 import { rewriteSandboxPreviewLinksInHtml } from '@shared/markdown/sandbox-preview-links'
 import { prepareMarkdownSource } from '@shared/markdown/prepare-markdown-source'
@@ -519,7 +518,7 @@ function renderStepProgressBodyHtml(
   const md = stepProgressMarkdown.value
   if (!md) return `<p>${escapePlainMarkdownFallback(prepared)}</p>`
   const html = applyStatusBadges(md.render(prepared))
-  return rewriteSandboxPreviewLinksInHtml(resolveDiagramBlocksInHtml(html))
+  return rewriteSandboxPreviewLinksInHtml(html)
 }
 
 async function refreshOutputLinkPreviews(): Promise<void> {

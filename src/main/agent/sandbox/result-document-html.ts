@@ -1,4 +1,4 @@
-import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
+import { resolveDiagramBlocksInHtml } from '@shared/markdown/resolve-diagram-blocks'
 import { createStandardMarkdownItEager } from '@shared/markdown/create-markdown-it-eager'
 
 import {
@@ -10,8 +10,10 @@ import {
 const markdown = createStandardMarkdownItEager()
 
 /** Full HTML document wrapping rendered markdown (for PDF export). */
-export function renderMarkdownToHtmlDocument(markdownBody: string): string {
-  const bodyHtml = resolveDiagramBlocksInHtml(markdown.render(markdownBody))
+export async function renderMarkdownToHtmlDocument(
+  markdownBody: string,
+): Promise<string> {
+  const bodyHtml = await resolveDiagramBlocksInHtml(markdown.render(markdownBody))
   return buildHtmlDocument(bodyHtml)
 }
 

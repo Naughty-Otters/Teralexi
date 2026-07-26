@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  applyDiagramFencePlugin,
-  resolveDiagramBlocksInHtml,
-} from './create-markdown-it'
+import { applyDiagramFencePlugin } from './create-markdown-it'
+import { resolveDiagramBlocksInHtml } from './resolve-diagram-blocks'
 import { createStandardMarkdownItEager } from './create-markdown-it-eager'
 import MarkdownIt from 'markdown-it'
 
@@ -32,10 +30,10 @@ describe('diagram fence markdown plugin', () => {
     expect(html).not.toContain('diagram-block')
   })
 
-  it('resolveDiagramBlocksInHtml renders SVG', () => {
+  it('resolveDiagramBlocksInHtml renders SVG', async () => {
     const md = createStandardMarkdownItEager()
     const html = md.render(`\`\`\`diagram\n${sampleSpec}\n\`\`\``)
-    const resolved = resolveDiagramBlocksInHtml(html)
+    const resolved = await resolveDiagramBlocksInHtml(html)
     expect(resolved).toContain('diagram-block--ready')
     expect(resolved).toContain('<svg')
     expect(resolved).toContain('Hello diagram')

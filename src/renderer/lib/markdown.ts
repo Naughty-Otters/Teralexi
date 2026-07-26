@@ -1,8 +1,5 @@
 import type MarkdownIt from 'markdown-it'
-import {
-  getStandardMarkdownIt,
-  resolveDiagramBlocksInHtml,
-} from '@shared/markdown/create-markdown-it'
+import { getStandardMarkdownIt } from '@shared/markdown/create-markdown-it'
 import {
   prepareMarkdownSource,
   unwrapOuterMarkdownFence,
@@ -44,6 +41,8 @@ export function getRendererMarkdown(): MarkdownIt | null {
 
 /**
  * Renders user/assistant markdown to HTML for `v-html`.
+ * Diagram fences stay as pending placeholders; call `hydrateDiagramBlocks`
+ * after mount to resolve them (lazy katex/mathjs/dagre).
  * Empty input returns an empty string (caller may hide the node).
  */
 export function renderMarkdownHtml(source: string): string {
@@ -52,6 +51,5 @@ export function renderMarkdownHtml(source: string): string {
   if (!prepared) return ''
   const md = rendererMarkdown.value
   if (!md) return `<p>${escapePlainMarkdownFallback(prepared)}</p>`
-  const html = md.render(prepared)
-  return resolveDiagramBlocksInHtml(html)
+  return md.render(prepared)
 }

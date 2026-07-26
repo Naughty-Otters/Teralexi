@@ -71,16 +71,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { FileChangeAction, FileChangePreview } from '@shared/file-change/types'
 import { fileChangePreviewOpenUrl } from '@shared/agent/step-attachment'
 import { useWorkspaceStore } from '@store/workspace'
 import { requestSandboxPreview } from '../../sandboxPreviewBridge'
 import { parseUnifiedDiffLines, countBriefDiffLines } from './unifiedDiffLines'
-
-const UnifiedDiffView = defineAsyncComponent(
-  () => import('./UnifiedDiffView.vue'),
-)
+import UnifiedDiffView from './UnifiedDiffView.vue'
 
 const workspaceStore = useWorkspaceStore()
 

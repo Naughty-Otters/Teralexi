@@ -65,20 +65,18 @@
         </AppIconTooltip>
         <span class="rich-composer-toolbar-divider" aria-hidden="true" />
       </template>
-      <template v-if="editor">
-        <AppIconTooltip text="Attach files">
-          <button
-            type="button"
-            class="rich-composer-tool"
-            aria-label="Attach files"
-            :disabled="disabled || !canAddAttachments"
-            @mousedown.prevent
-            @click="emit('pick-attachments')"
-          >
-            <UIcon name="i-lucide-paperclip" />
-          </button>
-        </AppIconTooltip>
-      </template>
+      <AppIconTooltip text="Attach files">
+        <button
+          type="button"
+          class="rich-composer-tool"
+          aria-label="Attach files"
+          :disabled="disabled || !canAddAttachments"
+          @mousedown.prevent
+          @click="emit('pick-attachments')"
+        >
+          <UIcon name="i-lucide-paperclip" />
+        </button>
+      </AppIconTooltip>
     </div>
     <div
       v-if="stagedAttachments.length > 0"
@@ -127,7 +125,24 @@
         :loading="mentionLoading"
         @select="onMentionSelect"
       />
-      <EditorContent :editor="editor" class="rich-composer-editor" />
+      <textarea
+        v-if="!editor"
+        class="rich-composer-draft"
+        :value="modelValue"
+        :placeholder="placeholder"
+        :disabled="disabled"
+        rows="2"
+        @input="onDraftInput"
+        @focus="void ensureEditor({ focus: true })"
+        @keydown="onDraftKeydown"
+        @paste="onDraftPaste"
+      />
+      <component
+        :is="EditorContentComp"
+        v-else-if="EditorContentComp"
+        :editor="editor"
+        class="rich-composer-editor"
+      />
     </div>
     <WebsitePublishDialog
       :open="publishDialogOpen"
@@ -142,12 +157,19 @@
 </template>
 
 <script setup lang="ts">
-import { Extension } from '@tiptap/core'
-import Placeholder from '@tiptap/extension-placeholder'
-import { Markdown } from '@tiptap/markdown'
-import StarterKit from '@tiptap/starter-kit'
-import { EditorContent, useEditor, type Editor } from '@tiptap/vue-3'
-import { ref, watch, onBeforeUnmount, onMounted, nextTick, computed, defineAsyncComponent } from 'vue'
+import {
+  ref,
+  shallowRef,
+  watch,
+  onBeforeUnmount,
+  onMounted,
+  nextTick,
+  computed,
+  defineAsyncComponent,
+  markRaw,
+  type Component,
+} from 'vue'
+import type { Editor } from '@tiptap/core'
 import AgentPickerButton from './AgentPickerButton.vue'
 import ComposerLlmOverrideControl from './ComposerLlmOverrideControl.vue'
 import {
@@ -398,10 +420,17 @@ function openAgentPickerFromCommand() {
 
 onMounted(() => {
   registerComposerAgentPicker(openAgentPickerFromCommand)
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(() => {
+      void ensureEditor()
+    }, { timeout: 4000 })
+  }
 })
 
 onBeforeUnmount(() => {
   unregisterComposerAgentPicker(openAgentPickerFromCommand)
+  editor.value?.destroy()
+  editor.value = null
 })
 
 function closeSlashMenu() {
@@ -597,7 +626,10 @@ watch(
   },
 )
 
-const SubmitOnEnter = Extension.create({
+const SubmitOnEnterFactory = (
+  Extension: typeof import('@tiptap/core').Extension,
+) =>
+  Extension.create({
   name: 'submitOnEnter',
   addKeyboardShortcuts() {
     return {
@@ -691,37 +723,112 @@ const SubmitOnEnter = Extension.create({
   },
 })
 
-const editor = useEditor({
-  content: props.modelValue || '',
-  contentType: 'markdown',
-  editable: !props.disabled,
-  autofocus: false,
-  extensions: [
-    StarterKit.configure({
-      heading: false,
-      horizontalRule: false,
-      codeBlock: false,
-      link: {
-        openOnClick: false,
-        autolink: true,
-        linkOnPaste: true,
-      },
-    }),
-    Markdown,
-    Placeholder.configure({
-      placeholder: props.placeholder,
-    }),
-    SubmitOnEnter,
-  ],
-  onUpdate: ({ editor: ed }) => {
-    if (syncingFromParent) return
-    emit('update:modelValue', ed.getMarkdown())
-    void refreshComposerMenus(ed)
-  },
-  onSelectionUpdate: ({ editor: ed }) => {
-    void refreshComposerMenus(ed)
-  },
-})
+const editor = shallowRef<Editor | null>(null)
+const EditorContentComp = shallowRef<Component | null>(null)
+let editorMountPromise: Promise<void> | null = null
+
+function onDraftInput(event: Event) {
+  const target = event.target as HTMLTextAreaElement
+  emit('update:modelValue', target.value)
+}
+
+function onDraftKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    emit('submit')
+    return
+  }
+  if (event.key === '/' || event.key === '@') {
+    void ensureEditor({ focus: true })
+  }
+}
+
+function onDraftPaste(event: ClipboardEvent) {
+  const text = event.clipboardData?.getData('text/plain')
+  if (text == null) return
+  event.preventDefault()
+  const el = event.target as HTMLTextAreaElement
+  const start = el.selectionStart ?? el.value.length
+  const end = el.selectionEnd ?? start
+  const next = el.value.slice(0, start) + text + el.value.slice(end)
+  emit('update:modelValue', next)
+  void ensureEditor({ focus: true, content: next })
+}
+
+async function ensureEditor(opts?: {
+  focus?: boolean
+  content?: string
+}): Promise<void> {
+  if (editor.value) {
+    if (opts?.content != null && opts.content !== editor.value.getMarkdown()) {
+      syncingFromParent = true
+      editor.value.commands.setContent(opts.content || '', {
+        contentType: 'markdown',
+        emitUpdate: false,
+      })
+      syncingFromParent = false
+    }
+    if (opts?.focus) editor.value.commands.focus('end')
+    return
+  }
+  if (!editorMountPromise) {
+    editorMountPromise = (async () => {
+      const [
+        { Extension, Editor },
+        { default: Placeholder },
+        { Markdown },
+        { default: StarterKit },
+        { EditorContent },
+      ] = await Promise.all([
+        import('@tiptap/core'),
+        import('@tiptap/extension-placeholder'),
+        import('@tiptap/markdown'),
+        import('@tiptap/starter-kit'),
+        import('@tiptap/vue-3'),
+      ])
+
+      EditorContentComp.value = markRaw(EditorContent)
+      const initialContent = opts?.content ?? props.modelValue ?? ''
+      const instance = new Editor({
+        content: initialContent,
+        contentType: 'markdown',
+        editable: !props.disabled,
+        autofocus: false,
+        extensions: [
+          StarterKit.configure({
+            heading: false,
+            horizontalRule: false,
+            codeBlock: false,
+            link: {
+              openOnClick: false,
+              autolink: true,
+              linkOnPaste: true,
+            },
+          }),
+          Markdown,
+          Placeholder.configure({
+            placeholder: props.placeholder,
+          }),
+          SubmitOnEnterFactory(Extension),
+        ],
+        onUpdate: ({ editor: ed }) => {
+          if (syncingFromParent) return
+          emit('update:modelValue', ed.getMarkdown())
+          void refreshComposerMenus(ed)
+        },
+        onSelectionUpdate: ({ editor: ed }) => {
+          void refreshComposerMenus(ed)
+        },
+      })
+      editor.value = markRaw(instance)
+    })().catch((err) => {
+      editorMountPromise = null
+      throw err
+    })
+  }
+  await editorMountPromise
+  if (opts?.focus) editor.value?.commands.focus('end')
+}
 
 /**
  * Sync parent → editor only when clearing after send or when the field is not focused.
@@ -890,6 +997,30 @@ watch(
 
 .rich-composer-editor {
   min-height: 0;
+}
+
+.rich-composer-draft {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  max-height: 200px;
+  margin: 0;
+  padding: 8px 48px 12px 14px;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--ui-text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.rich-composer-draft::placeholder {
+  color: var(--ui-text-muted);
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .rich-composer-editor :deep(.tiptap) {

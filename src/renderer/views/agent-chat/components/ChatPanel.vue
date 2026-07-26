@@ -238,7 +238,6 @@ import {
   watch,
   watchEffect,
 } from 'vue'
-import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
 import './chat/markdown-preview.css'
 import { Chat } from '@teralexi-ai/vue'
 import {

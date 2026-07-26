@@ -31,7 +31,7 @@ export async function writeFinalResultToSandbox(
     body = 'No result content available.'
   }
 
-  const html = renderMarkdownToHtmlDocument(body)
+  const html = await renderMarkdownToHtmlDocument(body)
   await writeFile(resultFilePath, html, 'utf8')
   const resultsFileUrl = pathToFileURL(resultFilePath).href
   return { outputResultsDir, resultFilePath, resultsFileUrl }

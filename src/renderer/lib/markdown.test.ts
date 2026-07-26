@@ -41,7 +41,7 @@ describe('renderMarkdownHtml', () => {
     expect(html).not.toMatch(/<img/i)
   })
 
-  it('renders diagram fence to inline SVG', () => {
+  it('keeps diagram fence as pending placeholder until hydrate', () => {
     const spec = JSON.stringify({
       version: 1,
       viewBox: [0, 0, 200, 60],
@@ -53,8 +53,8 @@ describe('renderMarkdownHtml', () => {
       ],
     })
     const html = renderMarkdownHtml(`Intro\n\n\`\`\`diagram\n${spec}\n\`\`\``)
-    expect(html).toContain('<svg')
-    expect(html).toContain('Diagram test')
-    expect(html).not.toContain('diagram-block--pending')
+    expect(html).toContain('diagram-block--pending')
+    expect(html).toContain('data-diagram-spec=')
+    expect(html).not.toContain('<svg')
   })
 })

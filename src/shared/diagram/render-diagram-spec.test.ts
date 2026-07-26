@@ -3,7 +3,7 @@ import { renderDiagramSpecToSvg } from './render-diagram-spec'
 import type { DiagramSpecV1 } from './diagram-spec'
 
 describe('renderDiagramSpecToSvg', () => {
-  it('renders a graph layer as SVG', () => {
+  it('renders a graph layer as SVG', async () => {
     const spec: DiagramSpecV1 = {
       version: 1,
       viewBox: [0, 0, 400, 200],
@@ -19,14 +19,14 @@ describe('renderDiagramSpecToSvg', () => {
         },
       ],
     }
-    const svg = renderDiagramSpecToSvg(spec)
+    const svg = await renderDiagramSpecToSvg(spec)
     expect(svg).toContain('<svg')
     expect(svg).toContain('Client')
     expect(svg).toContain('API')
     expect(svg).toContain('HTTPS')
   })
 
-  it('renders a plot layer as SVG path', () => {
+  it('renders a plot layer as SVG path', async () => {
     const spec: DiagramSpecV1 = {
       version: 1,
       viewBox: [0, 0, 480, 280],
@@ -42,12 +42,12 @@ describe('renderDiagramSpecToSvg', () => {
         },
       ],
     }
-    const svg = renderDiagramSpecToSvg(spec)
+    const svg = await renderDiagramSpecToSvg(spec)
     expect(svg).toContain('<path')
     expect(svg).toContain('diagram-plot')
   })
 
-  it('renders combined graph and plot layers', () => {
+  it('renders combined graph and plot layers', async () => {
     const spec: DiagramSpecV1 = {
       version: 1,
       viewBox: [0, 0, 960, 560],
@@ -76,7 +76,7 @@ describe('renderDiagramSpecToSvg', () => {
         },
       ],
     }
-    const svg = renderDiagramSpecToSvg(spec)
+    const svg = await renderDiagramSpecToSvg(spec)
     expect(svg).toContain('diagram-plot')
     expect(svg).toContain('diagram-graph')
     expect(svg).toContain('foreignObject')

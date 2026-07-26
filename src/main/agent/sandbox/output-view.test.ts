@@ -101,7 +101,7 @@ vi.mock('fs/promises', async (importOriginal) => {
 })
 
 vi.mock('./result-document-html', () => ({
-  renderMarkdownToHtmlDocument: (body: string) =>
+  renderMarkdownToHtmlDocument: async (body: string) =>
     `<html><body>${body}</body></html>`,
   renderMarkdownSourceHtmlDocument: (body: string) =>
     `<html><pre>${body}</pre></html>`,

@@ -128,7 +128,7 @@
                 </span>
               </div>
               <div class="wp-diff-body">
-                <ShikiDiffView :diff="diff" :file-path="diffFiles[0]" fill />
+                <DiffHighlightView :diff="diff" :file-path="diffFiles[0]" fill />
               </div>
             </div>
           </div>
@@ -150,8 +150,8 @@ import { useWorkspaceLiveSync } from '@renderer/composables/useWorkspaceLiveSync
 const PanelResizeHandle = defineAsyncComponent(
   () => import('@renderer/components/PanelResizeHandle.vue'),
 )
-const ShikiDiffView = defineAsyncComponent(
-  () => import('@renderer/components/code/ShikiDiffView.vue'),
+const DiffHighlightView = defineAsyncComponent(
+  () => import('@renderer/components/code/DiffHighlightView.vue'),
 )
 const WorkspaceGitStatus = defineAsyncComponent(
   () => import('./workspace/WorkspaceGitStatus.vue'),

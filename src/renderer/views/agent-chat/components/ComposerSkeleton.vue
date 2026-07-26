@@ -17,7 +17,7 @@
 
 <style scoped>
 .composer-skeleton {
-  min-height: 112px;
+  min-height: 88px;
   padding: 10px 48px 12px 12px;
   box-sizing: border-box;
 }
