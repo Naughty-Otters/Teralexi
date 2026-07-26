@@ -18,7 +18,11 @@ import {
   type StoreMessage,
 } from '@test/renderer/wire-agent-stream-listeners'
 import { flushPromises } from '@test/renderer/mount-app'
+<<<<<<< Updated upstream
 import { flushStoreStreamSync, flushStoreStreamSyncForConversation, resetStoreStreamSync } from '@renderer/views/agent-chat/perf/storeStreamSync'
+=======
+import { flushStoreStreamSync, resetStoreStreamSync } from '@renderer/views/agent-chat/perf/storeStreamSync'
+>>>>>>> Stashed changes
 
 const CONVERSATION_ID = 'conv-stream'
 const ASSISTANT_ID = 'assistant-stream-1'

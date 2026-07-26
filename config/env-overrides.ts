@@ -11,11 +11,20 @@ const TERALEXI_ENV_PREFIX = 'TERALEXI_'
 
 let cachedEnvOverrides: Map<string, string> | null = null
 let envOverridesInitialized = false
+<<<<<<< Updated upstream
 /** Test-only override for {@link isPackagedRuntime}; `null` = use Electron. */
+=======
+/** Test-only override for {@link isPackagedRuntime}; `null` = detect at runtime. */
+>>>>>>> Stashed changes
 let packagedRuntimeOverride: boolean | null = null
 
 export function isPackagedRuntime(): boolean {
   if (packagedRuntimeOverride != null) return packagedRuntimeOverride
+<<<<<<< Updated upstream
+=======
+  // Never `require('electron')` under Vitest — native load can hang CI workers.
+  if (process.env.VITEST === 'true') return false
+>>>>>>> Stashed changes
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { app } = require('electron') as typeof import('electron')
@@ -25,7 +34,11 @@ export function isPackagedRuntime(): boolean {
   }
 }
 
+<<<<<<< Updated upstream
 /** @internal Test helper — prefer over brittle Electron module mocks. */
+=======
+/** @internal Prefer this over Electron mocks in unit tests. */
+>>>>>>> Stashed changes
 export function setPackagedRuntimeForTests(value: boolean | null): void {
   packagedRuntimeOverride = value
 }

@@ -502,7 +502,10 @@ function createIpcUIMessageReadableStream(opts: {
     ) {
       return
     }
+<<<<<<< Updated upstream
     // Stay behind any in-flight UI chunk writes so final text cannot interleave.
+=======
+>>>>>>> Stashed changes
     await writeQueue
     if (finished || legacyTextStartSent || preferUiChunks) return
     legacyTextStartSent = true

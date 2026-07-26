@@ -86,7 +86,11 @@ export function wireAgentChatStreamListeners(
     _event: unknown,
     payload: { conversationId: string; assistantId: string },
   ) => {
+<<<<<<< Updated upstream
     flushStoreStreamSyncForConversation(payload.conversationId)
+=======
+    flushStoreStreamSync()
+>>>>>>> Stashed changes
     const content =
       store.conversations[payload.conversationId]?.find(
         (m) => m.id === payload.assistantId,
