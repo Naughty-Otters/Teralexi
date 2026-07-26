@@ -31,8 +31,6 @@ const DEV_ENV_PATH = join(REPO_ROOT, 'env', '.dev.env')
 const DOT_ENV_PATH = join(REPO_ROOT, 'env', '.env')
 const DEV_LOCAL_ENV_PATH = join(REPO_ROOT, 'env', '.dev.local.env')
 
-<<<<<<< Updated upstream
-=======
 /** Exact env-file match — never confuse `.env` with `.dev.env` / `.dev.local.env`. */
 function isEnvPath(
   target: unknown,
@@ -45,7 +43,6 @@ function isEnvPath(
   )
 }
 
->>>>>>> Stashed changes
 describe('env-overrides', () => {
   beforeEach(() => {
     resetEnvOverridesForTests()
@@ -53,13 +50,8 @@ describe('env-overrides', () => {
     setPackagedRuntimeForTests(false)
     vi.mocked(existsSync).mockReset()
     vi.mocked(readFileSync).mockReset()
-<<<<<<< Updated upstream
-    electronMock.app.isPackaged = false
-    vi.mocked(existsSync).mockReturnValue(false)
-=======
     vi.mocked(existsSync).mockReturnValue(false)
     vi.mocked(readFileSync).mockReturnValue('')
->>>>>>> Stashed changes
   })
 
   it('maps system prop keys to env var names', () => {
@@ -110,14 +102,7 @@ APP_DEV_PORT=3000
   })
 
   it('loads dev env file when unpackaged', () => {
-<<<<<<< Updated upstream
-    setPackagedRuntimeForTests(false)
-    vi.mocked(existsSync).mockImplementation(
-      (target) => String(target) === DEV_ENV_PATH,
-    )
-    vi.mocked(readFileSync).mockImplementation((target) => {
-      expect(String(target)).toBe(DEV_ENV_PATH)
-=======
+
     vi.mocked(existsSync).mockImplementation((target) =>
       isEnvPath(target, '.dev.env'),
     )
@@ -125,17 +110,12 @@ APP_DEV_PORT=3000
       if (!isEnvPath(target, '.dev.env')) {
         throw new Error(`unexpected readFileSync: ${String(target)}`)
       }
->>>>>>> Stashed changes
       return "BASE_API = 'https://api.teralexi.com/'\n"
     })
 
     const overrides = loadEnvOverrides({
       knownKeys: ['app.base.apiUrl'],
       searchRoots: [REPO_ROOT],
-<<<<<<< Updated upstream
-      // Isolate from ambient BASE_API / other process env that would mask file loads.
-=======
->>>>>>> Stashed changes
       processEnv: { TERALEXI_BUILD_ENV: 'dev' },
     })
 
@@ -146,18 +126,11 @@ APP_DEV_PORT=3000
 
   it('merges env/.env over env/.dev.env when present', () => {
     vi.mocked(existsSync).mockImplementation(
-<<<<<<< Updated upstream
-      (target) =>
-        String(target) === DEV_ENV_PATH || String(target) === DOT_ENV_PATH,
-    )
-    vi.mocked(readFileSync).mockImplementation((target) => {
-      if (String(target) === DOT_ENV_PATH) {
-=======
+
       (target) => isEnvPath(target, '.dev.env') || isEnvPath(target, '.env'),
     )
     vi.mocked(readFileSync).mockImplementation((target) => {
       if (isEnvPath(target, '.env')) {
->>>>>>> Stashed changes
         return "BASE_API = 'http://localhost:8000'\n"
       }
       if (isEnvPath(target, '.dev.env')) {
@@ -178,17 +151,7 @@ APP_DEV_PORT=3000
   it('merges env/.dev.local.env over env/.env when present', () => {
     vi.mocked(existsSync).mockImplementation(
       (target) =>
-<<<<<<< Updated upstream
-        String(target) === DEV_ENV_PATH ||
-        String(target) === DOT_ENV_PATH ||
-        String(target) === DEV_LOCAL_ENV_PATH,
-    )
-    vi.mocked(readFileSync).mockImplementation((target) => {
-      if (String(target) === DEV_LOCAL_ENV_PATH) {
-        return "BASE_API = 'http://127.0.0.1:9000'\n"
-      }
-      if (String(target) === DOT_ENV_PATH) {
-=======
+
         isEnvPath(target, '.dev.env') ||
         isEnvPath(target, '.env') ||
         isEnvPath(target, '.dev.local.env'),
@@ -198,7 +161,6 @@ APP_DEV_PORT=3000
         return "BASE_API = 'http://127.0.0.1:9000'\n"
       }
       if (isEnvPath(target, '.env')) {
->>>>>>> Stashed changes
         return "BASE_API = 'http://localhost:8000'\n"
       }
       if (isEnvPath(target, '.dev.env')) {
@@ -219,18 +181,11 @@ APP_DEV_PORT=3000
   it('merges env/.dev.local.env over env/.dev.env when present', () => {
     vi.mocked(existsSync).mockImplementation(
       (target) =>
-<<<<<<< Updated upstream
-        String(target) === DEV_ENV_PATH ||
-        String(target) === DEV_LOCAL_ENV_PATH,
-    )
-    vi.mocked(readFileSync).mockImplementation((target) => {
-      if (String(target) === DEV_LOCAL_ENV_PATH) {
-=======
+
         isEnvPath(target, '.dev.env') || isEnvPath(target, '.dev.local.env'),
     )
     vi.mocked(readFileSync).mockImplementation((target) => {
       if (isEnvPath(target, '.dev.local.env')) {
->>>>>>> Stashed changes
         return "BASE_API = 'http://localhost:8000'\n"
       }
       if (isEnvPath(target, '.dev.env')) {
@@ -258,10 +213,8 @@ APP_DEV_PORT=3000
 
     expect(overrides.get('app.base.apiUrl')).toBe('https://staging.example.com/')
     expect(vi.mocked(existsSync)).not.toHaveBeenCalled()
-<<<<<<< Updated upstream
-=======
+
     expect(vi.mocked(readFileSync)).not.toHaveBeenCalled()
->>>>>>> Stashed changes
   })
 })
 
