@@ -24,6 +24,9 @@ npm run version:minor
 npm run version:major
 ```
 
+These scripts bump root `package.json` / `package-lock.json` and sync related versions
+(`packages/cli`, Homebrew, Scoop, Chocolatey) via `npm run cli:sync-version`.
+
 Then edit `CHANGELOG.md` under a new `## [x.y.z] - YYYY-MM-DD` section.
 
 ## Creating a release

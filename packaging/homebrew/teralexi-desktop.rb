@@ -12,7 +12,7 @@
 # CLI formula remains Formula/teralexi.rb (brew install teralexi).
 
 cask "teralexi-desktop" do
-  version "0.0.5"
+  version "0.0.6"
   desc "Local-first AI agent desktop app"
   homepage "https://www.teralexi.com/"
 

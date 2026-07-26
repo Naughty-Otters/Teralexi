@@ -17,7 +17,7 @@
 
 ## Checklist
 
-- [ ] `package.json` / `package-lock.json` version bumped (`npm run version:patch|minor|major`)
+- [ ] `package.json` / `package-lock.json` / CLI + packaging versions bumped (`npm run version:patch|minor|major`)
 - [ ] No secrets, signing material, or `.env` files in the diff
 - [ ] CI green on this PR (unit + staging installer builds as applicable)
 - [ ] Breaking changes called out (migration / reinstall notes if needed)
