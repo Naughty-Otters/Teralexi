@@ -46,10 +46,56 @@
           <UIcon name="i-lucide-layers" class="conversation-groupby-btn__icon" />
         </button>
       </div>
+      <div class="conversation-groupby">
+        <button
+          type="button"
+          class="conversation-groupby-btn"
+          :class="{ 'conversation-groupby-btn--active': searchOpen }"
+          :title="t.chat.conversationSearch.toggle"
+          :aria-label="t.chat.conversationSearch.toggle"
+          :aria-expanded="searchOpen"
+          :aria-controls="searchOpen ? conversationSearchInputId : undefined"
+          @click="toggleSearch"
+        >
+          <UIcon name="i-lucide-search" class="conversation-groupby-btn__icon" />
+        </button>
+      </div>
     </div>
   </div>
+  <div
+    v-if="!collapsed && searchOpen"
+    class="conversation-search"
+  >
+    <UIcon
+      name="i-lucide-search"
+      class="conversation-search__icon"
+      aria-hidden="true"
+    />
+    <input
+      :id="conversationSearchInputId"
+      ref="searchInputRef"
+      v-model="searchQuery"
+      type="search"
+      class="conversation-search__input"
+      :placeholder="t.chat.conversationSearch.placeholder"
+      :aria-label="t.chat.conversationSearch.placeholder"
+      autocomplete="off"
+      spellcheck="false"
+      @keydown.escape.prevent="onSearchEscape"
+    />
+    <button
+      v-if="searchQuery.trim()"
+      type="button"
+      class="conversation-search__clear"
+      :title="t.chat.conversationSearch.clear"
+      :aria-label="t.chat.conversationSearch.clear"
+      @click="clearSearchQuery"
+    >
+      <UIcon name="i-lucide-x" class="conversation-search__clear-icon" />
+    </button>
+  </div>
   <button
-    v-else
+    v-else-if="collapsed"
     type="button"
     class="conversation-groupby-btn conversation-groupby-btn--collapsed-new"
     title="Start a new blank session"
@@ -538,6 +584,16 @@
     <li v-if="conversationItems.length === 0 && !collapsed" class="empty-item">
       No conversations yet.
     </li>
+    <li
+      v-else-if="
+        !collapsed &&
+        searchQuery.trim() &&
+        filteredConversationItems.length === 0
+      "
+      class="empty-item"
+    >
+      {{ t.chat.conversationSearch.noMatches }}
+    </li>
   </ul>
 
   <Teleport to="body">
@@ -683,6 +739,10 @@ const itemMenuStyle = ref<Record<string, string>>({})
 const conversationColors = ref<Record<string, string>>(
   readStoredStringMap(LAYOUT_PREF_KEYS.conversationListItemColors),
 )
+const searchOpen = ref(false)
+const searchQuery = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
+const conversationSearchInputId = 'conversation-list-search-input'
 const groupByMode = ref<ConversationListGroupBy>(
   parseConversationListGroupBy(
     readStoredString(LAYOUT_PREF_KEYS.conversationListGroupBy),
@@ -715,6 +775,23 @@ const conversationItems = computed((): Conversation[] => {
     .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 })
 
+const filteredConversationItems = computed((): Conversation[] => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return conversationItems.value
+  return conversationItems.value.filter((conv) => {
+    const title = (conv.title ?? '').toLowerCase()
+    const agent = agentName(conv.agentId).toLowerCase()
+    const workspace = (conv.workspacePath ?? '').toLowerCase()
+    const type = (conv.type ?? '').toLowerCase()
+    return (
+      title.includes(query) ||
+      agent.includes(query) ||
+      workspace.includes(query) ||
+      type.includes(query)
+    )
+  })
+})
+
 /** Unique workspace folders from existing conversations, newest first. */
 const existingWorkspaces = computed((): Array<{ path: string; label: string }> => {
   const seen = new Set<string>()
@@ -733,7 +810,7 @@ const existingWorkspaces = computed((): Array<{ path: string; label: string }> =
 
 const conversationGroups = computed(() =>
   groupConversations(
-    conversationItems.value,
+    filteredConversationItems.value,
     props.collapsed ? 'none' : groupByMode.value,
     agentName,
   ),
@@ -1065,6 +1142,38 @@ async function toggleGroupByMenu() {
   positionGroupByMenu()
 }
 
+async function toggleSearch() {
+  groupByMenuOpen.value = false
+  workspaceMenuOpen.value = false
+  closeItemMenu()
+  if (searchOpen.value) {
+    closeSearch()
+    return
+  }
+  searchOpen.value = true
+  await nextTick()
+  searchInputRef.value?.focus()
+  searchInputRef.value?.select()
+}
+
+function clearSearchQuery() {
+  searchQuery.value = ''
+  void nextTick(() => searchInputRef.value?.focus())
+}
+
+function closeSearch() {
+  searchOpen.value = false
+  searchQuery.value = ''
+}
+
+function onSearchEscape() {
+  if (searchQuery.value.trim()) {
+    clearSearchQuery()
+    return
+  }
+  closeSearch()
+}
+
 async function toggleWorkspaceMenu() {
   groupByMenuOpen.value = false
   closeItemMenu()
@@ -1299,6 +1408,13 @@ watch(
 )
 
 watch(
+  () => props.collapsed,
+  (collapsed) => {
+    if (collapsed) closeSearch()
+  },
+)
+
+watch(
   () => agentStore.hasLoadedInitialConversations,
   (loaded) => {
     if (loaded) {
@@ -1443,6 +1559,67 @@ const conversationTooltipModelById = computed(
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ui-text-muted);
+}
+.conversation-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 10px 6px;
+  padding: 0 8px;
+  height: 32px;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  background: var(--ui-bg);
+  box-sizing: border-box;
+}
+.conversation-search:focus-within {
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary-500, var(--ui-primary)) 55%,
+    var(--ui-border)
+  );
+}
+.conversation-search__icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--ui-text-muted);
+}
+.conversation-search__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--ui-text);
+  font: inherit;
+  font-size: 12px;
+}
+.conversation-search__input::-webkit-search-cancel-button {
+  display: none;
+}
+.conversation-search__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ui-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.conversation-search__clear:hover {
+  background: color-mix(in srgb, var(--ui-text) 10%, transparent);
+  color: var(--ui-text);
+}
+.conversation-search__clear-icon {
+  width: 12px;
+  height: 12px;
 }
 .conversation-groupby {
   position: relative;

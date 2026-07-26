@@ -192,6 +192,12 @@ export const lang: AppLocaleBundle = {
       color: 'Color',
       clearColor: 'Default',
     },
+    conversationSearch: {
+      toggle: 'Search conversations',
+      placeholder: 'Search conversations…',
+      clear: 'Clear search',
+      noMatches: 'No matching conversations',
+    },
     deleteConversationDialog: {
       title: 'Delete conversation',
       message:

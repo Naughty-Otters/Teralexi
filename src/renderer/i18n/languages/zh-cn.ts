@@ -185,6 +185,12 @@ export const lang: AppLocaleBundle = {
       color: '颜色',
       clearColor: '默认',
     },
+    conversationSearch: {
+      toggle: '搜索会话',
+      placeholder: '搜索会话…',
+      clear: '清除搜索',
+      noMatches: '没有匹配的会话',
+    },
     deleteConversationDialog: {
       title: '删除会话',
       message:

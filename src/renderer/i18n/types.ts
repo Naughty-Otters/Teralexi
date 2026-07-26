@@ -176,6 +176,12 @@ export type AppLabels = {
       color: string
       clearColor: string
     }
+    conversationSearch: {
+      toggle: string
+      placeholder: string
+      clear: string
+      noMatches: string
+    }
     deleteConversationDialog: {
       title: string
       message: string
