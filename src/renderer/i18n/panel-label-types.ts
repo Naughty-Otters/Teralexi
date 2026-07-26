@@ -219,6 +219,7 @@ export type SettingsPanelLabels = {
     httpHeaders: string
     enableServer: string
     disableServer: string
+    alwaysEnabled: string
     tools: string
     availableTools: string
     empty: string

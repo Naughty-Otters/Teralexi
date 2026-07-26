@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3'
 import {
+  isAlwaysOnMcpServer,
   isReferenceMcpServer,
   PLAYWRIGHT_MCP_SERVER_ID,
   REFERENCE_MCP_SERVER_DEFINITIONS,
@@ -33,7 +34,7 @@ function mapRow(row: McpServerRow): StoredMcpServer {
     args: parseJsonStringArray(row.args_json),
     env: parseJsonObject(row.env_json),
     headers: parseJsonObject(row.headers_json),
-    enabled: row.enabled !== 0,
+    enabled: row.enabled !== 0 || isAlwaysOnMcpServer({ id: row.id }),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -85,7 +86,7 @@ export class McpServersRepository {
 
   /**
    * Existing DBs may already have other reference rows (INSERT OR IGNORE skips
-   * re-seed). Keep Playwright Browser present, **enabled by default**, and on
+   * re-seed). Keep Playwright Browser present, **always enabled**, and on
    * the bundled package launch seed (not npx @latest).
    */
   enablePlaywrightMcpMigration(userId: string): void {
@@ -203,12 +204,14 @@ export class McpServersRepository {
   }
 
   setEnabled(userId: string, serverId: string, enabled: boolean): void {
+    // Playwright Browser is always on — ignore pause requests.
+    const nextEnabled = isAlwaysOnMcpServer({ id: serverId }) ? true : enabled
     const now = new Date().toISOString()
     this.db
       .prepare(
         'UPDATE mcp_servers SET enabled = ?, updated_at = ? WHERE user_id = ? AND id = ?',
       )
-      .run(enabled ? 1 : 0, now, userId, serverId)
+      .run(nextEnabled ? 1 : 0, now, userId, serverId)
   }
 
   delete(userId: string, serverId: string): void {

@@ -396,6 +396,12 @@
   transform: translateX(16px);
 }
 
+.sp-toggle:has(input:disabled),
+.sp-toggle--locked {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 html.dark .sp-toggle-track {
   background: #3f444e;
   border-color: rgba(255, 255, 255, 0.08);

@@ -17,7 +17,7 @@ Omit `agentId` when using a profile — defaults to `skill:coding`.
 
 **Important:** `bash` / `explore` / `browser` are **profiles** for `invoke_agents`. There is no tool named `bash` — use `shell` / `run_script` / `run_script_file` under the `bash` profile.
 
-**Browser MCP:** Settings → MCP includes built-in **Playwright Browser** (`ref-mcp-playwright`), enabled by default and launched from the bundled `@playwright/mcp` package (not `npx @latest`). Prefer MCP navigate/snapshot/click/fill for interactive work; use `web_scrape` only for one-shot markdown extraction. Chromium: `npx playwright install chromium` (or system Chrome) if MCP tools fail to launch.
+**Browser MCP:** Settings → MCP includes built-in **Playwright Browser** (`ref-mcp-playwright`), always enabled and launched from the bundled `@playwright/mcp` package (not `npx @latest`). Prefer MCP navigate/snapshot/click/fill for interactive work; use `web_scrape` only for one-shot markdown extraction. Chromium: `npx playwright install chromium` (or system Chrome) if MCP tools fail to launch.
 ## Orchestration profiles
 
 | Profile | Role |

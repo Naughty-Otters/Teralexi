@@ -265,6 +265,7 @@ export const settingsPanelsZhCn: SettingsPanelLabels = {
     httpHeaders: 'HTTP 头',
     enableServer: '启用服务器',
     disableServer: '禁用服务器',
+    alwaysEnabled: '始终启用',
     tools: '工具',
     availableTools: '可用工具',
     empty: '选择服务器查看详情，或添加新服务器。',
