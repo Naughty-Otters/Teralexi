@@ -21,10 +21,6 @@ vi.mock('./pino-framework', () => ({
   createLoggingFramework: vi.fn(() => framework),
 }))
 
-vi.mock('./agent-run-context', () => ({
-  duplicateAgentRunLog: vi.fn(),
-}))
-
 vi.mock('./main-process-streams', () => ({
   buildMainProcessLogStreams: vi.fn(() => []),
 }))

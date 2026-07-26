@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const info = vi.hoisted(() => vi.fn())
+const debug = vi.hoisted(() => vi.fn())
 const warn = vi.hoisted(() => vi.fn())
 const error = vi.hoisted(() => vi.fn())
 
 vi.mock('@main/logger', () => ({
-  createLogger: () => ({ info: info, warn: warn, error: error, debug: vi.fn() }),
+  createLogger: () => ({ info, debug, warn, error }),
 }))
 
 import { runLoggedToolExecute } from './tool-call-logging'
@@ -24,6 +25,7 @@ describe('serializeForToolLog', () => {
 describe('runLoggedToolExecute', () => {
   beforeEach(() => {
     info.mockClear()
+    debug.mockClear()
     warn.mockClear()
     error.mockClear()
   })
@@ -39,7 +41,25 @@ describe('runLoggedToolExecute', () => {
       ),
     ).rejects.toThrow('disk full')
     expect(error).toHaveBeenCalled()
-    expect(info).toHaveBeenCalled()
+    expect(debug).toHaveBeenCalled()
+  })
+
+  it('logs start/completed at debug on success', async () => {
+    const result = await runLoggedToolExecute(
+      { toolName: 'read_file', source: 'skill' },
+      { path: 'a.ts' },
+      async () => ({ content: 'ok' }),
+    )
+    expect(result).toEqual({ content: 'ok' })
+    expect(debug).toHaveBeenCalledWith(
+      'tool call start',
+      expect.objectContaining({ toolName: 'read_file' }),
+    )
+    expect(debug).toHaveBeenCalledWith(
+      'tool call completed',
+      expect.objectContaining({ toolName: 'read_file' }),
+    )
+    expect(info).not.toHaveBeenCalled()
   })
 
   it('logs warn for soft failure results without throwing', async () => {

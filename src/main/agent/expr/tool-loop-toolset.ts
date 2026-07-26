@@ -19,6 +19,7 @@ import {
 import { applyLspDiagnostics } from '../lsp'
 import { assertFileToolPermissionAllowed } from '../permissions/tool-permission-gate'
 import { applySessionToolApprovals } from '../session-tool-approval'
+import { applyStressAutoApproveToolCalls } from '@main/stress/stress-auto-approve'
 import {
   callMcpToolDirect,
   callSkillToolDirect,
@@ -173,12 +174,18 @@ export function buildAgentToolSet(
     state: runCtx.agentFlow.toolInputDedupeState,
     pathContext,
   })
-  applySessionToolApprovals(toolSet, runCtx.opts.conversationId)
+  applySessionToolApprovals(
+    toolSet as Record<string, { needsApproval?: unknown }>,
+    runCtx.opts.conversationId,
+  )
   applyCodingAgentPolicy(
     toolSet as Record<string, { needsApproval?: unknown }>,
     runCtx.opts.conversationId,
     skillId,
     runCtx.agentRun?.meta?.depth,
+  )
+  applyStressAutoApproveToolCalls(
+    toolSet as Record<string, { needsApproval?: unknown }>,
   )
   applyRuntimePlanModeGate(
     toolSet as Record<string, { execute?: (input: unknown) => Promise<unknown> }>,

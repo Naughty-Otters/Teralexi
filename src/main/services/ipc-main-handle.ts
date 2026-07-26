@@ -10,6 +10,22 @@ import { resolveAppVersion } from '../config/app-version'
 import { getSupportConfig } from '../services/support-config'
 import { recordSupportEvent } from '../services/support-event-store'
 import { submitSupportReport } from '../services/support-report'
+import {
+  isStressTestEnabled,
+  resolveStressDurationMs,
+} from '@config/stress-test-mode'
+import {
+  setStressAutoApproveToolCalls,
+} from '@main/stress/stress-auto-approve'
+import {
+  appendStressMetricsSample,
+  appendStressTurnRecord,
+  createStressRunDirectory,
+  ensureStressWorkspaceReady,
+  sampleAppProcessMetrics,
+  writeStressRunConfig,
+  writeStressRunSummary,
+} from '@main/stress/stress-report-writer'
 import type {
   SupportClientErrorPayload,
   SupportReportOptions,
@@ -132,6 +148,7 @@ import {
   runAgentForConversation,
   runSubAgentMentionDelegation,
   stopAgentForConversation,
+  isConversationRunInFlight,
 } from '@main/engine'
 import {
   releaseConversationSandbox,
@@ -163,7 +180,6 @@ import type {
   SkillComposerToolbarPreviewResult,
 } from '@shared/agent/skill-composer-toolbar'
 import { extractZodParams } from '@main/utils/zod-introspection'
-import { isConversationRunInFlight } from '@main/engine'
 import {
   gitStatus,
   type GitStatusResult,
@@ -406,6 +422,134 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     version: resolveAppVersion(),
     isPackaged: app.isPackaged,
   })
+
+  GetStressTestAvailability: () => ({
+    enabled: boolean
+    defaultDurationMs: number
+  }) = () => ({
+    enabled: isStressTestEnabled(),
+    defaultDurationMs: resolveStressDurationMs(),
+  })
+
+  GetAppProcessMetrics: () =>
+    import('@shared/stress-test/types').StressProcessMetrics = () =>
+    sampleAppProcessMetrics()
+
+  StartStressTestRun: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: {
+      runId: string
+      config: import('@shared/stress-test/types').StressRunConfig
+    },
+  ) => {
+    ok: boolean
+    reportDir: string
+    workspacePath: string
+    error?: string
+  } = (_event, args) => {
+    if (!isStressTestEnabled()) {
+      return {
+        ok: false,
+        reportDir: '',
+        workspacePath: '',
+        error: 'Stress test is not enabled for this launch',
+      }
+    }
+    const runId = args?.runId?.trim()
+    if (!runId) {
+      return {
+        ok: false,
+        reportDir: '',
+        workspacePath: '',
+        error: 'runId is required',
+      }
+    }
+    try {
+      const reportDir = createStressRunDirectory(runId)
+      const workspacePath = ensureStressWorkspaceReady()
+      const config = {
+        ...args.config,
+        runId,
+        workspacePath,
+      }
+      writeStressRunConfig(reportDir, config)
+      setStressAutoApproveToolCalls(true, runId)
+      return { ok: true, reportDir, workspacePath }
+    } catch (err) {
+      return {
+        ok: false,
+        reportDir: '',
+        workspacePath: '',
+        error: err instanceof Error ? err.message : String(err),
+      }
+    }
+  }
+
+  AppendStressMetricsSample: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: {
+      reportDir: string
+      sample: import('@shared/stress-test/types').StressMetricsSample
+    },
+  ) => { ok: boolean } = (_event, args) => {
+    const reportDir = args?.reportDir?.trim()
+    if (!reportDir || !args?.sample) return { ok: false }
+    try {
+      appendStressMetricsSample(reportDir, args.sample)
+      return { ok: true }
+    } catch {
+      return { ok: false }
+    }
+  }
+
+  AppendStressTurnRecord: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: {
+      reportDir: string
+      turn: import('@shared/stress-test/types').StressTurnRecord
+    },
+  ) => { ok: boolean } = (_event, args) => {
+    const reportDir = args?.reportDir?.trim()
+    if (!reportDir || !args?.turn) return { ok: false }
+    try {
+      appendStressTurnRecord(reportDir, args.turn)
+      return { ok: true }
+    } catch {
+      return { ok: false }
+    }
+  }
+
+  FinishStressTestRun: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: {
+      reportDir: string
+      summary: import('@shared/stress-test/types').StressRunSummary
+    },
+  ) => { ok: boolean; reportDir: string } = (_event, args) => {
+    setStressAutoApproveToolCalls(false, null)
+    const reportDir = args?.reportDir?.trim() ?? ''
+    if (!reportDir || !args?.summary) return { ok: false, reportDir }
+    try {
+      writeStressRunSummary(reportDir, {
+        ...args.summary,
+        reportDir,
+      })
+      return { ok: true, reportDir }
+    } catch {
+      return { ok: false, reportDir }
+    }
+  }
+
+  OpenStressReportFolder: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { reportDir: string },
+  ) => Promise<{ ok: boolean; error?: string }> = async (_event, args) => {
+    const reportDir = args?.reportDir?.trim()
+    if (!reportDir) return { ok: false, error: 'reportDir is required' }
+    const error = await shell.openPath(reportDir)
+    return error ? { ok: false, error } : { ok: true }
+  }
+
   GetSupportConfig: (
     event: Electron.IpcMainInvokeEvent,
   ) =>
@@ -909,6 +1053,13 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     _event: Electron.IpcMainInvokeEvent,
     args: { conversationId: string },
   ) => Promise<void> = async (_event, args) => {
+    const conversationId = args.conversationId?.trim() ?? ''
+    if (conversationId) {
+      // Abort any in-flight turn, but do not wait for teardown — aborted runs
+      // often take many seconds to unwind, and persist paths already skip when
+      // the conversation row is gone.
+      stopAgentForConversation(conversationId)
+    }
     await releaseConversationSandbox(args.conversationId)
     const subAgentRoots = await releaseSubAgentSandboxesForConversation(
       args.conversationId,

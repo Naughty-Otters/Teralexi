@@ -1,6 +1,6 @@
 import type { FakeIpcChannel } from '@test/ipc/fake-ipc-channel'
 import {
-  flushStoreStreamSync,
+  flushStoreStreamSyncForConversation,
   initStoreStreamSync,
   queueStoreStepProgress,
   queueStoreTextDelta,
@@ -86,13 +86,15 @@ export function wireAgentChatStreamListeners(
     _event: unknown,
     payload: { conversationId: string; assistantId: string },
   ) => {
-    flushStoreStreamSync()
+    flushStoreStreamSyncForConversation(payload.conversationId)
+    const content =
+      store.conversations[payload.conversationId]?.find(
+        (m) => m.id === payload.assistantId,
+      )?.content ?? ''
     syncStoreAssistantFromUiMessage(payload.conversationId, payload.assistantId, [
       {
         type: 'text',
-        text: store.conversations[payload.conversationId]?.find(
-          (m) => m.id === payload.assistantId,
-        )?.content,
+        text: content,
       },
     ])
     store.markAssistantMessageFinished(payload.conversationId, payload.assistantId)

@@ -258,6 +258,46 @@ describe('conversationToolResponseModel', () => {
     expect(sectionIndexForToolLoopAnchor(sections, 'toolLoop-2')).toBe(1)
   })
 
+  it('hides Exploring panel while streaming when the agentic run has no tools yet', () => {
+    const message = {
+      id: 'msg-empty',
+      role: 'assistant',
+      parts: [
+        {
+          type: 'data-agent-step-progress',
+          id: 'toolLoop-empty',
+          data: {
+            stepId: 'toolLoop',
+            title: 'Agentic Run',
+            sequence: 1,
+            status: 'running',
+            content: 'Working…',
+          },
+        },
+      ],
+    } as never
+
+    const slots = resolveConversationToolLoopPanelSlots({
+      message,
+      sections: [
+        {
+          id: 'SkillsToolExecutionStep',
+          title: 'Agentic Run',
+          bodyHtml: '',
+          status: 'running',
+          progressPartKey: 'toolLoop-empty',
+        },
+      ],
+      stepProgressParts: message.parts.filter(
+        (part: { type?: string }) => part.type === 'data-agent-step-progress',
+      ),
+      frozenItemsByAnchorKey: new Map(),
+      isStreaming: true,
+    })
+
+    expect(slots).toEqual([])
+  })
+
   it('maps conversation bubbles to tool-loop panel items', () => {
     const bubbles = resolveConversationToolResponseBubbles({
       id: 'msg-1',
@@ -338,7 +378,7 @@ describe('conversationToolResponseModel', () => {
     expect(conversationShouldUseToolLoopPanel(message, [])).toBe(true)
   })
 
-  it('uses shell anchor when toolLoop progress has no content yet', () => {
+  it('ignores empty Agentic Run shells with no content (no Exploring panel yet)', () => {
     const anchors = listToolLoopProgressAnchors([
       {
         id: 'toolLoop-1',
@@ -351,8 +391,7 @@ describe('conversationToolResponseModel', () => {
       },
     ])
 
-    expect(anchors).toHaveLength(1)
-    expect(anchors[0]?.key).toBe('toolLoop-1')
+    expect(anchors).toEqual([])
   })
 
   it('falls back to a single panel when anchors cannot partition tools', () => {

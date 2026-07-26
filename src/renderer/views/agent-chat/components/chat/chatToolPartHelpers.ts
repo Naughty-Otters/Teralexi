@@ -139,12 +139,26 @@ export function getToolPartErrorText(part: unknown): string {
   return typeof e === 'string' ? e : ''
 }
 
-export function formatToolOutput(part: unknown): string {
+const SETTLED_TOOL_STATES = new Set([
+  'output-available',
+  'output-error',
+  'output-denied',
+  'approval-responded',
+])
+
+export function formatToolOutput(
+  part: unknown,
+  opts?: { detailed?: boolean },
+): string {
   const p = part as UIMessagePart<any, UITools>
   if (!isToolOrDynamicToolUIPart(p)) return ''
+  const state = getToolPartState(part)
+  const settled = SETTLED_TOOL_STATES.has(state)
   return formatToolResultForDisplay(p.output, {
     toolName: toolPartDisplayName(part),
     toolInput: p.input,
+    // Skip pretty JSON while the tool is still in-flight unless caller asks.
+    deferRawJson: opts?.detailed ? false : !settled,
   })
 }
 

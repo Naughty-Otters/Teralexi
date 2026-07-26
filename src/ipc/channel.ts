@@ -58,6 +58,52 @@ export class IpcChannelMainClass {
     void,
     { version: string; isPackaged: boolean }
   > = null!
+  /** Whether Stress Test UI is available (launch gate). */
+  GetStressTestAvailability: IpcMainEventListener<
+    void,
+    {
+      enabled: boolean
+      defaultDurationMs: number
+    }
+  > = null!
+  /** Sample Electron process CPU / memory metrics. */
+  GetAppProcessMetrics: IpcMainEventListener<
+    void,
+    import('@shared/stress-test/types').StressProcessMetrics
+  > = null!
+  /** Prepare stress run directory + scratch workspace; enable auto-approve. */
+  StartStressTestRun: IpcMainEventListener<
+    {
+      runId: string
+      config: import('@shared/stress-test/types').StressRunConfig
+    },
+    { ok: boolean; reportDir: string; workspacePath: string; error?: string }
+  > = null!
+  AppendStressMetricsSample: IpcMainEventListener<
+    {
+      reportDir: string
+      sample: import('@shared/stress-test/types').StressMetricsSample
+    },
+    { ok: boolean }
+  > = null!
+  AppendStressTurnRecord: IpcMainEventListener<
+    {
+      reportDir: string
+      turn: import('@shared/stress-test/types').StressTurnRecord
+    },
+    { ok: boolean }
+  > = null!
+  FinishStressTestRun: IpcMainEventListener<
+    {
+      reportDir: string
+      summary: import('@shared/stress-test/types').StressRunSummary
+    },
+    { ok: boolean; reportDir: string }
+  > = null!
+  OpenStressReportFolder: IpcMainEventListener<
+    { reportDir: string },
+    { ok: boolean; error?: string }
+  > = null!
   GetSupportConfig: IpcMainEventListener<
     void,
     import('@shared/support-bundle').SupportConfig

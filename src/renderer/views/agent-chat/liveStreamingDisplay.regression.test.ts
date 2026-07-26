@@ -285,5 +285,19 @@ describe('live streaming display regression', () => {
       flushAllUiForConversation('conv-bg')
       expect(backgroundSync).toHaveBeenCalledTimes(1)
     })
+
+    it('flushes deferred background jobs when conversation is activated', () => {
+      const backgroundSync = vi.fn()
+      scheduleUiFlush('messages-sync', backgroundSync, {
+        conversationId: 'conv-bg',
+        priority: 'normal',
+      })
+      ;(globalThis as { __flushRaf?: () => void }).__flushRaf?.()
+      expect(backgroundSync).not.toHaveBeenCalled()
+
+      setVisibleConversationForUiFlush('conv-bg')
+      flushAllUiForConversation('conv-bg')
+      expect(backgroundSync).toHaveBeenCalledTimes(1)
+    })
   })
 })

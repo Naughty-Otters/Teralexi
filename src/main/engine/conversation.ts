@@ -183,6 +183,14 @@ function persistIncomingUserMessage(args: {
 
   const threadTag = resolveEffectiveThreadTag(args.conversationId, row.content)
 
+  if (!conversationRowExists(args.conversationId)) {
+    log.warn(ConfigContext.ENGINE_LOG.PERSIST_USER_FAIL, {
+      conversationId: args.conversationId,
+      reason: 'conversation-missing',
+    })
+    return null
+  }
+
   try {
     getConversationStore().saveMessage({
       id: row.id,
@@ -193,7 +201,7 @@ function persistIncomingUserMessage(args: {
       createdAt: row.createdAt,
       threadTag,
     })
-    log.info(ConfigContext.ENGINE_LOG.PERSIST_USER_OK, {
+    log.debug(ConfigContext.ENGINE_LOG.PERSIST_USER_OK, {
       conversationId: args.conversationId,
       agentId: args.agentId,
       messageId: row.id,
@@ -238,17 +246,39 @@ async function uploadUserAttachmentsBeforeAgentRun(
   })
 }
 
+function conversationRowExists(conversationId: string): boolean {
+  const id = conversationId.trim()
+  if (!id) return false
+  try {
+    return getConversationStore().getConversation(id) != null
+  } catch {
+    return false
+  }
+}
+
 function persistConversationSandboxRun(payload: AgentSandboxReadyPayload): void {
+  const conversationId = payload.conversationId?.trim() ?? ''
+  if (!conversationId) return
+  // Conversation may have been deleted while an aborted run was still writing
+  // final sandbox output — skip quietly instead of FOREIGN KEY errors.
+  if (!conversationRowExists(conversationId)) {
+    log.warn(ConfigContext.ENGINE_LOG.PERSIST_SANDBOX_FAIL, {
+      conversationId,
+      sandboxRoot: payload.sandboxRoot,
+      reason: 'conversation-missing',
+    })
+    return
+  }
   try {
     getConversationStore().upsertConversationSandboxRun({
-      conversationId: payload.conversationId,
+      conversationId,
       sandboxRoot: payload.sandboxRoot,
       resultsFileUrl: payload.resultsFileUrl,
       outputResultsDir: payload.outputResultsDir,
     })
   } catch (err) {
     log.warn(ConfigContext.ENGINE_LOG.PERSIST_SANDBOX_FAIL, {
-      conversationId: payload.conversationId,
+      conversationId,
       sandboxRoot: payload.sandboxRoot,
       err,
     })
@@ -424,7 +454,7 @@ async function executeAgentForConversation(
   const mcpTools = await loadMcpToolsForAgent(userId, agent)
   const enabledSkillTools = resolveEnabledSkillToolNames(agent)
 
-  log.info(ConfigContext.ENGINE_LOG.PREPARED_CONTEXT, {
+  log.debug(ConfigContext.ENGINE_LOG.PREPARED_CONTEXT, {
     conversationId,
     agentId,
     provider: agent.provider,
@@ -455,200 +485,216 @@ async function executeAgentForConversation(
   let hitlPaused = false
 
   try {
-    const llmOverride =
-      getConversationStore().getConversationLlmOverride(conversationId)
-    const runLlm = resolveRunLlmFromAgentAndOverride(agent, llmOverride)
-    const opts: AgentResponseOpts = {
-      provider: runLlm.provider,
-      model: runLlm.model,
-      stageLlm: runLlm.stageLlm,
-      systemPrompt: agent.systemPrompt,
-      responseLanguage: resolveResponseLanguageForAgent(agent.responseLanguage),
-      abortSignal: abortController.signal,
-      messages: history,
-      executionSteps: agent.executionSteps,
-      toolLoopMaxIterations:
-        agent.executionSteps?.toolLoop?.maxIterations ??
-        agent.toolLoopMaxIterations,
-      todoMaxRetries: agent.todoMaxRetries,
-      skillId: agent.skillId,
-      systemProperties: agent.systemProperties,
-      compiledArtifact: agent.compiledArtifact,
-      agentId,
-      availableSet: enabledSkillTools,
-      availableSetTouched: !!agent.availableSetTouched,
-      toolNeedsApprovalOverrides: agent.toolNeedsApprovalOverrides ?? {},
-      mcpTools,
-      userId,
-      conversationId,
-      ...credentials,
-      clientUiMessages: parseClientUiMessages(uiMessages),
-      pendingUserMessage,
-      assistantMessageId,
-      llmDebugRunId: createLlmDebugRunId(),
-      onChunk: streamBridge.onChunk,
-      onUIMessageChunk: streamBridge.onUIMessageChunk,
-      onStepProgress: streamBridge.onStepProgress,
-      onSubAgentRunEvent: streamBridge.onSubAgentRunEvent,
-      onSandboxReady: streamBridge.onSandboxReady,
-      onSandboxResultWritten: streamBridge.onSandboxResultWritten,
-      userAttachments,
-      eventBus,
-    }
-
-    const streamResult = await streamAgentResponse(opts)
-    finalContent = streamResult.structuredContent
-    shouldPersistMemory = streamResult.shouldPersistMemory
-    hitlPaused = streamResult.hitlPaused
-    log.info(ConfigContext.ENGINE_LOG.COMPLETED, {
-      conversationId,
-      agentId,
-      assistantMessageId,
-      finalContentLength: finalContent.length,
-    })
-  } catch (err: unknown) {
-    if (isAbortError(err)) {
-      log.info(ConfigContext.ENGINE_LOG.ABORTED, {
-        conversationId,
-        agentId,
-        assistantMessageId,
-      })
-      try {
-        await runUserHooks(
-          {
-            event: 'postHook',
-            conversationId,
-            agentId,
-            assistantMessageId,
-            workspacePath,
-            userMessage,
-            hasError: false,
-            finalContent: '',
-          },
-          conversationHooks,
-        )
-      } catch {
-        // post-hooks are best-effort
-      }
-      resetConversationFollowUps(conversationId, { enableWrites: false })
-      return { finalContent: '', hasError: false }
-    }
-    hasError = true
-    errorMessage = formatLlmErrorForUi(err)
-    log.error(ConfigContext.ENGINE_LOG.FAILED, {
-      conversationId,
-      agentId,
-      assistantMessageId,
-      errorMessage,
-      ...llmErrorFields(err),
-    })
-  } finally {
-    detachIpcProjector()
-    inFlightControllers.delete(conversationId)
-  }
-
-  if (!hasError && finalContent.trim()) {
-    const threadTag = resolveTurnThreadTag({
-      conversationId,
-      uiMessages,
-      pendingUserMessage,
-    })
     try {
-      getConversationStore().saveMessage({
-        id: assistantMessageId,
-        conversationId,
+      const llmOverride =
+        getConversationStore().getConversationLlmOverride(conversationId)
+      const runLlm = resolveRunLlmFromAgentAndOverride(agent, llmOverride)
+      const opts: AgentResponseOpts = {
+        provider: runLlm.provider,
+        model: runLlm.model,
+        stageLlm: runLlm.stageLlm,
+        systemPrompt: agent.systemPrompt,
+        responseLanguage: resolveResponseLanguageForAgent(agent.responseLanguage),
+        abortSignal: abortController.signal,
+        messages: history,
+        executionSteps: agent.executionSteps,
+        toolLoopMaxIterations:
+          agent.executionSteps?.toolLoop?.maxIterations ??
+          agent.toolLoopMaxIterations,
+        todoMaxRetries: agent.todoMaxRetries,
+        skillId: agent.skillId,
+        systemProperties: agent.systemProperties,
+        compiledArtifact: agent.compiledArtifact,
         agentId,
-        role: 'assistant',
-        content: finalContent,
-        createdAt: new Date().toISOString(),
-        threadTag,
-      })
-      log.info(ConfigContext.ENGINE_LOG.PERSIST_ASSISTANT_OK, {
+        availableSet: enabledSkillTools,
+        availableSetTouched: !!agent.availableSetTouched,
+        toolNeedsApprovalOverrides: agent.toolNeedsApprovalOverrides ?? {},
+        mcpTools,
+        userId,
         conversationId,
-        agentId,
+        ...credentials,
+        clientUiMessages: parseClientUiMessages(uiMessages),
+        pendingUserMessage,
         assistantMessageId,
-      })
-      notifyRendererConversationChanged(conversationId, agentId, webContents)
-      if (shouldPersistMemory) {
-        try {
-          const memoryModel = ProviderContext.createModel(
-            agent.provider,
-            agent.model,
-            credentials,
-          )
-          enqueueAgentMemoryExchange({
-            agentId,
-            conversationId,
-            userId,
-            assistantMessageId,
-            assistantContent: finalContent,
-            model: memoryModel,
-            responseLanguage: resolveResponseLanguageForAgent(agent.responseLanguage),
-            uiMessages,
-            pendingUserMessage: args.pendingUserMessage,
-          })
-          log.info(
-            `${ConfigContext.ENGINE_LOG.MEMORY_RECORD_ENQUEUED} conversationId=${conversationId} agentId=${agentId} assistantMessageId=${assistantMessageId}`,
-          )
-        } catch (memErr) {
-          const errText =
-            memErr instanceof Error ? memErr.message : String(memErr)
-          log.warn(
-            `${ConfigContext.ENGINE_LOG.MEMORY_RECORD_FAIL} conversationId=${conversationId} agentId=${agentId} assistantMessageId=${assistantMessageId} err=${errText}`,
-          )
-        }
-      } else {
-        log.info(
-          `Skipped agent memory persistence conversationId=${conversationId} agentId=${agentId} assistantMessageId=${assistantMessageId}`,
-        )
+        llmDebugRunId: createLlmDebugRunId(),
+        onChunk: streamBridge.onChunk,
+        onUIMessageChunk: streamBridge.onUIMessageChunk,
+        onStepProgress: streamBridge.onStepProgress,
+        onSubAgentRunEvent: streamBridge.onSubAgentRunEvent,
+        onSandboxReady: streamBridge.onSandboxReady,
+        onSandboxResultWritten: streamBridge.onSandboxResultWritten,
+        userAttachments,
+        eventBus,
       }
-    } catch (err) {
-      log.error(ConfigContext.ENGINE_LOG.PERSIST_ASSISTANT_FAIL, {
+
+      const streamResult = await streamAgentResponse(opts)
+      finalContent = streamResult.structuredContent
+      shouldPersistMemory = streamResult.shouldPersistMemory
+      hitlPaused = streamResult.hitlPaused
+      log.debug(ConfigContext.ENGINE_LOG.COMPLETED, {
         conversationId,
         agentId,
         assistantMessageId,
-        err,
+        finalContentLength: finalContent.length,
       })
-    }
-  }
-
-  // Notify the renderer only after persist so ChatPanel.onFinish reload sees the
-  // saved assistant row (AgentStreamFinished used to fire from `finally` before save).
-  if (hitlPaused) {
-    // Suspended mid-turn: follow-ups are post-turn only — drop any premature catalog.
-    resetConversationFollowUps(conversationId, { enableWrites: false })
-    return {
-      finalContent,
-      hasError,
-      errorMessage,
-      hitlPaused: true,
-    }
-  }
-
-  if (hasError) {
-    resetConversationFollowUps(conversationId, { enableWrites: false })
-  }
-  try {
-    await runUserHooks(
-      {
-        event: 'postHook',
+    } catch (err: unknown) {
+      if (isAbortError(err)) {
+        log.info(ConfigContext.ENGINE_LOG.ABORTED, {
+          conversationId,
+          agentId,
+          assistantMessageId,
+        })
+        try {
+          await runUserHooks(
+            {
+              event: 'postHook',
+              conversationId,
+              agentId,
+              assistantMessageId,
+              workspacePath,
+              userMessage,
+              hasError: false,
+              finalContent: '',
+            },
+            conversationHooks,
+          )
+        } catch {
+          // post-hooks are best-effort
+        }
+        resetConversationFollowUps(conversationId, { enableWrites: false })
+        return { finalContent: '', hasError: false }
+      }
+      hasError = true
+      errorMessage = formatLlmErrorForUi(err)
+      log.error(ConfigContext.ENGINE_LOG.FAILED, {
         conversationId,
         agentId,
         assistantMessageId,
-        workspacePath,
-        userMessage,
+        errorMessage,
+        ...llmErrorFields(err),
+      })
+    } finally {
+      detachIpcProjector()
+    }
+
+    if (!hasError && finalContent.trim()) {
+      if (!conversationRowExists(conversationId)) {
+        log.warn(ConfigContext.ENGINE_LOG.PERSIST_ASSISTANT_FAIL, {
+          conversationId,
+          agentId,
+          assistantMessageId,
+          reason: 'conversation-missing',
+        })
+      } else {
+        const threadTag = resolveTurnThreadTag({
+          conversationId,
+          uiMessages,
+          pendingUserMessage,
+        })
+        try {
+          getConversationStore().saveMessage({
+            id: assistantMessageId,
+            conversationId,
+            agentId,
+            role: 'assistant',
+            content: finalContent,
+            createdAt: new Date().toISOString(),
+            threadTag,
+          })
+          log.debug(ConfigContext.ENGINE_LOG.PERSIST_ASSISTANT_OK, {
+            conversationId,
+            agentId,
+            assistantMessageId,
+          })
+          notifyRendererConversationChanged(conversationId, agentId, webContents)
+          if (shouldPersistMemory) {
+            try {
+              const memoryModel = ProviderContext.createModel(
+                agent.provider,
+                agent.model,
+                credentials,
+              )
+              enqueueAgentMemoryExchange({
+                agentId,
+                conversationId,
+                userId,
+                assistantMessageId,
+                assistantContent: finalContent,
+                model: memoryModel,
+                responseLanguage: resolveResponseLanguageForAgent(
+                  agent.responseLanguage,
+                ),
+                uiMessages,
+                pendingUserMessage: args.pendingUserMessage,
+              })
+              log.debug(
+                `${ConfigContext.ENGINE_LOG.MEMORY_RECORD_ENQUEUED} conversationId=${conversationId} agentId=${agentId} assistantMessageId=${assistantMessageId}`,
+              )
+            } catch (memErr) {
+              const errText =
+                memErr instanceof Error ? memErr.message : String(memErr)
+              log.warn(
+                `${ConfigContext.ENGINE_LOG.MEMORY_RECORD_FAIL} conversationId=${conversationId} agentId=${agentId} assistantMessageId=${assistantMessageId} err=${errText}`,
+              )
+            }
+          } else {
+            log.debug(
+              `Skipped agent memory persistence conversationId=${conversationId} agentId=${agentId} assistantMessageId=${assistantMessageId}`,
+            )
+          }
+        } catch (err) {
+          log.error(ConfigContext.ENGINE_LOG.PERSIST_ASSISTANT_FAIL, {
+            conversationId,
+            agentId,
+            assistantMessageId,
+            err,
+          })
+        }
+      }
+    }
+
+    // Notify the renderer only after persist so ChatPanel.onFinish reload sees the
+    // saved assistant row (AgentStreamFinished used to fire from `finally` before save).
+    if (hitlPaused) {
+      // Suspended mid-turn: follow-ups are post-turn only — drop any premature catalog.
+      resetConversationFollowUps(conversationId, { enableWrites: false })
+      return {
+        finalContent,
         hasError,
         errorMessage,
-        finalContent,
-      },
-      conversationHooks,
-    )
-  } catch {
-    // post-hooks are best-effort
-  }
-  streamBridge.notifyFinished()
+        hitlPaused: true,
+      }
+    }
 
-  return { finalContent, hasError, errorMessage, hitlPaused: undefined }
+    if (hasError) {
+      resetConversationFollowUps(conversationId, { enableWrites: false })
+    }
+    try {
+      await runUserHooks(
+        {
+          event: 'postHook',
+          conversationId,
+          agentId,
+          assistantMessageId,
+          workspacePath,
+          userMessage,
+          hasError,
+          errorMessage,
+          finalContent,
+        },
+        conversationHooks,
+      )
+    } catch {
+      // post-hooks are best-effort
+    }
+    streamBridge.notifyFinished()
+
+    return { finalContent, hasError, errorMessage, hitlPaused: undefined }
+  } finally {
+    // Keep the run marked in-flight through post-stream persistence so deletes
+    // can wait for teardown (avoids FOREIGN KEY races after abort+delete).
+    inFlightControllers.delete(conversationId)
+  }
 }
 
 export type RunSubAgentMentionArgs = {
@@ -849,7 +895,7 @@ async function executeSubAgentMentionDelegation(
     hitlPaused = childResult.hitlPaused
     finalContent = resolveSubAgentSummaryText(childResult.stepOutputs)
 
-    log.info('Sub-agent mention delegation completed', {
+    log.debug('Sub-agent mention delegation completed', {
       conversationId,
       agentId,
       targetAgentId: targetId,
@@ -882,29 +928,38 @@ async function executeSubAgentMentionDelegation(
   }
 
   if (!hasError && finalContent.trim() && !hitlPaused) {
-    const threadTag = resolveTurnThreadTag({
-      conversationId,
-      uiMessages,
-      pendingUserMessage,
-    })
-    try {
-      getConversationStore().saveMessage({
-        id: assistantMessageId,
-        conversationId,
-        agentId,
-        role: 'assistant',
-        content: finalContent,
-        createdAt: new Date().toISOString(),
-        threadTag,
-      })
-      notifyRendererConversationChanged(conversationId, agentId, webContents)
-    } catch (err) {
-      log.error(ConfigContext.ENGINE_LOG.PERSIST_ASSISTANT_FAIL, {
+    if (!conversationRowExists(conversationId)) {
+      log.warn(ConfigContext.ENGINE_LOG.PERSIST_ASSISTANT_FAIL, {
         conversationId,
         agentId,
         assistantMessageId,
-        err,
+        reason: 'conversation-missing',
       })
+    } else {
+      const threadTag = resolveTurnThreadTag({
+        conversationId,
+        uiMessages,
+        pendingUserMessage,
+      })
+      try {
+        getConversationStore().saveMessage({
+          id: assistantMessageId,
+          conversationId,
+          agentId,
+          role: 'assistant',
+          content: finalContent,
+          createdAt: new Date().toISOString(),
+          threadTag,
+        })
+        notifyRendererConversationChanged(conversationId, agentId, webContents)
+      } catch (err) {
+        log.error(ConfigContext.ENGINE_LOG.PERSIST_ASSISTANT_FAIL, {
+          conversationId,
+          agentId,
+          assistantMessageId,
+          err,
+        })
+      }
     }
   }
 

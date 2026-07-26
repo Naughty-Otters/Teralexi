@@ -1,28 +1,18 @@
 <template>
-  <div v-if="!collapsed" class="sidebar-actions">
-    <button
-      type="button"
-      class="new-session-btn"
-      title="Start a new blank session"
-      @click="startNewSession"
-    >
-      <UIcon name="i-lucide-square-plus" class="new-session-btn__icon" />
-      <span>New blank session</span>
-    </button>
-  </div>
-  <button
-    v-else
-    type="button"
-    class="new-session-btn new-session-btn--collapsed"
-    title="Start a new blank session"
-    aria-label="Start a new blank session"
-    @click="startNewSession"
-  >
-    <UIcon name="i-lucide-square-plus" class="new-session-btn__icon" />
-  </button>
   <div v-if="!collapsed" class="sidebar-section-header">
     <div class="sidebar-section-label">Conversations</div>
     <div class="sidebar-section-actions">
+      <div class="conversation-groupby">
+        <button
+          type="button"
+          class="conversation-groupby-btn"
+          title="Start a new blank session"
+          aria-label="Start a new blank session"
+          @click="startNewSession"
+        >
+          <UIcon name="i-lucide-plus" class="conversation-groupby-btn__icon" />
+        </button>
+      </div>
       <div class="conversation-groupby">
         <button
           ref="workspaceTriggerRef"
@@ -56,8 +46,64 @@
           <UIcon name="i-lucide-layers" class="conversation-groupby-btn__icon" />
         </button>
       </div>
+      <div class="conversation-groupby">
+        <button
+          type="button"
+          class="conversation-groupby-btn"
+          :class="{ 'conversation-groupby-btn--active': searchOpen }"
+          :title="t.chat.conversationSearch.toggle"
+          :aria-label="t.chat.conversationSearch.toggle"
+          :aria-expanded="searchOpen"
+          :aria-controls="searchOpen ? conversationSearchInputId : undefined"
+          @click="toggleSearch"
+        >
+          <UIcon name="i-lucide-search" class="conversation-groupby-btn__icon" />
+        </button>
+      </div>
     </div>
   </div>
+  <div
+    v-if="!collapsed && searchOpen"
+    class="conversation-search"
+  >
+    <UIcon
+      name="i-lucide-search"
+      class="conversation-search__icon"
+      aria-hidden="true"
+    />
+    <input
+      :id="conversationSearchInputId"
+      ref="searchInputRef"
+      v-model="searchQuery"
+      type="search"
+      class="conversation-search__input"
+      :placeholder="t.chat.conversationSearch.placeholder"
+      :aria-label="t.chat.conversationSearch.placeholder"
+      autocomplete="off"
+      spellcheck="false"
+      @keydown.escape.prevent="onSearchEscape"
+    />
+    <button
+      v-if="searchQuery.trim()"
+      type="button"
+      class="conversation-search__clear"
+      :title="t.chat.conversationSearch.clear"
+      :aria-label="t.chat.conversationSearch.clear"
+      @click="clearSearchQuery"
+    >
+      <UIcon name="i-lucide-x" class="conversation-search__clear-icon" />
+    </button>
+  </div>
+  <button
+    v-else-if="collapsed"
+    type="button"
+    class="conversation-groupby-btn conversation-groupby-btn--collapsed-new"
+    title="Start a new blank session"
+    aria-label="Start a new blank session"
+    @click="startNewSession"
+  >
+    <UIcon name="i-lucide-plus" class="conversation-groupby-btn__icon" />
+  </button>
   <Teleport to="body">
     <div
       v-if="workspaceMenuOpen"
@@ -188,6 +234,83 @@
         {{ option.label }}
       </button>
     </div>
+    <div
+      v-if="itemMenuOpen"
+      ref="itemMenuEl"
+      class="conversation-groupby-menu conversation-item-menu"
+      :style="itemMenuStyle"
+      role="menu"
+      :aria-label="t.chat.conversationMenu.moreOptions"
+      @pointerdown.stop
+      @keydown="onItemMenuKeydown"
+    >
+      <button
+        v-if="itemMenuCanDelete"
+        type="button"
+        class="conversation-groupby-menu__option conversation-groupby-menu__option--danger"
+        role="menuitem"
+        @click="onItemMenuDeleteThis"
+      >
+        <UIcon
+          name="i-lucide-trash-2"
+          class="conversation-groupby-menu__check"
+        />
+        {{ t.chat.conversationMenu.deleteThis }}
+      </button>
+      <button
+        v-if="itemMenuCanDeleteOthers"
+        type="button"
+        class="conversation-groupby-menu__option conversation-groupby-menu__option--danger"
+        role="menuitem"
+        @click="onItemMenuDeleteOthers"
+      >
+        <UIcon
+          name="i-lucide-trash"
+          class="conversation-groupby-menu__check"
+        />
+        {{ t.chat.conversationMenu.deleteOthers }}
+      </button>
+      <div
+        v-if="itemMenuCanDelete || itemMenuCanDeleteOthers"
+        class="conversation-groupby-menu__divider"
+        role="separator"
+        aria-hidden="true"
+      />
+      <div class="conversation-groupby-menu__section-label">
+        {{ t.chat.conversationMenu.color }}
+      </div>
+      <div class="conversation-color-palette" role="group" :aria-label="t.chat.conversationMenu.color">
+        <button
+          type="button"
+          class="conversation-color-swatch conversation-color-swatch--clear"
+          :class="{
+            'conversation-color-swatch--active': !itemMenuColor,
+          }"
+          role="menuitemradio"
+          :aria-checked="!itemMenuColor"
+          :title="t.chat.conversationMenu.clearColor"
+          :aria-label="t.chat.conversationMenu.clearColor"
+          @click="setConversationColor(itemMenuConversationId, null)"
+        >
+          <UIcon name="i-lucide-ban" class="conversation-color-swatch__icon" />
+        </button>
+        <button
+          v-for="swatch in CONVERSATION_COLOR_PALETTE"
+          :key="swatch"
+          type="button"
+          class="conversation-color-swatch"
+          :class="{
+            'conversation-color-swatch--active': itemMenuColor === swatch,
+          }"
+          :style="{ '--swatch-color': swatch }"
+          role="menuitemradio"
+          :aria-checked="itemMenuColor === swatch"
+          :title="swatch"
+          :aria-label="`Color ${swatch}`"
+          @click="setConversationColor(itemMenuConversationId, swatch)"
+        />
+      </div>
+    </div>
   </Teleport>
   <ul
     v-if="isConversationListLoading"
@@ -302,12 +425,16 @@
             class="agent-item"
             :class="{
               'agent-item--active': isActiveConversation(conv.id),
+              'agent-item--running': isConversationRunning(conv.id),
               'agent-item--collapsed': collapsed,
               'agent-item--nested': showGroupHeaders,
+              'agent-item--tinted': Boolean(conversationColors[conv.id]),
             }"
+            :style="conversationItemStyle(conv.id)"
             role="button"
             tabindex="0"
             :aria-current="isActiveConversation(conv.id) ? 'true' : undefined"
+            :aria-busy="isConversationRunning(conv.id) ? 'true' : undefined"
             @click="openConversation(conv.id, conv.agentId)"
             @keydown.enter.prevent="openConversation(conv.id, conv.agentId)"
             @keydown.space.prevent="openConversation(conv.id, conv.agentId)"
@@ -322,7 +449,49 @@
               :ui="{ fallback: 'font-bold text-xs' }"
             />
             <div v-if="!collapsed" class="agent-item-info">
-              <p class="agent-item-name">{{ conv.title }}</p>
+              <p class="agent-item-name">
+                <span class="agent-item-name__text">{{ conv.title }}</span>
+                <span
+                  v-if="isConversationRunning(conv.id) && contextUsageById[conv.id]"
+                  class="agent-item-context"
+                  :class="{
+                    'agent-item-context--warn':
+                      contextUsageById[conv.id]!.atCapacity,
+                    'agent-item-context--over':
+                      contextUsageById[conv.id]!.overCapacity,
+                  }"
+                  :title="contextUsageTitle(conv.id)"
+                  role="progressbar"
+                  :aria-valuenow="contextUsageById[conv.id]!.used"
+                  :aria-valuemin="0"
+                  :aria-valuemax="contextUsageById[conv.id]!.capacity"
+                  :aria-label="`Context ${contextPercent(conv.id)}%`"
+                >
+                  <svg
+                    class="agent-item-context__svg"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      class="agent-item-context__track"
+                      cx="12"
+                      cy="12"
+                      :r="CONTEXT_RING_RADIUS"
+                    />
+                    <circle
+                      class="agent-item-context__fill"
+                      cx="12"
+                      cy="12"
+                      :r="CONTEXT_RING_RADIUS"
+                      :stroke-dasharray="CONTEXT_RING_CIRCUMFERENCE"
+                      :stroke-dashoffset="contextRingOffset(conv.id)"
+                    />
+                  </svg>
+                  <span class="agent-item-context__pct" aria-hidden="true">
+                    {{ contextPercent(conv.id) }}%
+                  </span>
+                </span>
+              </p>
               <p
                 v-if="conversationMetaById[conv.id]"
                 class="agent-item-desc"
@@ -330,22 +499,77 @@
                 {{ conversationMetaById[conv.id] }}
               </p>
             </div>
+            <span
+              v-else-if="isConversationRunning(conv.id) && contextUsageById[conv.id]"
+              class="agent-item-context agent-item-context--collapsed"
+              :class="{
+                'agent-item-context--warn':
+                  contextUsageById[conv.id]!.atCapacity,
+                'agent-item-context--over':
+                  contextUsageById[conv.id]!.overCapacity,
+              }"
+              :title="contextUsageTitle(conv.id)"
+              aria-hidden="true"
+            >
+              <svg
+                class="agent-item-context__svg"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="agent-item-context__track"
+                  cx="12"
+                  cy="12"
+                  :r="CONTEXT_RING_RADIUS"
+                />
+                <circle
+                  class="agent-item-context__fill"
+                  cx="12"
+                  cy="12"
+                  :r="CONTEXT_RING_RADIUS"
+                  :stroke-dasharray="CONTEXT_RING_CIRCUMFERENCE"
+                  :stroke-dashoffset="contextRingOffset(conv.id)"
+                />
+              </svg>
+            </span>
             <span v-if="msgCount(conv.id) > 0 && !collapsed" class="msg-badge">
               {{ msgCount(conv.id) }}
             </span>
             <div
-              v-if="!collapsed && canDelete(conv.id)"
+              v-if="!collapsed && (canDelete(conv.id) || isActiveConversation(conv.id))"
               class="agent-item-actions"
               role="toolbar"
               aria-label="Conversation actions"
               @click.stop
+              @pointerdown.stop
             >
               <button
+                v-if="isActiveConversation(conv.id)"
+                type="button"
+                class="agent-item-action-btn"
+                :class="{
+                  'agent-item-action-btn--active':
+                    itemMenuOpen && itemMenuConversationId === conv.id,
+                }"
+                :title="t.chat.conversationMenu.moreOptions"
+                :aria-label="t.chat.conversationMenu.moreOptions"
+                aria-haspopup="menu"
+                :aria-expanded="
+                  itemMenuOpen && itemMenuConversationId === conv.id
+                "
+                @click="toggleItemMenu(conv, $event)"
+              >
+                <UIcon
+                  name="i-lucide-ellipsis"
+                  class="agent-item-action-btn__icon"
+                />
+              </button>
+              <button
+                v-if="canDelete(conv.id)"
                 type="button"
                 class="agent-item-action-btn agent-item-action-btn--danger"
                 title="Delete conversation"
                 aria-label="Delete conversation"
-                @click="openDeleteDialog(conv)"
+                @click="openDeleteDialog(conv, 'single')"
               >
                 <UIcon
                   name="i-lucide-trash-2"
@@ -360,6 +584,16 @@
     <li v-if="conversationItems.length === 0 && !collapsed" class="empty-item">
       No conversations yet.
     </li>
+    <li
+      v-else-if="
+        !collapsed &&
+        searchQuery.trim() &&
+        filteredConversationItems.length === 0
+      "
+      class="empty-item"
+    >
+      {{ t.chat.conversationSearch.noMatches }}
+    </li>
   </ul>
 
   <Teleport to="body">
@@ -370,14 +604,17 @@
       @click.self="closeDeleteDialog"
     >
       <div
+        ref="deleteDialogEl"
         class="conversation-delete-dialog"
         role="alertdialog"
         aria-modal="true"
+        tabindex="-1"
         :aria-labelledby="deleteDialogTitleId"
         :aria-describedby="deleteDialogMessageId"
+        @keydown="onDeleteDialogKeydown"
       >
         <h3 :id="deleteDialogTitleId" class="conversation-delete-dialog__title">
-          {{ t.chat.deleteConversationDialog.title }}
+          {{ deleteDialogTitle }}
         </h3>
         <p
           :id="deleteDialogMessageId"
@@ -387,12 +624,13 @@
         </p>
         <div class="conversation-delete-dialog__actions">
           <button
+            ref="deleteCancelBtnRef"
             type="button"
             class="conversation-delete-dialog__btn"
             :disabled="deletingConversation"
             @click="closeDeleteDialog"
           >
-            {{ t.chat.deleteConversationDialog.cancel }}
+            {{ deleteDialogCancelLabel }}
           </button>
           <button
             type="button"
@@ -400,11 +638,7 @@
             :disabled="deletingConversation"
             @click="confirmDeleteConversation"
           >
-            {{
-              deletingConversation
-                ? t.chat.deleteConversationDialog.deleting
-                : t.chat.deleteConversationDialog.confirm
-            }}
+            {{ deleteDialogConfirmLabel }}
           </button>
         </div>
       </div>
@@ -422,8 +656,10 @@ import {
   LAYOUT_PREF_KEYS,
   readStoredBooleanMap,
   readStoredString,
+  readStoredStringMap,
   writeStoredBooleanMap,
   writeStoredString,
+  writeStoredStringMap,
 } from '@renderer/lib/layout-preferences'
 import {
   groupConversations,
@@ -443,7 +679,26 @@ import {
   type ConversationListLabelField,
 } from '../lib/conversation-list-item-labels'
 import { clearConversationSession } from '../conversation-chat-session'
+import { computeContextWindowUsage } from '@shared/agent/context-window-usage'
+import { chatUiContextWindowMessages } from '../chatUiSettings'
 import AppIconTooltip from '@renderer/components/AppIconTooltip.vue'
+
+const CONTEXT_RING_RADIUS = 9
+const CONTEXT_RING_CIRCUMFERENCE = 2 * Math.PI * CONTEXT_RING_RADIUS
+
+/** Soft tint colors for conversation list items. */
+const CONVERSATION_COLOR_PALETTE = [
+  '#f87171',
+  '#fb923c',
+  '#fbbf24',
+  '#a3e635',
+  '#34d399',
+  '#22d3ee',
+  '#60a5fa',
+  '#a78bfa',
+  '#f472b6',
+  '#94a3b8',
+] as const
 
 const emit = defineEmits<{ 'navigate-chat': [] }>()
 const props = defineProps<{ collapsed?: boolean }>()
@@ -455,16 +710,39 @@ const conversationItemRefs = new Map<string, HTMLElement>()
 const showDeleteDialog = ref(false)
 const deletingConversation = ref(false)
 const deleteTarget = ref<Conversation | null>(null)
+const deleteMode = ref<'single' | 'others'>('single')
+const deleteOthersTargets = ref<Conversation[]>([])
+const deleteDialogEl = ref<HTMLElement | null>(null)
+const deleteCancelBtnRef = ref<HTMLButtonElement | null>(null)
+/** Conversation that was active when the delete dialog opened (focus restore target). */
+const deleteDialogRestoreConversationId = ref<string | null>(null)
+/** Fallback focus target if the conversation row is gone. */
+const deleteDialogRestoreEl = ref<HTMLElement | null>(null)
 const deleteDialogTitleId = 'conversation-delete-dialog-title'
 const deleteDialogMessageId = 'conversation-delete-dialog-message'
 const groupByMenuOpen = ref(false)
 const groupByTriggerRef = ref<HTMLButtonElement | null>(null)
+/** Bumps while any conversation is streaming so live Chat message counts refresh. */
+const contextLiveTick = ref(0)
+let contextLiveTimer: ReturnType<typeof setInterval> | null = null
 const groupByMenuEl = ref<HTMLElement | null>(null)
 const groupByMenuStyle = ref<Record<string, string>>({})
 const workspaceMenuOpen = ref(false)
 const workspaceTriggerRef = ref<HTMLButtonElement | null>(null)
 const workspaceMenuEl = ref<HTMLElement | null>(null)
 const workspaceMenuStyle = ref<Record<string, string>>({})
+const itemMenuOpen = ref(false)
+const itemMenuConversationId = ref<string | null>(null)
+const itemMenuTriggerRef = ref<HTMLElement | null>(null)
+const itemMenuEl = ref<HTMLElement | null>(null)
+const itemMenuStyle = ref<Record<string, string>>({})
+const conversationColors = ref<Record<string, string>>(
+  readStoredStringMap(LAYOUT_PREF_KEYS.conversationListItemColors),
+)
+const searchOpen = ref(false)
+const searchQuery = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
+const conversationSearchInputId = 'conversation-list-search-input'
 const groupByMode = ref<ConversationListGroupBy>(
   parseConversationListGroupBy(
     readStoredString(LAYOUT_PREF_KEYS.conversationListGroupBy),
@@ -497,6 +775,23 @@ const conversationItems = computed((): Conversation[] => {
     .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 })
 
+const filteredConversationItems = computed((): Conversation[] => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return conversationItems.value
+  return conversationItems.value.filter((conv) => {
+    const title = (conv.title ?? '').toLowerCase()
+    const agent = agentName(conv.agentId).toLowerCase()
+    const workspace = (conv.workspacePath ?? '').toLowerCase()
+    const type = (conv.type ?? '').toLowerCase()
+    return (
+      title.includes(query) ||
+      agent.includes(query) ||
+      workspace.includes(query) ||
+      type.includes(query)
+    )
+  })
+})
+
 /** Unique workspace folders from existing conversations, newest first. */
 const existingWorkspaces = computed((): Array<{ path: string; label: string }> => {
   const seen = new Set<string>()
@@ -515,7 +810,7 @@ const existingWorkspaces = computed((): Array<{ path: string; label: string }> =
 
 const conversationGroups = computed(() =>
   groupConversations(
-    conversationItems.value,
+    filteredConversationItems.value,
     props.collapsed ? 'none' : groupByMode.value,
     agentName,
   ),
@@ -560,6 +855,14 @@ watch(
       LAYOUT_PREF_KEYS.conversationListItemLabels,
       serializeConversationListItemLabels(value),
     )
+  },
+  { deep: true },
+)
+
+watch(
+  conversationColors,
+  (value) => {
+    writeStoredStringMap(LAYOUT_PREF_KEYS.conversationListItemColors, value)
   },
   { deep: true },
 )
@@ -615,6 +918,55 @@ function isActiveConversation(conversationId: string): boolean {
   return agentStore.currentConversationId === conversationId
 }
 
+function isConversationRunning(conversationId: string): boolean {
+  return agentStore.isConversationStreamActive(conversationId)
+}
+
+function conversationMessageCount(conversationId: string): number {
+  // Prefer Pinia store length — avoid touching live Chat SDK on the sidebar hot path.
+  return agentStore.conversations?.[conversationId]?.length ?? 0
+}
+
+const contextUsageById = computed(() => {
+  // Recompute when streams start/end (epoch inside isConversationStreamActive) or store changes.
+  void contextLiveTick.value
+  for (const conv of conversationItems.value) {
+    void agentStore.isConversationStreamActive(conv.id)
+  }
+  void agentStore.conversations
+  void chatUiContextWindowMessages.value
+  const capacity = chatUiContextWindowMessages.value
+  const out: Record<
+    string,
+    ReturnType<typeof computeContextWindowUsage>
+  > = {}
+  for (const conv of conversationItems.value) {
+    out[conv.id] = computeContextWindowUsage({
+      messageCount: conversationMessageCount(conv.id),
+      capacity,
+    })
+  }
+  return out
+})
+
+function contextPercent(conversationId: string): number {
+  const usage = contextUsageById.value[conversationId]
+  if (!usage) return 0
+  return Math.round(usage.fillRatio * 100)
+}
+
+function contextRingOffset(conversationId: string): number {
+  const usage = contextUsageById.value[conversationId]
+  if (!usage) return CONTEXT_RING_CIRCUMFERENCE
+  return CONTEXT_RING_CIRCUMFERENCE * (1 - usage.fillRatio)
+}
+
+function contextUsageTitle(conversationId: string): string {
+  const usage = contextUsageById.value[conversationId]
+  if (!usage) return 'Running'
+  return `Context ${usage.used}/${usage.capacity} messages (${contextPercent(conversationId)}%)`
+}
+
 async function scrollActiveConversationIntoView(): Promise<void> {
   const activeId = agentStore.currentConversationId
   if (!activeId || props.collapsed) return
@@ -631,16 +983,21 @@ function positionFloatingMenu(
   trigger: HTMLElement | null,
   width: number,
 ): Record<string, string> {
-  if (!trigger) return {}
+  if (!(trigger instanceof HTMLElement)) return {}
   const rect = trigger.getBoundingClientRect()
   const gap = 4
   let left = rect.left
   if (left + width > window.innerWidth - 8) {
     left = Math.max(8, window.innerWidth - width - 8)
   }
+  let top = rect.bottom + gap
+  const estimatedHeight = 220
+  if (top + estimatedHeight > window.innerHeight - 8) {
+    top = Math.max(8, rect.top - estimatedHeight - gap)
+  }
   return {
     position: 'fixed',
-    top: `${rect.bottom + gap}px`,
+    top: `${top}px`,
     left: `${left}px`,
     width: `${width}px`,
     zIndex: '10050',
@@ -658,8 +1015,124 @@ function positionWorkspaceMenu() {
   )
 }
 
+function positionItemMenu() {
+  itemMenuStyle.value = positionFloatingMenu(itemMenuTriggerRef.value, 240)
+}
+
+const itemMenuConversation = computed(() => {
+  const id = itemMenuConversationId.value
+  if (!id) return null
+  return conversationItems.value.find((c) => c.id === id) ?? null
+})
+
+const itemMenuCanDelete = computed(() => {
+  const id = itemMenuConversationId.value
+  return Boolean(id && canDelete(id))
+})
+
+const itemMenuCanDeleteOthers = computed(() => {
+  const id = itemMenuConversationId.value
+  if (!id) return false
+  return deletableOtherConversations(id).length > 0
+})
+
+const itemMenuColor = computed(() => {
+  const id = itemMenuConversationId.value
+  if (!id) return null
+  return conversationColors.value[id] ?? null
+})
+
+function deletableOtherConversations(keepId: string): Conversation[] {
+  return conversationItems.value.filter(
+    (c) => c.id !== keepId && canDelete(c.id),
+  )
+}
+
+function conversationItemStyle(
+  conversationId: string,
+): Record<string, string> | undefined {
+  const color = conversationColors.value[conversationId]
+  if (!color) return undefined
+  return { '--conv-item-tint': color }
+}
+
+function clearConversationColor(conversationId: string) {
+  if (!(conversationId in conversationColors.value)) return
+  const next = { ...conversationColors.value }
+  delete next[conversationId]
+  conversationColors.value = next
+}
+
+function setConversationColor(
+  conversationId: string | null,
+  color: string | null,
+) {
+  if (!conversationId) return
+  if (!color) {
+    clearConversationColor(conversationId)
+    return
+  }
+  conversationColors.value = {
+    ...conversationColors.value,
+    [conversationId]: color,
+  }
+}
+
+function closeItemMenu() {
+  itemMenuOpen.value = false
+  itemMenuConversationId.value = null
+}
+
+async function toggleItemMenu(conv: Conversation, event?: MouseEvent) {
+  groupByMenuOpen.value = false
+  workspaceMenuOpen.value = false
+  const trigger =
+    event?.currentTarget instanceof HTMLElement
+      ? event.currentTarget
+      : null
+  if (
+    itemMenuOpen.value &&
+    itemMenuConversationId.value === conv.id
+  ) {
+    closeItemMenu()
+    return
+  }
+  if (trigger) itemMenuTriggerRef.value = trigger
+  itemMenuConversationId.value = conv.id
+  itemMenuOpen.value = true
+  await nextTick()
+  positionItemMenu()
+  // Re-position after the teleported menu mounts and layout settles.
+  await nextTick()
+  positionItemMenu()
+}
+
+function onItemMenuDeleteThis() {
+  const conv = itemMenuConversation.value
+  closeItemMenu()
+  if (!conv) return
+  openDeleteDialog(conv, 'single')
+}
+
+function onItemMenuDeleteOthers() {
+  const conv = itemMenuConversation.value
+  closeItemMenu()
+  if (!conv) return
+  openDeleteDialog(conv, 'others')
+}
+
+function onItemMenuKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    closeItemMenu()
+    void nextTick(() => itemMenuTriggerRef.value?.focus())
+  }
+}
+
 async function toggleGroupByMenu() {
   workspaceMenuOpen.value = false
+  closeItemMenu()
   if (groupByMenuOpen.value) {
     groupByMenuOpen.value = false
     return
@@ -669,8 +1142,41 @@ async function toggleGroupByMenu() {
   positionGroupByMenu()
 }
 
+async function toggleSearch() {
+  groupByMenuOpen.value = false
+  workspaceMenuOpen.value = false
+  closeItemMenu()
+  if (searchOpen.value) {
+    closeSearch()
+    return
+  }
+  searchOpen.value = true
+  await nextTick()
+  searchInputRef.value?.focus()
+  searchInputRef.value?.select()
+}
+
+function clearSearchQuery() {
+  searchQuery.value = ''
+  void nextTick(() => searchInputRef.value?.focus())
+}
+
+function closeSearch() {
+  searchOpen.value = false
+  searchQuery.value = ''
+}
+
+function onSearchEscape() {
+  if (searchQuery.value.trim()) {
+    clearSearchQuery()
+    return
+  }
+  closeSearch()
+}
+
 async function toggleWorkspaceMenu() {
   groupByMenuOpen.value = false
+  closeItemMenu()
   if (workspaceMenuOpen.value) {
     workspaceMenuOpen.value = false
     return
@@ -697,14 +1203,51 @@ function onDocumentPointerDown(event: PointerEvent) {
     const inMenu = workspaceMenuEl.value?.contains(target)
     if (!inTrigger && !inMenu) workspaceMenuOpen.value = false
   }
+  if (itemMenuOpen.value) {
+    const trigger = itemMenuTriggerRef.value
+    const inTrigger =
+      trigger instanceof HTMLElement ? trigger.contains(target) : false
+    const inMenu = itemMenuEl.value?.contains(target) ?? false
+    if (!inTrigger && !inMenu) closeItemMenu()
+  }
 }
 
 function onWindowReposition() {
   if (groupByMenuOpen.value) positionGroupByMenu()
   if (workspaceMenuOpen.value) positionWorkspaceMenu()
+  if (itemMenuOpen.value) positionItemMenu()
 }
 
+const deleteDialogTitle = computed(() =>
+  deleteMode.value === 'others'
+    ? t.value.chat.deleteOthersDialog.title
+    : t.value.chat.deleteConversationDialog.title,
+)
+
+const deleteDialogCancelLabel = computed(() =>
+  deleteMode.value === 'others'
+    ? t.value.chat.deleteOthersDialog.cancel
+    : t.value.chat.deleteConversationDialog.cancel,
+)
+
+const deleteDialogConfirmLabel = computed(() => {
+  if (deletingConversation.value) {
+    return deleteMode.value === 'others'
+      ? t.value.chat.deleteOthersDialog.deleting
+      : t.value.chat.deleteConversationDialog.deleting
+  }
+  return deleteMode.value === 'others'
+    ? t.value.chat.deleteOthersDialog.confirm
+    : t.value.chat.deleteConversationDialog.confirm
+})
+
 const deleteDialogMessage = computed(() => {
+  if (deleteMode.value === 'others') {
+    return t.value.chat.deleteOthersDialog.message.replace(
+      '{count}',
+      String(deleteOthersTargets.value.length),
+    )
+  }
   const conv = deleteTarget.value
   if (!conv) return ''
   const name = conv.title?.trim() || 'Untitled'
@@ -715,26 +1258,123 @@ const deleteDialogMessage = computed(() => {
   return template.replace('{name}', name)
 })
 
-function openDeleteDialog(conv: Conversation) {
+function focusConversationItem(conversationId: string | null | undefined): boolean {
+  if (!conversationId) return false
+  const host = conversationItemRefs.get(conversationId)
+  const item = host?.querySelector<HTMLElement>('.agent-item[role="button"]')
+  if (!item) return false
+  item.focus()
+  return true
+}
+
+function restoreFocusAfterDeleteDialog() {
+  const preferredId = deleteDialogRestoreConversationId.value
+  deleteDialogRestoreConversationId.value = null
+  const fallbackEl = deleteDialogRestoreEl.value
+  deleteDialogRestoreEl.value = null
+
+  if (focusConversationItem(preferredId)) return
+  if (focusConversationItem(agentStore.currentConversationId)) return
+  fallbackEl?.focus?.()
+}
+
+function openDeleteDialog(
+  conv: Conversation,
+  mode: 'single' | 'others' = 'single',
+) {
+  deleteDialogRestoreConversationId.value = agentStore.currentConversationId
+  const active = document.activeElement
+  deleteDialogRestoreEl.value = active instanceof HTMLElement ? active : null
+  deleteMode.value = mode
   deleteTarget.value = conv
+  deleteOthersTargets.value =
+    mode === 'others' ? deletableOtherConversations(conv.id) : []
+  if (mode === 'others' && deleteOthersTargets.value.length === 0) return
   showDeleteDialog.value = true
+  void nextTick(() => {
+    ;(deleteCancelBtnRef.value ?? deleteDialogEl.value)?.focus()
+  })
 }
 
 function closeDeleteDialog() {
   if (deletingConversation.value) return
   showDeleteDialog.value = false
   deleteTarget.value = null
+  deleteOthersTargets.value = []
+  deleteMode.value = 'single'
+  void nextTick(() => restoreFocusAfterDeleteDialog())
+}
+
+function onDeleteDialogKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    closeDeleteDialog()
+    return
+  }
+  if (event.key !== 'Tab') return
+  const root = deleteDialogEl.value
+  if (!root) return
+  const focusables = Array.from(
+    root.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((el) => !el.hasAttribute('disabled') && el.tabIndex >= 0)
+  if (focusables.length === 0) {
+    event.preventDefault()
+    root.focus()
+    return
+  }
+  const first = focusables[0]!
+  const last = focusables[focusables.length - 1]!
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
 }
 
 async function confirmDeleteConversation() {
+  if (deletingConversation.value) return
+  if (deleteMode.value === 'others') {
+    const targets = [...deleteOthersTargets.value]
+    if (targets.length === 0) return
+    deletingConversation.value = true
+    try {
+      for (const conv of targets) {
+        clearConversationSession(conv.id)
+        clearConversationColor(conv.id)
+        await agentStore.deleteConversation(conv.id)
+      }
+      showDeleteDialog.value = false
+      deleteTarget.value = null
+      deleteOthersTargets.value = []
+      deleteMode.value = 'single'
+      void nextTick(() => restoreFocusAfterDeleteDialog())
+    } catch (err) {
+      toast.add({
+        title: t.value.chat.deleteOthersDialog.failed,
+        description: err instanceof Error ? err.message : String(err),
+        color: 'error',
+      })
+    } finally {
+      deletingConversation.value = false
+    }
+    return
+  }
+
   const conv = deleteTarget.value
-  if (!conv || deletingConversation.value) return
+  if (!conv) return
   deletingConversation.value = true
   try {
     clearConversationSession(conv.id)
+    clearConversationColor(conv.id)
     await agentStore.deleteConversation(conv.id)
     showDeleteDialog.value = false
     deleteTarget.value = null
+    void nextTick(() => restoreFocusAfterDeleteDialog())
   } catch (err) {
     toast.add({
       title: t.value.chat.deleteConversationDialog.failed,
@@ -751,12 +1391,26 @@ onMounted(() => {
   window.addEventListener('resize', onWindowReposition)
   window.addEventListener('scroll', onWindowReposition, true)
   void scrollActiveConversationIntoView()
+  contextLiveTimer = setInterval(() => {
+    const anyRunning = conversationItems.value.some((conv) =>
+      agentStore.isConversationStreamActive(conv.id),
+    )
+    if (anyRunning) contextLiveTick.value++
+  }, 1000)
 })
 
 watch(
   () => agentStore.currentConversationId,
   () => {
+    closeItemMenu()
     void scrollActiveConversationIntoView()
+  },
+)
+
+watch(
+  () => props.collapsed,
+  (collapsed) => {
+    if (collapsed) closeSearch()
   },
 )
 
@@ -782,6 +1436,10 @@ onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onDocumentPointerDown, true)
   window.removeEventListener('resize', onWindowReposition)
   window.removeEventListener('scroll', onWindowReposition, true)
+  if (contextLiveTimer) {
+    clearInterval(contextLiveTimer)
+    contextLiveTimer = null
+  }
 })
 
 async function openConversation(conversationId: string, agentId: string) {
@@ -881,40 +1539,6 @@ const conversationTooltipModelById = computed(
 </script>
 
 <style scoped>
-.sidebar-actions {
-  padding: 8px 12px 4px;
-}
-.new-session-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 5px 10px;
-  border: 1px dashed var(--ui-border);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ui-text);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
-}
-.new-session-btn:hover {
-  background: var(--ui-bg-accented);
-  border-color: var(--color-primary-500);
-}
-.new-session-btn--collapsed {
-  width: 32px;
-  height: 32px;
-  margin: 6px auto 4px;
-  padding: 0;
-  border-style: solid;
-}
-.new-session-btn__icon {
-  width: 16px;
-  height: 16px;
-}
 .sidebar-section-header {
   display: flex;
   align-items: center;
@@ -935,6 +1559,67 @@ const conversationTooltipModelById = computed(
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ui-text-muted);
+}
+.conversation-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 10px 6px;
+  padding: 0 8px;
+  height: 32px;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  background: var(--ui-bg);
+  box-sizing: border-box;
+}
+.conversation-search:focus-within {
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary-500, var(--ui-primary)) 55%,
+    var(--ui-border)
+  );
+}
+.conversation-search__icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--ui-text-muted);
+}
+.conversation-search__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--ui-text);
+  font: inherit;
+  font-size: 12px;
+}
+.conversation-search__input::-webkit-search-cancel-button {
+  display: none;
+}
+.conversation-search__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ui-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.conversation-search__clear:hover {
+  background: color-mix(in srgb, var(--ui-text) 10%, transparent);
+  color: var(--ui-text);
+}
+.conversation-search__clear-icon {
+  width: 12px;
+  height: 12px;
 }
 .conversation-groupby {
   position: relative;
@@ -957,6 +1642,10 @@ const conversationTooltipModelById = computed(
 .conversation-groupby-btn--active {
   background: color-mix(in srgb, var(--ui-text) 10%, transparent);
   color: var(--ui-text);
+}
+.conversation-groupby-btn--collapsed-new {
+  display: flex;
+  margin: 6px auto 4px;
 }
 .conversation-groupby-btn__icon {
   width: 14px;
@@ -1010,6 +1699,50 @@ const conversationTooltipModelById = computed(
 .conversation-groupby-menu__option:hover,
 .conversation-groupby-menu__option--active {
   background: color-mix(in srgb, var(--ui-text) 8%, transparent);
+}
+.conversation-groupby-menu__option--danger {
+  color: var(--color-error-600, #dc2626);
+}
+.conversation-groupby-menu__option--danger:hover {
+  background: color-mix(in srgb, var(--color-error-500, #ef4444) 12%, transparent);
+  color: var(--color-error-700, #b91c1c);
+}
+.conversation-item-menu {
+  min-width: 220px;
+}
+.conversation-color-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 10px 10px;
+}
+.conversation-color-swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--swatch-color);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.conversation-color-swatch:hover {
+  transform: scale(1.08);
+}
+.conversation-color-swatch--active {
+  border-color: var(--ui-text);
+  box-shadow: 0 0 0 1px var(--ui-bg);
+}
+.conversation-color-swatch--clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ui-bg-accented);
+  color: var(--ui-text-muted);
+}
+.conversation-color-swatch__icon {
+  width: 12px;
+  height: 12px;
 }
 .conversation-groupby-menu__check {
   width: 14px;
@@ -1242,6 +1975,27 @@ const conversationTooltipModelById = computed(
 .agent-item--active:hover {
   background: color-mix(in srgb, var(--color-primary-500, var(--ui-primary)) 18%, var(--ui-bg));
 }
+.agent-item--tinted {
+  background: color-mix(in srgb, var(--conv-item-tint) 22%, var(--ui-bg));
+  border-color: color-mix(in srgb, var(--conv-item-tint) 34%, var(--ui-border));
+}
+.agent-item--tinted:hover {
+  background: color-mix(in srgb, var(--conv-item-tint) 28%, var(--ui-bg));
+}
+.agent-item--tinted.agent-item--active {
+  background: color-mix(in srgb, var(--conv-item-tint) 30%, var(--ui-bg));
+  border-color: color-mix(in srgb, var(--conv-item-tint) 42%, var(--ui-border));
+  box-shadow: inset 3px 0 0 var(--conv-item-tint);
+}
+.agent-item--tinted.agent-item--active:hover {
+  background: color-mix(in srgb, var(--conv-item-tint) 36%, var(--ui-bg));
+}
+.agent-item--tinted.agent-item--active .agent-item-name {
+  color: var(--ui-text);
+}
+.agent-item--tinted.agent-item--active .agent-item-desc {
+  color: var(--ui-text-muted);
+}
 .agent-item--active .agent-item-name {
   color: var(--color-primary-500, var(--ui-primary));
   font-weight: 600;
@@ -1260,18 +2014,105 @@ const conversationTooltipModelById = computed(
     0 0 0 2px var(--ui-bg),
     0 0 0 3px var(--color-primary-500, var(--ui-primary));
 }
-.agent-item-info {
-  flex: 1;
-  min-width: 0;
-}
 .agent-item-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 500;
   color: var(--ui-text);
+  margin: 0 0 1px;
+  min-width: 0;
+}
+.agent-item-name__text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin: 0 0 1px;
+  min-width: 0;
+}
+.agent-item-context {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  animation: agent-item-context-breathe 1.6s ease-in-out infinite;
+}
+.agent-item-context--collapsed {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  gap: 0;
+}
+.agent-item-context__svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+}
+.agent-item-context--collapsed .agent-item-context__svg {
+  width: 14px;
+  height: 14px;
+}
+.agent-item-context--collapsed .agent-item-context__pct {
+  display: none;
+}
+.agent-item-context__track,
+.agent-item-context__fill {
+  fill: none;
+  stroke-width: 3;
+}
+.agent-item-context__track {
+  stroke: color-mix(in srgb, var(--ui-border) 85%, transparent);
+}
+.agent-item-context__fill {
+  stroke: var(--color-primary-500, var(--ui-primary));
+  stroke-linecap: round;
+  transition:
+    stroke-dashoffset 0.2s ease,
+    stroke 0.2s ease;
+}
+.agent-item-context--warn .agent-item-context__fill {
+  stroke: var(--color-warning-500, #f59e0b);
+}
+.agent-item-context--over .agent-item-context__fill {
+  stroke: var(--color-error-500, #ef4444);
+}
+.agent-item-context__pct {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--ui-text-muted);
+  white-space: nowrap;
+}
+.agent-item-context--warn .agent-item-context__pct {
+  color: var(--color-warning-500, #f59e0b);
+}
+.agent-item-context--over .agent-item-context__pct {
+  color: var(--color-error-500, #ef4444);
+}
+.agent-item--running:not(.agent-item--active) {
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary-500, var(--ui-primary)) 22%,
+    var(--ui-border)
+  );
+}
+@keyframes agent-item-context-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+.agent-item-info {
+  flex: 1;
+  min-width: 0;
 }
 .agent-item-desc {
   font-size: 11px;
@@ -1308,7 +2149,8 @@ const conversationTooltipModelById = computed(
 }
 
 .agent-item:hover .agent-item-actions,
-.agent-item:focus-within .agent-item-actions {
+.agent-item:focus-within .agent-item-actions,
+.agent-item--active .agent-item-actions {
   opacity: 1;
   pointer-events: auto;
 }
@@ -1326,7 +2168,8 @@ const conversationTooltipModelById = computed(
   cursor: pointer;
 }
 
-.agent-item-action-btn:hover {
+.agent-item-action-btn:hover,
+.agent-item-action-btn--active {
   background: color-mix(in srgb, var(--ui-text) 10%, transparent);
   color: var(--ui-text);
 }

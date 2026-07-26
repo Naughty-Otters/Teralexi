@@ -34,6 +34,7 @@ export default defineConfig({
       '@main': resolve('src/main'),
       '@logging': resolve('src/logging'),
       '@shared': resolve('src/shared'),
+      '@config': resolve('config'),
       '@teralexi-ai/vue': resolve('src/teralexi-ai/vue.ts'),
       '@teralexi-ai/mcp': resolve('src/teralexi-ai/mcp.ts'),
       '@teralexi-ai': resolve('src/teralexi-ai/renderer.ts'),

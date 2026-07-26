@@ -28,9 +28,15 @@ const {
 vi.mock('@main/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
+    debug: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
-    child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
+    child: () => ({
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    }),
   }),
   instrumentObjectMethods: <T>(o: T) => o,
   instrumentInstanceMethods: <T>(o: T) => o,
@@ -43,6 +49,13 @@ vi.mock('@main/services/conversation-store', () => ({
     upsertConversationSandboxRun: vi.fn(),
     getMessageAttachmentsForMessage: vi.fn(() => []),
     getMessages: vi.fn(() => []),
+    getConversation: vi.fn((id: string) => ({
+      id,
+      agentId: 'skill:demo',
+      title: 'Test',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })),
     getConversationHooks: vi.fn(() => ({ hooks: [] })),
     getConversationLlmOverride: getConversationLlmOverrideMock,
   })),

@@ -178,6 +178,19 @@ export const lang: AppLocaleBundle = {
       '此技能需要先保存本地配置才能开始聊天。设置会写入 ~/.teralexi/config/config.properties，不会加入对话记录。',
     skillSetupSave: '保存并继续',
     skillSetupSaving: '保存中…',
+    conversationMenu: {
+      moreOptions: '会话选项',
+      deleteThis: '删除此会话',
+      deleteOthers: '删除其他会话',
+      color: '颜色',
+      clearColor: '默认',
+    },
+    conversationSearch: {
+      toggle: '搜索会话',
+      placeholder: '搜索会话…',
+      clear: '清除搜索',
+      noMatches: '没有匹配的会话',
+    },
     deleteConversationDialog: {
       title: '删除会话',
       message:
@@ -188,6 +201,15 @@ export const lang: AppLocaleBundle = {
       confirm: '删除',
       deleting: '删除中…',
       failed: '无法删除会话',
+    },
+    deleteOthersDialog: {
+      title: '删除其他会话',
+      message:
+        '确定删除其余 {count} 个会话？将移除这些会话、全部消息以及沙箱数据，此操作无法撤销。',
+      cancel: '取消',
+      confirm: '删除其他',
+      deleting: '删除中…',
+      failed: '无法删除其他会话',
     },
   },
   monitor: {

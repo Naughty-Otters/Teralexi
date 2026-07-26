@@ -80,6 +80,17 @@ export function assembleInstructions(
   stage: InjectionStage,
   options: { todo?: TodoExecutionParams } = {},
 ): string {
+  const cacheKey = options.todo
+    ? `${stage}::todo::${options.todo.attempt}::${options.todo.stepGoal}`
+    : `${stage}::`
+  let cache = assembleInstructionsCache.get(ctx)
+  if (!cache) {
+    cache = new Map()
+    assembleInstructionsCache.set(ctx, cache)
+  }
+  const hit = cache.get(cacheKey)
+  if (hit !== undefined) return hit
+
   const profile = resolveInjectionProfile(ctx, stage)
   const runCtx = buildRunContext(ctx, profile, 0, [], options.todo)
   const injectors = instructionInjectors(profile)
@@ -95,14 +106,24 @@ export function assembleInstructions(
   }
 
   const assembled = blocks.join('\n\n')
-  if (!languageInjector) return assembled
-
-  const withLanguage = languageInjector.injectInstructions!({
-    ...runCtx,
-    assembledInstructions: assembled,
-  })
-  return withLanguage ?? assembled
+  let result: string
+  if (!languageInjector) {
+    result = assembled
+  } else {
+    const withLanguage = languageInjector.injectInstructions!({
+      ...runCtx,
+      assembledInstructions: assembled,
+    })
+    result = withLanguage ?? assembled
+  }
+  cache.set(cacheKey, result)
+  return result
 }
+
+const assembleInstructionsCache = new WeakMap<
+  AgentStepContext,
+  Map<string, string>
+>()
 
 export async function injectUserMessages(
   ctx: AgentStepContext,

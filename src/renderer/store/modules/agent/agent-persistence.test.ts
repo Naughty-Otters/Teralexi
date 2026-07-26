@@ -13,6 +13,7 @@ function makeCtx(
     log: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
     inFlightConversations: new Set(),
     uiChatInFlightConversations: new Set(),
+    uiChatInFlightEpoch: ref(0),
     inFlightWaiters: new Map(),
     pendingAgentConfigSaves: new Map(),
     agents: ref([

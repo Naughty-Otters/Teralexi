@@ -1,4 +1,3 @@
-import { duplicateAgentRunLog } from './agent-run-context'
 import { createLoggingFramework } from './pino-framework'
 import { buildMainProcessLogStreams } from './main-process-streams'
 
@@ -9,7 +8,6 @@ const framework = createLoggingFramework({
     processType: 'main',
   },
   streams: buildMainProcessLogStreams(),
-  duplicateEmit: duplicateAgentRunLog,
 })
 
 export const {

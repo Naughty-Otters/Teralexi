@@ -1,9 +1,11 @@
 /**
- * Shared logging — framework, per-run agent logs, and process log sinks.
+ * Shared logging — framework and process log sinks.
  *
  * Process entry points:
  * - Main: `@main/logger` (re-exports {@link main-logger})
  * - Renderer: `@renderer/utils/logger` (re-exports {@link renderer-logger})
+ *
+ * Per-run agent log duplication is disabled (see {@link agent-run-context}).
  */
 
 export {

@@ -151,6 +151,7 @@ import { runConversationStoreUiSync } from './conversationStoreUiSync'
 import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { PROVIDER_SETUP_SESSION_KEY } from '@renderer/lib/provider-setup-session'
 import { requestSandboxPreview } from './sandboxPreviewBridge'
+import { registerStressChatViewOpener } from './stress/stressChatBridge'
 import { useAgentStartupBootstrap } from '@renderer/composables/useAgentStartupBootstrap'
 import {
   LAYOUT_PREF_KEYS,
@@ -414,6 +415,10 @@ onMounted(() => {
   registerAppUpdateAboutHandler(() => {
     rightPanelView.value = 'settings'
   })
+  // Stress runner starts from Settings; ChatPanel is v-else-if and must remount.
+  registerStressChatViewOpener(() => {
+    rightPanelView.value = 'chat'
+  })
   void loadChatUiSettings()
   void loadAppLocale()
 
@@ -548,6 +553,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   registerAppUpdateAboutHandler(null)
+  registerStressChatViewOpener(null)
   resetTitleBarChatControls()
   window.ipcRendererChannel?.ConversationStoreChanged?.removeAllListeners?.()
   window.ipcRendererChannel?.AgentStreamChunk?.removeAllListeners?.()

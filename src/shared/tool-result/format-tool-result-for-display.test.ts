@@ -307,6 +307,16 @@ describe('formatToolResultForDisplay edge cases', () => {
     expect(huge).toContain('…[truncated]')
   })
 
+  it('defers raw JSON to a short stub when requested', () => {
+    const stub = formatToolResultForDisplay(
+      { resultType: 'unknown', foo: 'bar', n: 1 },
+      { deferRawJson: true },
+    )
+    expect(stub).toContain('unknown')
+    expect(stub).toContain('3 fields')
+    expect(stub).not.toContain('"foo"')
+  })
+
   it('extracts terminal text from output field and combined stderr', () => {
     expect(
       extractTerminalTextFromResult({

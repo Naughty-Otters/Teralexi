@@ -18,6 +18,8 @@ export type AgentStoreContext = {
 
   inFlightConversations: Set<string>
   uiChatInFlightConversations: Set<string>
+  /** Bumped when UI chat in-flight membership changes (sidebar running indicators). */
+  uiChatInFlightEpoch: Ref<number>
   inFlightWaiters: Map<string, Array<() => void>>
   pendingAgentConfigSaves: Map<string, Promise<void>>
 

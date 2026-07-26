@@ -1,5 +1,5 @@
 import MarkdownIt from 'markdown-it'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { extractPersistedStepBodies } from '@shared/persistence/conversation-storage-contract'
 import {
   limitMessageContentForPersistence,
@@ -8,11 +8,43 @@ import {
 import {
   buildStructuredDebugViewForMessage,
   buildStructuredDebugViewFromStepProgress,
+  clearStructuredSectionHtmlCacheForTests,
   filterConversationBubbleSections,
 } from './structuredDebugViewModel'
 import { HEAD_TAIL_KEEP_CHARS } from '@shared/text/truncate-head-tail'
 
 const markdown = new MarkdownIt({ html: false, breaks: true, linkify: true })
+
+describe('section body html cache', () => {
+  it('reuses markdown-it output for unchanged settled section bodies', () => {
+    clearStructuredSectionHtmlCacheForTests()
+    const renderSpy = vi.spyOn(markdown, 'render')
+    const parts = [
+      {
+        id: 'plan-1',
+        data: {
+          stepId: 'planning',
+          title: 'Planning',
+          sequence: 1,
+          status: 'done',
+          content: '## Plan\n\n- step one\n- step two',
+        },
+      },
+    ]
+
+    const first = buildStructuredDebugViewFromStepProgress(parts, markdown, {
+      isStreaming: false,
+    })
+    const second = buildStructuredDebugViewFromStepProgress(parts, markdown, {
+      isStreaming: false,
+    })
+
+    expect(first?.sections[0]?.bodyHtml).toBeTruthy()
+    expect(second?.sections[0]?.bodyHtml).toBe(first?.sections[0]?.bodyHtml)
+    expect(renderSpy).toHaveBeenCalledTimes(1)
+    renderSpy.mockRestore()
+  })
+})
 
 describe('buildStructuredDebugViewFromStepProgress', () => {
   it('uses semantic section ids for live step-progress bubbles', () => {

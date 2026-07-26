@@ -104,21 +104,51 @@ export function hasSkillRoutingTargets(
   return buildSkillRoutingCatalog(ctx, availableToolNames) != null
 }
 
+const skillRoutingCatalogCache = new WeakMap<
+  AgentStepContext,
+  Map<string, SkillRoutingCatalog | null>
+>()
+
 export function buildSkillRoutingCatalog(
   ctx: AgentStepContext,
   availableToolNames: readonly string[],
 ): SkillRoutingCatalog | null {
-  if (!isRootRun(ctx)) return null
-  if (isPlanModeActive(ctx.opts.conversationId)) return null
+  const toolKey = [...availableToolNames].sort().join('\0')
+  let cache = skillRoutingCatalogCache.get(ctx)
+  if (!cache) {
+    cache = new Map()
+    skillRoutingCatalogCache.set(ctx, cache)
+  }
+  if (cache.has(toolKey)) {
+    return cache.get(toolKey) ?? null
+  }
+
+  if (!isRootRun(ctx)) {
+    cache.set(toolKey, null)
+    return null
+  }
+  if (isPlanModeActive(ctx.opts.conversationId)) {
+    cache.set(toolKey, null)
+    return null
+  }
 
   const userId = ctx.opts.userId?.trim()
-  if (!userId) return null
+  if (!userId) {
+    cache.set(toolKey, null)
+    return null
+  }
 
   const agents = appCache.getAgents(userId)
-  if (!agents?.length) return null
+  if (!agents?.length) {
+    cache.set(toolKey, null)
+    return null
+  }
 
   const caller = agents.find((a) => a.id === ctx.opts.agentId)
-  if (!caller) return null
+  if (!caller) {
+    cache.set(toolKey, null)
+    return null
+  }
 
   const callerRef = toRoutingAgentRef(caller)
   const names = new Set(availableToolNames)
@@ -136,13 +166,18 @@ export function buildSkillRoutingCatalog(
   )
   const entries = mergeSkillRoutingEntries(variants, subAgents)
 
-  if (entries.length === 0) return null
+  if (entries.length === 0) {
+    cache.set(toolKey, null)
+    return null
+  }
 
-  return {
+  const catalog: SkillRoutingCatalog = {
     entries,
     groupLabel:
       callerRef.skillGroupLabel?.trim() || callerRef.skillGroup?.trim() || null,
   }
+  cache.set(toolKey, catalog)
+  return catalog
 }
 
 /** Backward-compatible alias used by tool-loop-expr. */

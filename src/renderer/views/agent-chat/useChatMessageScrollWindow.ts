@@ -1,13 +1,15 @@
 import { computed, nextTick, ref, watch, type Ref } from 'vue'
 import type { UIMessage } from '@teralexi-ai'
 
+import { chatUiPerfMark, chatUiPerfMarkEnd } from './perf/chatUiPerf'
+
 export const CHAT_MESSAGE_PAGE_SIZE = 25
 export const CHAT_MESSAGE_WINDOW_MAX = 50
 export const CHAT_SCROLL_EDGE_THRESHOLD_PX = 100
 
 /**
- * Virtual list integration is deferred until post-implementation profiling shows
- * rolling-window DOM caps are insufficient. Keep false for the current path.
+ * Virtual list integration is deferred until rolling-window DOM caps are
+ * insufficient under profiling. Windowing is enabled via {@link CHAT_MESSAGE_WINDOW_MAX}.
  */
 export const CHAT_VIRTUAL_LIST_ENABLED = false
 
@@ -25,32 +27,89 @@ type PreserveScrollOptions = {
   pinToTop?: boolean
 }
 
+type ScrollMetrics = {
+  scrollHeight: number
+  clientHeight: number
+}
+
 /**
- * Scroll helper for the chat message list. All messages currently in memory are
- * rendered; only server pagination trims what is loaded. Scrolling to the top
- * fetches older pages from the store.
+ * Scroll helper for the chat message list. While stuck to bottom, only the
+ * trailing {@link CHAT_MESSAGE_WINDOW_MAX} messages are mounted. Scrolling to
+ * the top fetches older pages from the store.
  */
 export function useChatMessageScrollWindow(
   messages: Ref<UIMessage[]>,
   scrollEl: Ref<HTMLElement | null>,
   options: ScrollWindowOptions = {},
 ) {
+  const pageSize = options.pageSize ?? CHAT_MESSAGE_PAGE_SIZE
+  const windowMax = options.windowMax ?? CHAT_MESSAGE_WINDOW_MAX
   const stickToBottom = ref(true)
   const isLoadingOlder = ref(false)
+  /** When true, show the full in-memory list (user scrolled up / loading older). */
+  const showFullHistory = ref(false)
   let lastScrollTop = 0
   let userDetachedFromBottom = false
   let isPreservingScroll = false
   let wasNearTop = false
+  let cachedMetrics: ScrollMetrics | null = null
+  let stickScrollRaf: number | null = null
+  let stickScrollScheduled = false
+  let metricsFromObserver = false
+
+  function readDomMetrics(el: HTMLElement): ScrollMetrics {
+    return {
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
+    }
+  }
+
+  function getMetrics(el: HTMLElement, force = false): ScrollMetrics {
+    if (!force && cachedMetrics && metricsFromObserver) {
+      return cachedMetrics
+    }
+    cachedMetrics = readDomMetrics(el)
+    return cachedMetrics
+  }
+
+  function invalidateMetrics(): void {
+    cachedMetrics = null
+    metricsFromObserver = false
+  }
+
+  function updateMetricsFromObserver(
+    el: HTMLElement,
+    entry?: ResizeObserverEntry,
+  ): void {
+    const box = entry?.contentBoxSize?.[0]
+    if (box) {
+      cachedMetrics = {
+        scrollHeight: el.scrollHeight,
+        clientHeight: box.blockSize,
+      }
+      metricsFromObserver = true
+      return
+    }
+    if (entry?.contentRect) {
+      cachedMetrics = {
+        scrollHeight: el.scrollHeight,
+        clientHeight: entry.contentRect.height,
+      }
+      metricsFromObserver = true
+      return
+    }
+    cachedMetrics = readDomMetrics(el)
+    metricsFromObserver = true
+  }
 
   function isScrollable(el: HTMLElement): boolean {
-    return el.scrollHeight > el.clientHeight + 1
+    const m = getMetrics(el)
+    return m.scrollHeight > m.clientHeight + 1
   }
 
   function isNearBottom(el: HTMLElement): boolean {
-    return (
-      el.scrollHeight - el.scrollTop - el.clientHeight <
-      CHAT_SCROLL_EDGE_THRESHOLD_PX
-    )
+    const m = getMetrics(el)
+    return m.scrollHeight - el.scrollTop - m.clientHeight < CHAT_SCROLL_EDGE_THRESHOLD_PX
   }
 
   function isNearTop(el: HTMLElement): boolean {
@@ -62,28 +121,39 @@ export function useChatMessageScrollWindow(
       if (isScrollable(el) && isNearBottom(el) && !isNearTop(el)) {
         userDetachedFromBottom = false
         stickToBottom.value = true
+        showFullHistory.value = false
       } else {
         stickToBottom.value = false
       }
       return
     }
     stickToBottom.value = isScrollable(el) && isNearBottom(el)
+    if (stickToBottom.value) showFullHistory.value = false
   }
 
-  const visibleMessages = computed(() => messages.value)
+  const visibleMessages = computed(() => {
+    const all = messages.value
+    if (showFullHistory.value || !stickToBottom.value) return all
+    if (all.length <= windowMax) return all
+    return all.slice(-windowMax)
+  })
 
-  const hasHiddenAbove = computed(() =>
-    Boolean(options.hasOlderOnServer?.()),
-  )
+  const hasHiddenAbove = computed(() => {
+    if (options.hasOlderOnServer?.()) return true
+    if (showFullHistory.value || !stickToBottom.value) return false
+    return messages.value.length > windowMax
+  })
 
   const hasHiddenBelow = computed(() => false)
 
   function resetWindow(anchorBottom = true): void {
     lastScrollTop = 0
     wasNearTop = false
+    invalidateMetrics()
     if (anchorBottom) {
       userDetachedFromBottom = false
       stickToBottom.value = true
+      showFullHistory.value = false
     }
   }
 
@@ -102,7 +172,7 @@ export function useChatMessageScrollWindow(
     mutate: () => void | Promise<void>,
     opts: PreserveScrollOptions = {},
   ): Promise<void> {
-    const prevHeight = el.scrollHeight
+    const prevHeight = getMetrics(el, true).scrollHeight
     const prevTop = el.scrollTop
     await mutate()
     await nextTick()
@@ -113,17 +183,19 @@ export function useChatMessageScrollWindow(
       }
       resolve()
     })
-    el.scrollTop = opts.pinToTop
-      ? 0
-      : prevTop + (el.scrollHeight - prevHeight)
+    invalidateMetrics()
+    const nextHeight = getMetrics(el, true).scrollHeight
+    el.scrollTop = opts.pinToTop ? 0 : prevTop + (nextHeight - prevHeight)
     lastScrollTop = el.scrollTop
   }
 
   function maxScrollTop(el: HTMLElement): number {
-    return Math.max(0, el.scrollHeight - el.clientHeight)
+    const m = getMetrics(el)
+    return Math.max(0, m.scrollHeight - m.clientHeight)
   }
 
   function scrollElementToBottom(el: HTMLElement, behavior: ScrollBehavior): void {
+    chatUiPerfMark('scroll')
     const top = maxScrollTop(el)
     if (behavior === 'auto' || behavior === 'instant') {
       el.scrollTop = top
@@ -132,16 +204,19 @@ export function useChatMessageScrollWindow(
     }
     lastScrollTop = el.scrollTop
     wasNearTop = top <= CHAT_SCROLL_EDGE_THRESHOLD_PX
+    chatUiPerfMarkEnd('scroll')
   }
 
   function armStickToBottom(): void {
     userDetachedFromBottom = false
     stickToBottom.value = true
+    showFullHistory.value = false
   }
 
   function detachFromBottom(): void {
     userDetachedFromBottom = true
     stickToBottom.value = false
+    showFullHistory.value = true
   }
 
   function onWheel(event: WheelEvent): void {
@@ -163,7 +238,17 @@ export function useChatMessageScrollWindow(
     const enteredNearTop = nearTop && !wasNearTop
     wasNearTop = nearTop
 
-    if (!enteredNearTop || !options.onLoadOlder || isLoadingOlder.value) return
+    if (!enteredNearTop || isLoadingOlder.value) return
+
+    // Reveal trimmed local history before hitting the server.
+    if (!showFullHistory.value && messages.value.length > windowMax) {
+      showFullHistory.value = true
+      await nextTick()
+      invalidateMetrics()
+      return
+    }
+
+    if (!options.onLoadOlder) return
 
     isLoadingOlder.value = true
     isPreservingScroll = true
@@ -187,16 +272,35 @@ export function useChatMessageScrollWindow(
     behavior: ScrollBehavior = 'smooth',
   ): Promise<void> {
     if (!stickToBottom.value) return
+    // Coalesce before awaiting nextTick so concurrent stream flushes share one frame.
+    if (stickScrollScheduled) return
+    stickScrollScheduled = true
     await nextTick()
     const el = scrollEl.value
-    if (!el) return
-    scrollElementToBottom(el, behavior)
-    if (typeof requestAnimationFrame === 'function') {
-      requestAnimationFrame(() => {
-        if (!stickToBottom.value) return
-        scrollElementToBottom(el, behavior)
-      })
+    if (!el || !stickToBottom.value) {
+      stickScrollScheduled = false
+      return
     }
+
+    if (typeof requestAnimationFrame !== 'function') {
+      stickScrollScheduled = false
+      invalidateMetrics()
+      scrollElementToBottom(el, behavior)
+      return
+    }
+    if (stickScrollRaf != null) {
+      stickScrollScheduled = false
+      return
+    }
+    stickScrollRaf = requestAnimationFrame(() => {
+      stickScrollRaf = null
+      stickScrollScheduled = false
+      if (!stickToBottom.value) return
+      const latest = scrollEl.value
+      if (!latest) return
+      invalidateMetrics()
+      scrollElementToBottom(latest, behavior)
+    })
   }
 
   function startContentAutoScroll(): () => void {
@@ -217,9 +321,12 @@ export function useChatMessageScrollWindow(
           cancelAnimationFrame(rafHandle)
         }
         rafHandle = null
+        invalidateMetrics()
         if (!el) return
 
-        observer = new ResizeObserver(() => {
+        observer = new ResizeObserver((entries) => {
+          const entry = entries[0]
+          updateMetricsFromObserver(el, entry)
           if (!stickToBottom.value) return
           if (rafHandle != null) return
           if (typeof requestAnimationFrame !== 'function') {
@@ -232,6 +339,7 @@ export function useChatMessageScrollWindow(
           })
         })
         observer.observe(el)
+        updateMetricsFromObserver(el)
 
         onCleanup(() => {
           observer?.disconnect()
@@ -251,6 +359,10 @@ export function useChatMessageScrollWindow(
       if (rafHandle != null && typeof cancelAnimationFrame === 'function') {
         cancelAnimationFrame(rafHandle)
       }
+      if (stickScrollRaf != null && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(stickScrollRaf)
+        stickScrollRaf = null
+      }
     }
   }
 
@@ -267,5 +379,7 @@ export function useChatMessageScrollWindow(
     armStickToBottom,
     scrollToBottomIfStuck,
     startContentAutoScroll,
+    /** Test/debug: page size used for older loads. */
+    pageSize,
   }
 }

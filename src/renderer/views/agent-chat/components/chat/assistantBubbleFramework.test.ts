@@ -208,6 +208,49 @@ describe('assistantBubbleFramework', () => {
     expect(bubbles.map((b) => b.kind)).toEqual(['tool', 'tool'])
   })
 
+  it('keeps stable toolCallId keys when parts shift index', () => {
+    const toolPart = {
+      type: 'tool-read_file',
+      toolCallId: 'call-stable-1',
+      state: 'output-available',
+      input: { path: 'a.ts' },
+      output: { content: 'x' },
+    }
+    const before = resolveAssistantBubbles(
+      messageWithParts([toolPart]),
+      { structuredLayoutEnabled: false, shouldShowStepProgress: () => false },
+    )
+    const after = resolveAssistantBubbles(
+      messageWithParts([
+        { type: 'reasoning', text: 'inserted', state: 'done' },
+        toolPart,
+      ]),
+      { structuredLayoutEnabled: false, shouldShowStepProgress: () => false },
+    )
+
+    const toolBefore = before.find((b) => b.kind === 'tool')
+    const toolAfter = after.find((b) => b.kind === 'tool')
+    expect(toolBefore?.key).toBe('m-1-tool-call-stable-1')
+    expect(toolAfter?.key).toBe(toolBefore?.key)
+  })
+
+  it('shows tool rows with output without formatting for visibility', () => {
+    const huge = { blob: 'x'.repeat(50_000), nested: { a: 1, b: 2 } }
+    const bubbles = resolveAssistantBubbles(
+      messageWithParts([
+        {
+          type: 'tool-read_file',
+          toolCallId: 'call-2',
+          state: 'output-available',
+          output: huge,
+        },
+      ]),
+      { structuredLayoutEnabled: false, shouldShowStepProgress: () => false },
+    )
+    expect(bubbles).toHaveLength(1)
+    expect(bubbles[0]?.kind).toBe('tool')
+  })
+
   it('routes step progress when callback allows it', () => {
     const progressPart = {
       type: 'data-agent-step-progress',

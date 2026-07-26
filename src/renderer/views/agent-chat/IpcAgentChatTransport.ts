@@ -47,7 +47,8 @@ export type IpcAgentRunContext = {
 }
 
 export type IpcAgentChatTransportOptions = {
-  getRunContext: () => IpcAgentRunContext | null
+  /** Resolve run context; prefer `conversationId` when the Chat SDK passes chatId. */
+  getRunContext: (conversationId?: string) => IpcAgentRunContext | null
   persistUserMessage: (args: {
     id: string
     conversationId: string
@@ -466,6 +467,9 @@ function createIpcUIMessageReadableStream(opts: {
 
   async function finishOk(releaseHitlQueue: boolean) {
     if (finished) return
+    // Drain queued UI chunks before closing so late text-deltas are not dropped.
+    await writeQueue
+    if (finished) return
     finished = true
     // UI cleanup must never prevent finish/close — otherwise Chat status stays
     // submitted/streaming and every later user message only queues.
@@ -492,11 +496,14 @@ function createIpcUIMessageReadableStream(opts: {
     if (
       !shouldInjectAssistantFinalContent(trimmed) ||
       legacyTextStartSent ||
+      preferUiChunks ||
       sawToolApprovalRequestChunk ||
       sawCollectFormRequestChunk
     ) {
       return
     }
+    await writeQueue
+    if (finished || legacyTextStartSent || preferUiChunks) return
     legacyTextStartSent = true
     await writer
       .write({ type: 'text-start', id: opts.textPartId })
@@ -512,6 +519,8 @@ function createIpcUIMessageReadableStream(opts: {
 
   async function finishError(text: string) {
     if (finished) return
+    await writeQueue
+    if (finished) return
     finished = true
     try {
       flushAllUiForConversation(opts.conversationId)
@@ -525,11 +534,18 @@ function createIpcUIMessageReadableStream(opts: {
     }
     await cleanupListeners()
     const message = text.trim() || 'Agent failed'
-    transportLog.error('Agent run failed in chat transport', {
-      conversationId: opts.conversationId,
-      assistantMessageId: opts.assistantMessageId,
-      errorMessage: message,
-    })
+    if (message === 'Aborted') {
+      transportLog.warn('Agent run aborted in chat transport', {
+        conversationId: opts.conversationId,
+        assistantMessageId: opts.assistantMessageId,
+      })
+    } else {
+      transportLog.error('Agent run failed in chat transport', {
+        conversationId: opts.conversationId,
+        assistantMessageId: opts.assistantMessageId,
+        errorMessage: message,
+      })
+    }
     const errorPartId = `${opts.textPartId}-error`
     const body = `\n\n${AGENT_ERROR_TEXT_PREFIX} ${message}\n\n`
     await writer
@@ -583,9 +599,12 @@ function createIpcUIMessageReadableStream(opts: {
       const hitlPaused = Boolean(result.hitlPaused)
       if (!hitlPaused) {
         const finalText = result.finalContent.trim()
+        // UI-chunk streams already delivered text; do not inject main's finalContent
+        // (legacyTextStartSent stays false when preferUiChunks short-circuits ensureLegacyTextStart).
         if (
           shouldInjectAssistantFinalContent(finalText) &&
           !legacyTextStartSent &&
+          !preferUiChunks &&
           !sawToolApprovalRequestChunk &&
           !sawCollectFormRequestChunk
         ) {
@@ -631,7 +650,9 @@ export class IpcAgentChatTransport implements ChatTransport<UIMessage> {
     abortSignal,
     body,
   }: Parameters<ChatTransport<UIMessage>['sendMessages']>[0]) {
-    const ctx = this.options.getRunContext()
+    const chatId =
+      typeof _chatId === 'string' && _chatId.trim() ? _chatId.trim() : undefined
+    const ctx = this.options.getRunContext(chatId)
     if (!ctx) throw new Error('No active agent conversation')
 
     const assistantMessageId = pickAssistantStreamMessageId(
