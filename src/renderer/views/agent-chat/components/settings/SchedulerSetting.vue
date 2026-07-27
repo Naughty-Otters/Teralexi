@@ -1,6 +1,10 @@
 <template>
-  <div class="sch-layout">
-    <aside class="sch-sidebar">
+  <SettingsSplitLayout
+    storage-key="teralexi.settings.schedulerSidebarWidth"
+    :default-width="180"
+    sidebar-class="sch-sidebar"
+  >
+    <template #sidebar>
       <button
         class="sch-tab sch-tab--add"
         :class="{ 'sch-tab--active': selectedId === '__new__' }"
@@ -41,7 +45,7 @@
       >
         <span class="sch-tab-name">{{ item.name }}</span>
       </button>
-    </aside>
+    </template>
 
     <section v-if="draft" class="sch-content sp-section">
       <div class="sp-section-title-row">
@@ -239,7 +243,7 @@
     <section v-else class="sch-content sch-empty">
       <span>{{ p.scheduler.empty }}</span>
     </section>
-  </div>
+  </SettingsSplitLayout>
 </template>
 
 <script setup lang="ts">
@@ -247,6 +251,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
 import { DEFAULT_USER_ID } from '@store/agent/config'
 import { useAgentStore } from '@store/agent'
+import SettingsSplitLayout from './SettingsSplitLayout.vue'
 
 type SchedulerDefinition = {
   id: string
@@ -520,28 +525,6 @@ async function removeSelected() {
 
 <style scoped>
 @import './sp-shared.css';
-
-.sch-layout {
-  display: flex;
-  align-items: stretch;
-  gap: 0;
-  height: 100%;
-  min-height: 0;
-  border: 1px solid var(--ui-border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.sch-sidebar {
-  width: 170px;
-  flex-shrink: 0;
-  border-right: 1px solid var(--ui-border);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 6px;
-  overflow-y: auto;
-}
 
 .sch-sidebar-empty {
   font-size: 11px;

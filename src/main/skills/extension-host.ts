@@ -107,6 +107,13 @@ export type PendingHookReview = {
 }
 
 let hostCache: ExtensionHostCache | null = null
+/** Dedupes concurrent rebuilds so enable/trust reload races don't wipe contributions. */
+let hostCacheBuild: Promise<ExtensionHostCache> | null = null
+let hostCacheBuildKey: string | null = null
+
+function hostCacheKey(userId: string, workspacePath?: string): string {
+  return `${userId}::${workspacePath ?? ''}`
+}
 
 function substituteExtensionRoot(value: string, extensionDir: string): string {
   return value.split(EXTENSION_ROOT_PLACEHOLDER).join(extensionDir)
@@ -303,6 +310,8 @@ async function buildHostCache(
 
 export function clearExtensionHostCache(): void {
   hostCache = null
+  hostCacheBuild = null
+  hostCacheBuildKey = null
   clearExtensionContributions()
 }
 
@@ -326,6 +335,8 @@ export async function reloadExtensionHost(
   workspacePath?: string,
 ): Promise<void> {
   hostCache = null
+  hostCacheBuild = null
+  hostCacheBuildKey = null
   await ensureExtensionHostInitialized(userId, workspacePath)
 }
 
@@ -340,8 +351,24 @@ async function ensureHostCache(
   ) {
     return hostCache
   }
-  hostCache = await buildHostCache(userId, workspacePath)
-  return hostCache
+
+  const key = hostCacheKey(userId, workspacePath)
+  if (hostCacheBuild && hostCacheBuildKey === key) {
+    return hostCacheBuild
+  }
+
+  const buildPromise = buildHostCache(userId, workspacePath)
+  hostCacheBuild = buildPromise
+  hostCacheBuildKey = key
+  try {
+    hostCache = await buildPromise
+    return hostCache
+  } finally {
+    if (hostCacheBuild === buildPromise) {
+      hostCacheBuild = null
+      hostCacheBuildKey = null
+    }
+  }
 }
 
 export async function getExtensionHookBindings(

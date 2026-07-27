@@ -13,6 +13,10 @@ class ChannelRegistry {
     this.senders.set(channelId, sender)
   }
 
+  unregister(channelId: string): void {
+    this.senders.delete(channelId)
+  }
+
   get(channelId: string): ChannelMessageSender | null {
     return this.senders.get(channelId) ?? null
   }

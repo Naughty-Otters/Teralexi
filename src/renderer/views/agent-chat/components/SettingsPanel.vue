@@ -57,8 +57,13 @@
         <EditorSetting />
       </div>
       <section v-else-if="settingsTab === 'llm'" class="sp-llm-section sp-panel-view">
-        <div class="sp-llm-layout">
-          <aside class="sp-llm-sidebar" aria-label="LLM providers">
+        <SettingsSplitLayout
+          storage-key="teralexi.settings.llmSidebarWidth"
+          :default-width="200"
+          sidebar-class="sp-llm-sidebar"
+          aria-label="Resize LLM provider list"
+        >
+          <template #sidebar>
             <template
               v-for="entry in llmSidebarEntries"
               :key="entry.kind === 'header' ? entry.id : entry.id"
@@ -77,10 +82,15 @@
                 :class="{ 'sp-llm-item--active': llmVendorTab === entry.id }"
                 @click="switchLlmVendor(entry.id)"
               >
+                <span
+                  v-if="entry.fromExtension"
+                  class="sp-llm-item-dot sp-llm-item-dot--on"
+                  aria-hidden="true"
+                />
                 {{ entry.label }}
               </button>
             </template>
-          </aside>
+          </template>
 
           <div class="sp-llm-content">
             <OllamaSetting v-if="llmVendorTab === 'ollama'" class="sp-panel-view" />
@@ -123,7 +133,7 @@
               class="sp-panel-view"
             />
           </div>
-        </div>
+        </SettingsSplitLayout>
       </section>
       <McpSetting v-else-if="settingsTab === 'mcp'" class="sp-panel-view" />
       <ExtensionsSetting
@@ -168,6 +178,11 @@
             :class="{ 'sp-tab--active': channelTab === ch.id }"
             @click="channelTab = ch.id"
           >
+            <span
+              v-if="ch.fromExtension"
+              class="sp-channel-dot sp-channel-dot--on"
+              aria-hidden="true"
+            />
             {{ ch.label }}
           </button>
         </div>
@@ -248,6 +263,7 @@ import ZhipuSetting from './settings/ZhipuSetting.vue'
 import OpenAiCompatibleProviderSetting from './settings/OpenAiCompatibleProviderSetting.vue'
 import ExtensionLlmProviderSetting from './settings/ExtensionLlmProviderSetting.vue'
 import ExtensionChannelSetting from './settings/ExtensionChannelSetting.vue'
+import SettingsSplitLayout from './settings/SettingsSplitLayout.vue'
 
 const McpSetting = defineAsyncComponent(
   () => import('./settings/McpSetting.vue'),
@@ -334,7 +350,7 @@ type LlmProviderGroupId = 'local' | 'vendor' | 'wholesale' | 'extension'
 
 type LlmSidebarEntry =
   | { kind: 'header'; id: string; category: LlmProviderGroupId; label: string }
-  | { kind: 'provider'; id: string; label: string }
+  | { kind: 'provider'; id: string; label: string; fromExtension?: boolean }
 
 const llmSidebarEntries = computed((): LlmSidebarEntry[] => {
   const groups = [
@@ -384,6 +400,7 @@ const llmSidebarEntries = computed((): LlmSidebarEntry[] => {
         kind: 'provider',
         id: provider.registryId,
         label: provider.label,
+        fromExtension: true,
       })
     }
   }
@@ -407,15 +424,16 @@ type SkillTab = 'clawhub' | 'installed'
 const skillTab = ref<SkillTab>('installed')
 const channelTabs = computed(() => {
   const builtIn = [
-    { id: 'whatsapp' as BuiltinChannelTab, label: t.value.settings.channels.whatsapp },
-    { id: 'telegram' as BuiltinChannelTab, label: t.value.settings.channels.telegram },
-    { id: 'discord' as BuiltinChannelTab, label: t.value.settings.channels.discord },
-    { id: 'wechat' as BuiltinChannelTab, label: t.value.settings.channels.wechat },
-    { id: 'slack' as BuiltinChannelTab, label: t.value.settings.channels.slack },
+    { id: 'whatsapp' as BuiltinChannelTab, label: t.value.settings.channels.whatsapp, fromExtension: false },
+    { id: 'telegram' as BuiltinChannelTab, label: t.value.settings.channels.telegram, fromExtension: false },
+    { id: 'discord' as BuiltinChannelTab, label: t.value.settings.channels.discord, fromExtension: false },
+    { id: 'wechat' as BuiltinChannelTab, label: t.value.settings.channels.wechat, fromExtension: false },
+    { id: 'slack' as BuiltinChannelTab, label: t.value.settings.channels.slack, fromExtension: false },
   ]
   const fromExtensions = extensionChannels.value.map((ch) => ({
     id: ch.registryId,
     label: `${ch.extensionId} / ${ch.channelId}`,
+    fromExtension: true,
   }))
   return [...builtIn, ...fromExtensions]
 })
@@ -690,26 +708,7 @@ onUnmounted(() => {
   min-height: 0;
 }
 
-.sp-llm-layout {
-  display: flex;
-  align-items: stretch;
-  gap: 0;
-  flex: 1;
-  min-height: 0;
-  border: 1px solid var(--ui-border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.sp-llm-sidebar {
-  width: 188px;
-  flex-shrink: 0;
-  border-right: 1px solid var(--ui-border);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 6px;
-  overflow-y: auto;
+:deep(.sp-llm-sidebar) {
   background: var(--ui-bg-elevated);
 }
 
@@ -781,6 +780,7 @@ onUnmounted(() => {
 .sp-llm-item {
   display: flex;
   align-items: center;
+  gap: 6px;
   width: 100%;
   padding: 7px 10px;
   border: none;
@@ -795,6 +795,30 @@ onUnmounted(() => {
   transition:
     background 0.12s,
     color 0.12s;
+}
+
+.sp-llm-item-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sp-llm-item-dot--on {
+  background: var(--color-success-500, #22c55e);
+}
+
+.sp-channel-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.sp-channel-dot--on {
+  background: var(--color-success-500, #22c55e);
 }
 
 .sp-llm-item:hover {

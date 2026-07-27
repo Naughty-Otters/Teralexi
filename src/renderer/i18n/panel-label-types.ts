@@ -229,6 +229,13 @@ export type SettingsPanelLabels = {
     approveHooks: string
     rejectHooks: string
     pendingHooks: string
+    contributedProviders: string
+    contributedChannels: string
+    contributedPanels: string
+    trustRequiredHint: string
+    contributionsInactive: string
+    active: string
+    inactive: string
   }
   mcp: {
     addServer: string

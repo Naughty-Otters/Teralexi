@@ -115,6 +115,10 @@ function registerUiPanels(
 }
 
 export function clearExtensionContributions(): void {
+  const registry = getChannelRegistry()
+  for (const registryId of registeredChannels.keys()) {
+    registry.unregister(registryId)
+  }
   registeredChannels.clear()
   registeredUiPanels.clear()
   clearExtensionLlmProviders()

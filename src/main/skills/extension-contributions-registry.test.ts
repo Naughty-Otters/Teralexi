@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { registerMock, registerExtensionLlmProviderMock } = vi.hoisted(() => ({
+const { registerMock, unregisterMock, registerExtensionLlmProviderMock } = vi.hoisted(() => ({
   registerMock: vi.fn(),
+  unregisterMock: vi.fn(),
   registerExtensionLlmProviderMock: vi.fn(),
 }))
 
 vi.mock('@main/channels/framework/channel-registry', () => ({
-  getChannelRegistry: () => ({ register: registerMock }),
+  getChannelRegistry: () => ({ register: registerMock, unregister: unregisterMock }),
 }))
 
 vi.mock('@main/agent/providers/extension-llm-provider-registry', () => ({
@@ -27,6 +28,7 @@ describe('extension-contributions-registry', () => {
   beforeEach(() => {
     clearExtensionContributions()
     registerMock.mockReset()
+    unregisterMock.mockReset()
     registerExtensionLlmProviderMock.mockReset()
   })
 
@@ -114,5 +116,21 @@ describe('extension-contributions-registry', () => {
       extensionDir: '/tmp/demo-ext',
       component: './Settings.vue',
     })
+  })
+
+  it('unregisters channels when contributions are cleared', () => {
+    registerExtensionContributions({
+      extensionId: 'demo-ext',
+      extensionDir: '/tmp/demo-ext',
+      channels: {
+        matrix: {
+          sendToTarget: vi.fn(async () => undefined),
+        },
+      },
+    })
+
+    clearExtensionContributions()
+    expect(unregisterMock).toHaveBeenCalledWith('demo-ext:matrix')
+    expect(listExtensionChannelSummaries()).toEqual([])
   })
 })

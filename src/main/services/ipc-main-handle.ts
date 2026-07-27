@@ -137,7 +137,6 @@ import {
 import { getMcpServerManager } from './mcp-server-manager'
 import { listExtensionsForUser } from '@main/skills/extensions-with-settings'
 import {
-  clearExtensionHostCache,
   listExtensionChannels,
   listExtensionLlmProviderSummaries,
   listExtensionUiPanels,
@@ -1299,15 +1298,15 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       enabled: boolean
       workspacePath?: string
     },
-  ) => void = (_event, args) => {
+  ) => Promise<void> = async (_event, args) => {
     getConversationStore().setExtensionEnabled(
       args.userId,
       args.extensionId,
       args.enabled,
     )
     clearUserHooksCache()
-    clearExtensionHostCache()
-    void reloadExtensionHost(args.userId, args.workspacePath)
+    // Await reload so ListExtension* IPCs after toggle see fresh contributions.
+    await reloadExtensionHost(args.userId, args.workspacePath)
   }
 
   ListPendingHookReviews: (
@@ -1326,15 +1325,15 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       status: 'trusted' | 'rejected'
       workspacePath?: string
     },
-  ) => void = (_event, args) => {
+  ) => Promise<void> = async (_event, args) => {
     getConversationStore().setExtensionHookTrustStatus(
       args.userId,
       args.trustKey,
       args.contentHash,
       args.status,
     )
-    clearExtensionHostCache()
-    void reloadExtensionHost(args.userId, args.workspacePath)
+    // Await reload so LLM/Channels lists refresh after approve/reject.
+    await reloadExtensionHost(args.userId, args.workspacePath)
   }
 
   ListExtensionChannels: (
