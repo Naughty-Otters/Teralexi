@@ -52,11 +52,13 @@ vi.mock('./bundled-skills', () => ({
 
 vi.mock('./skill-path', () => ({
   isLoadableSkillFolder: vi.fn(() => true),
+  findSkillMarkdownPath: vi.fn((folder: string) => `${folder}/skill.md`),
   extractYamlFrontmatterBlock: vi.fn(() => null),
   stripYamlFrontmatter: vi.fn((s: string) => s),
   normalizeSkillFileText: vi.fn((s: string) => s),
   resolvePropertiesRaw: vi.fn(() => 'name: Demo\nmodel: llama\nprovider: ollama'),
   resolveUserSkillsDirectory: vi.fn(() => '/user/skills'),
+  resolveProjectSkillsDirectory: vi.fn(() => '/project/skills'),
 }))
 
 import { existsSync, readdirSync, readFileSync } from 'fs'

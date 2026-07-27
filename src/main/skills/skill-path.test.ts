@@ -57,11 +57,12 @@ describe('skill-path', () => {
     expect(isReservedSkillDirName('my-skill')).toBe(false)
   })
 
-  it('isLoadableSkillFolder requires directory with skill.md', () => {
+  it('isLoadableSkillFolder requires directory with a skill instruction marker', () => {
     vi.mocked(statSync).mockReturnValue({ isDirectory: () => true } as never)
     vi.mocked(existsSync).mockImplementation((p) =>
-      String(p).endsWith(SKILL_FILES.SKILL_MD),
+      String(p).endsWith('SKILL.md'),
     )
+    vi.mocked(readdirSync).mockReturnValue(['SKILL.md'] as never)
     expect(isLoadableSkillFolder('/skills', 'demo')).toBe(true)
     vi.mocked(statSync).mockImplementation(() => {
       throw new Error('missing')
@@ -118,9 +119,11 @@ describe('skill-path', () => {
     expect(raw).toContain('provider: ollama')
   })
 
-  it('resolveSkillsSourceRoots returns bundled then user', () => {
-    expect(resolveSkillsSourceRoots()).toEqual([
+  it('resolveSkillsSourceRoots returns bundled, project, then user', () => {
+    const roots = resolveSkillsSourceRoots('/ws')
+    expect(roots).toEqual([
       resolveBundledSkillsDirectory(),
+      join('/ws', '.teralexi', 'skills'),
       resolveUserSkillsDirectory(),
     ])
   })

@@ -71,14 +71,12 @@ function cleanupUninstalledSkillRecords(localSkillId: string): void {
 
 async function findSkillRootInExtracted(root: string): Promise<string | null> {
   const { readdirSync, statSync } = await import('node:fs')
+  const { hasSkillInstructionMarker } = await import('../skill-ecosystem')
 
   function walk(dir: string, depth: number): string[] {
     if (depth > 5) return []
     const hits: string[] = []
-    if (
-      existsSync(join(dir, SKILL_FILES.SKILL_MD)) ||
-      existsSync(join(dir, 'SKILL.md'))
-    ) {
+    if (hasSkillInstructionMarker(dir)) {
       hits.push(dir)
     }
     let entries: string[]

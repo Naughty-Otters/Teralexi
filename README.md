@@ -156,6 +156,7 @@ npm run test:unit    # unit tests
 | [BUILD-AND-RELEASE.md](./BUILD-AND-RELEASE.md) | Env modes, local builds, CI & release |
 | [CODING.md](./CODING.md) | Contributor UI / IPC notes |
 | [skills/SKILL-DEVELOPMENT.md](./skills/SKILL-DEVELOPMENT.md) | Authoring agent skills |
+| [docs/SKILLS-ECOSYSTEM.md](./docs/SKILLS-ECOSYSTEM.md) | SKILL.md / Codex / Claude / Claw compat + CLI install |
 | [docs/CLI-DISTRIBUTION.md](./docs/CLI-DISTRIBUTION.md) | curl\|bash, npm, Homebrew, Scoop, Chocolatey |
 | [docs/](./docs/) | Releases, code signing, support upload, App Store notes |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |

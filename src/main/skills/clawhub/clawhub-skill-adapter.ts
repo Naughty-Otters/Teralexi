@@ -17,6 +17,7 @@ import {
   serializePropertiesKeyValues,
   stripYamlFrontmatter,
 } from '../skill-path'
+import { findSkillMarkdownPath } from '../skill-ecosystem'
 
 export type DefaultSkillLlm = {
   provider: string
@@ -35,12 +36,7 @@ const SCRIPT_ATTACHMENT_DIR_NAMES = new Set(['scripts', 'script'])
 const FORM_ATTACHMENT_DIR_NAMES = new Set(['form', 'forms'])
 
 function findSkillMarkdownFile(root: string): string | null {
-  const candidates = ['SKILL.md', 'skill.md', 'Skill.md']
-  for (const name of candidates) {
-    const path = join(root, name)
-    if (existsSync(path)) return path
-  }
-  return null
+  return findSkillMarkdownPath(root)
 }
 
 function readExistingPropertiesRaw(skillFolder: string): string {

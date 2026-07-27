@@ -82,3 +82,12 @@ bash -c 'curl -fsSL https://raw.githubusercontent.com/Naughty-Otters/Teralexi/ma
 ## Headless `teralexi run`
 
 Stubbed until the Electron agent core is extractable into a Node entry. Not production-ready yet.
+
+## Skills & extensions via CLI
+
+```bash
+npx teralexi-ai skill install owner/repo
+npx teralexi-ai extension install ./extensions/demo
+```
+
+Marker compatibility (`SKILL.md`, `skills.md`, `AGENT.md`, …) and the upstream `npx skills -a teralexi` snippet: [SKILLS-ECOSYSTEM.md](./SKILLS-ECOSYSTEM.md).

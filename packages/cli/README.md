@@ -18,8 +18,12 @@ npm i -g teralexi-ai@latest
 teralexi --version
 teralexi doctor
 teralexi open          # launch desktop app if installed
+teralexi skill install owner/repo
+teralexi extension install ./path/to/extension
 teralexi run "…"       # headless agent (coming soon)
 ```
+
+See [docs/SKILLS-ECOSYSTEM.md](../../docs/SKILLS-ECOSYSTEM.md) for Agent Skills / SKILL.md compatibility.
 
 ## Develop
 

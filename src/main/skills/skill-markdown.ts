@@ -8,21 +8,30 @@ import type {
 } from './types'
 import type { SkillDefinition } from './skill-models'
 import { normalizeSkillFileText } from './skill-path'
+import {
+  canonicalizeSkillPropertyKey,
+  normalizeAllowedToolsList,
+} from './skill-ecosystem'
 import { parseSkillVisibility } from './skill-visibility'
 import { parseSkillGroupFromFrontmatter } from '@shared/agent/skill-groups'
 import { parseSkillSystemPropertySpecs } from '@shared/skills/skill-system-properties'
 import { SKILL_MARKDOWN_LLM, SKILL_MARKDOWN_SECTIONS } from './llm-constants'
+import { SKILL_DEFAULT_PROPERTIES } from './constants'
 
-/** Parse simple `key: value` frontmatter (no nested YAML needed) */
+/** Parse simple `key: value` frontmatter (supports hyphenated Agent Skills keys). */
 export function parseFrontmatter(raw: string): Partial<SkillProperties> {
   const result: Record<string, unknown> = {}
   for (const line of normalizeSkillFileText(raw).split('\n')) {
-    const m = line.match(/^(\w+):\s*(.+)$/)
+    const m = line.match(/^([\w.-]+):\s*(.+)$/)
     if (!m) continue
-    const [, key, val] = m
+    const key = canonicalizeSkillPropertyKey(m[1])
+    let val = m[2].trim()
+    if (key === 'allowed_tools') {
+      val = normalizeAllowedToolsList(val)
+    }
     if (val === 'true') result[key] = true
     else if (val === 'false') result[key] = false
-    else result[key] = val.trim()
+    else result[key] = val
   }
   return result as Partial<SkillProperties>
 }
@@ -85,7 +94,7 @@ export function normalizeToolName(value: string): string {
 
 export function parseCommaSeparatedToolList(raw: string | undefined): string[] {
   if (!raw?.trim()) return []
-  return raw
+  return normalizeAllowedToolsList(raw)
     .split(',')
     .map((entry) => normalizeToolName(entry.trim()))
     .filter(Boolean)
@@ -144,10 +153,16 @@ export function parseSkillMarkdown(
 ): SkillDefinition | null {
   const fm = parseFrontmatter(propertiesRaw)
 
-  if (!fm.name || !fm.model || !fm.provider) return null
+  const name = String(fm.name ?? '').trim()
+  const model =
+    String(fm.model ?? '').trim() || SKILL_DEFAULT_PROPERTIES.MODEL
+  const provider =
+    String(fm.provider ?? '').trim() || SKILL_DEFAULT_PROPERTIES.PROVIDER
+  if (!name) return null
 
   const allowedTools = parseCommaSeparatedToolList(
-    fm.allowed_tools as string | undefined,
+    (fm.allowed_tools as string | undefined) ??
+      (fm as Record<string, unknown>)['allowed-tools'] as string | undefined,
   )
   const systemProperties = parseSkillSystemPropertySpecs(propertiesRaw)
 
@@ -159,10 +174,10 @@ export function parseSkillMarkdown(
     : undefined
 
   const properties: SkillProperties = {
-    name: fm.name,
+    name,
     description: fm.description ?? '',
-    model: fm.model,
-    provider: fm.provider,
+    model,
+    provider,
     color: fm.color ?? 'primary',
     enabled: fm.enabled !== false,
     visibility: parseSkillVisibility(fm.visibility as string | undefined),

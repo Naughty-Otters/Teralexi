@@ -4,9 +4,16 @@ import { join, basename } from 'node:path'
 import { tmpdir } from 'node:os'
 import { promisify } from 'node:util'
 import { existsSync } from 'node:fs'
-import { resolveUserSkillsDirectory, isLoadableSkillFolder } from './skill-path'
-import { SKILL_FILES } from './constants'
+import {
+  resolveUserSkillsDirectory,
+  isLoadableSkillFolder,
+} from './skill-path'
+import { hasSkillInstructionMarker } from './skill-ecosystem'
 import { compileSkill } from './skill-compiler'
+import {
+  normalizeClawHubSkillFolder,
+  resolveDefaultSkillLlmFromBundledDefault,
+} from './clawhub/clawhub-skill-adapter'
 
 const execFileAsync = promisify(execFile)
 
@@ -43,11 +50,14 @@ function parseGithubUrl(url: string): {
   return null
 }
 
-async function findSkillRoot(cloneDir: string, subPath: string): Promise<string | null> {
+async function findSkillRoot(
+  cloneDir: string,
+  subPath: string,
+): Promise<string | null> {
   const candidates = [
     subPath ? join(cloneDir, subPath) : cloneDir,
     join(cloneDir, 'skills', basename(subPath) || ''),
-  ].filter((p) => existsSync(join(p, SKILL_FILES.SKILL_MD)))
+  ].filter((p) => p && hasSkillInstructionMarker(p))
 
   if (candidates.length > 0) return candidates[0]
 
@@ -60,7 +70,7 @@ async function findSkillRoot(cloneDir: string, subPath: string): Promise<string 
     }
   }
 
-  if (existsSync(join(cloneDir, SKILL_FILES.SKILL_MD))) return cloneDir
+  if (hasSkillInstructionMarker(cloneDir)) return cloneDir
   return null
 }
 
@@ -70,24 +80,47 @@ export async function installSkillFromGithub(args: {
 }): Promise<InstallSkillResult> {
   const parsed = parseGithubUrl(args.url)
   if (!parsed) {
-    return { ok: false, error: 'Invalid GitHub URL. Use https://github.com/owner/repo or owner/repo.' }
+    return {
+      ok: false,
+      error:
+        'Invalid GitHub URL. Use https://github.com/owner/repo or owner/repo.',
+    }
   }
 
-  const skillId = (args.skillId?.trim() || parsed.defaultId).replace(/[^a-zA-Z0-9_-]/g, '-')
+  const skillId = (args.skillId?.trim() || parsed.defaultId).replace(
+    /[^a-zA-Z0-9_-]/g,
+    '-',
+  )
   if (!skillId) return { ok: false, error: 'skillId is required' }
 
   const tempDir = await mkdtemp(join(tmpdir(), 'teralexi-skill-'))
   try {
-    await execFileAsync('git', ['clone', '--depth', '1', parsed.cloneUrl, tempDir], {
-      timeout: 120_000,
-    })
+    await execFileAsync(
+      'git',
+      ['clone', '--depth', '1', parsed.cloneUrl, tempDir],
+      {
+        timeout: 120_000,
+      },
+    )
     const skillRoot = await findSkillRoot(tempDir, parsed.subPath)
     if (!skillRoot) {
-      return { ok: false, error: 'No skill.md found in repository.' }
+      return {
+        ok: false,
+        error:
+          'No skill instruction file found (skill.md, SKILL.md, skills.md, AGENT.md, …).',
+      }
     }
 
     const dest = join(resolveUserSkillsDirectory(), skillId)
     await cp(skillRoot, dest, { recursive: true, force: true })
+    normalizeClawHubSkillFolder({
+      skillFolder: dest,
+      skillId,
+      displayName: skillId,
+      summary: '',
+      defaults: resolveDefaultSkillLlmFromBundledDefault(),
+      preserveUserProperties: true,
+    })
     await compileSkill(skillId, { force: true })
     return { ok: true, skillId }
   } catch (err) {
