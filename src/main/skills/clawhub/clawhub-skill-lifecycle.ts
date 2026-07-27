@@ -1,5 +1,5 @@
 import AdmZip from 'adm-zip'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync, statSync } from 'node:fs'
 import { cp, mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -19,6 +19,7 @@ import type {
 } from '@shared/skills/clawhub-types'
 import { SKILL_FILES } from '../constants'
 import { isLoadableSkillFolder, resolveUserSkillsDirectory } from '../skill-path'
+import { hasSkillInstructionMarker } from '../skill-ecosystem'
 import { getClawHubClient } from './clawhub-client'
 import {
   listClawHubOrigins,
@@ -70,9 +71,6 @@ function cleanupUninstalledSkillRecords(localSkillId: string): void {
 }
 
 async function findSkillRootInExtracted(root: string): Promise<string | null> {
-  const { readdirSync, statSync } = await import('node:fs')
-  const { hasSkillInstructionMarker } = await import('../skill-ecosystem')
-
   function walk(dir: string, depth: number): string[] {
     if (depth > 5) return []
     const hits: string[] = []
