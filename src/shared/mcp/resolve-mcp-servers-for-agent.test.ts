@@ -10,6 +10,11 @@ const servers = [
   { id: 'c', enabled: false },
 ]
 
+const serversWithPlaywright = [
+  { id: 'a', enabled: true },
+  { id: 'ref-mcp-playwright', enabled: false },
+]
+
 describe('resolveMcpServersForAgent', () => {
   it('returns all active servers when agent allowlist is null', () => {
     expect(resolveMcpServersForAgent(servers, null).map((s) => s.id)).toEqual([
@@ -26,6 +31,18 @@ describe('resolveMcpServersForAgent', () => {
 
   it('returns empty when allowlist is empty', () => {
     expect(resolveMcpServersForAgent(servers, [])).toEqual([])
+  })
+
+  it('always includes Playwright Browser even when paused or omitted', () => {
+    expect(
+      resolveMcpServersForAgent(serversWithPlaywright, null).map((s) => s.id),
+    ).toEqual(['a', 'ref-mcp-playwright'])
+    expect(
+      resolveMcpServersForAgent(serversWithPlaywright, ['a']).map((s) => s.id),
+    ).toEqual(['a', 'ref-mcp-playwright'])
+    expect(
+      resolveMcpServersForAgent(serversWithPlaywright, []).map((s) => s.id),
+    ).toEqual(['ref-mcp-playwright'])
   })
 })
 
@@ -52,5 +69,13 @@ describe('unionMcpServerIdsForAgents', () => {
     expect(
       unionMcpServerIdsForAgents(servers, [{ availableMcpServers: null }]),
     ).toEqual(['a', 'b'])
+  })
+
+  it('always unions Playwright Browser for agents', () => {
+    expect(
+      unionMcpServerIdsForAgents(serversWithPlaywright, [
+        { availableMcpServers: ['a'] },
+      ]),
+    ).toEqual(['a', 'ref-mcp-playwright'])
   })
 })

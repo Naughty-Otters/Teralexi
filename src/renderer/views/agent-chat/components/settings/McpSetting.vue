@@ -36,13 +36,17 @@
         class="mcp-tab"
         :class="{
           'mcp-tab--active': selectedId === server.id,
-          'mcp-tab--disabled': !server.enabled,
+          'mcp-tab--disabled': !server.enabled && !isAlwaysOnMcpServer(server),
         }"
         @click="selectServer(server.id)"
       >
         <span
           class="mcp-tab-dot"
-          :class="server.enabled ? 'mcp-tab-dot--on' : 'mcp-tab-dot--off'"
+          :class="
+            server.enabled || isAlwaysOnMcpServer(server)
+              ? 'mcp-tab-dot--on'
+              : 'mcp-tab-dot--off'
+          "
         />
         <span class="mcp-tab-name">{{ server.name }}</span>
         <span
@@ -343,16 +347,27 @@
         <span class="mcp-section-title">{{ selectedServer.name }}</span>
         <label
           class="sp-toggle"
-          :title="selectedServer.enabled ? p.mcp.disableServer : p.mcp.enableServer"
+          :class="{ 'sp-toggle--locked': selectedServerAlwaysOn }"
+          :title="
+            selectedServerAlwaysOn
+              ? p.mcp.alwaysEnabled
+              : selectedServer.enabled
+                ? p.mcp.disableServer
+                : p.mcp.enableServer
+          "
         >
           <input
             type="checkbox"
-            :checked="selectedServer.enabled"
+            :checked="selectedServer.enabled || selectedServerAlwaysOn"
+            :disabled="selectedServerAlwaysOn"
             @change="agentStore.toggleMcpServerEnabled(selectedServer!.id)"
           />
           <span
             class="sp-toggle-track"
-            :class="{ 'sp-toggle-track--on': selectedServer.enabled }"
+            :class="{
+              'sp-toggle-track--on':
+                selectedServer.enabled || selectedServerAlwaysOn,
+            }"
           />
         </label>
       </div>
@@ -491,7 +506,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
 import { useAgentStore, type McpTransportType } from '@store/agent'
 import { registryDraftToKvLines } from '@shared/mcp/registry-config-mapper'
-import { isReferenceMcpServer } from '@shared/mcp/reference-mcp-servers'
+import { isAlwaysOnMcpServer, isReferenceMcpServer } from '@shared/mcp/reference-mcp-servers'
 import {
   describeMcpLaunchCommand,
   mcpRuntimeInstallUrl,
@@ -552,6 +567,10 @@ const selectedServer = computed(() =>
 
 const selectedServerIsReference = computed(
   () => selectedServer.value != null && isReferenceMcpServer(selectedServer.value),
+)
+
+const selectedServerAlwaysOn = computed(
+  () => selectedServer.value != null && isAlwaysOnMcpServer(selectedServer.value),
 )
 
 const selectedServerRuntimeKind = computed((): McpRuntimeKind | null => {

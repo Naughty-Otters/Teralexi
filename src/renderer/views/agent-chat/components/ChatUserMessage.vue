@@ -38,6 +38,7 @@
     </ul>
     <div
       v-if="plainText"
+      ref="markdownEl"
       class="msg-plain md-preview"
       v-html="renderedHtml"
     />
@@ -45,9 +46,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, type Ref } from 'vue'
+import { computed, inject, nextTick, onMounted, onUpdated, ref, type Ref } from 'vue'
 import type { UIMessage } from '@teralexi-ai'
 import { renderMarkdownHtml, rendererMarkdown } from '@renderer/lib/markdown'
+import { hydrateDiagramBlocks } from '../diagramHydrate'
 import {
   userCollectFormResponseChipLabel,
   userMessagePlainText,
@@ -67,6 +69,7 @@ const messageAttachmentsById = inject<Ref<Record<string, ChatAttachmentMeta[]>>>
   CHAT_MESSAGE_ATTACHMENTS_KEY,
 )
 const conversationId = inject<Ref<string | null | undefined>>('chatConversationId')
+const markdownEl = ref<HTMLElement | null>(null)
 
 const submittedForm = computed(() => userSubmittedFormView(props.message))
 const formChip = computed(() => userCollectFormResponseChipLabel(props.message))
@@ -78,6 +81,19 @@ const renderedHtml = computed(() => {
 const attachments = computed(
   () => messageAttachmentsById?.value?.[props.message.id] ?? [],
 )
+
+async function refreshDiagrams(): Promise<void> {
+  await nextTick()
+  await hydrateDiagramBlocks(markdownEl.value)
+}
+
+onMounted(() => {
+  void refreshDiagrams()
+})
+
+onUpdated(() => {
+  void refreshDiagrams()
+})
 
 function revealTitle(item: ChatAttachmentMeta): string {
   return `Reveal ${item.originalName} in file manager`

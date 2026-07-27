@@ -5,8 +5,7 @@ import {
   toValue,
 } from 'vue'
 import { useAppIsDark } from '@renderer/composables/appColorMode'
-import { codeToHtml } from '@renderer/lib/shiki/highlighter'
-import { extractShikiInnerHtml } from '@renderer/lib/shiki/highlight-unified-diff'
+import { codeToHtml, extractShikiInnerHtml } from '@renderer/lib/shiki/highlighter'
 
 export function useShikiHtml(
   source: MaybeRefOrGetter<string>,

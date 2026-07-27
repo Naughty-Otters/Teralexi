@@ -278,6 +278,7 @@ export const settingsPanelsEn: SettingsPanelLabels = {
     httpHeaders: 'HTTP Headers',
     enableServer: 'Enable server',
     disableServer: 'Disable server',
+    alwaysEnabled: 'Always enabled',
     tools: 'Tools',
     availableTools: 'Available Tools',
     empty: 'Select a server to view details, or add a new one.',

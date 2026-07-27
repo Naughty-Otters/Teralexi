@@ -343,16 +343,19 @@ function copyOutput() {
   font-family: var(--app-font-family);
   font-weight: 600;
 }
-.tr__diff-add { color: var(--color-success-600, #16a34a); }
-.tr__diff-del { color: var(--color-error-600, #dc2626); }
+.tr__diff-add { color: var(--diff-add); }
+.tr__diff-del { color: var(--diff-del); }
 
 .tr__changes {
   padding: 0;
   margin: 0;
   border-bottom: none;
 }
+.tr__changes :deep(.fcs) {
+  padding: 6px;
+}
 .tr__changes :deep(.fcs > .fc:last-child) {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .tr__copy {

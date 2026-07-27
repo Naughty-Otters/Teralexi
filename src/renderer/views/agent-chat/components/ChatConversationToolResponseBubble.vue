@@ -466,11 +466,11 @@ function guessLanguageFromPath(path: string): string {
 }
 
 .conv-tool-response__body--diff {
-  padding: 0;
+  padding: 6px;
 }
 
 .conv-tool-response__body--diff :deep(.fcs > .fc:last-child) {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .conv-tool-response__body--diff :deep(.shiki-surface) {

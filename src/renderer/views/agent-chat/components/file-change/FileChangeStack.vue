@@ -4,8 +4,8 @@
     <p v-if="error" class="fcs__error" role="alert">{{ error }}</p>
     <p v-else-if="loading" class="fcs__loading" aria-live="polite">Loading preview…</p>
     <FileChangeCard
-      v-for="(file, index) in files"
-      :key="`${file.path}-${index}`"
+      v-for="file in files"
+      :key="fileChangeCardKey(file)"
       :file="file"
       :compact="compact"
       :brief-lines="briefLines"
@@ -17,12 +17,8 @@
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue'
 import type { FileChangePreview } from '@shared/file-change/types'
-
-const FileChangeCard = defineAsyncComponent(
-  () => import('./FileChangeCard.vue'),
-)
+import FileChangeCard from './FileChangeCard.vue'
 
 withDefaults(
   defineProps<{
@@ -41,6 +37,11 @@ withDefaults(
     briefLines: undefined,
   },
 )
+
+function fileChangeCardKey(file: FileChangePreview): string {
+  const moveFrom = file.moveFrom?.trim()
+  return moveFrom ? `${file.path}\0${moveFrom}` : file.path
+}
 </script>
 
 <style scoped>

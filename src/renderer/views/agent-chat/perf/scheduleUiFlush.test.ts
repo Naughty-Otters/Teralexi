@@ -141,6 +141,18 @@ describe('scheduleUiFlush', () => {
     expect(fn).not.toHaveBeenCalled()
   })
 
+  it('allows flushes for all conversations in the visible set', async () => {
+    const { setVisibleConversationIdsForUiFlush } = await import('./scheduleUiFlush')
+    setVisibleConversationIdsForUiFlush(['conv-1', 'conv-2'], 'conv-1')
+    const fn = vi.fn()
+    scheduleUiFlush('scroll', fn, {
+      conversationId: 'conv-2',
+      priority: 'normal',
+    })
+    flushRaf()
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
   it('flushAllUiForConversation only runs that conversation’s pending jobs', () => {
     const fnA = vi.fn()
     const fnB = vi.fn()

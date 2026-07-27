@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isAlwaysOnMcpServer,
   isPlaywrightReferenceMcpServer,
   isReferenceMcpServer,
   PLAYWRIGHT_MCP_SERVER_ID,
@@ -42,6 +43,7 @@ describe('reference-mcp-servers', () => {
     expect(isPlaywrightReferenceMcpServer({ id: PLAYWRIGHT_MCP_SERVER_ID })).toBe(
       true,
     )
+    expect(isAlwaysOnMcpServer({ id: PLAYWRIGHT_MCP_SERVER_ID })).toBe(true)
   })
 
   it('identifies reference servers by id', () => {

@@ -188,10 +188,10 @@ function onOpen(item: StepAttachment): void {
 }
 
 .conv-workspace-files__add {
-  color: var(--color-success-600, #16a34a);
+  color: var(--diff-add);
 }
 
 .conv-workspace-files__del {
-  color: var(--color-error-600, #dc2626);
+  color: var(--diff-del);
 }
 </style>

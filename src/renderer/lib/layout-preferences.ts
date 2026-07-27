@@ -12,6 +12,8 @@ export const LAYOUT_PREF_KEYS = {
   workspaceEditorSessionByConversation:
     'teralexi.agent.workspaceEditorSessionByConversation',
   lastConversationId: 'teralexi.agent.lastConversationId',
+  /** Binary-tree conversation pane layout (splits, ratios, focused pane). */
+  conversationPaneLayout: 'teralexi.agent.conversationPaneLayout',
   /** Sidebar conversation list: `none` | `agent` | `workspace` | `source` */
   conversationListGroupBy: 'teralexi.agent.conversationListGroupBy',
   /** Collapsed group keys for the sidebar list (`agent::id` / `workspace::path`). */

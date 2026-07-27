@@ -28,6 +28,12 @@ export type CreateNewConversationOptions = {
   mode?: CreateNewConversationMode
   /** Absolute workspace folder to attach after create (applied after `fresh` clears pending). */
   workspacePath?: string | null
+  /**
+   * When false, create the conversation without focusing it (used by pane split
+   * so the source leaf is not replaced before the new leaf is inserted).
+   * Default true.
+   */
+  select?: boolean
 }
 
 export function createConversationActions(
@@ -664,9 +670,11 @@ export function createConversationActions(
     if (sourceConversationId) {
       replicateConversationUiState(sourceConversationId, conv.id)
     }
-    focusedConversationId.value = conv.id
-    persistFocusedConversationId(conv.id)
-    activeConversationId.value[agentId] = conv.id
+    if (options?.select !== false) {
+      focusedConversationId.value = conv.id
+      persistFocusedConversationId(conv.id)
+      activeConversationId.value[agentId] = conv.id
+    }
     return conv
   }
 
@@ -763,9 +771,36 @@ export function createConversationActions(
         delete activeConversationId.value[ownerAgentId]
       }
     }
-    if (focusedConversationId.value === conversationId) {
+
+    let layoutNextFocus: string | null | undefined
+    try {
+      const { useConversationLayoutStore } = await import(
+        '@store/conversation-layout'
+      )
+      const layoutStore = useConversationLayoutStore()
+      const result = layoutStore.removeConversation(conversationId)
+      if (result.cleared) {
+        layoutNextFocus = null
+      } else {
+        layoutNextFocus = result.nextFocusedConversationId
+      }
+    } catch {
+      layoutNextFocus = undefined
+    }
+
+    if (layoutNextFocus) {
+      await selectConversation(layoutNextFocus)
+    } else if (focusedConversationId.value === conversationId || layoutNextFocus === null) {
       const recent = mostRecentConversation()
       if (recent && recent.id !== conversationId) {
+        try {
+          const { useConversationLayoutStore } = await import(
+            '@store/conversation-layout'
+          )
+          useConversationLayoutStore().ensureLayout(recent.id)
+        } catch {
+          /* ignore */
+        }
         await selectConversation(recent.id)
       } else {
         focusedConversationId.value = null

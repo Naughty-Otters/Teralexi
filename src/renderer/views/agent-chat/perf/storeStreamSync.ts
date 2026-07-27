@@ -11,7 +11,19 @@ type StoreMessage = {
 
 type StoreStreamSyncDeps = {
   getVisibleConversationId: () => string | null
+  /** When set, any listed conversation is treated as on-screen (not background). */
+  getVisibleConversationIds?: () => readonly string[]
   getConversations: () => Record<string, StoreMessage[]>
+}
+
+function isBackgroundConversation(conversationId: string): boolean {
+  if (!deps) return false
+  const ids = deps.getVisibleConversationIds?.()
+  if (ids && ids.length > 0) {
+    return !ids.some((id) => id.trim() === conversationId)
+  }
+  const visible = deps.getVisibleConversationId()
+  return Boolean(visible && visible !== conversationId)
 }
 
 let deps: StoreStreamSyncDeps | null = null
@@ -48,8 +60,7 @@ export function queueStoreTextDelta(
   delta: string,
 ): void {
   if (!deps) return
-  const visible = deps.getVisibleConversationId()
-  const isBackground = Boolean(visible && visible !== conversationId)
+  const isBackground = isBackgroundConversation(conversationId)
 
   if (isBackground) {
     const key = deltaKey(conversationId, assistantId)
@@ -75,9 +86,8 @@ export function queueStoreStepProgress(
   content: string,
 ): void {
   if (!deps) return
-  const visible = deps.getVisibleConversationId()
   const key = deltaKey(conversationId, assistantId)
-  const isBackground = Boolean(visible && visible !== conversationId)
+  const isBackground = isBackgroundConversation(conversationId)
 
   pendingStepProgress.set(key, { conversationId, assistantId, content })
 

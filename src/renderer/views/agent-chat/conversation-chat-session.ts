@@ -206,6 +206,8 @@ export function clearConversationSession(conversationId: string): void {
 type EvictOptions = {
   /** Return true while the conversation still has a live stream (must keep Chat). */
   isStreamActive?: (conversationId: string) => boolean
+  /** Conversation ids that must not be evicted (e.g. on-screen panes). */
+  keepIds?: readonly string[]
   keepLimit?: number
 }
 
@@ -216,7 +218,11 @@ type EvictOptions = {
 export function evictIdleConversationChats(opts: EvictOptions = {}): void {
   const keepLimit = opts.keepLimit ?? IDLE_CHAT_CACHE_LIMIT
   const isActive = opts.isStreamActive
+  const keepIds = new Set(
+    (opts.keepIds ?? []).map((id) => id.trim()).filter(Boolean),
+  )
   const idleIds = [...chatsByConversationId.keys()].filter((id) => {
+    if (keepIds.has(id)) return false
     if (isActive?.(id)) return false
     return true
   })

@@ -97,4 +97,19 @@ describe('McpServersRepository', () => {
     )
     expect(repo.list('default')).toHaveLength(7)
   })
+
+  it('refuses to disable always-on Playwright Browser', () => {
+    const db = createMigrationTestDatabase()
+    runMigrations(db)
+    const repo = new McpServersRepository(db)
+
+    repo.ensureReferenceServers('default', '/tmp/workspace')
+    repo.setEnabled('default', 'ref-mcp-playwright', false)
+    expect(repo.get('default', 'ref-mcp-playwright')?.enabled).toBe(true)
+
+    repo.setEnabled('default', 'ref-mcp-filesystem', true)
+    expect(repo.get('default', 'ref-mcp-filesystem')?.enabled).toBe(true)
+    repo.setEnabled('default', 'ref-mcp-filesystem', false)
+    expect(repo.get('default', 'ref-mcp-filesystem')?.enabled).toBe(false)
+  })
 })

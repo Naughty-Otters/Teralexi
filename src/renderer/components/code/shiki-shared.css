@@ -1,4 +1,5 @@
 @import './terminal-theme.css';
+@import '../../styles/diff-theme.css';
 
 .shiki-surface {
   margin: 0;
@@ -70,34 +71,119 @@
 
 .shiki-diff__line {
   display: flex;
+  align-items: flex-start;
   gap: 0;
   min-height: 1.5em;
+  line-height: 1.45;
+  border-left: var(--diff-accent-width) solid transparent;
+  box-sizing: border-box;
+}
+
+.shiki-diff__ln {
+  box-sizing: border-box;
+  flex: 0 0 calc(var(--diff-ln-ch, 2) * 1ch + 12px);
+  width: calc(var(--diff-ln-ch, 2) * 1ch + 12px);
+  padding: 0 6px;
+  text-align: right;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92em;
+  line-height: inherit;
+  color: var(--ui-text-muted);
+  opacity: 0.72;
+  background: var(--diff-gutter-bg);
+}
+
+.shiki-diff__ln--old {
+  border-right: 1px solid color-mix(in srgb, var(--ui-text) 6%, transparent);
+}
+
+.shiki-diff__ln--new {
+  border-right: 1px solid color-mix(in srgb, var(--ui-text) 8%, transparent);
 }
 
 .shiki-diff__gutter {
-  flex: 0 0 1.25em;
+  box-sizing: border-box;
+  flex: 0 0 var(--diff-marker-width, var(--diff-gutter-width));
+  width: var(--diff-marker-width, var(--diff-gutter-width));
+  padding: 0 4px;
+  text-align: center;
   user-select: none;
-  opacity: 0.55;
+  opacity: 0.45;
+  font-weight: 700;
+  background: var(--diff-gutter-bg);
+  border-right: 1px solid color-mix(in srgb, var(--ui-text) 8%, transparent);
+  color: var(--ui-text-muted);
 }
 
 .shiki-diff__code {
   flex: 1;
   min-width: 0;
+  padding: 0 var(--diff-line-pad-x) 0 10px;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .shiki-diff__line--add {
-  background: color-mix(in srgb, var(--color-success-500, #22c55e) 10%, transparent);
+  background: var(--diff-add-bg);
+  border-left-color: var(--diff-add-border);
+}
+
+.shiki-diff__line--add .shiki-diff__ln,
+.shiki-diff__line--add .shiki-diff__gutter {
+  background: color-mix(in srgb, var(--diff-add) 12%, var(--diff-gutter-bg));
+}
+
+.shiki-diff__line--add .shiki-diff__ln--new {
+  color: var(--diff-add);
+  opacity: 1;
+}
+
+.shiki-diff__line--add .shiki-diff__gutter {
+  color: var(--diff-add);
+  opacity: 1;
+  border-right-color: color-mix(in srgb, var(--diff-add) 22%, transparent);
 }
 
 .shiki-diff__line--remove {
-  background: color-mix(in srgb, var(--color-error-500, #ef4444) 10%, transparent);
+  background: var(--diff-del-bg);
+  border-left-color: var(--diff-del-border);
+}
+
+.shiki-diff__line--remove .shiki-diff__ln,
+.shiki-diff__line--remove .shiki-diff__gutter {
+  background: color-mix(in srgb, var(--diff-del) 12%, var(--diff-gutter-bg));
+}
+
+.shiki-diff__line--remove .shiki-diff__ln--old {
+  color: var(--diff-del);
+  opacity: 1;
+}
+
+.shiki-diff__line--remove .shiki-diff__gutter {
+  color: var(--diff-del);
+  opacity: 1;
+  border-right-color: color-mix(in srgb, var(--diff-del) 22%, transparent);
 }
 
 .shiki-diff__line--hunk,
 .shiki-diff__line--meta {
   color: var(--ui-text-muted);
+  background: var(--diff-hunk-bg);
+}
+
+.shiki-diff__line--hunk .shiki-diff__ln,
+.shiki-diff__line--meta .shiki-diff__ln,
+.shiki-diff__line--hunk .shiki-diff__gutter,
+.shiki-diff__line--meta .shiki-diff__gutter {
+  opacity: 0.3;
+  background: transparent;
+  border-right-color: transparent;
+}
+
+.shiki-diff__line--hunk .shiki-diff__code,
+.shiki-diff__line--meta .shiki-diff__code {
+  padding-left: 10px;
 }
 
 .shiki-diff__line--context {
@@ -106,4 +192,10 @@
 
 .shiki-diff__line--other {
   color: var(--ui-text-muted);
+}
+
+/* Diff surfaces: slightly lifted code panel */
+.shiki-surface.shiki-diff {
+  padding: 0;
+  background: var(--diff-surface-bg);
 }

@@ -71,16 +71,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { FileChangeAction, FileChangePreview } from '@shared/file-change/types'
 import { fileChangePreviewOpenUrl } from '@shared/agent/step-attachment'
 import { useWorkspaceStore } from '@store/workspace'
 import { requestSandboxPreview } from '../../sandboxPreviewBridge'
 import { parseUnifiedDiffLines, countBriefDiffLines } from './unifiedDiffLines'
-
-const UnifiedDiffView = defineAsyncComponent(
-  () => import('./UnifiedDiffView.vue'),
-)
+import UnifiedDiffView from './UnifiedDiffView.vue'
 
 const workspaceStore = useWorkspaceStore()
 
@@ -172,14 +169,14 @@ function onOpenPath() {
 
 <style scoped>
 .fc {
-  border: 1px solid color-mix(in srgb, var(--ui-text) 22%, var(--ui-border));
-  border-radius: 0;
+  border: 1px solid color-mix(in srgb, var(--ui-text) 14%, var(--ui-border));
+  border-radius: 8px;
   overflow: hidden;
   background: var(--ui-bg);
 }
 
 .fc + .fc {
-  border-top-width: 0;
+  margin-top: 8px;
 }
 
 .fc__head {
@@ -188,9 +185,9 @@ function onOpenPath() {
   align-items: center;
   gap: 6px;
   min-height: 0;
-  padding: 6px 8px 6px 2px;
-  border-bottom: 1px solid color-mix(in srgb, var(--ui-text) 18%, var(--ui-border));
-  background: color-mix(in srgb, var(--ui-text) 8%, var(--ui-bg-elevated, var(--ui-bg)));
+  padding: 7px 10px 7px 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-text) 12%, var(--ui-border));
+  background: color-mix(in srgb, var(--ui-text) 5%, var(--ui-bg-elevated, var(--ui-bg)));
 }
 
 .fc--collapsed .fc__head {
@@ -290,8 +287,8 @@ function onOpenPath() {
   font-weight: 600;
 }
 
-.fc__add { color: var(--color-success-600, #16a34a); }
-.fc__del { color: var(--color-error-600, #dc2626); }
+.fc__add { color: var(--diff-add); }
+.fc__del { color: var(--diff-del); }
 
 .fc :deep(.shiki-surface) {
   border: none;
@@ -299,6 +296,7 @@ function onOpenPath() {
   max-height: 280px;
   padding: 0;
   margin: 0;
+  background: var(--diff-surface-bg);
 }
 
 .fc--brief :deep(.shiki-surface) {
@@ -308,7 +306,7 @@ function onOpenPath() {
 .fc--brief :deep(.shiki-diff__line) {
   padding-top: 0;
   padding-bottom: 0;
-  min-height: 1.35em;
+  min-height: 1.4em;
 }
 
 .fc__expand {
@@ -317,10 +315,10 @@ function onOpenPath() {
   justify-content: center;
   width: 100%;
   margin: 0;
-  padding: 4px 10px;
+  padding: 5px 10px;
   border: none;
-  border-top: 1px solid color-mix(in srgb, var(--ui-text) 16%, var(--ui-border));
-  background: color-mix(in srgb, var(--ui-text) 5%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--ui-text) 12%, var(--ui-border));
+  background: color-mix(in srgb, var(--ui-text) 3.5%, transparent);
   color: var(--ui-text-muted);
   cursor: pointer;
 }

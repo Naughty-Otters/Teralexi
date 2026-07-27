@@ -265,7 +265,7 @@ async function loadMarkdownPreview(
   const html =
     markdownView === 'raw'
       ? renderMarkdownSourceHtmlDocument(markdownBody)
-      : renderMarkdownToHtmlDocument(markdownBody)
+      : await renderMarkdownToHtmlDocument(markdownBody)
   const cacheKey = await previewCacheKey(filePath, markdownView)
   await loadHtmlDocumentInView(view, html, cacheKey)
 }

@@ -1,6 +1,5 @@
 import type { UIMessage, TextUIPart } from '@teralexi-ai'
 import type MarkdownIt from 'markdown-it'
-import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
 import { rewriteSandboxPreviewLinksInHtml } from '@shared/markdown/sandbox-preview-links'
 import { renderAssistantMessageHtml } from '../../assistantStructuredRender'
 import { chatUiPerfMark, chatUiPerfMarkEnd } from '../../perf/chatUiPerf'
@@ -47,7 +46,7 @@ export function createAssistantTextPartHtmlRenderer(opts: {
       structuredDebug: opts.getStructuredDebug(),
     })
     if (!streaming) {
-      html = rewriteSandboxPreviewLinksInHtml(resolveDiagramBlocksInHtml(html))
+      html = rewriteSandboxPreviewLinksInHtml(html)
     }
     chatUiPerfMarkEnd('markdown')
 

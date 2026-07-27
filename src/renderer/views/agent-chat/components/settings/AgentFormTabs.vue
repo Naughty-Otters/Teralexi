@@ -419,17 +419,23 @@
               <span class="aft-mcp-name">{{ server.name }}</span>
               <label
                 class="sp-toggle"
+                :class="{ 'sp-toggle--locked': isAlwaysOnMcpServer(server) }"
                 :title="
-                  effectiveMcpServers.includes(server.id)
-                    ? p.mcp.disableServer
-                    : p.mcp.enableServer
+                  isAlwaysOnMcpServer(server)
+                    ? p.mcp.alwaysEnabled
+                    : effectiveMcpServers.includes(server.id)
+                      ? p.mcp.disableServer
+                      : p.mcp.enableServer
                 "
                 @click.stop
               >
                 <input
                   type="checkbox"
-                  :checked="effectiveMcpServers.includes(server.id)"
-                  :disabled="disabled"
+                  :checked="
+                    isAlwaysOnMcpServer(server) ||
+                    effectiveMcpServers.includes(server.id)
+                  "
+                  :disabled="disabled || isAlwaysOnMcpServer(server)"
                   @change="
                     toggleMcpServer(
                       server.id,
@@ -440,7 +446,9 @@
                 <span
                   class="sp-toggle-track"
                   :class="{
-                    'sp-toggle-track--on': effectiveMcpServers.includes(server.id),
+                    'sp-toggle-track--on':
+                      isAlwaysOnMcpServer(server) ||
+                      effectiveMcpServers.includes(server.id),
                   }"
                 />
               </label>
@@ -527,6 +535,7 @@ import AgentConfigurationsTab from './AgentConfigurationsTab.vue'
 import { useAgentStore } from '@store/agent'
 import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
 import { useI18n } from '@renderer/composables/useI18n'
+import { isAlwaysOnMcpServer } from '@shared/mcp/reference-mcp-servers'
 import {
   buildRuntimePromptViews,
   type RuntimeCompiledPromptSource,
@@ -967,6 +976,7 @@ const effectiveMcpServers = computed<string[]>(() => {
 })
 
 function toggleMcpServer(serverId: string, enabled: boolean) {
+  if (!enabled && isAlwaysOnMcpServer({ id: serverId })) return
   const current =
     props.modelValue.availableMcpServers === null
       ? agentStore.mcpServers.map((s) => s.id)
@@ -974,6 +984,10 @@ function toggleMcpServer(serverId: string, enabled: boolean) {
   const next = new Set(current)
   if (enabled) next.add(serverId)
   else next.delete(serverId)
+  // Always-on servers stay on every explicit allowlist.
+  for (const server of agentStore.mcpServers) {
+    if (isAlwaysOnMcpServer(server)) next.add(server.id)
+  }
   emit('update:modelValue', {
     ...props.modelValue,
     availableMcpServers: Array.from(next),

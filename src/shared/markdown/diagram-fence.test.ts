@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  applyDiagramFencePlugin,
-  resolveDiagramBlocksInHtml,
-} from './create-markdown-it'
+import { applyDiagramFencePlugin } from './create-markdown-it'
+import { resolveDiagramBlocksInHtml } from './resolve-diagram-blocks'
 import { createStandardMarkdownItEager } from './create-markdown-it-eager'
 import MarkdownIt from 'markdown-it'
 

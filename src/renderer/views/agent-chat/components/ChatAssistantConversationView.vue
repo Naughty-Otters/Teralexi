@@ -1128,14 +1128,15 @@ function bubblePresentation(
 }
 
 .conversation-bubble__file-changes {
-  margin: 6px -12px -10px;
-  width: calc(100% + 24px);
+  margin: 8px -8px -6px;
+  width: calc(100% + 16px);
   min-width: 0;
   box-sizing: border-box;
+  padding: 0 4px 4px;
 }
 
 .conversation-bubble__file-changes :deep(.fcs > .fc:last-child) {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .conversation-bubble__file-item {
@@ -1191,11 +1192,11 @@ function bubblePresentation(
 }
 
 .conversation-bubble__file-stat--add {
-  color: var(--color-success-600, #16a34a);
+  color: var(--diff-add);
 }
 
 .conversation-bubble__file-stat--del {
-  color: var(--color-error-600, #dc2626);
+  color: var(--diff-del);
 }
 
 .conversation-bubble__file-hint {

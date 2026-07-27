@@ -1,5 +1,6 @@
 import { randomShortUuid } from '@shared/utils/short-uuid'
 import { unionMcpServerIdsForAgents } from '@shared/mcp/resolve-mcp-servers-for-agent'
+import { isAlwaysOnMcpServer } from '@shared/mcp/reference-mcp-servers'
 import { DEFAULT_USER_ID } from './config'
 import type { AgentStoreContext } from './agent-store-context'
 import type { Agent, McpServerDefinition, McpToolDefinition, McpTransportType } from './types'
@@ -158,6 +159,8 @@ export function createMcpServerActions(ctx: AgentStoreContext) {
     if (!target) return
 
     const enabled = !target.enabled
+    if (!enabled && isAlwaysOnMcpServer(target)) return
+
     const channel = window.ipcRendererChannel?.SetMcpServerEnabled
     if (!channel?.invoke) return
 

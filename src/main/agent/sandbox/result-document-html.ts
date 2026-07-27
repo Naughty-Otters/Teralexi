@@ -1,4 +1,4 @@
-import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
+import { resolveDiagramBlocksInHtml } from '@shared/markdown/resolve-diagram-blocks'
 import { createStandardMarkdownItEager } from '@shared/markdown/create-markdown-it-eager'
 
 import {

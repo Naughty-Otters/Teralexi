@@ -86,3 +86,10 @@ export function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
 }
+
+/** Shiki returns `<pre class="shiki">…<code>…</code></pre>` — keep inner code markup only. */
+export function extractShikiInnerHtml(fragment: string): string {
+  const codeMatch = fragment.match(/<code[^>]*>([\s\S]*)<\/code>/i)
+  if (codeMatch?.[1]) return codeMatch[1]
+  return fragment
+}

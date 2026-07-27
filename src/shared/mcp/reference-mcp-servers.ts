@@ -69,6 +69,7 @@ export const REFERENCE_MCP_SERVER_DEFINITIONS: ReferenceMcpServerDefinition[] = 
     // Seed uses `node` + package name; runtime rewrites to the bundled cli.js.
     command: 'node',
     args: [...PLAYWRIGHT_MCP_SEED_ARGS],
+    // Always on: seed enabled and refuse disable in the store / UI.
     enabled: true,
   },
 ]
@@ -88,4 +89,9 @@ export function isPlaywrightReferenceMcpServer(server: {
   id: string
 }): boolean {
   return server.id === PLAYWRIGHT_MCP_SERVER_ID
+}
+
+/** Built-in servers that cannot be paused or removed from agent allowlists. */
+export function isAlwaysOnMcpServer(server: { id: string }): boolean {
+  return isPlaywrightReferenceMcpServer(server)
 }

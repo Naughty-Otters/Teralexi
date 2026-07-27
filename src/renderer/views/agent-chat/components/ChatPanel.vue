@@ -1,13 +1,5 @@
 <template>
-  <div class="chat-panel" @click.capture="onChatPanelClick">
-    <ChatPanelHeader
-      :active-agent-name="activeAgentName"
-      :active-agent-model="activeAgentModel"
-      :active-agent-color="activeAgentColor"
-      :is-busy="isBusy"
-      :context-usage="contextWindowUsage"
-    />
-
+  <div class="chat-panel">
     <div
       ref="chatBodyEl"
       class="chat-body"
@@ -32,169 +24,31 @@
         @keyboard-resize="onWorkspaceSplitPanelKeyboardResize"
       />
 
-      <section class="chat-main">
-        <div class="chat-scroll-area">
-          <ChatConversationSkeleton
-            v-if="showConversationLoading"
-            :aria-label="t.startup.loadingConversations"
+      <ConversationSplitLayout
+        v-if="layoutRoot && layoutFocusedPaneId"
+        :node="layoutRoot"
+        :focused-pane-id="layoutFocusedPaneId"
+        @focus-pane="onFocusPane"
+        @update-ratio="onUpdateRatio"
+      >
+        <template #pane="{ paneId, conversationId, isFocused }">
+          <ChatPaneView
+            :key="paneId"
+            :conversation-id="conversationId"
+            :is-focused="isFocused"
+            @activate="onFocusPane(paneId)"
+            @open-preview="openSandboxPreview"
           />
-          <div
-            v-show="!showConversationLoading"
-            ref="messagesEl"
-            class="chat-scroll"
-            @scroll.passive="onMessagesScroll"
-            @wheel.passive="onMessagesWheel"
-          >
-            <div ref="messagesContentEl" class="chat-scroll__content">
-            <AgentGuidePanel
-              v-if="showAgentGuide"
-              :agents="agentStore.chatSelectableAgents"
-              :selected-agent-id="agentStore.selectedAgentId"
-              :signed-in="isTeralexiSignedIn"
-              @select-agent="onSelectAgent"
-              @sign-in-required="notifyWebsiteSkillRequiresSignIn"
-            />
-            <div
-              v-if="hasHiddenAbove || isLoadingOlderMessages"
-              class="chat-scroll-edge chat-scroll-edge--top"
-              aria-hidden="true"
-            >
-              <span
-                v-if="isLoadingOlderMessages"
-                class="chat-scroll-edge__label"
-              >
-                Loading older messages…
-              </span>
-            </div>
-            <div
-              v-for="msg in visibleMessages"
-              :key="msg.id"
-              :class="[
-                'msg-row',
-                msg.role === 'user' ? 'msg-row--user' : 'msg-row--assistant',
-              ]"
-            >
-              <ChatUserMessage v-if="msg.role === 'user'" :message="msg" />
-              <ChatAssistantMessageParts
-                v-else
-                :message="msg"
-                :render-text-part-html="assistantTextPartHtml"
-                :chat-ready="!!chatInst"
-                :show-thinking-indicator="
-                  thinkingAssistantMessageId != null &&
-                  msg.id === thinkingAssistantMessageId
-                "
-                :show-catching-up="
-                  thinkingAssistantMessageId != null &&
-                  msg.id === thinkingAssistantMessageId &&
-                  isCatchingUp
-                "
-                @collect-form-submit="onCollectFormSubmit"
-                @tool-approval="onToolApproval"
-                @open-preview="openSandboxPreview"
-              />
-            </div>
+        </template>
+      </ConversationSplitLayout>
 
-            <div
-              v-if="hasHiddenBelow"
-              class="chat-scroll-edge chat-scroll-edge--bottom"
-              aria-hidden="true"
-            >
-              <span class="chat-scroll-edge__label">
-                Newer messages hidden — scroll down
-              </span>
-            </div>
-
-            <div
-              v-if="queuedMessageCount > 0"
-              class="message-queue"
-              role="region"
-              aria-label="Queued messages"
-            >
-              <p class="message-queue__title">
-                Queued — sent when the agent is ready
-              </p>
-              <ul class="message-queue__list">
-                <li
-                  v-for="item in messageQueue"
-                  :key="item.id"
-                  class="message-queue__item"
-                >
-                  <span class="message-queue__text">{{ item.text }}</span>
-                  <button
-                    type="button"
-                    class="message-queue__remove"
-                    aria-label="Remove from queue"
-                    title="Remove from queue"
-                    @click="removeQueuedMessage(item.id)"
-                  >
-                    <UIcon
-                      name="i-lucide-x"
-                      class="message-queue__remove-icon"
-                    />
-                  </button>
-                </li>
-              </ul>
-            </div>
-            <ChatFollowUpSuggestions
-              v-if="!isBusy && !hasPendingHitl && followUpItems.length > 0"
-              :items="followUpItems"
-              @select="onFollowUpSelect"
-            />
-            </div>
-          </div>
-        </div>
-
-        <ChatConversationWorkspaceAttachments
-          v-if="
-            workspaceStore.isWorkspaceActive &&
-            conversationWorkspaceAttachments.length > 0
-          "
-          :attachments="conversationWorkspaceAttachments"
-          @open-preview="openSandboxPreview"
-        />
-
-        <ChatComposer
-          v-model="draft"
-          :loading="showConversationLoading"
-          :send-disabled="!canSend"
-          :selected-agent-id="agentStore.selectedAgentId"
-          :agent-options="composerAgentOptions"
-          :chat-agents="composerChatAgents"
-          :conversation-id="agentStore.currentConversationId"
-          :skill-id="composerSkillId"
-          :workspace-disabled="isBusy"
-          :workspace-hint="workspaceComposerHint"
-          :google-workspace-hint="googleWorkspaceComposerHint"
-          :skill-setup="composerSkillSetup"
-          :show-coding-mode-bar="selectedAgentIsCoding"
-          :coding-agent="selectedAgentIsCoding"
-          :coding-mode="codingMode"
-          :plan-display-status="planDisplayStatus"
-          :agent-busy="isBusy"
-          :background-tasks="backgroundTasks"
-          :sub-agent-slash-enabled="subAgentSlashEnabled"
-          :staged-attachments="stagedAttachments"
-          :can-add-attachments="canAddAttachments"
-          :llm-override="llmOverride"
-          :agent-provider="composerAgentProvider"
-          :agent-model="composerAgentModel"
-          :signed-in="isTeralexiSignedIn"
-          :locked-agent-title="t.signInGate.websiteSkill"
-          @select-agent="onSelectAgent"
-          @sign-in-required="notifyWebsiteSkillRequiresSignIn"
-          @update:coding-mode="onCodingModeChange"
-          @update:llm-override="onLlmOverrideChange"
-          @cancel-background-task="onCancelBackgroundTask"
-          @pick-attachments="pickAttachments"
-          @remove-attachment="removeStaged"
-          @add-attachment-paths="addSourcePaths"
-          @submit="onSubmit"
-        />
-        <p v-if="attachmentError" class="chat-attachment-error" role="alert">
-          {{ attachmentError }}
-        </p>
-      </section>
+      <div
+        v-else
+        class="chat-panel__empty"
+        role="status"
+      >
+        {{ t.common.loading }}
+      </div>
 
       <PanelResizeHandle
         v-if="showReportPanel"
@@ -229,124 +83,29 @@
 import {
   computed,
   defineAsyncComponent,
-  nextTick,
-  onMounted,
-  onUnmounted,
-  provide,
-  ref,
-  shallowRef,
   watch,
   watchEffect,
+  ref,
+  onMounted,
+  onUnmounted,
 } from 'vue'
-import { resolveDiagramBlocksInHtml } from '@shared/markdown/create-markdown-it'
-import './chat/markdown-preview.css'
-import { Chat } from '@teralexi-ai/vue'
-import {
-  lastAssistantMessageIsCompleteWithApprovalResponses,
-  type UIMessage,
-} from '@teralexi-ai'
-
-import {
-  useAgentStore,
-  type Conversation,
-  type Message as StoreMessage,
-} from '@store/agent'
-import { useWorkspaceStore } from '@store/workspace'
+import { storeToRefs } from 'pinia'
+import { useAgentStore, type Conversation } from '@store/agent'
 import { useWorkspaceNavigationStore } from '@store/workspace-navigation'
-import { agentIsCodingAgent } from '@shared/agent/coding-agent'
-import { formatAgentGroupDisplayName } from '@shared/agent/skill-groups'
-import {
-  agentIsGoogleWorkspaceAgent,
-  googleWorkspaceComposerHint as buildGoogleWorkspaceComposerHint,
-} from '@shared/agent/google-workspace-agent'
-import {
-  defaultPlanModeView,
-  resolvePlanModeDisplayStatus,
-  type PlanModeView,
-} from '@shared/agent/plan-mode-phase'
-import { agentRequiresWorkspace, resolveAgentSkillId } from '@shared/agent/workspace-required-skills'
-import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
-import { collectConversationWorkspaceAttachments } from '@shared/agent/conversation-workspace-attachments'
-import { useGoogleWorkspaceAccount } from '@renderer/composables/useGoogleWorkspaceAccount'
-import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
-import { useSkillSystemProperties } from '@renderer/composables/useSkillSystemProperties'
-import { useI18n } from '@renderer/composables/useI18n'
-import { isSignedInOnlySkillId, isAgentLockedWithoutSignIn } from '@shared/auth/signed-in-features'
-import { DEFAULT_USER_ID } from '@store/agent/config'
+import { useConversationLayoutStore } from '@store/conversation-layout'
 import { setTitleBarChatControls } from '@renderer/composables/useTitleBarChatControls'
-import { useChatAttachments } from '@renderer/composables/useChatAttachments'
-import type { ChatAttachmentMeta } from '@shared/chat/attachments'
-import { CHAT_MESSAGE_ATTACHMENTS_KEY } from './chatAttachmentContext'
-import { SUBMIT_CHAT_TEXT_KEY } from '../submitChatText'
-
-import {
-  createRendererChatGenerateId,
-  IpcAgentChatTransport,
-} from '../IpcAgentChatTransport'
-import {
-  clearConversationChatCache,
-  clearConversationSession,
-  conversationHitlBlocksQueue,
-  evictIdleConversationChats,
-  getConversationChat,
-  setConversationHitlBlocksQueue,
-  getConversationQueue,
-  getConversationSnapshot,
-  setConversationChat,
-  stashConversationChat,
-  syncConversationSnapshot,
-  type QueuedUserMessage,
-} from '../conversation-chat-session'
-import {
-  registerStressChatDriver,
-  type StressChatSendResult,
-  type StressSendOptions,
-} from '../stress/stressChatBridge'
-import {
-  UI_CHAT_CONVERSATION_MODE_ONLY,
-  resolveUiChatBoxDisplayMode,
-  usesStructuredAssistantRendering,
-} from '../chatBoxDisplayMode'
-import { computeContextWindowUsage } from '@shared/agent/context-window-usage'
-import { chatUiContextWindowMessages } from '../chatUiSettings'
-import { useChatMessageScrollWindow } from '../useChatMessageScrollWindow'
-import { useStreamingTextBuffer } from '../useStreamingTextBuffer'
-import { chatUiPerfMark, chatUiPerfMarkEnd } from '../perf/chatUiPerf'
-import {
-  flushAllUiForConversation,
-  scheduleUiFlush,
-  setVisibleConversationForUiFlush,
-  conversationIsCatchingUp,
-} from '../perf/scheduleUiFlush'
-import { flushStoreStreamSyncForConversation } from '../perf/storeStreamSync'
-import {
-  isChatUiWorkerAvailable,
-  syncIncrementalSyncChatMessages,
-  syncNormalizeChatMessages,
-  workerNormalizeChatMessages,
-} from '../perf/chatUiWorkerClient'
-import { registerConversationStoreUiSync } from '../conversationStoreUiSync'
-import { createAssistantTextPartHtmlRenderer } from './chat/chatAssistantRender'
-import {
-  mergeLiveChatMessagesWithStore,
-  normalizeChatMessagesForDisplay,
-} from './chat/chatMessageNormalize'
-import { chatMessagesHavePendingHitl } from './chat/chatHitlHelpers'
-import { parsePersistedCollectFormResponse } from './chat/chatUserMessageHelpers'
-import {
-  isExitPlanModeToolPart,
-  toolPartDisplayName,
-} from './chat/chatToolPartHelpers'
-import { lastAssistantMessageIsCompleteWithCollectFormResponses } from './chat/chatSendAutomaticallyWhen'
-
-import { useHorizontalPanelResize, SPLIT_PANEL_PEER_MIN_PX } from '@renderer/composables/useHorizontalPanelResize'
 import {
   LAYOUT_PREF_KEYS,
   useLayoutPreference,
 } from '@renderer/lib/layout-preferences'
-import { useLazyStandardMarkdown } from '@renderer/composables/useLazyStandardMarkdown'
+import { useHorizontalPanelResize } from '@renderer/composables/useHorizontalPanelResize'
+import { SPLIT_PANEL_PEER_MIN_PX } from '@renderer/composables/useHorizontalPanelResize'
 import PanelResizeHandle from '@renderer/components/PanelResizeHandle.vue'
-import { handleChatPanelLinkClick } from '../sandboxPreview'
+import { useI18n } from '@renderer/composables/useI18n'
+import { getConversationChat } from '../conversation-chat-session'
+import {
+  setVisibleConversationIdsForUiFlush,
+} from '../perf/scheduleUiFlush'
 import { bindSandboxPreviewRequest } from '../sandboxPreviewBridge'
 import {
   closePreviewLinkTab,
@@ -356,60 +115,9 @@ import {
   type PreviewLinkTab,
 } from '../report-preview-tabs'
 import type { ReportPanelPreviewSource } from './ReportPanel.vue'
-import ChatPanelHeader from './ChatPanelHeader.vue'
-import AgentGuidePanel from './AgentGuidePanel.vue'
-import ChatUserMessage from './ChatUserMessage.vue'
-import ChatAssistantMessageParts from './ChatAssistantMessageParts.vue'
-import ChatComposer from './ChatComposer.vue'
-import ChatFollowUpSuggestions from './ChatFollowUpSuggestions.vue'
-import ChatConversationSkeleton from './ChatConversationSkeleton.vue'
-import ChatConversationWorkspaceAttachments from './ChatConversationWorkspaceAttachments.vue'
-import { formatSlashHelp } from './composer-slash-commands'
-import { openComposerAgentPicker } from '@renderer/composables/useComposerAgentPicker'
-import {
-  describeAgentSlashStatus,
-  formatAgentSwitchHelp,
-  isAgentSlashCommand,
-  parseAgentSlashCommand,
-  resolveAgentIdForAgentSwitch,
-  type AgentSlashAction,
-} from '@shared/agent/agent-switch-command'
-import {
-  isSkillSwitchCommand,
-  parseSkillSwitchCommand,
-  resolveAgentIdForSkillSwitch,
-} from '@shared/agent/skill-switch-command'
-import {
-  describeWorkspaceSlashStatus,
-  formatWorkspaceSlashHelp,
-  isWorkspaceSlashCommand,
-  parseWorkspaceSlashCommand,
-  type WorkspaceSlashAction,
-} from '@shared/agent/workspace-slash-command'
-import type { CodingMode } from '@shared/agent/coding-mode'
-import {
-  toPlainConversationLlmOverride,
-  type ConversationLlmOverride,
-} from '@shared/agent/conversation-llm-override'
-import type { ProviderType } from '@shared/agent/llm-provider-registry'
-import {
-  codingModeLabel,
-  DEFAULT_CODING_MODE,
-  parseCodingMode,
-} from '@shared/agent/coding-mode'
-import {
-  followUpItemToUserMessage,
-  type FollowUpItem,
-} from '@shared/agent/follow-up'
-import type { BackgroundTaskView } from './BackgroundTaskPanel.vue'
-import {
-  resolveDelegatableSubAgentTargets,
-} from '@shared/agent/sub-agent-targets'
-import {
-  isSubAgentSlashCommand,
-  parseSubAgentSlashCommand,
-} from '@shared/agent/sub-agent-slash-command'
-import { resolveAllowSubAgents } from '@shared/agent/sub-agent-settings'
+import ConversationSplitLayout from './ConversationSplitLayout.vue'
+import ChatPaneView from './ChatPaneView.vue'
+import { buildPaneConversationOptions } from '../paneConversationOptions'
 
 const ReportPanel = defineAsyncComponent(() => import('./ReportPanel.vue'))
 const WorkspacePanel = defineAsyncComponent(() => import('./WorkspacePanel.vue'))
@@ -417,110 +125,20 @@ const WorkspacePanel = defineAsyncComponent(() => import('./WorkspacePanel.vue')
 const props = defineProps<{ sidebarCollapsed: boolean }>()
 const emit = defineEmits<{ 'toggle-sidebar': [] }>()
 
-const agentStore = useAgentStore()
-const showConversationLoading = computed(
-  () => agentStore.isLoadingInitialConversations,
-)
-const workspaceStore = useWorkspaceStore()
-const workspaceNavStore = useWorkspaceNavigationStore()
 const { t } = useI18n()
-const selectedAgentRef = computed(() => agentStore.selectedAgent)
-const skillSystemProperties = useSkillSystemProperties(selectedAgentRef)
+const agentStore = useAgentStore()
+const workspaceNavStore = useWorkspaceNavigationStore()
+const layoutStore = useConversationLayoutStore()
 const {
-  isSignedIn: googleWorkspaceSignedIn,
-  hasWorkspaceAccess: googleWorkspaceHasAccess,
-  refresh: refreshGoogleWorkspaceAccount,
-} = useGoogleWorkspaceAccount()
-const { isSignedIn: isTeralexiSignedIn } = useGoogleAccount()
-const toast = useToast()
+  root: layoutRoot,
+  focusedPaneId: layoutFocusedPaneId,
+  canSplit,
+  canCloseFocused,
+  visibleConversationIdList,
+  focusedConversationId: layoutFocusedConversationId,
+} = storeToRefs(layoutStore)
 
-function agentRequiresTeralexiSignIn(agentId: string): boolean {
-  const agent = agentStore.chatSelectableAgents.find((entry) => entry.id === agentId)
-  if (!agent) return false
-  return isAgentLockedWithoutSignIn(agent, false)
-}
-
-function notifyWebsiteSkillRequiresSignIn(): void {
-  toast.add({
-    title: t.value.auth.signInRequiredTitle,
-    description: t.value.signInGate.websiteSkill,
-    color: 'warning',
-  })
-}
-
-/** Returns false when the agent is blocked for signed-out users. */
-function ensureAgentAllowedWithoutSignIn(agentId: string): boolean {
-  if (isTeralexiSignedIn.value) return true
-  if (!agentRequiresTeralexiSignIn(agentId)) return true
-  notifyWebsiteSkillRequiresSignIn()
-  return false
-}
-
-const COMPACT_CMD_RE = /^\/compact(?:\s+([\s\S]*))?$/i
-const MODE_CMD_RE = /^\/(yolo|auto)\b/i
-const EXPLORE_CMD_RE = /^\/explore(?:\s+(\S+))?\b/i
-/** @deprecated Use /explore — kept for backward compatibility. */
-const PLAN_CMD_ALIAS_RE = /^\/plan(?:\s+(\S+))?\b/i
-const HELP_CMD_RE = /^\/help\b/i
-const MCP_CMD_RE = /^\/mcp(?:\s+([\s\S]*))?$/i
-const INSTALL_SKILL_CMD_RE = /^\/skill:install\s+(\S+)/i
-const standardMarkdown = useLazyStandardMarkdown()
-
-const codingMode = ref<CodingMode>(DEFAULT_CODING_MODE)
-const llmOverride = ref<ConversationLlmOverride | null>(null)
-const planModeView = ref<PlanModeView>(defaultPlanModeView())
-const followUpItems = ref<FollowUpItem[]>([])
-/** Monotonic revision from main; ignore notify/load payloads with a lower revision. */
-const followUpRevision = ref(0)
-/** Bumps whenever follow-ups are cleared so late IPC loads cannot resurrect chips. */
-let followUpLoadGeneration = 0
-const backgroundTasks = ref<BackgroundTaskView[]>([])
-let backgroundTaskPollTimer: ReturnType<typeof setInterval> | null = null
-
-const draft = ref('')
-const messageAttachmentsById = ref<Record<string, ChatAttachmentMeta[]>>({})
-const {
-  staged: stagedAttachments,
-  attachmentSourcePaths,
-  pickAttachments,
-  addSourcePaths,
-  removeStaged,
-  clearStaging,
-  canAddMore: canAddAttachments,
-  error: attachmentError,
-} = useChatAttachments({
-  conversationId: computed(() => agentStore.currentConversationId),
-})
-
-provide(CHAT_MESSAGE_ATTACHMENTS_KEY, messageAttachmentsById)
-provide(
-  'chatConversationId',
-  computed(() => agentStore.currentConversationId),
-)
-
-async function loadConversationAttachments(conversationId: string | null | undefined) {
-  const cid = conversationId?.trim()
-  if (!cid) {
-    messageAttachmentsById.value = {}
-    return
-  }
-  const ch = window.ipcRendererChannel?.GetConversationAttachments
-  if (!ch) return
-  const result = await ch.invoke({ conversationId: cid })
-  if (!result.ok) return
-  const grouped: Record<string, ChatAttachmentMeta[]> = {}
-  for (const item of result.attachments ?? []) {
-    const messageId = item.messageId?.trim()
-    if (!messageId) continue
-    grouped[messageId] = [...(grouped[messageId] ?? []), item]
-  }
-  messageAttachmentsById.value = grouped
-}
-
-function sendTextForAttachments(sourcePaths: readonly string[]): string {
-  if (sourcePaths.length === 0) return ''
-  return `Attached ${sourcePaths.length} file${sourcePaths.length === 1 ? '' : 's'}`
-}
+const chatBodyEl = ref<HTMLElement | null>(null)
 
 const showReportPanel = useLayoutPreference(
   LAYOUT_PREF_KEYS.reportPanelOpen,
@@ -535,6 +153,7 @@ const showWorkspaceSplitPanel = computed({
     workspaceNavStore.setWorkspacePanelOpen(conversationId, open)
   },
 })
+
 const previewLinkTabsByConversation = ref<Record<string, PreviewLinkTab[]>>({})
 const activePreviewLinkTabIdByConversation = ref<Record<string, string | null>>(
   {},
@@ -542,19 +161,8 @@ const activePreviewLinkTabIdByConversation = ref<Record<string, string | null>>(
 const previewPanelSourceByConversation = ref<
   Record<string, ReportPanelPreviewSource>
 >({})
-const messagesEl = ref<HTMLElement | null>(null)
-const messagesContentEl = ref<HTMLElement | null>(null)
-const chatBodyEl = ref<HTMLElement | null>(null)
-const chatInst = shallowRef<InstanceType<typeof Chat> | null>(null)
-
-provide(SUBMIT_CHAT_TEXT_KEY, (text: string) => {
-  const trimmed = text.trim()
-  if (!trimmed || !chatInst.value) return
-  void chatInst.value.sendMessage({ text: trimmed })
-})
 
 const reportPanelResizeEnabled = computed(() => showReportPanel.value)
-
 const {
   sizePx: reportPanelWidthPx,
   isResizing: reportPanelResizing,
@@ -573,7 +181,6 @@ const {
 const workspaceSplitPanelResizeEnabled = computed(
   () => showWorkspaceSplitPanel.value,
 )
-
 const {
   sizePx: workspaceSplitPanelWidthPx,
   isResizing: workspaceSplitPanelResizing,
@@ -705,2100 +312,6 @@ function onUpdatePreviewLinkTabUrl(payload: { tabId: string; url: string }) {
   setConversationPreviewTabs(cid, tabs, activeId)
 }
 
-function onChatPanelClick(event: MouseEvent) {
-  handleChatPanelLinkClick(event, openSandboxPreview)
-}
-
-function onChatBodySandboxPreviewClick(event: MouseEvent) {
-  handleChatPanelLinkClick(event, openSandboxPreview)
-}
-
-const messageQueue = ref<QueuedUserMessage[]>([])
-const queuedMessageCount = computed(() => messageQueue.value?.length ?? 0)
-
-/** Last conversation rendered in this panel (may differ from store during async select). */
-const lastViewedConversationId = ref<string | null>(null)
-
-const chatGenerateId = createRendererChatGenerateId()
-
-const streamingTextBuffer = useStreamingTextBuffer()
-
-const assistantTextPartHtmlRenderer = shallowRef<
-  ((msg: UIMessage, part: unknown) => string) | null
->(null)
-
-watch(
-  standardMarkdown,
-  (markdown) => {
-    if (!markdown) return
-    assistantTextPartHtmlRenderer.value = createAssistantTextPartHtmlRenderer({
-      markdown,
-      getStructuredDebug: () =>
-        usesStructuredAssistantRendering(resolveUiChatBoxDisplayMode()),
-      getStreamingText: UI_CHAT_CONVERSATION_MODE_ONLY
-        ? undefined
-        : (msg, part) => {
-            const partId = (part as { id?: string }).id ?? 'text-0'
-            const override = streamingTextBuffer.textForMessage(
-              msg,
-              partId,
-              part.text ?? '',
-            )
-            if (override !== (part.text ?? '')) return override
-            return undefined
-          },
-    })
-  },
-  { immediate: true },
-)
-
-function assistantTextPartHtml(msg: UIMessage, part: unknown): string {
-  return assistantTextPartHtmlRenderer.value?.(msg, part) ?? ''
-}
-
-const isCatchingUp = computed(() => {
-  const cid = agentStore.currentConversationId
-  if (!cid) return false
-  return conversationIsCatchingUp(cid).value
-})
-
-function scheduleSnapshot(conversationId: string, immediate = false): void {
-  scheduleUiFlush(
-    'snapshot',
-    () =>
-      syncConversationSnapshot(conversationId, {
-        // Soft during stream coalesce; deep clone on end / switch / force.
-        clone: immediate,
-      }),
-    {
-      conversationId,
-      priority: immediate ? 'immediate' : 'normal',
-      force: immediate,
-    },
-  )
-}
-
-function shouldPreserveReactiveMessagesWhenChatEmpty(): boolean {
-  if (!chatInst.value || reactiveMessages.value.length === 0) return false
-  const cid = agentStore.currentConversationId
-  if (!cid) return false
-  if ((agentStore.conversations[cid] ?? []).length > 0) return true
-  return Boolean(getConversationChat(cid)?.messages?.length)
-}
-
-function clearHitlQueueBlockIfMessagesResolved(
-  messages: readonly UIMessage[],
-): void {
-  const conversationId = resolveActiveConversationId()
-  if (!conversationId) return
-  if (!conversationHitlBlocksQueue(conversationId)) return
-  if (chatMessagesHavePendingHitl(messages)) return
-  setConversationHitlBlocksQueue(conversationId, false)
-  // Match transport onHitlBlocksQueue(false): clearing the block must drain
-  // any messages queued while HITL / busy was holding the composer.
-  void nextTick(() => dequeueAndSendNext())
-}
-
-function syncReactiveMessagesFromChat(
-  raw: UIMessage[] | undefined,
-  opts?: { full?: boolean },
-): void {
-  if (!raw || raw.length === 0) {
-    if (shouldPreserveReactiveMessagesWhenChatEmpty()) return
-    reactiveMessages.value = []
-    streamingTextBuffer.clear()
-    return
-  }
-
-  chatUiPerfMark('normalize')
-  const useFull = Boolean(opts?.full || reactiveMessages.value.length === 0)
-  if (useFull) {
-    // Sync paint first so the frame is not empty; optionally refine via worker.
-    reactiveMessages.value = syncNormalizeChatMessages(raw)
-    if (isChatUiWorkerAvailable()) {
-      const gen = ++normalizeGeneration
-      void workerNormalizeChatMessages(raw).then((next) => {
-        if (gen !== normalizeGeneration) return
-        if (agentStore.currentConversationId == null) return
-        reactiveMessages.value = next
-      })
-    }
-  } else {
-    reactiveMessages.value = syncIncrementalSyncChatMessages(
-      raw,
-      reactiveMessages.value,
-    )
-  }
-  chatUiPerfMarkEnd('normalize')
-
-  clearHitlQueueBlockIfMessagesResolved(reactiveMessages.value)
-
-  const tail = reactiveMessages.value[reactiveMessages.value.length - 1]
-  if (UI_CHAT_CONVERSATION_MODE_ONLY) {
-    streamingTextBuffer.clear()
-  } else if (tail?.role === 'assistant') {
-    streamingTextBuffer.syncFromMessage(tail)
-  } else {
-    streamingTextBuffer.clear()
-  }
-}
-
-function scheduleScrollToBottom(behavior: ScrollBehavior = 'auto'): void {
-  scheduleUiFlush(
-    'scroll',
-    () => {
-      void scrollToBottomIfStuck(behavior)
-    },
-    {
-      conversationId: agentStore.currentConversationId ?? undefined,
-      priority: 'normal',
-    },
-  )
-}
-
-const transport = new IpcAgentChatTransport({
-  getRunContext: (conversationId) => {
-    const cid =
-      conversationId?.trim() ||
-      agentStore.currentConversationId?.trim() ||
-      undefined
-    if (!cid) return null
-    let agentId: string | null = null
-    for (const convs of Object.values(agentStore.conversationList)) {
-      const hit = convs.find((c) => c.id === cid)
-      if (hit) {
-        agentId = hit.agentId
-        break
-      }
-    }
-    agentId = agentId ?? agentStore.selectedAgentId
-    if (!agentId) return null
-    return {
-      conversationId: cid,
-      agentId,
-      userId: DEFAULT_USER_ID,
-    }
-  },
-  onStreamLifecycle(conversationId, phase) {
-    agentStore.markUiChatInFlight(conversationId, phase === 'start')
-    if (phase === 'end') {
-      flushStoreStreamSyncForConversation(conversationId)
-      flushAllUiForConversation(conversationId)
-      scheduleSnapshot(conversationId, true)
-      streamingTextBuffer.flushNow()
-      scheduleUiFlush(
-        'messages-sync',
-        () => {
-          const chat =
-            getConversationChat(conversationId) ??
-            (chatInst.value?.id === conversationId ? chatInst.value : null)
-          if (!chat) return
-          if (agentStore.currentConversationId !== conversationId) return
-          syncReactiveMessagesFromChat(
-            (
-              chat as unknown as {
-                state?: { messagesRef?: { value: UIMessage[] } }
-              }
-            ).state?.messagesRef?.value ?? chat.messages,
-            { full: true },
-          )
-        },
-        { conversationId, priority: 'immediate', force: true },
-      )
-      void refreshPlanModeState(conversationId)
-      void loadFollowUpSuggestions(conversationId)
-      evictIdleConversationChats({
-        isStreamActive: (id) => agentStore.isConversationStreamActive(id),
-      })
-    }
-  },
-  onStreamUiChunk(conversationId, meta) {
-    const isVisible = agentStore.currentConversationId === conversationId
-    // Background: keep Chat SDK hot; snapshot only on end / leave (not per chunk).
-    if (isVisible) {
-      scheduleSnapshot(conversationId, meta?.immediate)
-    }
-    scheduleUiFlush(
-      'messages-sync',
-      () => {
-        const chat =
-          getConversationChat(conversationId) ??
-          (chatInst.value?.id === conversationId ? chatInst.value : null)
-        if (!chat) return
-        // Background streams keep Chat fresh; only the visible conversation paints.
-        if (agentStore.currentConversationId !== conversationId) return
-        syncReactiveMessagesFromChat(
-          (
-            chat as unknown as {
-              state?: { messagesRef?: { value: UIMessage[] } }
-            }
-          ).state?.messagesRef?.value ?? chat.messages,
-        )
-      },
-      {
-        conversationId,
-        priority: meta?.immediate ? 'immediate' : 'normal',
-        force: meta?.immediate,
-      },
-    )
-  },
-  onHitlBlocksQueue(conversationId, blocked) {
-    setConversationHitlBlocksQueue(conversationId, blocked)
-    void refreshPlanModeState(conversationId)
-    if (!blocked && chatInst.value?.id === conversationId) {
-      void nextTick(() => dequeueAndSendNext())
-    }
-  },
-  persistUserMessage: async ({ id, conversationId, agentId, content }) => {
-    /** User row is persisted in main when `RunAgentForConversation` runs; keep local store in sync. */
-    const list = agentStore.conversations[conversationId]
-    if (list && !list.some((m) => m.id === id)) {
-      list.push({
-        id,
-        role: 'user',
-        content,
-        createdAt: new Date(),
-      })
-    }
-    void refreshPlanModeState(conversationId)
-  },
-})
-
-function dedupeStoreRowsByIdLastWins(rows: StoreMessage[]): StoreMessage[] {
-  if (rows.length <= 1) return rows
-  const lastIdx = new Map<string, number>()
-  for (let i = 0; i < rows.length; i++) {
-    lastIdx.set(rows[i].id, i)
-  }
-  return rows.filter((_, i) => lastIdx.get(rows[i].id) === i)
-}
-
-function storeMessagesToUi(rows: StoreMessage[]): UIMessage[] {
-  const uniqueRows = dedupeStoreRowsByIdLastWins(rows)
-  return uniqueRows.map((m) => {
-    if (m.role === 'user') {
-      const form = parsePersistedCollectFormResponse(m.content)
-      if (form) {
-        return {
-          id: m.id,
-          role: m.role,
-          parts: [
-            {
-              type: 'data-collect-form-response' as const,
-              id: form.requestId || undefined,
-              data: { values: form.values },
-            },
-          ],
-        } as UIMessage
-      }
-    }
-    return {
-      id: m.id,
-      role: m.role,
-      parts: [
-        {
-          type: 'text' as const,
-          text: m.content,
-          state: m.isStreaming ? ('streaming' as const) : ('done' as const),
-        },
-      ],
-    }
-  })
-}
-
-function conversationMeta(conversationId: string): Conversation | undefined {
-  for (const convs of Object.values(agentStore.conversationList)) {
-    const hit = convs.find((x) => x.id === conversationId)
-    if (hit) return hit
-  }
-  return undefined
-}
-
-const headerTitle = computed(() => {
-  const cid = agentStore.currentConversationId
-  if (!cid) return 'New chat'
-  return conversationMeta(cid)?.title ?? 'Conversation'
-})
-
-const chatStatus = computed(() => {
-  const c = chatInst.value as unknown as {
-    state?: { statusRef?: { value: string } }
-  }
-  return c?.state?.statusRef?.value ?? 'ready'
-})
-
-function readChatStatusFor(chat: InstanceType<typeof Chat> | null | undefined): string {
-  const c = chat as unknown as {
-    state?: { statusRef?: { value: string } }
-  }
-  return c?.state?.statusRef?.value ?? 'ready'
-}
-
-function extractLastAssistantTextFrom(
-  chat: InstanceType<typeof Chat> | null | undefined,
-): string {
-  const messages = chat?.messages ?? []
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i] as UIMessage
-    if (msg.role !== 'assistant') continue
-    const parts = (msg.parts ?? []) as Array<{ type?: string; text?: string }>
-    const text = parts
-      .filter((p) => p.type === 'text' && typeof p.text === 'string')
-      .map((p) => p.text!.trim())
-      .filter(Boolean)
-      .join('\n')
-      .trim()
-    if (text) return text
-  }
-  return ''
-}
-
-function readChatStatus(): string {
-  return readChatStatusFor(chatInst.value)
-}
-
-function extractLastAssistantText(): string {
-  return extractLastAssistantTextFrom(chatInst.value)
-}
-
-async function stressSendAndWait(
-  text: string,
-  opts?: StressSendOptions,
-): Promise<StressChatSendResult> {
-  const conversationId =
-    opts?.conversationId?.trim() ||
-    agentStore.currentConversationId?.trim() ||
-    ''
-  const chat =
-    (conversationId ? getConversationChat(conversationId) : null) ??
-    chatInst.value
-  if (!chat || !conversationId) {
-    return { ok: false, error: 'Chat not ready' }
-  }
-  const isAborted = () => opts?.isAborted?.() === true
-
-  const abortTurn = (): StressChatSendResult => {
-    agentStore.markUiChatInFlight(conversationId, false)
-    void chat.stop()
-    void window.ipcRendererChannel?.StopAgentForConversation?.invoke?.({
-      conversationId,
-    })
-    return {
-      ok: false,
-      aborted: true,
-      error: 'Stopped',
-      assistantText: extractLastAssistantTextFrom(chat),
-    }
-  }
-
-  if (isAborted()) return abortTurn()
-
-  try {
-    // Race so Settings → Stop can interrupt a hung sendMessage.
-    const sendPromise = chat.sendMessage({ text }).then(
-      () => 'ok' as const,
-      (err: unknown) => {
-        throw err
-      },
-    )
-    while (true) {
-      if (isAborted()) return abortTurn()
-      const raced = await Promise.race([
-        sendPromise.then(() => 'done' as const),
-        new Promise<'tick'>((resolve) => setTimeout(() => resolve('tick'), 120)),
-      ])
-      if (raced === 'done') break
-    }
-  } catch (err) {
-    if (isAborted()) return abortTurn()
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : String(err),
-    }
-  }
-
-  const deadline = Date.now() + 30 * 60 * 1000
-  while (Date.now() < deadline) {
-    if (isAborted()) return abortTurn()
-    const status = readChatStatusFor(chat)
-    const busy = status === 'submitted' || status === 'streaming'
-    const inFlight = agentStore.isConversationStreamActive(conversationId)
-    if (!busy && !inFlight) break
-    await new Promise((r) => setTimeout(r, 120))
-  }
-
-  if (isAborted()) return abortTurn()
-
-  if (conversationHitlBlocksQueue(conversationId)) {
-    return {
-      ok: false,
-      hitlPaused: true,
-      error: 'Paused for HITL (form or tool approval)',
-      assistantText: extractLastAssistantTextFrom(chat),
-    }
-  }
-
-  const status = readChatStatusFor(chat)
-  if (status === 'error') {
-    // Title-bar stop aborts the chat without stress abort — treat as turn end.
-    return {
-      ok: false,
-      error: 'Chat status error',
-      assistantText: extractLastAssistantTextFrom(chat),
-    }
-  }
-  return {
-    ok: true,
-    assistantText: extractLastAssistantTextFrom(chat),
-  }
-}
-
-const isBusy = computed(() =>
-  ['submitted', 'streaming'].includes(chatStatus.value),
-)
-
-const activeAgentName = computed(() => {
-  const agent = agentStore.selectedAgent
-  if (!agent) return 'Select an agent'
-  return formatAgentGroupDisplayName(agent)
-})
-const activeAgentModel = computed(() => agentStore.selectedAgent?.model ?? '')
-const composerAgentProvider = computed(
-  (): ProviderType => agentStore.selectedAgent?.provider ?? 'ollama',
-)
-const composerAgentModel = computed(
-  () => agentStore.selectedAgent?.model ?? '',
-)
-const activeAgentColor = computed(
-  () => agentStore.selectedAgent?.color ?? 'neutral',
-)
-
-const contextWindowUsage = computed(() => {
-  void chatUiContextWindowMessages.value
-  if (!agentStore.currentConversationId) return null
-  return computeContextWindowUsage({
-    messageCount: agentStore.currentMessages.length,
-    capacity: chatUiContextWindowMessages.value,
-  })
-})
-
-const composerAgentOptions = computed(() =>
-  agentStore.chatSelectableAgents.map((agent) => ({
-    id: agent.id,
-    name: agent.name,
-  })),
-)
-
-const composerChatAgents = computed(() => agentStore.chatSelectableAgents)
-
-const selectedAgentRequiresWorkspace = computed(() =>
-  agentStore.selectedAgent
-    ? agentRequiresWorkspace(agentStore.selectedAgent)
-    : false,
-)
-
-const selectedAgentIsCoding = computed(() =>
-  agentIsCodingAgent(agentStore.selectedAgent),
-)
-
-const composerSkillId = computed(() =>
-  agentStore.selectedAgent
-    ? resolveAgentSkillId(agentStore.selectedAgent)
-    : null,
-)
-
-const selectedAgentIsGoogleWorkspace = computed(() =>
-  agentIsGoogleWorkspaceAgent(agentStore.selectedAgent),
-)
-
-const workspaceComposerHint = computed(() => {
-  if (!selectedAgentRequiresWorkspace.value) return null
-  if (workspaceStore.activeWorkspacePath) return null
-  const skillId = agentStore.selectedAgent?.skillId?.trim()
-  if (skillId === 'website') {
-    return 'Select a project folder (toolbar folder icon) — the site will be built there or promoted into it after preview.'
-  }
-  return 'Select a project folder (toolbar folder icon) to edit and review code in this agent.'
-})
-
-const googleWorkspaceComposerHint = computed(() =>
-  buildGoogleWorkspaceComposerHint({
-    agentIsGoogleWorkspace: selectedAgentIsGoogleWorkspace.value,
-    isSignedIn: googleWorkspaceSignedIn.value,
-    hasWorkspaceAccess: googleWorkspaceHasAccess.value,
-  }),
-)
-
-const composerSkillSetup = computed(() => {
-  if (!skillSystemProperties.needsSetup.value) return null
-  const skillName =
-    agentStore.selectedAgent?.name?.trim() || 'this skill'
-  return {
-    needsSetup: true,
-    title: t.value.chat.skillSetupTitle.replace('{skillName}', skillName),
-    intro: t.value.chat.skillSetupIntro,
-    loadingLabel: t.value.common.loading,
-    saveLabel: t.value.chat.skillSetupSave,
-    savingLabel: t.value.chat.skillSetupSaving,
-    fields: skillSystemProperties.fields.value,
-    loading: skillSystemProperties.loading.value,
-    saving: skillSystemProperties.saving.value,
-    canSave: skillSystemProperties.canSave.value,
-    error: skillSystemProperties.error.value,
-    onUpdateField: skillSystemProperties.setDraft,
-    onSave: () => {
-      void skillSystemProperties.save()
-    },
-  }
-})
-
-watch(selectedAgentIsGoogleWorkspace, (active) => {
-  if (active) void refreshGoogleWorkspaceAccount()
-})
-
-watch(
-  [isTeralexiSignedIn, () => agentStore.selectedAgentId],
-  () => {
-    if (isTeralexiSignedIn.value) return
-    const agentId = agentStore.selectedAgentId
-    if (!agentId || !agentRequiresTeralexiSignIn(agentId)) return
-    const fallback = agentStore.chatSelectableAgents.find(
-      (entry) =>
-        entry.id !== agentId &&
-        !isSignedInOnlySkillId(resolveAgentSkillId(entry)),
-    )
-    if (fallback) void agentStore.selectAgent(fallback.id)
-  },
-)
-
-const canSend = computed(() => {
-  const text = draft.value.trim()
-  const hasAttachments = attachmentSourcePaths.value.length > 0
-  if (!text && !hasAttachments) return false
-  if (text && isSkillSwitchCommand(text)) return true
-  if (text && isAgentSlashCommand(text)) return true
-  if (text && isWorkspaceSlashCommand(text)) return true
-  if (
-    text &&
-    isSubAgentSlashCommand(text) &&
-    subAgentSlashEnabled.value &&
-    parseSubAgentSlashCommand(text, delegatableSubAgentTargets.value)
-  ) {
-    return true
-  }
-  if (!agentStore.selectedAgentId) return false
-  if (skillSystemProperties.needsSetup.value) return false
-  if (
-    selectedAgentRequiresWorkspace.value &&
-    !workspaceStore.activeWorkspacePath
-  ) {
-    return false
-  }
-  return true
-})
-
-const reactiveMessages = ref<UIMessage[]>([])
-let normalizeGeneration = 0
-
-const showAgentGuide = computed(
-  () =>
-    reactiveMessages.value.length === 0 &&
-    !isBusy.value &&
-    !agentStore.isLoadingInitialConversations,
-)
-
-const conversationWorkspaceAttachments = computed(() =>
-  collectConversationWorkspaceAttachments(reactiveMessages.value),
-)
-
-async function syncVisibleConversationFromStore(
-  conversationId: string,
-): Promise<void> {
-  if (agentStore.currentConversationId !== conversationId) return
-  if (agentStore.isConversationStreamActive(conversationId)) return
-
-  await agentStore.refreshConversationMessagesTail(conversationId)
-
-  const rows = agentStore.conversations[conversationId] ?? []
-  const uiFromStore = storeMessagesToUi(rows)
-  const chat = chatInst.value
-
-  if (chat?.id === conversationId) {
-    const merged = mergeLiveChatMessagesWithStore(chat.messages, uiFromStore)
-    const uiMessages = normalizeChatMessagesForDisplay(merged)
-    chat.messages = uiMessages
-    setConversationChat(conversationId, chat)
-    syncReactiveMessagesFromChat(uiMessages, { full: true })
-    await nextTick()
-    void scrollToBottomIfStuck('auto')
-    return
-  }
-
-  await rebuildChat()
-}
-
-async function loadOlderMessagesForScroll(): Promise<boolean> {
-  const conversationId = agentStore.currentConversationId
-  if (!conversationId) return false
-  if (!agentStore.conversationHasOlderMessages(conversationId)) return false
-
-  const loaded = await agentStore.loadOlderConversationMessages(conversationId)
-  if (!loaded) return false
-
-  const rows = agentStore.conversations[conversationId] ?? []
-  const uiFromStore = storeMessagesToUi(rows)
-  const chat = chatInst.value
-  if (chat?.id === conversationId) {
-    const merged = mergeLiveChatMessagesWithStore(chat.messages, uiFromStore)
-    chat.messages = normalizeChatMessagesForDisplay(merged)
-    setConversationChat(conversationId, chat)
-  }
-  return true
-}
-
-const {
-  visibleMessages,
-  hasHiddenAbove,
-  hasHiddenBelow,
-  isLoadingOlder: isLoadingOlderMessages,
-  resetWindow: resetMessageWindow,
-  onScroll: onMessagesScroll,
-  onWheel: onMessagesWheel,
-  armStickToBottom,
-  scrollToBottomIfStuck,
-  startContentAutoScroll,
-} = useChatMessageScrollWindow(reactiveMessages, messagesEl, {
-  onLoadOlder: loadOlderMessagesForScroll,
-  hasOlderOnServer: () => {
-    const cid = agentStore.currentConversationId
-    return cid ? agentStore.conversationHasOlderMessages(cid) : false
-  },
-  contentEl: messagesContentEl,
-})
-
-/** In-progress assistant row while the agent run is active (submitted / streaming). */
-const thinkingAssistantMessageId = computed(() => {
-  if (!isBusy.value) return null
-  const msgs = reactiveMessages.value
-  for (let i = msgs.length - 1; i >= 0; i--) {
-    if (msgs[i]?.role === 'assistant') return msgs[i].id
-  }
-  return null
-})
-
-watch(
-  () => {
-    const inst = chatInst.value as unknown as {
-      state?: { messagesRef?: { value: UIMessage[] } }
-    }
-    const msgs = inst?.state?.messagesRef?.value
-    if (!msgs?.length) return { len: 0, tailId: '', revision: 0 }
-    const tail = msgs[msgs.length - 1]
-    const tailRevision = tail
-      ? tail.parts
-          .map((p) => {
-            if (p.type === 'text') {
-              return `t:${(p.text ?? '').length}:${p.state ?? ''}`
-            }
-            if (p.type === 'reasoning') {
-              return `r:${(p.text ?? '').length}:${p.state ?? ''}`
-            }
-            if (p.type === 'data-agent-step-progress') {
-              const data = (
-                p as { data?: { content?: string; status?: string } }
-              ).data
-              return `p:${(data?.content ?? '').length}:${data?.status ?? ''}`
-            }
-            return String(p.type)
-          })
-          .join('|')
-      : ''
-    return {
-      len: msgs.length,
-      tailId: tail?.id ?? '',
-      tailRevision,
-      msgs,
-    }
-  },
-  (v) => {
-    if (!v?.msgs?.length) {
-      if (shouldPreserveReactiveMessagesWhenChatEmpty()) return
-      syncReactiveMessagesFromChat(undefined)
-      return
-    }
-    const conversationId = agentStore.currentConversationId ?? undefined
-    scheduleUiFlush(
-      'messages-sync',
-      () => syncReactiveMessagesFromChat(v.msgs),
-      { conversationId, priority: 'normal' },
-    )
-  },
-  { immediate: true },
-)
-
-watch(
-  () => {
-    const msgs = reactiveMessages.value
-    if (!msgs.length) return ''
-    const tail = msgs[msgs.length - 1]
-    return tail
-      ? tail.parts
-          .map((p) => {
-            if (p.type === 'text') {
-              return `t:${(p.text ?? '').length}:${p.state ?? ''}`
-            }
-            if (p.type === 'reasoning') {
-              return `r:${(p.text ?? '').length}:${p.state ?? ''}`
-            }
-            if (p.type === 'data-agent-step-progress') {
-              const data = (
-                p as { data?: { content?: string; status?: string } }
-              ).data
-              return `p:${(data?.content ?? '').length}:${data?.status ?? ''}`
-            }
-            return String(p.type)
-          })
-          .join('|')
-      : ''
-  },
-  () => {
-    scheduleScrollToBottom('auto')
-  },
-)
-
-watch(
-  () => streamingTextBuffer.displayText.value,
-  () => {
-    scheduleScrollToBottom('auto')
-  },
-)
-
-watch(draft, () => {
-  scheduleScrollToBottom('auto')
-})
-
-watch(messageQueue, () => {
-  scheduleScrollToBottom('auto')
-})
-
-function removeQueuedMessage(id: string) {
-  messageQueue.value = messageQueue.value.filter((q) => q.id !== id)
-}
-
-function resolveActiveConversationId(): string | undefined {
-  const fromChat = chatInst.value?.id?.trim()
-  if (fromChat) return fromChat
-  return agentStore.currentConversationId ?? undefined
-}
-
-const hasPendingHitl = computed(() =>
-  conversationHasPendingHitl(resolveActiveConversationId()),
-)
-
-/**
- * After the user engages with HITL (approve/deny, form submit, or any composer
- * send), hide the wait_for_approval composer banner even if the tool part is
- * still resolving. Reset when a new HITL pause begins.
- */
-const hitlWaitComposerHintSuppressed = ref(false)
-
-function dismissHitlWaitComposerHint() {
-  hitlWaitComposerHintSuppressed.value = true
-}
-
-const planDisplayStatus = computed(() =>
-  resolvePlanModeDisplayStatus(
-    planModeView.value,
-    hasPendingHitl.value && !hitlWaitComposerHintSuppressed.value,
-  ),
-)
-
-const delegatableSubAgentTargets = computed(() => {
-  const caller = agentStore.selectedAgent
-  if (!caller) return []
-  return resolveDelegatableSubAgentTargets(
-    {
-      id: caller.id,
-      allowSubAgents: caller.allowSubAgents,
-      subAgentIds: caller.subAgentIds ?? undefined,
-    },
-    agentStore.agents
-      .filter((agent) => !isWorkflowPanelAgentId(agent.id))
-      .map((agent) => ({
-        id: agent.id,
-        name: agent.name,
-        description: agent.description,
-        allowAsSubAgent: agent.allowAsSubAgent,
-      })),
-  )
-})
-
-const subAgentSlashEnabled = computed(() => {
-  const caller = agentStore.selectedAgent
-  if (!caller) return false
-  const status = planDisplayStatus.value
-  if (status === 'planning' || status === 'plan_tool_execute') return false
-  return resolveAllowSubAgents(caller.allowSubAgents)
-})
-
-function applyPlanModeView(view: PlanModeView) {
-  planModeView.value = view
-}
-
-function messagesLookPendingHitl(messages: readonly UIMessage[]): boolean {
-  return chatMessagesHavePendingHitl(messages)
-}
-
-function conversationHasPendingHitl(
-  conversationId: string | undefined,
-): boolean {
-  if (!conversationId) return false
-  if (conversationHitlBlocksQueue(conversationId)) return true
-  const chat = chatInst.value
-  if (chat?.id === conversationId && messagesLookPendingHitl(chat.messages)) {
-    return true
-  }
-  if (
-    agentStore.currentConversationId === conversationId &&
-    messagesLookPendingHitl(reactiveMessages.value)
-  ) {
-    return true
-  }
-  return false
-}
-
-function canDequeueQueuedMessages(): boolean {
-  const chat = chatInst.value
-  const conversationId = resolveActiveConversationId()
-  if (!chat || !conversationId || messageQueue.value.length === 0) return false
-  if (isBusy.value) return false
-  if (conversationHasPendingHitl(conversationId)) return false
-  return true
-}
-
-async function dequeueAndSendNext(): Promise<void> {
-  if (!canDequeueQueuedMessages()) return
-  const chat = chatInst.value!
-  const next = messageQueue.value[0]
-  messageQueue.value = messageQueue.value.slice(1)
-  try {
-    const sendText =
-      next.text.trim() ||
-      (next.attachmentSourcePaths?.length
-        ? `Attached ${next.attachmentSourcePaths.length} file${
-            next.attachmentSourcePaths.length === 1 ? '' : 's'
-          }`
-        : '')
-    await chat.sendMessage(
-      { text: sendText },
-      next.attachmentSourcePaths?.length
-        ? { body: { attachmentSourcePaths: next.attachmentSourcePaths } }
-        : undefined,
-    )
-    void loadConversationAttachments(chat.id)
-  } catch {
-    messageQueue.value = [next, ...messageQueue.value]
-  }
-}
-
-watch(isBusy, (busy, wasBusy) => {
-  // Keep followUpItems while busy so chips appear as soon as the turn ends
-  // (meta is often written mid-stream via generate_follow_up).
-  if (wasBusy && !busy) {
-    void dequeueAndSendNext()
-    if (!hasPendingHitl.value) {
-      void loadFollowUpSuggestions(agentStore.currentConversationId ?? undefined)
-    } else {
-      // HITL pause: do not surface post-turn chips while the turn is suspended.
-      followUpItems.value = []
-    }
-  }
-})
-
-watch(hasPendingHitl, (pending, wasPending) => {
-  if (pending) {
-    followUpItems.value = []
-    // Fresh HITL pause — show the wait banner until the user engages again.
-    if (!wasPending) hitlWaitComposerHintSuppressed.value = false
-  }
-})
-
-function createChatForConversation(
-  conversationId: string,
-  initial: UIMessage[],
-): InstanceType<typeof Chat> {
-  return new Chat<UIMessage>({
-    id: conversationId,
-    messages: initial,
-    generateId: chatGenerateId,
-    transport,
-    sendAutomaticallyWhen: (opts) =>
-      lastAssistantMessageIsCompleteWithApprovalResponses(opts) ||
-      lastAssistantMessageIsCompleteWithCollectFormResponses(opts),
-
-    async onFinish({ isAbort }) {
-      const chat = getConversationChat(conversationId) ?? chatInst.value
-      const liveMessages = chat?.messages ?? reactiveMessages.value
-      const messagesPendingHitl = messagesLookPendingHitl(liveMessages)
-
-      agentStore.markUiChatInFlight(conversationId, false)
-
-      if (!isAbort) {
-        void refreshPlanModeState(conversationId)
-        if (!messagesPendingHitl) {
-          void loadFollowUpSuggestions(conversationId)
-        }
-      }
-
-      if (isAbort) {
-        clearConversationChatCache(conversationId)
-        return
-      }
-
-      // Only live form/approval parts should keep the composer blocked. A stale
-      // HITL queue flag after an empty/completed turn must not skip dequeue.
-      if (messagesPendingHitl) {
-        if (chat) syncConversationSnapshot(conversationId)
-        return
-      }
-
-      if (conversationHitlBlocksQueue(conversationId)) {
-        setConversationHitlBlocksQueue(conversationId, false)
-      }
-
-      await agentStore.refreshConversationMessagesTail(conversationId)
-
-      const rows = agentStore.conversations[conversationId] ?? []
-      const uiFromStore = storeMessagesToUi(rows)
-      const merged = mergeLiveChatMessagesWithStore(
-        chat?.messages ?? [],
-        uiFromStore,
-      )
-      const uiMessages = normalizeChatMessagesForDisplay(merged)
-      if (chat) {
-        chat.messages = uiMessages
-        setConversationChat(conversationId, chat)
-      } else if (chatInst.value?.id === conversationId) {
-        const rebuilt = createChatForConversation(conversationId, uiMessages)
-        setConversationChat(conversationId, rebuilt)
-        chatInst.value = rebuilt
-      }
-
-      if (chatInst.value?.id === conversationId) {
-        await nextTick()
-        const mergedChat = getConversationChat(conversationId) ?? chatInst.value
-        syncReactiveMessagesFromChat(mergedChat?.messages ?? uiMessages, {
-          full: true,
-        })
-        await dequeueAndSendNext()
-      }
-    },
-  })
-}
-
-async function rebuildChat() {
-  const conversationId = agentStore.currentConversationId
-
-  const previousViewedId = lastViewedConversationId.value
-  if (
-    previousViewedId &&
-    conversationId !== previousViewedId &&
-    chatInst.value
-  ) {
-    stashConversationChat(previousViewedId, chatInst.value, messageQueue.value)
-  }
-
-  if (conversationId !== previousViewedId) {
-    messageQueue.value = []
-  }
-
-  if (!conversationId) {
-    chatInst.value = null
-    lastViewedConversationId.value = null
-    return
-  }
-
-  await agentStore.selectConversation(conversationId, false)
-
-  const cached = getConversationChat(conversationId)
-  if (cached) {
-    messageQueue.value = getConversationQueue(conversationId)
-    chatInst.value = cached
-    lastViewedConversationId.value = conversationId
-    reactiveMessages.value = normalizeChatMessagesForDisplay(cached.messages)
-    resetMessageWindow(true)
-    await nextTick()
-    void scrollToBottomIfStuck('auto')
-    return
-  }
-
-  const inFlight = agentStore.isConversationStreamActive(conversationId)
-  const snapshot = getConversationSnapshot(conversationId)
-  const storeUi = storeMessagesToUi(
-    agentStore.conversations[conversationId] ?? [],
-  )
-  const initial =
-    inFlight && snapshot?.length
-      ? snapshot
-      : snapshot?.length
-        ? mergeLiveChatMessagesWithStore(snapshot, storeUi)
-        : storeUi
-
-  const chat = createChatForConversation(conversationId, initial)
-  setConversationChat(conversationId, chat)
-  chatInst.value = chat
-  lastViewedConversationId.value = conversationId
-  reactiveMessages.value = normalizeChatMessagesForDisplay(initial)
-  resetMessageWindow(true)
-  await nextTick()
-  void scrollToBottomIfStuck('auto')
-}
-
-function resetFollowUpUiForConversationSwitch(): void {
-  // Drop previous conversation's chips immediately. Revision is per-conversation
-  // on main, but this panel only tracks the active conversation's watermark —
-  // leaving it high would reject a freshly loaded empty/low-revision catalog.
-  followUpLoadGeneration += 1
-  followUpItems.value = []
-  followUpRevision.value = 0
-}
-
-watch(
-  () => agentStore.currentConversationId,
-  (conversationId, previousId) => {
-    if (previousId) {
-      flushStoreStreamSyncForConversation(previousId)
-      flushAllUiForConversation(previousId)
-      scheduleSnapshot(previousId, true)
-    }
-    setVisibleConversationForUiFlush(conversationId)
-    if (conversationId) {
-      flushStoreStreamSyncForConversation(conversationId)
-      // Run any namespaced jobs that were deferred while this chat was background.
-      flushAllUiForConversation(conversationId)
-    }
-    streamingTextBuffer.clear()
-    resetFollowUpUiForConversationSwitch()
-    void rebuildChat()
-    if (conversationId) {
-      void loadCodingMode(conversationId)
-      void loadLlmOverride(conversationId)
-      void loadPlanModeState(conversationId)
-      void loadFollowUpSuggestions(conversationId)
-      if (selectedAgentIsCoding.value) startBackgroundTaskPolling()
-    } else {
-      codingMode.value = DEFAULT_CODING_MODE
-      llmOverride.value = null
-      planModeView.value = defaultPlanModeView()
-      backgroundTasks.value = []
-      stopBackgroundTaskPolling()
-    }
-  },
-  { flush: 'post' },
-)
-
-function onPlanModeStateChanged(
-  _event: unknown,
-  payload: { conversationId?: string; view?: PlanModeView },
-) {
-  const conversationId = payload?.conversationId?.trim()
-  if (!conversationId || conversationId !== resolveActiveConversationId())
-    return
-  if (payload.view) applyPlanModeView(payload.view)
-}
-
-function onConversationFollowUpsChanged(
-  _event: unknown,
-  payload: {
-    conversationId?: string
-    followUps?: FollowUpItem[]
-    revision?: number
-  },
-) {
-  const conversationId = payload?.conversationId?.trim()
-  if (!conversationId || conversationId !== agentStore.currentConversationId) {
-    return
-  }
-  const items = Array.isArray(payload.followUps) ? payload.followUps : []
-  // HITL suspend/resume owns the turn; ignore premature chips until idle after finish.
-  if (hasPendingHitl.value && items.length > 0) {
-    return
-  }
-  applyFollowUpSuggestions(items, payload.revision)
-}
-
-let unregisterConversationStoreUiSync: (() => void) | null = null
-let stopContentAutoScroll: (() => void) | null = null
-let stopSandboxPreviewRequestWatch: (() => void) | null = null
-
-stopSandboxPreviewRequestWatch = bindSandboxPreviewRequest(openSandboxPreview)
-
-onMounted(() => {
-  chatBodyEl.value?.addEventListener(
-    'click',
-    onChatBodySandboxPreviewClick,
-    true,
-  )
-  setVisibleConversationForUiFlush(agentStore.currentConversationId)
-  stopContentAutoScroll = startContentAutoScroll()
-  unregisterConversationStoreUiSync = registerConversationStoreUiSync(
-    syncVisibleConversationFromStore,
-  )
-  void rebuildChat()
-  const cid = agentStore.currentConversationId
-  if (cid) {
-    void loadCodingMode(cid)
-    void loadPlanModeState(cid)
-    void loadFollowUpSuggestions(cid)
-    void loadConversationAttachments(cid)
-    if (selectedAgentIsCoding.value) startBackgroundTaskPolling()
-  }
-  window.ipcRendererChannel?.PlanModeStateChanged?.on?.(onPlanModeStateChanged)
-  window.ipcRendererChannel?.ConversationFollowUpsChanged?.on?.(
-    onConversationFollowUpsChanged,
-  )
-  window.ipcRendererChannel?.AgentSandboxOutput?.on?.((_e, payload) => {
-    agentStore.recordSandboxOutput(payload)
-  })
-  applyPendingWorkspaceSplitOpen()
-  registerStressChatDriver({
-    isReady: () => Boolean(chatInst.value && agentStore.currentConversationId),
-    sendAndWait: stressSendAndWait,
-    stopCurrentTurn: () => {
-      const conversationId =
-        agentStore.currentConversationId?.trim() ||
-        (typeof chatInst.value?.id === 'string' ? chatInst.value.id.trim() : '')
-      if (!conversationId) return
-      agentStore.markUiChatInFlight(conversationId, false)
-      const chat = getConversationChat(conversationId) ?? chatInst.value
-      void chat?.stop()
-      void window.ipcRendererChannel?.StopAgentForConversation?.invoke?.({
-        conversationId,
-      })
-    },
-    stopConversation: (conversationId: string) => {
-      const cid = conversationId.trim()
-      if (!cid) return
-      agentStore.markUiChatInFlight(cid, false)
-      void getConversationChat(cid)?.stop()
-      void window.ipcRendererChannel?.StopAgentForConversation?.invoke?.({
-        conversationId: cid,
-      })
-    },
-  })
-})
-
-watch(
-  () => agentStore.selectedAgentId,
-  (agentId, previousId) => {
-    if (!agentId || agentId === previousId) return
-    if (!selectedAgentIsCoding.value) {
-      stopBackgroundTaskPolling()
-      backgroundTasks.value = []
-    } else {
-      startBackgroundTaskPolling()
-    }
-    // Agent-scoped refresh when switching agents (base buckets warmed at app startup).
-    void window.ipcRendererChannel?.WarmAgentCache?.invoke?.({
-      userId: DEFAULT_USER_ID,
-      agentId,
-    })
-  },
-)
-
-watch(
-  () => agentStore.currentConversationId,
-  (conversationId) => {
-    setVisibleConversationForUiFlush(conversationId)
-    clearStaging()
-    void loadConversationAttachments(conversationId)
-  },
-)
-
-onUnmounted(() => {
-  chatBodyEl.value?.removeEventListener(
-    'click',
-    onChatBodySandboxPreviewClick,
-    true,
-  )
-  stopContentAutoScroll?.()
-  stopContentAutoScroll = null
-  stopSandboxPreviewRequestWatch?.()
-  stopSandboxPreviewRequestWatch = null
-  unregisterConversationStoreUiSync?.()
-  unregisterConversationStoreUiSync = null
-  stopBackgroundTaskPolling()
-  window.ipcRendererChannel?.PlanModeStateChanged?.removeListener?.(
-    onPlanModeStateChanged,
-  )
-  window.ipcRendererChannel?.ConversationFollowUpsChanged?.removeListener?.(
-    onConversationFollowUpsChanged,
-  )
-  window.ipcRendererChannel?.AgentSandboxOutput?.removeAllListeners?.()
-  registerStressChatDriver(null)
-})
-
-async function onCollectFormSubmit(payload: {
-  requestId: string
-  values: Record<string, unknown>
-}) {
-  const chat = chatInst.value
-  if (!chat) return
-  const conversationId = resolveActiveConversationId()
-  // Match onToolApproval: form-request chunks set hitlBlocksQueue, and leaving
-  // it stuck keeps the composer on "Waiting for your approval…" after submit
-  // even while plan execution resumes.
-  if (conversationId) {
-    dismissHitlWaitComposerHint()
-    setConversationHitlBlocksQueue(conversationId, false)
-    void refreshPlanModeState(conversationId)
-  }
-  await chat.sendMessage({
-    role: 'user',
-    parts: [
-      {
-        type: 'data-collect-form-response',
-        id: payload.requestId,
-        data: { values: payload.values },
-      },
-    ],
-  } as Parameters<typeof chat.sendMessage>[0])
-}
-
-async function onToolApproval(payload: {
-  part: unknown
-  approved: boolean
-  approveForSession?: boolean
-  feedback?: string
-}) {
-  const id = (payload.part as { approval?: { id?: string } }).approval?.id
-  if (!id || !chatInst.value) return
-
-  // Hide wait banner immediately on approve or deny (before async resume).
-  dismissHitlWaitComposerHint()
-
-  if (payload.approveForSession && payload.approved) {
-    const conversationId = agentStore.currentConversationId
-    const toolName = toolPartDisplayName(payload.part)
-    if (conversationId && toolName) {
-      void window.ipcRendererChannel?.AddSessionToolApproval?.invoke({
-        conversationId,
-        toolName,
-      })
-    }
-  }
-
-  // Await so chat.messages flips to approval-responded before we sync the
-  // reactive transcript — otherwise the composer stays on wait_for_approval.
-  await chatInst.value.addToolApprovalResponse({
-    id,
-    approved: payload.approved,
-  })
-
-  const conversationId = agentStore.currentConversationId
-  if (conversationId) {
-    setConversationHitlBlocksQueue(conversationId, false)
-    if (payload.approved && isExitPlanModeToolPart(payload.part)) {
-      applyPlanModeView({
-        status: 'plan_tool_execute',
-        planSlug: planModeView.value.planSlug,
-      })
-    }
-    syncReactiveMessagesFromChat(chatInst.value.messages, { full: true })
-    void refreshPlanModeState(conversationId)
-  }
-
-  const feedback = payload.feedback?.trim()
-  if (!payload.approved && feedback) {
-    void chatInst.value.sendMessage({ text: feedback })
-  }
-}
-
-async function loadCodingMode(conversationId: string) {
-  const ch = window.ipcRendererChannel?.GetCodingMode
-  if (!ch) {
-    codingMode.value = DEFAULT_CODING_MODE
-    return
-  }
-  const result = await ch.invoke({ conversationId })
-  codingMode.value = result.ok ? result.mode : DEFAULT_CODING_MODE
-}
-
-async function loadLlmOverride(conversationId: string) {
-  const ch = window.ipcRendererChannel?.GetConversationLlmOverride
-  if (!ch) {
-    llmOverride.value = null
-    return
-  }
-  const result = await ch.invoke({ conversationId })
-  llmOverride.value = result.ok ? result.override : null
-}
-
-async function persistLlmOverride(
-  conversationId: string,
-  override: ConversationLlmOverride | null,
-) {
-  const plain = toPlainConversationLlmOverride(override)
-  const ch = window.ipcRendererChannel?.SetConversationLlmOverride
-  if (!ch) {
-    llmOverride.value = plain
-    return
-  }
-  const result = await ch.invoke({ conversationId, override: plain })
-  if (result.ok) llmOverride.value = result.override
-}
-
-async function onLlmOverrideChange(override: ConversationLlmOverride | null) {
-  const conversationId = agentStore.currentConversationId?.trim()
-  const plain = toPlainConversationLlmOverride(override)
-  if (!conversationId) {
-    llmOverride.value = plain
-    return
-  }
-  await persistLlmOverride(conversationId, plain)
-}
-
-async function clearLlmOverrideForConversation(conversationId: string) {
-  await persistLlmOverride(conversationId, null)
-}
-
-async function loadFollowUpSuggestions(conversationId: string | undefined) {
-  const id = conversationId?.trim()
-  if (!id) {
-    followUpItems.value = []
-    followUpRevision.value = 0
-    return
-  }
-  const ch = window.ipcRendererChannel?.GetConversationFollowUps
-  if (!ch) {
-    followUpItems.value = []
-    return
-  }
-  const loadGeneration = followUpLoadGeneration
-  try {
-    const result = await ch.invoke({ conversationId: id })
-    if (loadGeneration !== followUpLoadGeneration) return
-    if (agentStore.currentConversationId !== id) return
-    if (result.ok) {
-      if (hasPendingHitl.value && result.followUps.length > 0) {
-        followUpItems.value = []
-        return
-      }
-      applyFollowUpSuggestions(result.followUps, result.revision)
-    } else {
-      followUpItems.value = []
-    }
-  } catch {
-    if (
-      loadGeneration === followUpLoadGeneration &&
-      agentStore.currentConversationId === id
-    ) {
-      followUpItems.value = []
-    }
-  }
-}
-
-function applyFollowUpSuggestions(
-  items: FollowUpItem[],
-  revision?: number,
-): void {
-  if (typeof revision === 'number' && Number.isFinite(revision)) {
-    if (revision < followUpRevision.value) return
-    followUpRevision.value = revision
-  }
-  followUpItems.value = items
-}
-
-async function clearFollowUpSuggestions(conversationId: string | undefined) {
-  followUpLoadGeneration += 1
-  followUpItems.value = []
-  const id = conversationId?.trim()
-  if (!id) return
-  const ch = window.ipcRendererChannel?.ClearConversationFollowUps
-  if (!ch) return
-  try {
-    const result = await ch.invoke({ conversationId: id })
-    if (typeof result?.revision === 'number' && Number.isFinite(result.revision)) {
-      followUpRevision.value = Math.max(followUpRevision.value, result.revision)
-    }
-  } catch {
-    /* ignore clear failures — UI already cleared */
-  }
-}
-
-async function onFollowUpSelect(item: FollowUpItem) {
-  const conversationId = agentStore.currentConversationId
-  const text = followUpItemToUserMessage(item)
-  if (!text || !chatInst.value || !conversationId) return
-
-  dismissHitlWaitComposerHint()
-  await clearFollowUpSuggestions(conversationId)
-  draft.value = ''
-  void chatInst.value.sendMessage({ text })
-}
-
-async function loadPlanModeState(conversationId: string) {
-  const ch = window.ipcRendererChannel?.GetPlanModeState
-  if (!ch) {
-    applyPlanModeView(defaultPlanModeView())
-    return
-  }
-  const result = await ch.invoke({ conversationId })
-  applyPlanModeView(result.ok ? result.view : defaultPlanModeView())
-}
-
-/** Re-fetch plan status from main after server-side transitions (exit_plan_mode, todos done, etc.). */
-async function refreshPlanModeState(conversationId: string | undefined) {
-  const id = conversationId?.trim()
-  if (!id) return
-  await loadPlanModeState(id)
-}
-
-async function ensureConversationForModeCommands(): Promise<string | null> {
-  const existing = agentStore.currentConversationId
-  if (existing) return existing
-  if (!agentStore.selectedAgentId) {
-    toast.add({
-      title: 'No agent selected',
-      description: 'Select an agent before changing explore or YOLO mode.',
-      color: 'warning',
-    })
-    return null
-  }
-  const conv = await agentStore.createNewConversation()
-  if (!conv) return null
-  await nextTick()
-  await rebuildChat()
-  return conv.id
-}
-
-async function activateAgentExploreModeFromSlash(subcommand?: string) {
-  const conversationId = await ensureConversationForModeCommands()
-  if (!conversationId) return
-  const ch = window.ipcRendererChannel?.TransitionPlanMode
-  if (!ch) return
-
-  if (subcommand?.toLowerCase() === 'clear') {
-    const result = await ch.invoke({
-      conversationId,
-      action: 'resetToIdle',
-    })
-    if (result.ok) {
-      applyPlanModeView(result.view)
-      toast.add({
-        title: 'Exploring cleared',
-        description: 'Exploring was reset.',
-        color: 'neutral',
-      })
-    }
-    return
-  }
-
-  const result = await ch.invoke({
-    conversationId,
-    action: 'activatePlanning',
-  })
-  if (result.ok) {
-    applyPlanModeView(result.view)
-    toast.add({
-      title: 'Exploring',
-      description:
-        'Agent will explore read-only. Send a message to start, or the agent can call enter_plan_mode.',
-      color: 'neutral',
-    })
-  }
-}
-
-async function onCodingModeChange(mode: CodingMode) {
-  if (mode !== 'yolo' && !selectedAgentIsCoding.value) return
-  const conversationId = await ensureConversationForModeCommands()
-  if (!conversationId) return
-  const ch = window.ipcRendererChannel?.SetCodingMode
-  if (!ch) return
-  const result = await ch.invoke({ conversationId, mode })
-  if (result.ok) {
-    codingMode.value = result.mode
-    toast.add({
-      title: `${codingModeLabel(result.mode)} mode`,
-      description:
-        result.mode === 'normal'
-          ? 'Standard approval flow restored.'
-          : `${codingModeLabel(result.mode)} mode enabled for this conversation.`,
-      color: 'neutral',
-    })
-  }
-}
-
-function requireCodingAgentForSlash(command: string): boolean {
-  if (selectedAgentIsCoding.value) return true
-  toast.add({
-    title: 'Coding agent only',
-    description: `${command} is only available when the Coding agent is selected.`,
-    color: 'warning',
-  })
-  return false
-}
-
-async function toggleCodingModeFromSlash(mode: CodingMode) {
-  if (mode !== 'yolo' && !requireCodingAgentForSlash(`/${mode}`)) return
-  const conversationId = await ensureConversationForModeCommands()
-  if (!conversationId) {
-    return
-  }
-  const next = codingMode.value === mode ? 'normal' : mode
-  await onCodingModeChange(next)
-}
-
-async function runHelpCommand() {
-  toast.add({
-    title: 'Slash commands',
-    description: formatSlashHelp(
-      selectedAgentIsCoding.value,
-      agentStore.chatSelectableAgents,
-      subAgentSlashEnabled.value ? delegatableSubAgentTargets.value : [],
-    ),
-    color: 'neutral',
-  })
-}
-
-async function runAgentCommand(action: AgentSlashAction) {
-  if (action.kind === 'status') {
-    toast.add({
-      title: 'Agent',
-      description: [
-        describeAgentSlashStatus(
-          agentStore.selectedAgentId,
-          agentStore.chatSelectableAgents,
-        ),
-        '',
-        formatAgentSwitchHelp(agentStore.chatSelectableAgents),
-      ].join('\n'),
-      color: 'neutral',
-    })
-    return
-  }
-
-  if (action.kind === 'pick') {
-    if (!openComposerAgentPicker()) {
-      toast.add({
-        title: 'Agent picker unavailable',
-        description: 'Open the chat composer and try /agent pick again.',
-        color: 'warning',
-      })
-    }
-    return
-  }
-
-  const agentId = resolveAgentIdForAgentSwitch(
-    agentStore.chatSelectableAgents,
-    action.target,
-  )
-  if (!agentId) {
-    toast.add({
-      title: 'Agent not found',
-      description: `No enabled agent matches "${action.target}". Use /agent to list targets.`,
-      color: 'warning',
-    })
-    return
-  }
-
-  if (!ensureAgentAllowedWithoutSignIn(agentId)) return
-
-  const agent = agentStore.chatSelectableAgents.find(
-    (entry) => entry.id === agentId,
-  )
-  if (agentId === agentStore.selectedAgentId) {
-    toast.add({
-      title: 'Already selected',
-      description: `${agent?.name ?? action.target} is already selected.`,
-      color: 'neutral',
-    })
-    return
-  }
-
-  await agentStore.selectAgent(agentId)
-  toast.add({
-    title: 'Agent switched',
-    description: `Now using ${agent?.name ?? action.target}.`,
-    color: 'success',
-  })
-}
-
-async function runSkillSwitchCommand(target: string) {
-  const agentId = resolveAgentIdForSkillSwitch(
-    agentStore.chatSelectableAgents,
-    target,
-  )
-  if (!agentId) {
-    toast.add({
-      title: 'Skill not found',
-      description: `No enabled skill agent matches "${target}". Use /help to list /skill:<id> targets.`,
-      color: 'warning',
-    })
-    return
-  }
-
-  if (!ensureAgentAllowedWithoutSignIn(agentId)) return
-
-  const agent = agentStore.chatSelectableAgents.find((a) => a.id === agentId)
-  if (agentId === agentStore.selectedAgentId) {
-    toast.add({
-      title: 'Already on skill',
-      description: `${agent?.name ?? target} is already selected.`,
-      color: 'neutral',
-    })
-    return
-  }
-
-  await agentStore.selectAgent(agentId)
-  toast.add({
-    title: 'Skill switched',
-    description: `Now using ${agent?.name ?? target}.`,
-    color: 'success',
-  })
-}
-
-function workspaceMutationBlocked(): boolean {
-  if (!isBusy.value) return false
-  toast.add({
-    title: 'Agent is running',
-    description:
-      'Cannot change workspace while the agent is running for this conversation.',
-    color: 'warning',
-  })
-  return true
-}
-
-async function runWorkspaceCommand(action: WorkspaceSlashAction) {
-  const hasConversation = Boolean(agentStore.currentConversationId?.trim())
-
-  if (action.kind === 'status') {
-    toast.add({
-      title: 'Workspace',
-      description: [
-        describeWorkspaceSlashStatus(
-          workspaceStore.activeWorkspacePath,
-          workspaceStore.pendingWorkspacePath,
-          hasConversation,
-        ),
-        '',
-        formatWorkspaceSlashHelp(),
-      ].join('\n'),
-      color: 'neutral',
-    })
-    return
-  }
-
-  if (workspaceMutationBlocked()) return
-
-  if (action.kind === 'pick') {
-    await workspaceStore.selectAndSetWorkspace()
-    if (workspaceStore.lastError) {
-      toast.add({
-        title: 'Workspace not updated',
-        description: workspaceStore.lastError,
-        color: 'error',
-      })
-      return
-    }
-    const path =
-      workspaceStore.activeWorkspacePath ?? workspaceStore.pendingWorkspacePath
-    toast.add({
-      title: path ? 'Workspace updated' : 'Workspace unchanged',
-      description: path
-        ? describeWorkspaceSlashStatus(
-            workspaceStore.activeWorkspacePath,
-            workspaceStore.pendingWorkspacePath,
-            hasConversation,
-          )
-        : 'No folder was selected.',
-      color: path ? 'success' : 'neutral',
-    })
-    return
-  }
-
-  if (action.kind === 'clear') {
-    await workspaceStore.clearWorkspace()
-    if (workspaceStore.lastError) {
-      toast.add({
-        title: 'Workspace not cleared',
-        description: workspaceStore.lastError,
-        color: 'error',
-      })
-      return
-    }
-    toast.add({
-      title: 'Workspace cleared',
-      description: 'Using sandbox only for this conversation.',
-      color: 'success',
-    })
-    return
-  }
-
-  const ok = await workspaceStore.setWorkspaceByPath(action.path)
-  if (!ok) {
-    toast.add({
-      title: 'Workspace not set',
-      description:
-        workspaceStore.lastError ??
-        `Could not set workspace to "${action.path}".`,
-      color: 'error',
-    })
-    return
-  }
-
-  toast.add({
-    title: 'Workspace updated',
-    description: describeWorkspaceSlashStatus(
-      workspaceStore.activeWorkspacePath,
-      workspaceStore.pendingWorkspacePath,
-      hasConversation,
-    ),
-    color: 'success',
-  })
-}
-
-async function runMcpCommand(args: string) {
-  if (!requireCodingAgentForSlash('/mcp')) return
-  const trimmed = args.trim()
-  const addMatch = trimmed.match(/^add\s+(\S+)\s+(.+)$/i)
-  if (addMatch) {
-    const [, name, commandLine] = addMatch
-    const parts = commandLine.trim().split(/\s+/)
-    const command = parts[0] ?? ''
-    const cmdArgs = parts.slice(1)
-    const ch = window.ipcRendererChannel?.CreateMcpServer
-    if (!ch) return
-    const id = `mcp-${name}-${Date.now()}`
-    await ch.invoke({
-      id,
-      userId: DEFAULT_USER_ID,
-      name,
-      transportType: 'stdio',
-      command,
-      args: cmdArgs,
-      enabled: true,
-    })
-    toast.add({
-      title: 'MCP server added',
-      description: `${name} (${command} ${cmdArgs.join(' ')})`,
-      color: 'success',
-    })
-    return
-  }
-
-  const listCh = window.ipcRendererChannel?.ListMcpServers
-  if (!listCh) return
-  const servers = await listCh.invoke({ userId: DEFAULT_USER_ID })
-  const lines =
-    servers.length === 0
-      ? 'No MCP servers configured. Use `/mcp add <name> <command> [args…]` to add a stdio server.'
-      : servers
-          .map(
-            (s) =>
-              `${s.enabled ? '●' : '○'} ${s.name} (${s.transportType}) — ${s.command || s.url}`,
-          )
-          .join('\n')
-  toast.add({
-    title: 'MCP servers',
-    description: lines,
-    color: 'neutral',
-  })
-}
-
-async function runInstallSkillCommand(url: string) {
-  if (!requireCodingAgentForSlash('/skill:install')) return
-  const ch = window.ipcRendererChannel?.InstallSkillFromGithub
-  if (!ch) return
-  const result = await ch.invoke({ url })
-  if (!result.ok) {
-    toast.add({
-      title: 'Skill install failed',
-      description: result.error ?? 'Unknown error',
-      color: 'error',
-    })
-    return
-  }
-  toast.add({
-    title: 'Skill installed',
-    description: `Installed skill "${result.skillId}" from GitHub.`,
-    color: 'success',
-  })
-}
-
-async function refreshBackgroundTasks() {
-  const conversationId = agentStore.currentConversationId ?? undefined
-  const ch = window.ipcRendererChannel?.ListBackgroundTasks
-  if (!ch) return
-  const tasks = await ch.invoke({ conversationId })
-  backgroundTasks.value = tasks
-    .filter((t) => t.kind === 'shell')
-    .map((t) => ({
-      id: t.id,
-      label: t.label,
-      status: t.status,
-      output: t.output,
-      error: t.error,
-    }))
-}
-
-function onCancelBackgroundTask(taskId: string) {
-  void window.ipcRendererChannel?.CancelBackgroundTask?.invoke({ taskId }).then(
-    () => refreshBackgroundTasks(),
-  )
-}
-
-function startBackgroundTaskPolling() {
-  stopBackgroundTaskPolling()
-  void refreshBackgroundTasks()
-  backgroundTaskPollTimer = setInterval(() => {
-    void refreshBackgroundTasks()
-  }, 3000)
-}
-
-function stopBackgroundTaskPolling() {
-  if (backgroundTaskPollTimer) {
-    clearInterval(backgroundTaskPollTimer)
-    backgroundTaskPollTimer = null
-  }
-}
-
-async function runCompactCommand(conversationId: string, hint: string) {
-  const ch = window.ipcRendererChannel?.CompactConversation
-  if (!ch) return
-  const result = await ch.invoke({
-    conversationId,
-    hint: hint || undefined,
-    userId: DEFAULT_USER_ID,
-  })
-  if (!result.ok) {
-    toast.add({
-      title: 'Compaction failed',
-      description: result.error ?? 'Unknown error',
-      color: 'error',
-    })
-    return
-  }
-  if (result.compacted) {
-    clearConversationChatCache(conversationId)
-    await agentStore.loadConversationMessages(conversationId)
-    await rebuildChat()
-    toast.add({
-      title: 'History compacted',
-      description: 'Older messages were summarized into a hand-off note.',
-      color: 'success',
-    })
-    return
-  }
-  toast.add({
-    title: 'Nothing to compact',
-    description: result.message ?? 'History is already short.',
-    color: 'neutral',
-  })
-}
-
-async function onSubmit() {
-  const text = draft.value.trim()
-  const sourcePaths = [...attachmentSourcePaths.value]
-  if (!text && sourcePaths.length === 0) return
-
-  // Composer send: drop follow-up chips and delete followup/meta.json before the new turn.
-  await clearFollowUpSuggestions(agentStore.currentConversationId ?? undefined)
-
-  const skillSwitchTarget = text ? parseSkillSwitchCommand(text) : null
-  if (skillSwitchTarget) {
-    draft.value = ''
-    await runSkillSwitchCommand(skillSwitchTarget)
-    return
-  }
-
-  const agentAction = parseAgentSlashCommand(text)
-  if (agentAction) {
-    draft.value = ''
-    await runAgentCommand(agentAction)
-    return
-  }
-
-  const workspaceAction = parseWorkspaceSlashCommand(text)
-  if (workspaceAction) {
-    draft.value = ''
-    await runWorkspaceCommand(workspaceAction)
-    return
-  }
-
-  const agentId = agentStore.selectedAgentId
-  let conversationId = agentStore.currentConversationId ?? undefined
-
-  if (!agentId) return
-
-  const compactMatch = text.match(COMPACT_CMD_RE)
-  if (compactMatch) {
-    draft.value = ''
-    if (!conversationId) {
-      toast.add({
-        title: 'No conversation',
-        description: 'Start a conversation before running /compact.',
-        color: 'warning',
-      })
-      return
-    }
-    await runCompactCommand(conversationId, compactMatch[1]?.trim() ?? '')
-    return
-  }
-
-  const exploreMatch =
-    text.match(EXPLORE_CMD_RE) ?? text.match(PLAN_CMD_ALIAS_RE)
-  if (exploreMatch) {
-    draft.value = ''
-    await activateAgentExploreModeFromSlash(exploreMatch[1]?.trim())
-    return
-  }
-
-  const modeMatch = text.match(MODE_CMD_RE)
-  if (modeMatch) {
-    draft.value = ''
-    await toggleCodingModeFromSlash(parseCodingMode(modeMatch[1].toLowerCase()))
-    return
-  }
-
-  if (HELP_CMD_RE.test(text)) {
-    draft.value = ''
-    await runHelpCommand()
-    return
-  }
-
-  const mcpMatch = text.match(MCP_CMD_RE)
-  if (mcpMatch) {
-    draft.value = ''
-    await runMcpCommand(mcpMatch[1]?.trim() ?? '')
-    return
-  }
-
-  const skillInstallMatch = text.match(INSTALL_SKILL_CMD_RE)
-  if (skillInstallMatch) {
-    draft.value = ''
-    await runInstallSkillCommand(skillInstallMatch[1])
-    return
-  }
-
-  if (!conversationId) {
-    const autoTitle = text.length > 60 ? `${text.slice(0, 57)}…` : text
-    const conv = await agentStore.createNewConversation(autoTitle)
-    if (!conv) return
-    conversationId = conv.id
-    await nextTick()
-    await rebuildChat()
-  } else if (
-    conversationMeta(conversationId)?.title === 'New Conversation' &&
-    (agentStore.conversations[conversationId]?.length ?? 0) === 0
-  ) {
-    const autoTitle = text.length > 60 ? `${text.slice(0, 57)}…` : text
-    await agentStore.renameConversation(conversationId, autoTitle)
-  }
-
-  if (!chatInst.value) await rebuildChat()
-
-  const subAgentDelegation = subAgentSlashEnabled.value
-    ? parseSubAgentSlashCommand(text, delegatableSubAgentTargets.value)
-    : null
-
-  if (
-    isSubAgentSlashCommand(text) &&
-    subAgentSlashEnabled.value &&
-    !subAgentDelegation
-  ) {
-    toast.add({
-      title: 'Invalid /sub-agent command',
-      description:
-        'Use /sub-agent @<slug> <task> (for example: /sub-agent @code fix the bug).',
-      color: 'warning',
-    })
-    return
-  }
-
-  const pendingHitl = conversationHasPendingHitl(conversationId)
-
-  if (isBusy.value || pendingHitl) {
-    // User already engaged — don't keep "Waiting for your approval…" on the
-    // composer while their message sits in the queue.
-    dismissHitlWaitComposerHint()
-    messageQueue.value = [
-      ...messageQueue.value,
-      {
-        id: crypto.randomUUID(),
-        text: text || sendTextForAttachments(sourcePaths),
-        attachmentSourcePaths: sourcePaths.length > 0 ? sourcePaths : undefined,
-      },
-    ]
-    draft.value = ''
-    clearStaging()
-    armStickToBottom()
-    scheduleScrollToBottom('auto')
-    return
-  }
-
-  dismissHitlWaitComposerHint()
-  draft.value = ''
-  clearStaging()
-  armStickToBottom()
-  scheduleScrollToBottom('auto')
-  const sendText = text || sendTextForAttachments(sourcePaths)
-  if (subAgentDelegation) {
-    await chatInst.value!.sendMessage(
-      { text: sendText },
-      {
-        body: {
-          subAgentMention: {
-            targetAgentId: subAgentDelegation.agentId,
-            task: subAgentDelegation.task,
-          },
-          attachmentSourcePaths: sourcePaths,
-        },
-      },
-    )
-    void loadConversationAttachments(conversationId)
-    return
-  }
-  await chatInst.value!.sendMessage(
-    { text: sendText },
-    sourcePaths.length > 0
-      ? { body: { attachmentSourcePaths: sourcePaths } }
-      : undefined,
-  )
-  void loadConversationAttachments(conversationId)
-}
-
-function onSelectAgent(agentId: string) {
-  if (!agentId || agentId === agentStore.selectedAgentId) return
-  if (!ensureAgentAllowedWithoutSignIn(agentId)) return
-  const conversationId = agentStore.currentConversationId?.trim()
-  void agentStore.selectAgent(agentId)
-  if (conversationId) void clearLlmOverrideForConversation(conversationId)
-}
-
-function onStop() {
-  const conversationId =
-    agentStore.currentConversationId?.trim() ||
-    (typeof chatInst.value?.id === 'string' ? chatInst.value.id.trim() : '')
-  if (!conversationId) return
-
-  // Stop only the focused conversation — never broadcast to other sessions.
-  agentStore.markUiChatInFlight(conversationId, false)
-  const chat = getConversationChat(conversationId) ?? chatInst.value
-  void chat?.stop()
-  void window.ipcRendererChannel?.StopAgentForConversation?.invoke?.({
-    conversationId,
-  })
-}
-
-function toggleSidebar() {
-  emit('toggle-sidebar')
-}
-
-function toggleReportPanel() {
-  showReportPanel.value = !showReportPanel.value
-}
-
 function closeWorkspaceSplitPanel() {
   showWorkspaceSplitPanel.value = false
 }
@@ -2816,12 +329,140 @@ watch(
   },
 )
 
+function conversationMeta(conversationId: string): Conversation | undefined {
+  for (const convs of Object.values(agentStore.conversationList)) {
+    const hit = convs.find((x) => x.id === conversationId)
+    if (hit) return hit
+  }
+  return undefined
+}
+
+const headerTitle = computed(() => {
+  const cid = agentStore.currentConversationId
+  if (!cid) return 'New chat'
+  return conversationMeta(cid)?.title ?? 'Conversation'
+})
+
+const activeAgentName = computed(
+  () => agentStore.selectedAgent?.name?.trim() || 'Agent',
+)
+const activeAgentModel = computed(() => {
+  const agent = agentStore.selectedAgent
+  if (!agent) return ''
+  return agent.model?.trim() || ''
+})
+
+const isBusy = computed(() => {
+  const cid = agentStore.currentConversationId?.trim()
+  if (!cid) return false
+  return agentStore.isConversationStreamActive(cid)
+})
+
+async function onFocusPane(paneId: string) {
+  if (!layoutStore.focusPane(paneId)) return
+  const conversationId = layoutStore.focusedConversationId
+  if (!conversationId) return
+  if (agentStore.currentConversationId !== conversationId) {
+    await agentStore.selectConversation(conversationId)
+  }
+}
+
+function onUpdateRatio(path: number[], ratio: number) {
+  layoutStore.updateGroupRatio(path, ratio)
+}
+
+function syncVisibleUiFlush() {
+  setVisibleConversationIdsForUiFlush(
+    visibleConversationIdList.value,
+    layoutFocusedConversationId.value ?? agentStore.currentConversationId,
+  )
+}
+
+watch(
+  [visibleConversationIdList, layoutFocusedConversationId],
+  () => {
+    syncVisibleUiFlush()
+  },
+  { immediate: true, deep: true },
+)
+
+watch(
+  () => agentStore.currentConversationId,
+  (conversationId) => {
+    if (!conversationId) return
+    if (!layoutStore.root) {
+      layoutStore.ensureLayout(conversationId)
+      return
+    }
+    if (layoutStore.focusedConversationId !== conversationId) {
+      if (!layoutStore.focusPaneForConversation(conversationId)) {
+        layoutStore.openConversation(conversationId)
+      }
+    }
+  },
+)
+
+function toggleSidebar() {
+  emit('toggle-sidebar')
+}
+
+function toggleReportPanel() {
+  showReportPanel.value = !showReportPanel.value
+}
+
+function onStop() {
+  const conversationId = agentStore.currentConversationId?.trim()
+  if (!conversationId) return
+  agentStore.markUiChatInFlight(conversationId, false)
+  const chat = getConversationChat(conversationId)
+  void chat?.stop()
+  void window.ipcRendererChannel?.StopAgentForConversation?.invoke?.({
+    conversationId,
+  })
+}
+
 async function startNewSessionFromTitleBar() {
   const conv = await agentStore.createNewConversation(undefined, {
     mode: 'replicate-current',
   })
   if (!conv) return
+  layoutStore.openConversation(conv.id)
   await agentStore.selectConversation(conv.id)
+}
+
+async function splitPane(direction: 'right' | 'down') {
+  if (!canSplit.value) return
+  const conv = await agentStore.createNewConversation(undefined, {
+    mode: 'replicate-current',
+    select: false,
+  })
+  if (!conv) return
+  const newPaneId = layoutStore.splitFocused(direction, conv.id)
+  if (!newPaneId) return
+  await agentStore.selectConversation(conv.id)
+}
+
+async function closeFocusedPane() {
+  if (!canCloseFocused.value) return
+  const nextPaneId = layoutStore.closeFocusedPane()
+  if (!nextPaneId) return
+  const nextConv = layoutStore.focusedConversationId
+  if (nextConv) await agentStore.selectConversation(nextConv)
+}
+
+const paneConversationOptions = computed(() =>
+  buildPaneConversationOptions({
+    conversations: Object.values(agentStore.uiConversationList).flat(),
+    openConversationIds: visibleConversationIdList.value,
+    currentConversationId: agentStore.currentConversationId,
+  }),
+)
+
+async function onSelectPaneConversation(conversationId: string) {
+  const id = conversationId.trim()
+  if (!id || id === agentStore.currentConversationId) return
+  layoutStore.openConversation(id)
+  await agentStore.selectConversation(id)
 }
 
 watchEffect(() => {
@@ -2831,13 +472,58 @@ watchEffect(() => {
     activeAgentName: activeAgentName.value,
     activeAgentModel: activeAgentModel.value,
     sidebarCollapsed: props.sidebarCollapsed,
+    showChatActions: true,
+    showWorkspacePanel: showWorkspaceSplitPanel.value,
     showReportPanel: showReportPanel.value,
     isBusy: isBusy.value,
+    canSplitPane: canSplit.value,
+    canClosePane: canCloseFocused.value,
+    conversationId: agentStore.currentConversationId,
+    conversationOptions: paneConversationOptions.value,
     onToggleSidebar: toggleSidebar,
     onToggleReportPanel: toggleReportPanel,
     onStop,
     onNewSession: startNewSessionFromTitleBar,
+    onSplitRight: () => {
+      void splitPane('right')
+    },
+    onSplitDown: () => {
+      void splitPane('down')
+    },
+    onClosePane: () => {
+      void closeFocusedPane()
+    },
+    onSelectConversation: (conversationId: string) => {
+      void onSelectPaneConversation(conversationId)
+    },
   })
+})
+
+let stopSandboxPreviewRequestWatch: (() => void) | null = null
+let onSandboxOutput: ((...args: unknown[]) => void) | null = null
+
+onMounted(() => {
+  stopSandboxPreviewRequestWatch = bindSandboxPreviewRequest(openSandboxPreview)
+  onSandboxOutput = (_e: unknown, payload: unknown) => {
+    agentStore.recordSandboxOutput(payload as never)
+  }
+  window.ipcRendererChannel?.AgentSandboxOutput?.on?.(onSandboxOutput)
+  const cid = agentStore.currentConversationId?.trim()
+  if (cid && !layoutStore.root) {
+    layoutStore.ensureLayout(cid)
+  }
+  syncVisibleUiFlush()
+})
+
+onUnmounted(() => {
+  stopSandboxPreviewRequestWatch?.()
+  stopSandboxPreviewRequestWatch = null
+  if (onSandboxOutput) {
+    window.ipcRendererChannel?.AgentSandboxOutput?.removeListener?.(
+      onSandboxOutput,
+    )
+    onSandboxOutput = null
+  }
 })
 </script>
 
@@ -2859,159 +545,15 @@ watchEffect(() => {
   cursor: col-resize;
   user-select: none;
 }
-.chat-body--resizing .chat-main {
+.chat-body--resizing :deep(.chat-main) {
   pointer-events: none;
 }
-.chat-main {
+.chat-panel__empty {
   flex: 1;
-  min-width: 0;
-  min-height: 0;
   display: flex;
-  flex-direction: column;
-  /** Full chat-column width for user + assistant response bubbles. */
-  --chat-response-bubble-min-width: 100%;
-  /* Keep composer / follow-ups above report-panel DOM chrome when they overlap. */
-  position: relative;
-  z-index: 2;
-}
-.chat-scroll-area {
-  flex: 1;
-  min-height: 0;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-.chat-scroll {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-anchor: none;
-  padding: 16px;
-}
-.chat-scroll__content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex-shrink: 0;
-}
-.chat-scroll__content > * {
-  flex-shrink: 0;
-}
-.chat-scroll-edge {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: center;
-  padding: 4px 0 8px;
-}
-.chat-scroll-edge--bottom {
-  padding: 8px 0 4px;
-}
-.chat-scroll-edge__label {
-  font-size: 11px;
-  color: var(--ui-text-muted);
-}
-.msg-row {
-  flex-shrink: 0;
-  align-self: stretch;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--ui-text);
-}
-.msg-row--user {
-  background: var(--ui-bg-elevated);
-  border: 1px solid var(--ui-border);
-}
-.msg-row--assistant {
-  background: var(--ui-bg-elevated);
-}
-
-/* Conversation mode: grey background per step bubble, not the whole assistant row. */
-.msg-row--assistant:has(.assistant-msg-parts--conversation) {
-  background: transparent;
-  border: none;
-  padding: 0;
-}
-
-.message-queue {
-  align-self: stretch;
-  margin-top: 4px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px dashed
-    color-mix(in srgb, var(--color-primary-500) 35%, var(--ui-border));
-  background: color-mix(
-    in srgb,
-    var(--color-primary-500) 6%,
-    var(--ui-bg-elevated)
-  );
-}
-.message-queue__title {
-  margin: 0 0 8px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ui-text-muted);
-}
-.message-queue__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.message-queue__item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--ui-bg-elevated);
-  border: 1px solid var(--ui-border);
-  font-size: 13px;
-  line-height: 1.45;
-}
-.message-queue__text {
-  flex: 1;
-  min-width: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.message-queue__remove {
-  flex-shrink: 0;
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
   color: var(--ui-text-muted);
-  cursor: pointer;
-}
-.message-queue__remove:hover {
-  background: color-mix(in srgb, var(--ui-text) 8%, transparent);
-  color: var(--ui-text);
-}
-.message-queue__remove-icon {
-  width: 16px;
-  height: 16px;
-}
-.chat-attachment-error {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--color-warning-600, #d97706);
-  line-height: 1.4;
+  font-size: 13px;
 }
 </style>

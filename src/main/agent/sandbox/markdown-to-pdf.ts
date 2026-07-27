@@ -14,7 +14,7 @@ export async function exportMarkdownBodyToPdf(
   const html =
     kind === 'research-report'
       ? renderResearchReportHtmlDocument(markdownBody)
-      : renderMarkdownToHtmlDocument(markdownBody)
+      : await renderMarkdownToHtmlDocument(markdownBody)
   const tmpHtml = `${pdfPath}.render-tmp.html`
   await writeFile(tmpHtml, html, 'utf8')
   try {

@@ -60,10 +60,10 @@ describe('file-io-utils', () => {
     expect(meta.diff).not.toContain('===')
     expect(meta.diff).not.toContain('--- ')
     expect(meta.diff).not.toContain('+++ ')
-    expect(meta.diff).not.toContain('@@')
+    expect(meta.diff).toContain('@@')
   })
 
-  it('strips unified diff file and hunk headers', () => {
+  it('strips unified diff file headers but keeps hunk headers', () => {
     const raw = [
       'Index: app.js',
       '===================================================================',
@@ -74,7 +74,9 @@ describe('file-io-utils', () => {
       '-old',
       '+new',
     ].join('\n')
-    expect(stripUnifiedDiffHeaders(raw)).toBe(' keep\n-old\n+new')
+    expect(stripUnifiedDiffHeaders(raw)).toBe(
+      '@@ -807,44 +807,9 @@\n keep\n-old\n+new',
+    )
   })
 
   it('builds file preview rows with moveFrom and relative path', () => {
