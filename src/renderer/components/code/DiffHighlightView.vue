@@ -5,7 +5,7 @@
       'shiki-surface--compact': compact,
       'shiki-surface--fill': fill,
     }"
-    :style="briefMinHeightStyle"
+    :style="diffSurfaceStyle"
   >
     <div
       v-for="(line, index) in visibleLines"
@@ -13,6 +13,14 @@
       class="shiki-diff__line"
       :class="`shiki-diff__line--${line.kind}`"
     >
+      <span
+        class="shiki-diff__ln shiki-diff__ln--old"
+        aria-hidden="true"
+      >{{ formatLineNumber(line.oldLine) }}</span>
+      <span
+        class="shiki-diff__ln shiki-diff__ln--new"
+        aria-hidden="true"
+      >{{ formatLineNumber(line.newLine) }}</span>
       <span class="shiki-diff__gutter" aria-hidden="true">{{ line.gutter }}</span>
       <code class="shiki-diff__code" v-html="line.html" />
     </div>
@@ -63,15 +71,31 @@ const isTruncated = computed(() => {
   return countBriefDiffLines(lines.value) > max
 })
 
-/** Reserve height for brief peeks so first paint matches final layout (CLS). */
-const briefMinHeightStyle = computed(() => {
-  const max = props.maxLines
-  if (max == null || max <= 0 || props.fill) return undefined
-  const lineCount = Math.min(max, Math.max(visibleLines.value.length, 1))
-  return {
-    minHeight: `${lineCount * BRIEF_LINE_HEIGHT_EM}em`,
+const lnDigits = computed(() => {
+  let max = 0
+  for (const line of visibleLines.value) {
+    if (line.oldLine != null) max = Math.max(max, line.oldLine)
+    if (line.newLine != null) max = Math.max(max, line.newLine)
   }
+  return Math.max(2, String(max).length)
 })
+
+/** Reserve height for brief peeks so first paint matches final layout (CLS). */
+const diffSurfaceStyle = computed(() => {
+  const style: Record<string, string> = {
+    '--diff-ln-ch': String(lnDigits.value),
+  }
+  const max = props.maxLines
+  if (max != null && max > 0 && !props.fill) {
+    const lineCount = Math.min(max, Math.max(visibleLines.value.length, 1))
+    style.minHeight = `${lineCount * BRIEF_LINE_HEIGHT_EM}em`
+  }
+  return style
+})
+
+function formatLineNumber(n: number | null): string {
+  return n == null ? '' : String(n)
+}
 </script>
 
 <style scoped>
@@ -91,7 +115,11 @@ const briefMinHeightStyle = computed(() => {
 
 .shiki-diff__more {
   margin: 0;
-  padding: 6px var(--diff-line-pad-x) 8px calc(var(--diff-accent-width) + var(--diff-gutter-width) + 10px);
+  padding: 6px var(--diff-line-pad-x) 8px
+    calc(
+      var(--diff-accent-width) + (var(--diff-ln-ch, 2) * 1ch + 12px) * 2 +
+        var(--diff-marker-width) + 10px
+    );
   font-size: var(--app-font-size-sm);
   line-height: 1;
   color: var(--ui-text-muted);

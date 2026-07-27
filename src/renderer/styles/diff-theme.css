@@ -12,7 +12,9 @@ html {
   --diff-del-border: var(--diff-del);
   --diff-surface-bg: color-mix(in srgb, var(--ui-text) 2.5%, var(--ui-bg));
   --diff-gutter-bg: color-mix(in srgb, var(--ui-text) 4%, var(--ui-bg));
-  --diff-gutter-width: 2.5em;
+  --diff-gutter-width: 1.75em;
+  --diff-marker-width: 1.75em;
+  --diff-ln-ch: 2;
   --diff-accent-width: 3px;
   --diff-line-pad-x: 12px;
   --diff-hunk-bg: color-mix(in srgb, var(--ui-text) 5%, transparent);

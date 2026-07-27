@@ -110,8 +110,8 @@ export function trimDiff(diff: string): string {
 }
 
 /**
- * Drop unified-diff file/hunk headers so chat peeks only show +/- and context.
- * Path/action live on {@link FileChangePreview} fields separately.
+ * Drop unified-diff file headers so chat peeks focus on the change body.
+ * Keeps `@@` hunk headers so the UI can show old/new line numbers.
  */
 export function stripUnifiedDiffHeaders(diff: string): string {
   return diff
@@ -121,9 +121,11 @@ export function stripUnifiedDiffHeaders(diff: string): string {
       if (line.startsWith('diff --git ')) return false
       if (line.startsWith('===')) return false
       if (line.startsWith('--- ') || line.startsWith('+++ ')) return false
-      if (line.startsWith('@@')) return false
       return (
-        line.startsWith('+') || line.startsWith('-') || line.startsWith(' ')
+        line.startsWith('@@') ||
+        line.startsWith('+') ||
+        line.startsWith('-') ||
+        line.startsWith(' ')
       )
     })
     .join('\n')
