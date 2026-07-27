@@ -74,3 +74,14 @@ export function countBriefDiffLines(lines: readonly DiffLineKindLike[]): number 
   }
   return Math.max(0, code.length - start)
 }
+
+/**
+ * Whether a brief peek hides more code than `briefLines` — the condition for
+ * showing the FileChangeCard bottom expand control. Matches DiffHighlightView
+ * truncation (`isTruncated`).
+ */
+export function diffNeedsBriefExpand(diff: string, briefLines: number): boolean {
+  if (briefLines <= 0) return false
+  if (!diff.trim()) return false
+  return countBriefDiffLines(parseUnifiedDiffLines(diff)) > briefLines
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   countBriefDiffLines,
+  diffNeedsBriefExpand,
   parseUnifiedDiffLines,
   selectBriefDiffLines,
 } from './unifiedDiffLines'
@@ -56,5 +57,32 @@ describe('selectBriefDiffLines', () => {
     )
     expect(countBriefDiffLines(lines)).toBe(4)
     expect(selectBriefDiffLines(lines, 2)).toHaveLength(2)
+  })
+})
+
+describe('diffNeedsBriefExpand', () => {
+  it('is true when more code remains after the brief peek', () => {
+    const diff = [
+      '@@ -1,8 +1,8 @@',
+      ' keep',
+      '-a',
+      '+b',
+      ' c1',
+      ' c2',
+      ' c3',
+      ' c4',
+      ' c5',
+    ].join('\n')
+    expect(diffNeedsBriefExpand(diff, 5)).toBe(true)
+  })
+
+  it('is false when the brief peek already covers the change', () => {
+    const diff = ['@@ -1 +1 @@', ' keep', '-a', '+b'].join('\n')
+    expect(diffNeedsBriefExpand(diff, 5)).toBe(false)
+  })
+
+  it('is false for empty diffs or non-positive limits', () => {
+    expect(diffNeedsBriefExpand('  ', 5)).toBe(false)
+    expect(diffNeedsBriefExpand('+x\n+y\n+z', 0)).toBe(false)
   })
 })

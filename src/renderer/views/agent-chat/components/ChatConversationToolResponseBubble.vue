@@ -41,16 +41,16 @@
       </button>
     </header>
 
-    <!-- File updates: always show a Cursor-style brief diff peek. -->
+    <!-- File updates: brief peek + per-file expand (never clear briefLines). -->
     <div
-      v-if="viewer === 'diff' && fileChanges.length"
+      v-if="viewer === 'diff' && fileChanges.length && expanded"
       class="conv-tool-response__body-wrap conv-tool-response__body-wrap--diff"
     >
       <div class="conv-tool-response__body conv-tool-response__body--diff">
         <FileChangeStack
           :files="fileChanges"
           compact
-          :brief-lines="expanded ? undefined : TOOL_LOOP_BRIEF_DIFF_LINES"
+          :brief-lines="TOOL_LOOP_BRIEF_DIFF_LINES"
         />
       </div>
       <div v-if="errorText" class="conv-tool-response__error" role="alert">
@@ -168,7 +168,8 @@ const props = defineProps<{
   viewer: ConversationToolResponseViewer
 }>()
 
-const expanded = ref(false)
+/** Diffs start open (brief peek); other viewers stay collapsed until toggled. */
+const expanded = ref(props.viewer === 'diff')
 const maxLen = 20_000
 const compactHintMax = 72
 

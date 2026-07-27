@@ -36,7 +36,7 @@ import {
   type HighlightedDiffLine,
 } from '@renderer/lib/diff-highlight/highlight-unified-diff'
 import {
-  countBriefDiffLines,
+  diffNeedsBriefExpand,
   selectBriefDiffLines,
 } from '@renderer/views/agent-chat/components/file-change/unifiedDiffLines'
 import './shiki-shared.css'
@@ -68,7 +68,7 @@ const visibleLines = computed(() => {
 const isTruncated = computed(() => {
   const max = props.maxLines
   if (max == null || max <= 0) return false
-  return countBriefDiffLines(lines.value) > max
+  return diffNeedsBriefExpand(props.diff, max)
 })
 
 const lnDigits = computed(() => {

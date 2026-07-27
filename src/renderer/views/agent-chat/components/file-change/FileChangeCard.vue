@@ -13,7 +13,7 @@
         :aria-expanded="contentOpen"
         :aria-label="contentOpen ? 'Collapse file diff' : 'Expand file diff'"
         :title="contentOpen ? 'Collapse' : 'Expand'"
-        @click="contentOpen = !contentOpen"
+        @click="onToggleContentOpen"
       >
         <UIcon
           :name="contentOpen ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
@@ -58,7 +58,7 @@
         :aria-expanded="diffExpanded"
         :aria-label="diffExpanded ? 'Show less' : 'Show full diff'"
         :title="diffExpanded ? 'Show less' : 'Show full diff'"
-        @click="diffExpanded = !diffExpanded"
+        @click="onToggleDiffExpanded"
       >
         <UIcon
           :name="diffExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
@@ -76,7 +76,8 @@ import type { FileChangeAction, FileChangePreview } from '@shared/file-change/ty
 import { fileChangePreviewOpenUrl } from '@shared/agent/step-attachment'
 import { useWorkspaceStore } from '@store/workspace'
 import { requestSandboxPreview } from '../../sandboxPreviewBridge'
-import { parseUnifiedDiffLines, countBriefDiffLines } from './unifiedDiffLines'
+import { TOOL_LOOP_BRIEF_DIFF_LINES } from '../chat/toolLoopPanelItems'
+import { diffNeedsBriefExpand } from './unifiedDiffLines'
 import UnifiedDiffView from './UnifiedDiffView.vue'
 
 const workspaceStore = useWorkspaceStore()
@@ -88,7 +89,7 @@ const props = withDefaults(
     /** Limit diff to this many lines until expanded. */
     briefLines?: number
   }>(),
-  { compact: false, briefLines: undefined },
+  { compact: false, briefLines: TOOL_LOOP_BRIEF_DIFF_LINES },
 )
 
 /** Fully hide/show the file body (GitHub-style file fold). */
@@ -96,26 +97,39 @@ const contentOpen = ref(true)
 /** Expand brief peek → full diff lines (separate from contentOpen). */
 const diffExpanded = ref(false)
 
+const briefLineLimit = computed(() => {
+  const n = props.briefLines
+  return n != null && n > 0 ? n : null
+})
+
 const isBrief = computed(
-  () => props.briefLines != null && props.briefLines > 0 && !diffExpanded.value,
+  () => briefLineLimit.value != null && !diffExpanded.value,
 )
 
 const maxDiffLines = computed(() =>
-  diffExpanded.value ? undefined : props.briefLines,
+  diffExpanded.value ? undefined : (briefLineLimit.value ?? undefined),
 )
 
 const showDiff = computed(() => props.file.diff.trim().length > 0)
 
-function countableBriefLines(diff: string): number {
-  return countBriefDiffLines(parseUnifiedDiffLines(diff))
-}
-
 const canExpandDiff = computed(() => {
-  if (props.briefLines == null || props.briefLines <= 0) return false
+  const limit = briefLineLimit.value
+  if (limit == null) return false
   if (!showDiff.value) return false
-  return countableBriefLines(props.file.diff) > props.briefLines
+  return diffNeedsBriefExpand(props.file.diff, limit)
 })
 
+function onToggleDiffExpanded(event: MouseEvent) {
+  diffExpanded.value = !diffExpanded.value
+  const target = event.currentTarget
+  if (target instanceof HTMLElement) target.blur()
+}
+
+function onToggleContentOpen() {
+  contentOpen.value = !contentOpen.value
+  // Folding the file resets the brief/full peek so reopen starts collapsed again.
+  if (!contentOpen.value) diffExpanded.value = false
+}
 const ACTION_LABELS: Record<FileChangeAction, string> = {
   create: 'New file',
   modify: 'Modified',
@@ -296,14 +310,11 @@ function onOpenPath() {
 .fc :deep(.shiki-surface) {
   border: none;
   border-radius: 0;
-  max-height: 280px;
+  /* Line truncation is via briefLines; never CSS-cap (hides expand affordance). */
+  max-height: none;
   padding: 0;
   margin: 0;
   background: var(--diff-surface-bg);
-}
-
-.fc--brief :deep(.shiki-surface) {
-  max-height: none;
 }
 
 .fc--brief :deep(.shiki-diff__line) {
@@ -343,11 +354,19 @@ function onOpenPath() {
   transition: opacity 0.12s ease, color 0.12s ease;
 }
 
+/* Hover on the card (header or body) reveals the control; no layout reserved. */
 .fc:hover .fc__expand,
-.fc:focus-within .fc__expand,
 .fc__expand:focus-visible {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* Touch / no-hover pointers: keep a light always-on affordance. */
+@media (hover: none) {
+  .fc__expand {
+    opacity: 0.85;
+    pointer-events: auto;
+  }
 }
 
 .fc__expand-icon {

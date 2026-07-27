@@ -18,6 +18,7 @@
 
 <script setup lang="ts">
 import type { FileChangePreview } from '@shared/file-change/types'
+import { TOOL_LOOP_BRIEF_DIFF_LINES } from '../chat/toolLoopPanelItems'
 import FileChangeCard from './FileChangeCard.vue'
 
 withDefaults(
@@ -27,6 +28,7 @@ withDefaults(
     error?: string
     loading?: boolean
     compact?: boolean
+    /** Cap peek lines until expanded. Defaults to chat brief peek size. */
     briefLines?: number
   }>(),
   {
@@ -34,7 +36,7 @@ withDefaults(
     error: '',
     loading: false,
     compact: false,
-    briefLines: undefined,
+    briefLines: TOOL_LOOP_BRIEF_DIFF_LINES,
   },
 )
 
