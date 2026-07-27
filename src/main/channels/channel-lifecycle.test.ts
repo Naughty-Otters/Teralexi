@@ -77,4 +77,15 @@ describe('ensureBuiltinChannelManagersStarted', () => {
 
     expect(channelManagers.whatsapp.ensureStarted).not.toHaveBeenCalled()
   })
+
+  it('retries startup after a previous failure', async () => {
+    channelManagers.whatsapp.ensureStarted
+      .mockRejectedValueOnce(new Error('startup failed'))
+      .mockResolvedValueOnce(undefined)
+
+    await expect(ensureBuiltinChannelManagersStarted()).rejects.toThrow('startup failed')
+    await ensureBuiltinChannelManagersStarted()
+
+    expect(channelManagers.whatsapp.ensureStarted).toHaveBeenCalledTimes(2)
+  })
 })

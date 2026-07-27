@@ -25,6 +25,8 @@ const {
   loadStoredAccount,
   refreshAuthAndEntitlement,
   startEntitlementPolling,
+  showErrorBox,
+  loadExtension,
 } = vi.hoisted(() => ({
   initStaticPaths: vi.fn(),
   seedBundledDefaultRulesIfMissing: vi.fn(),
@@ -60,6 +62,8 @@ const {
   loadStoredAccount: vi.fn(() => null),
   refreshAuthAndEntitlement: vi.fn(async () => null),
   startEntitlementPolling: vi.fn(),
+  showErrorBox: vi.fn(),
+  loadExtension: vi.fn(async () => undefined),
 }))
 
 vi.mock('./config/static-path', () => ({
@@ -191,11 +195,11 @@ vi.mock('electron', () => ({
   },
   session: {
     defaultSession: {
-      loadExtension: vi.fn(async () => undefined),
+      loadExtension,
     },
   },
   dialog: {
-    showErrorBox: vi.fn(),
+    showErrorBox,
   },
 }))
 
@@ -233,9 +237,12 @@ describe('startMainApp', () => {
     )
     expect(initWindowInstance.initWindow).toHaveBeenCalled()
     expect(createTray).toHaveBeenCalledWith(expect.any(Function))
+    const trayWindowProvider = createTray.mock.calls[0]?.[0] as (() => unknown) | undefined
+    expect(trayWindowProvider?.()).toEqual(initWindowInstance.mainWindow)
     expect(startToolSetCatalogLoad).toHaveBeenCalled()
     expect(app.on).toHaveBeenCalledWith('before-quit', expect.any(Function))
     appListeners.get('before-quit')?.()
+    appListeners.get('browser-window-created')?.()
     expect(closeAllLsp).toHaveBeenCalled()
   })
 
@@ -263,11 +270,82 @@ describe('startMainApp', () => {
     expect(channelManagers.whatsapp.ensureStarted).not.toHaveBeenCalled()
     expect(schedulerEnsureStarted).not.toHaveBeenCalled()
   })
+
+  it('skips skill module cache clear when packaged', async () => {
+    isPackagedApp.mockReturnValue(true)
+
+    await startMainApp()
+
+    expect(clearSkillModuleCache).not.toHaveBeenCalled()
+  })
+
+  it('refreshes stored account on launch', async () => {
+    loadStoredAccount.mockReturnValue({ email: 'user@example.com' })
+
+    await startMainApp()
+
+    expect(startEntitlementPolling).toHaveBeenCalled()
+    expect(refreshAuthAndEntitlement).toHaveBeenCalledWith('launch')
+  })
+
+  it('continues startup when launch auth refresh fails', async () => {
+    loadStoredAccount.mockReturnValue({ email: 'user@example.com' })
+    refreshAuthAndEntitlement.mockRejectedValueOnce(new Error('revoked'))
+
+    await startMainApp()
+
+    expect(initWindowInstance.initWindow).toHaveBeenCalled()
+  })
+
+  it('exits when tool catalog load fails', async () => {
+    startToolSetCatalogLoad.mockRejectedValueOnce(new Error('catalog missing'))
+
+    await startMainApp()
+    await Promise.resolve()
+
+    expect(showErrorBox).toHaveBeenCalled()
+    expect(app.exit).toHaveBeenCalledWith(1)
+  })
+
+  it('loads vue devtools in development', async () => {
+    process.env.NODE_ENV = 'development'
+
+    await startMainApp()
+
+    expect(loadExtension).toHaveBeenCalled()
+  })
+
+  it('skips dock icon when empty on macOS', async () => {
+    Object.defineProperty(process, 'platform', { value: 'darwin' })
+    loadDockIcon.mockReturnValueOnce({ isEmpty: () => true })
+
+    await startMainApp()
+
+    expect(dockSetIcon).not.toHaveBeenCalled()
+  })
+
+  it('continues when bundled LSP init fails', async () => {
+    initBundledLspBin.mockImplementationOnce(() => {
+      throw new Error('missing lsp')
+    })
+
+    await startMainApp()
+
+    expect(initWindowInstance.initWindow).toHaveBeenCalled()
+  })
 })
 
 describe('shutdownMainApp', () => {
   it('closes all LSP clients', async () => {
     await shutdownMainApp()
     expect(closeAllLsp).toHaveBeenCalled()
+  })
+
+  it('ignores LSP cleanup errors', async () => {
+    closeAllLsp.mockImplementationOnce(() => {
+      throw new Error('not initialized')
+    })
+
+    await expect(shutdownMainApp()).resolves.toBeUndefined()
   })
 })

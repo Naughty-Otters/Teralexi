@@ -17,6 +17,9 @@ vi.mock('@main/agent/providers/extension-llm-provider-registry', () => ({
 
 import {
   clearExtensionContributions,
+  getExtensionUiPanel,
+  listExtensionChannelSummaries,
+  listExtensionUiPanelSummaries,
   registerExtensionContributions,
 } from './extension-contributions-registry'
 
@@ -24,6 +27,7 @@ describe('extension-contributions-registry', () => {
   beforeEach(() => {
     clearExtensionContributions()
     registerMock.mockReset()
+    registerExtensionLlmProviderMock.mockReset()
   })
 
   it('registers channels under extension-scoped ids', () => {
@@ -41,16 +45,74 @@ describe('extension-contributions-registry', () => {
       'demo-ext:matrix',
       expect.objectContaining({ sendToTarget: expect.any(Function) }),
     )
+    expect(listExtensionChannelSummaries()).toEqual([
+      {
+        extensionId: 'demo-ext',
+        channelId: 'matrix',
+        registryId: 'demo-ext:matrix',
+      },
+    ])
   })
 
-  it('skips invalid llm provider contributions', () => {
+  it('skips invalid channel and llm provider contributions', () => {
+    registerExtensionContributions({
+      extensionId: 'demo-ext',
+      extensionDir: '/tmp/demo-ext',
+      channels: {
+        broken: { sendToTarget: 'nope' },
+      },
+      llmProviders: {
+        broken: { label: 'Broken', adapter: {} },
+      },
+      uiPanels: {
+        broken: { label: '', component: '' },
+      },
+    })
+
+    expect(registerMock).not.toHaveBeenCalled()
+    expect(registerExtensionLlmProviderMock).not.toHaveBeenCalled()
+    expect(listExtensionChannelSummaries()).toEqual([])
+    expect(listExtensionUiPanelSummaries()).toEqual([])
+  })
+
+  it('registers valid llm providers and ui panels', () => {
     registerExtensionContributions({
       extensionId: 'demo-ext',
       extensionDir: '/tmp/demo-ext',
       llmProviders: {
-        broken: { label: 'Broken', adapter: {} },
+        local: {
+          label: ' Local ',
+          adapter: { createModel: () => ({}) },
+          credentialFields: ['apiKey'],
+        },
+      },
+      uiPanels: {
+        settings: {
+          label: ' Settings ',
+          component: ' ./Settings.vue ',
+        },
       },
     })
-    expect(registerExtensionLlmProviderMock).not.toHaveBeenCalled()
+
+    expect(registerExtensionLlmProviderMock).toHaveBeenCalledWith(
+      'demo-ext:local',
+      expect.objectContaining({
+        label: 'Local',
+        credentialFields: ['apiKey'],
+      }),
+    )
+    expect(listExtensionUiPanelSummaries()).toEqual([
+      {
+        extensionId: 'demo-ext',
+        panelId: 'settings',
+        registryId: 'demo-ext:settings',
+        label: 'Settings',
+        component: './Settings.vue',
+      },
+    ])
+    expect(getExtensionUiPanel('demo-ext:settings')).toMatchObject({
+      extensionDir: '/tmp/demo-ext',
+      component: './Settings.vue',
+    })
   })
 })
