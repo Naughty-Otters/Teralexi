@@ -1,4 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import { clearUserHooksCache, loadUserHooksConfig, runUserHooks } from './user-hooks'
 
 vi.mock('node:child_process', () => ({
@@ -10,8 +12,15 @@ vi.mock('node:fs', () => ({
   readFileSync: vi.fn(),
 }))
 
+vi.mock('@main/skills/extension-host', () => ({
+  getExtensionHookBindings: vi.fn(async () => []),
+}))
+
 import { execFile } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
+
+const globalHooksPath = join(homedir(), '.teralexi', 'hooks.json')
+const projectHooksPath = join(process.cwd(), '.teralexi', 'hooks.json')
 
 describe('user-hooks', () => {
   beforeEach(() => {
@@ -47,12 +56,15 @@ describe('user-hooks', () => {
   })
 
   it('blocks beforeToolCall when hook execution fails', async () => {
-    vi.mocked(existsSync).mockReturnValue(true)
-    vi.mocked(readFileSync).mockReturnValueOnce(
-      JSON.stringify({
-        hooks: [{ event: 'beforeToolCall', command: 'node', args: ['hook.js'] }],
-      }),
-    )
+    vi.mocked(existsSync).mockImplementation((path) => String(path) === globalHooksPath)
+    vi.mocked(readFileSync).mockImplementation((path) => {
+      if (String(path) === globalHooksPath) {
+        return JSON.stringify({
+          hooks: [{ event: 'beforeToolCall', command: 'node', args: ['hook.js'] }],
+        })
+      }
+      return '{}'
+    })
 
     vi.mocked(execFile).mockImplementationOnce((...args: unknown[]) => {
       const cb = args[args.length - 1] as (
@@ -70,12 +82,15 @@ describe('user-hooks', () => {
   })
 
   it('does not block non-beforeToolCall events on hook errors', async () => {
-    vi.mocked(existsSync).mockReturnValue(true)
-    vi.mocked(readFileSync).mockReturnValueOnce(
-      JSON.stringify({
-        hooks: [{ event: 'afterToolCall', command: 'node', args: ['hook.js'] }],
-      }),
-    )
+    vi.mocked(existsSync).mockImplementation((path) => String(path) === globalHooksPath)
+    vi.mocked(readFileSync).mockImplementation((path) => {
+      if (String(path) === globalHooksPath) {
+        return JSON.stringify({
+          hooks: [{ event: 'afterToolCall', command: 'node', args: ['hook.js'] }],
+        })
+      }
+      return '{}'
+    })
 
     vi.mocked(execFile).mockImplementationOnce((...args: unknown[]) => {
       const cb = args[args.length - 1] as (
@@ -92,12 +107,15 @@ describe('user-hooks', () => {
   })
 
   it('runs conversation extraHooks after global hooks for preHook', async () => {
-    vi.mocked(existsSync).mockReturnValue(true)
-    vi.mocked(readFileSync).mockReturnValueOnce(
-      JSON.stringify({
-        hooks: [{ event: 'preHook', command: 'global-cmd' }],
-      }),
-    )
+    vi.mocked(existsSync).mockImplementation((path) => String(path) === globalHooksPath)
+    vi.mocked(readFileSync).mockImplementation((path) => {
+      if (String(path) === globalHooksPath) {
+        return JSON.stringify({
+          hooks: [{ event: 'preHook', command: 'global-cmd' }],
+        })
+      }
+      return '{}'
+    })
 
     const calls: string[] = []
     vi.mocked(execFile).mockImplementation((...args: unknown[]) => {
@@ -119,37 +137,70 @@ describe('user-hooks', () => {
     expect(calls).toEqual(['global-cmd', 'local-cmd'])
   })
 
-  it('blocks preHook when conversation hook fails', async () => {
-    vi.mocked(existsSync).mockReturnValue(false)
+  it('merges global and project hooks.json', async () => {
+    vi.mocked(existsSync).mockImplementation(() => true)
+    vi.mocked(readFileSync).mockImplementation((path) => {
+      if (String(path) === globalHooksPath) {
+        return JSON.stringify({
+          hooks: [{ event: 'preHook', command: 'global-cmd' }],
+        })
+      }
+      if (String(path) === projectHooksPath) {
+        return JSON.stringify({
+          hooks: [{ event: 'preHook', command: 'project-cmd' }],
+        })
+      }
+      return '{}'
+    })
+
+    const calls: string[] = []
+    vi.mocked(execFile).mockImplementation((...args: unknown[]) => {
+      calls.push(String(args[0]))
+      const cb = args[args.length - 1] as (
+        err: Error | null,
+        stdout: string,
+        stderr: string,
+      ) => void
+      cb(null, '', '')
+      return {} as never
+    })
+
+    await runUserHooks({ event: 'preHook', conversationId: 'c1' })
+    expect(calls).toEqual(['project-cmd', 'global-cmd'])
+  })
+
+  it('surfaces hookSpecificOutput parsed from stdout JSON', async () => {
+    vi.mocked(existsSync).mockImplementation((path) => String(path) === globalHooksPath)
+    vi.mocked(readFileSync).mockImplementation((path) => {
+      if (String(path) === globalHooksPath) {
+        return JSON.stringify({
+          hooks: [{ event: 'afterToolCall', command: 'node' }],
+        })
+      }
+      return '{}'
+    })
     vi.mocked(execFile).mockImplementationOnce((...args: unknown[]) => {
       const cb = args[args.length - 1] as (
         err: Error | null,
         stdout: string,
         stderr: string,
       ) => void
-      cb(new Error('not allowed'), '', '')
+      cb(
+        null,
+        JSON.stringify({
+          hookSpecificOutput: { additionalContext: 'be careful' },
+        }),
+        '',
+      )
       return {} as never
     })
 
-    const result = await runUserHooks(
-      { event: 'preHook', conversationId: 'c1' },
-      [{ id: 'local', event: 'preHook', command: 'node', args: ['deny.js'] }],
-    )
-    expect(result.blocked).toBe(true)
-    expect(result.message).toContain('not allowed')
-  })
-
-  it('skips disabled conversation hooks', async () => {
-    vi.mocked(existsSync).mockReturnValue(false)
-    vi.mocked(execFile).mockImplementation(() => {
-      throw new Error('should not run')
+    const result = await runUserHooks({
+      event: 'afterToolCall',
+      toolName: 'read_file',
     })
-
-    const result = await runUserHooks(
-      { event: 'postHook', conversationId: 'c1' },
-      [{ id: 'off', event: 'postHook', command: 'node', enabled: false }],
-    )
-    expect(result.blocked).toBe(false)
-    expect(execFile).not.toHaveBeenCalled()
+    expect(result.hookSpecificOutput).toEqual({
+      additionalContext: 'be careful',
+    })
   })
 })

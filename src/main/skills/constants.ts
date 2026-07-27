@@ -36,3 +36,14 @@ export const SKILL_MODULE = {
   PACKAGED_CACHE_DIR: 'dist/electron/skill-module-cache',
   DEFAULT_TOOL_SET_TAG: 'toolSet',
 } as const
+
+export const EXTENSION_FILES = {
+  MANIFEST_JSON: 'extension.json',
+  HOOKS_JSON: 'hooks/hooks.json',
+} as const
+
+export const EXTENSION_LOADER_LOG = {
+  SKIPPED_INVALID: 'Skipped extension folder: invalid extension.json',
+  SKIPPED_FAILED: 'Skipped extension folder: failed to read extension.json',
+  LOADED: 'Loaded extensions from directory',
+} as const

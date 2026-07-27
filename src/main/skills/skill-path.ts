@@ -1,10 +1,14 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
-import { getTeralexiSkillsDir, getTeralexiToolSetDir } from '@config/teralexi-home'
+import {
+  getTeralexiExtensionsDir,
+  getTeralexiSkillsDir,
+  getTeralexiToolSetDir,
+} from '@config/teralexi-home'
 import { joinAppResourcePath } from '@main/config/app-paths'
 import { getBundledSkillIds, isBundledSkillId } from './bundled-skills-manifest'
 import type { SkillToolOs } from './types'
-import { SKILL_FILES, SKILLS_RESERVED_DIR_NAMES } from './constants'
+import { EXTENSION_FILES, SKILL_FILES, SKILLS_RESERVED_DIR_NAMES } from './constants'
 import { buildDefaultPropertiesYaml } from './llm-constants'
 
 const RESERVED_SKILL_DIR_NAMES = new Set(SKILLS_RESERVED_DIR_NAMES)
@@ -97,6 +101,51 @@ export function resolveUserToolSetDirectory(): string {
  */
 export function resolveToolSetSourceRoots(): string[] {
   return [resolveBundledToolSetDirectory(), resolveUserToolSetDirectory()]
+}
+
+/**
+ * An extension folder is loadable when it has an `extension.json` manifest —
+ * the same "marker file decides the folder is loadable" rule `skill.md` plays
+ * for skills. A skill-only folder with no `extension.json` is just a skill,
+ * not additionally scanned as an extension.
+ */
+export function isLoadableExtensionFolder(
+  extensionsDir: string,
+  entry: string,
+): boolean {
+  if (isReservedSkillDirName(entry)) return false
+  const extensionFolder = join(extensionsDir, entry)
+  try {
+    if (!statSync(extensionFolder).isDirectory()) return false
+  } catch {
+    return false
+  }
+  return existsSync(join(extensionFolder, EXTENSION_FILES.MANIFEST_JSON))
+}
+
+/** Shipped defaults: `<repo>/extensions` or `<app>/extensions` when packaged. */
+export function resolveBundledExtensionsDirectory(): string {
+  return joinAppResourcePath('extensions')
+}
+
+/** `~/.teralexi/extensions` — user-installed extensions; wins on id conflicts. */
+export function resolveUserExtensionsDirectory(): string {
+  return getTeralexiExtensionsDir()
+}
+
+/** Extension roots in merge order: bundled first, user last (user overwrites bundled). */
+export function resolveExtensionsSourceRoots(workspacePath?: string): string[] {
+  return [
+    resolveBundledExtensionsDirectory(),
+    resolveProjectExtensionsDirectory(workspacePath),
+    resolveUserExtensionsDirectory(),
+  ]
+}
+
+/** Project-scoped extensions: `<workspace>/.teralexi/extensions`. */
+export function resolveProjectExtensionsDirectory(workspacePath?: string): string {
+  const base = workspacePath?.trim() || process.cwd()
+  return join(base, '.teralexi', 'extensions')
 }
 
 /** True when the user has a disk folder that overrides a shipped bundled skill. */

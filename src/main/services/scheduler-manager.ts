@@ -9,6 +9,7 @@ import {
   type StoredSchedulerDefinition,
 } from './conversation-store'
 import { getChannelRegistry } from '@main/channels/framework/channel-registry'
+import { ensureChannelSenderReady } from '@main/channels/channel-sender-readiness'
 import { runAgentForConversation } from '@main/engine'
 import { serializeAssistantMessageForExternalReply } from '@main/agent/utils'
 import { notifyConversationStoreChanged } from '@main/services/conversation-store-notify'
@@ -130,6 +131,10 @@ class SchedulerManager {
     })
 
     if (schedule.actionType === 'send-channel-message') {
+      await ensureChannelSenderReady(
+        ConfigContext.DEFAULT_USER_ID,
+        schedule.channelId,
+      )
       const sender = getChannelRegistry().get(schedule.channelId)
       if (!sender) {
         throw new Error(`Unknown channel: ${schedule.channelId}`)
@@ -196,6 +201,10 @@ class SchedulerManager {
             lastAssistant.content,
           )
           if (replyText.trim()) {
+            await ensureChannelSenderReady(
+              ConfigContext.DEFAULT_USER_ID,
+              channelId,
+            )
             const sender = getChannelRegistry().get(channelId)
             if (!sender) {
               throw new Error(`Unknown channel: ${channelId}`)

@@ -37,6 +37,34 @@ export function runMigrations(db: Database.Database): void {
   migrateWorkflowsSchema(db)
   migrateSchedulersRunWorkflow(db)
   migrateMessageAttachments(db)
+  migrateExtensionSettingsSchema(db)
+  migrateExtensionHookTrustSchema(db)
+}
+
+/** Per-user enable/disable override for discovered extensions (see extensions-directory-loader.ts). */
+function migrateExtensionSettingsSchema(db: Database.Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS extension_settings (
+      user_id      TEXT NOT NULL,
+      extension_id TEXT NOT NULL,
+      enabled      INTEGER NOT NULL DEFAULT 1,
+      updated_at   TEXT NOT NULL,
+      PRIMARY KEY (user_id, extension_id)
+    );
+  `)
+}
+
+function migrateExtensionHookTrustSchema(db: Database.Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS extension_hook_trust (
+      user_id      TEXT NOT NULL,
+      trust_key    TEXT NOT NULL,
+      content_hash TEXT NOT NULL,
+      status       TEXT NOT NULL,
+      updated_at   TEXT NOT NULL,
+      PRIMARY KEY (user_id, trust_key)
+    );
+  `)
 }
 
 function migrateMessageAttachments(db: Database.Database): void {

@@ -54,6 +54,7 @@ export const lang: AppLocaleBundle = {
       chat: 'Chat',
       toolset: 'ToolSet',
       mcp: 'MCP',
+      extensions: 'Extensions',
       developer: 'Developer',
       about: 'About',
     },

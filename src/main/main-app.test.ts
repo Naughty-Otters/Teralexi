@@ -239,15 +239,15 @@ describe('startMainApp', () => {
     expect(closeAllLsp).toHaveBeenCalled()
   })
 
-  it('starts background channels outside test mode', async () => {
+  it('does not start channels or scheduler at launch outside test mode', async () => {
     await startMainApp()
 
-    expect(channelManagers.whatsapp.ensureStarted).toHaveBeenCalled()
-    expect(channelManagers.telegram.ensureStarted).toHaveBeenCalled()
-    expect(channelManagers.discord.ensureStarted).toHaveBeenCalled()
-    expect(channelManagers.wechat.ensureStarted).toHaveBeenCalled()
-    expect(channelManagers.slack.ensureStarted).toHaveBeenCalled()
-    expect(schedulerEnsureStarted).toHaveBeenCalled()
+    expect(channelManagers.whatsapp.ensureStarted).not.toHaveBeenCalled()
+    expect(channelManagers.telegram.ensureStarted).not.toHaveBeenCalled()
+    expect(channelManagers.discord.ensureStarted).not.toHaveBeenCalled()
+    expect(channelManagers.wechat.ensureStarted).not.toHaveBeenCalled()
+    expect(channelManagers.slack.ensureStarted).not.toHaveBeenCalled()
+    expect(schedulerEnsureStarted).not.toHaveBeenCalled()
     expect(setSystemPropValue).not.toHaveBeenCalled()
   })
 

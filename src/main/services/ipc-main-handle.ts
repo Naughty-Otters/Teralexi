@@ -135,6 +135,16 @@ import {
   githubAccountInfoForUi,
 } from './github-oauth'
 import { getMcpServerManager } from './mcp-server-manager'
+import { listExtensionsForUser } from '@main/skills/extensions-with-settings'
+import {
+  clearExtensionHostCache,
+  listExtensionChannels,
+  listExtensionLlmProviderSummaries,
+  listExtensionUiPanels,
+  listPendingHookReviews,
+  reloadExtensionHost,
+} from '@main/skills/extension-host'
+import { clearUserHooksCache } from '@main/agent/hooks/user-hooks'
 import { checkMcpRuntimeStatus, prewarmMcpRuntimeEnvironment } from './mcp-runtime-check'
 import { getMcpRegistryService } from './mcp-registry-service'
 import { getWhatsAppChannelManager } from '@main/channels/whatsapp/manager'
@@ -142,6 +152,9 @@ import { getTelegramChannelManager } from '@main/channels/telegram/manager'
 import { getDiscordChannelManager } from '@main/channels/discord/manager'
 import { getWeChatChannelManager } from '@main/channels/wechat/manager'
 import { getSlackChannelManager } from '@main/channels/slack/manager'
+import { DEFAULT_USER_ID } from '@main/agent/config/config'
+import { ensureBuiltinChannelManagersStarted } from '@main/channels/channel-lifecycle'
+import { ensureChannelSenderReady } from '@main/channels/channel-sender-readiness'
 import { getSchedulerManager } from './scheduler-manager'
 import { getChannelRegistry } from '@main/channels/framework/channel-registry'
 import {
@@ -1271,6 +1284,80 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     void getMcpServerManager().closeClient(args.serverId)
   }
 
+  ListExtensions: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { userId: string; workspacePath?: string },
+  ) => ReturnType<typeof listExtensionsForUser> = (_event, args) => {
+    return listExtensionsForUser(args.userId, args.workspacePath)
+  }
+
+  SetExtensionEnabled: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: {
+      userId: string
+      extensionId: string
+      enabled: boolean
+      workspacePath?: string
+    },
+  ) => void = (_event, args) => {
+    getConversationStore().setExtensionEnabled(
+      args.userId,
+      args.extensionId,
+      args.enabled,
+    )
+    clearUserHooksCache()
+    clearExtensionHostCache()
+    void reloadExtensionHost(args.userId, args.workspacePath)
+  }
+
+  ListPendingHookReviews: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { userId: string; workspacePath?: string },
+  ) => ReturnType<typeof listPendingHookReviews> = (_event, args) => {
+    return listPendingHookReviews(args.userId, args.workspacePath)
+  }
+
+  SetHookTrustStatus: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: {
+      userId: string
+      trustKey: string
+      contentHash: string
+      status: 'trusted' | 'rejected'
+      workspacePath?: string
+    },
+  ) => void = (_event, args) => {
+    getConversationStore().setExtensionHookTrustStatus(
+      args.userId,
+      args.trustKey,
+      args.contentHash,
+      args.status,
+    )
+    clearExtensionHostCache()
+    void reloadExtensionHost(args.userId, args.workspacePath)
+  }
+
+  ListExtensionChannels: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { userId: string; workspacePath?: string },
+  ) => ReturnType<typeof listExtensionChannels> = (_event, args) => {
+    return listExtensionChannels(args.userId, args.workspacePath)
+  }
+
+  ListExtensionUiPanels: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { userId: string; workspacePath?: string },
+  ) => ReturnType<typeof listExtensionUiPanels> = (_event, args) => {
+    return listExtensionUiPanels(args.userId, args.workspacePath)
+  }
+
+  ListExtensionLlmProviders: (
+    _event: Electron.IpcMainInvokeEvent,
+    args: { userId: string; workspacePath?: string },
+  ) => ReturnType<typeof listExtensionLlmProviderSummaries> = (_event, args) => {
+    return listExtensionLlmProviderSummaries(args.userId, args.workspacePath)
+  }
+
   GetMcpServerTools: (
     _event: Electron.IpcMainInvokeEvent,
     args: { userId: string; serverId: string },
@@ -1355,11 +1442,19 @@ export class IpcMainHandleClass implements IIpcMainHandle {
   ListSchedulers: (
     _event: Electron.IpcMainInvokeEvent,
     args: { userId: string },
-  ) => ReturnType<ReturnType<typeof getConversationStore>['listSchedulers']> = (
+  ) => ReturnType<ReturnType<typeof getConversationStore>['listSchedulers']> = async (
     _event,
     args,
   ) => {
+    await getSchedulerManager().ensureStarted()
     return getConversationStore().listSchedulers(args.userId)
+  }
+
+  EnsureBuiltinChannelManagersStarted: (
+    _event: Electron.IpcMainInvokeEvent,
+  ) => Promise<{ ok: true }> = async () => {
+    await ensureBuiltinChannelManagersStarted()
+    return { ok: true }
   }
 
   UpsertScheduler: (
@@ -1382,7 +1477,8 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       prompt: string
       workflowId: string
     },
-  ) => void = (_event, args) => {
+  ) => void = async (_event, args) => {
+    await getSchedulerManager().ensureStarted()
     getConversationStore().upsertScheduler(args)
     getSchedulerManager().upsertSchedule(args.id, args.userId)
   }
@@ -2060,6 +2156,8 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     const target = args?.target?.trim() ?? ''
     const text = args?.text ?? ''
     if (!channelId || !target || !text.trim()) return false
+
+    await ensureChannelSenderReady(DEFAULT_USER_ID, channelId)
 
     const sender = getChannelRegistry().get(channelId)
     if (!sender) {

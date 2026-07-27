@@ -42,6 +42,7 @@ import type {
   McpTransportType,
   McpServerDefinition,
   McpToolDefinition,
+  ExtensionSummary,
   AgentExecutionSteps,
   RuntimeToolMeta,
 } from './types'
@@ -78,6 +79,7 @@ export const useAgentStore = defineStore('agent', () => {
   const mcpServers = ref<McpServerDefinition[]>([])
   const mcpToolsByServer = ref<Record<string, McpToolDefinition[]>>({})
   const mcpToolsLoadErrorByServer = ref<Record<string, string>>({})
+  const extensions = ref<ExtensionSummary[]>([])
   const conversationSandboxRuns = ref<Record<string, ConversationSandboxRun[]>>(
     {},
   )
@@ -219,6 +221,7 @@ export const useAgentStore = defineStore('agent', () => {
     mcpServers,
     mcpToolsByServer,
     mcpToolsLoadErrorByServer,
+    extensions,
     conversationSandboxRuns,
     sandboxSelectedRunIdByConversation,
     chatBoxDisplayMode,
@@ -399,6 +402,42 @@ export const useAgentStore = defineStore('agent', () => {
     return actions.fetchMcpServerTools(serverId)
   }
 
+  let extensionActionsPromise: Promise<
+    ReturnType<typeof import('./agent-extensions').createExtensionActions>
+  > | null = null
+
+  async function getExtensionActions() {
+    if (!extensionActionsPromise) {
+      extensionActionsPromise = import('./agent-extensions').then((m) =>
+        m.createExtensionActions(ctx),
+      )
+    }
+    return extensionActionsPromise
+  }
+
+  async function loadExtensions(): Promise<void> {
+    const m = await import('./agent-extensions')
+    return m.loadExtensions(ctx)
+  }
+
+  async function toggleExtensionEnabled(extensionId: string) {
+    const actions = await getExtensionActions()
+    return actions.toggleExtensionEnabled(extensionId)
+  }
+
+  async function listPendingHookReviews() {
+    const actions = await getExtensionActions()
+    return actions.listPendingHookReviews()
+  }
+
+  async function setHookTrustStatus(
+    review: import('./agent-extensions').PendingHookReview,
+    status: 'trusted' | 'rejected',
+  ) {
+    const actions = await getExtensionActions()
+    return actions.setHookTrustStatus(review, status)
+  }
+
   type SettingsActions = ReturnType<
     typeof import('./settings-init').createSettingsInitActions
   >
@@ -487,6 +526,7 @@ export const useAgentStore = defineStore('agent', () => {
     mcpServers,
     mcpToolsByServer,
     mcpToolsLoadErrorByServer,
+    extensions,
     enabledMcpTools,
     selectAgent: conversation.selectAgent,
     initializeSettingsFromConfig,
@@ -524,6 +564,10 @@ export const useAgentStore = defineStore('agent', () => {
     toggleMcpServerEnabled,
     deleteMcpServer,
     fetchMcpServerTools,
+    loadExtensions,
+    toggleExtensionEnabled,
+    listPendingHookReviews,
+    setHookTrustStatus,
     updateAgentModel: mutations.updateAgentModel,
     updateAgentName: mutations.updateAgentName,
     updateAgentDescription: mutations.updateAgentDescription,

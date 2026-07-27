@@ -259,6 +259,9 @@ export async function executeTodoToolLoop(
       provider: toolLoopChoice.provider,
       modelId: toolLoopChoice.model,
       providerOptions: toolLoopChoice.providerOptions,
+      userId: toolRunCtx.opts.userId,
+      conversationId: toolRunCtx.opts.conversationId,
+      workspacePath: toolRunCtx.opts.workspacePathOverride,
     })
 
     let rawMessages = await buildLoopMessagesForRoute(route, {

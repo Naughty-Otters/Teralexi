@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "function",
+        "module": "actions/guard.ts",
+        "export": "beforeToolCall"
+      }
+    ]
+  }
+}

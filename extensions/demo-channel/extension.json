@@ -1,0 +1,10 @@
+{
+  "id": "demo-channel",
+  "version": "1.0.0",
+  "permissions": {
+    "filesystem": "workspace",
+    "network": false,
+    "shell": false
+  },
+  "activationEvents": ["onStartup"]
+}

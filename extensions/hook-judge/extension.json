@@ -1,0 +1,20 @@
+{
+  "id": "hook-judge",
+  "version": "1.0.0",
+  "permissions": {
+    "filesystem": "workspace",
+    "network": true,
+    "shell": false
+  },
+  "contributes": {
+    "hooks": {
+      "onApprovalRequired": [
+        {
+          "type": "prompt",
+          "prompt": "You are a security reviewer. If the tool call looks destructive or reads secrets, reply with {\"continue\":false,\"stopReason\":\"Blocked by hook-judge\"}. Otherwise reply with {\"continue\":true}.",
+          "model": "openai:gpt-4o-mini"
+        }
+      ]
+    }
+  }
+}

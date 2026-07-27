@@ -15,7 +15,13 @@ import {
 import { STEP_ERRORS, STEP_HELPERS_LABELS } from '../constants/pipeline'
 import { toolLoopFilesystemScopeFromStepKey } from '../run/flow-scoped-ids'
 import { resolveEngineAgent } from '../run/resolve-child-agent'
+import { loadAgentRunCredentials } from '../utils/agent-run-context'
 import { runUserHooks } from '../hooks/user-hooks'
+import {
+  applyAdditionalContextToToolResult,
+  applyUpdatedInput,
+  applyUpdatedInputUnknown,
+} from '../hooks/hook-result-applier'
 import { getCurrentAgentRunScope } from '../run/run-scope'
 import { getWorkspacePath } from '../workspace/conversation-workspace'
 import type { SandboxGlobalsBindings } from '../sandbox/sandbox-globals-lock'
@@ -261,6 +267,24 @@ function resolveSandboxGlobalsBindings(
   return { root, outputScope, workspacePath, conversationId, assistantMessageId }
 }
 
+function hookOptionsFromRunCtx(runCtx?: AgentStepContext, userId?: string) {
+  const bindings = resolveSandboxGlobalsBindings(runCtx)
+  const delegation = buildSubAgentDelegationFromRunCtx(runCtx)
+  return {
+    userId: userId ?? runCtx?.opts.userId,
+    workspacePath: bindings.workspacePath ?? undefined,
+    credentials: runCtx ? loadAgentRunCredentials() : undefined,
+    defaultProvider: runCtx?.opts.provider,
+    defaultModel: runCtx?.opts.model,
+    hookDelegation: delegation
+      ? {
+          parentRun: delegation.parentRun,
+          parentOpts: delegation.opts,
+        }
+      : undefined,
+  }
+}
+
 function buildSubAgentDelegationFromRunCtx(
   runCtx?: AgentStepContext,
 ): SubAgentDelegationContext | undefined {
@@ -307,16 +331,23 @@ export async function callSkillToolDirect(
       ? (input as Record<string, unknown>)
       : { input }
 
-  const hookResult = await runUserHooks({
-    event: 'beforeToolCall',
-    conversationId: runCtx?.opts.conversationId,
-    toolName,
-    toolInput,
-    workspacePath: resolveSandboxGlobalsBindings(runCtx).workspacePath,
-  })
+  const hookOpts = hookOptionsFromRunCtx(runCtx)
+  const hookResult = await runUserHooks(
+    {
+      event: 'beforeToolCall',
+      conversationId: runCtx?.opts.conversationId,
+      agentId: runCtx?.opts.agentId,
+      toolName,
+      toolInput,
+      workspacePath: resolveSandboxGlobalsBindings(runCtx).workspacePath,
+    },
+    [],
+    hookOpts,
+  )
   if (hookResult.blocked) {
     return { error: hookResult.message ?? 'Blocked by user hook' }
   }
+  const effectiveInput = applyUpdatedInput(toolInput, hookResult)
 
   return runLoggedToolExecute(
     {
@@ -327,7 +358,7 @@ export async function callSkillToolDirect(
       agentId: runCtx?.opts.agentId,
       stepId: runCtx?.stepId,
     },
-    toolInput,
+    effectiveInput,
     async () => {
       let tool
       try {
@@ -346,21 +377,29 @@ export async function callSkillToolDirect(
 
       bindSubAgentDelegation(buildSubAgentDelegationFromRunCtx(runCtx))
       try {
-        return await tool.execute(toolInput)
+        return await tool.execute(effectiveInput)
       } finally {
         clearSubAgentDelegation()
       }
     },
   ).then(async (result) => {
-    await runUserHooks({
-      event: 'afterToolCall',
-      conversationId: runCtx?.opts.conversationId,
-      toolName,
-      toolInput,
-      workspacePath: resolveSandboxGlobalsBindings(runCtx).workspacePath,
-      toolResult: result,
-    })
-    return result
+    const afterHook = await runUserHooks(
+      {
+        event: 'afterToolCall',
+        conversationId: runCtx?.opts.conversationId,
+        agentId: runCtx?.opts.agentId,
+        toolName,
+        toolInput: effectiveInput,
+        workspacePath: resolveSandboxGlobalsBindings(runCtx).workspacePath,
+        toolResult: result,
+      },
+      [],
+      hookOpts,
+    )
+    return applyAdditionalContextToToolResult(
+      result,
+      afterHook.hookSpecificOutput?.additionalContext,
+    )
   })
 }
 
@@ -371,33 +410,85 @@ export async function callMcpToolDirect(
   input: unknown,
   runCtx?: AgentStepContext,
 ): Promise<unknown> {
-  return runLoggedToolExecute(
+  const hookOpts = hookOptionsFromRunCtx(runCtx, userId)
+  const preHook = await runUserHooks(
     {
-      toolName,
-      source: 'mcp',
+      event: 'PreMcpToolUse',
       conversationId: runCtx?.opts.conversationId,
       agentId: runCtx?.opts.agentId,
-      stepId: runCtx?.stepId,
+      toolName,
+      toolInput: input,
+      workspacePath: resolveSandboxGlobalsBindings(runCtx).workspacePath,
     },
-    input,
-    async () => {
-      const server = getConversationStore().getMcpServer(userId, serverId)
-      if (!server) {
-        throw new Error(
-          STEP_ERRORS.MCP_SERVER_NOT_FOUND.replace('{serverId}', serverId),
-        )
-      }
-      if (!server.enabled) {
-        throw new Error(
-          STEP_ERRORS.MCP_SERVER_DISABLED.replace('{serverId}', serverId),
-        )
-      }
-      return getMcpServerManager().callTool(server, toolName, input, {
-        userId,
-        conversationId: runCtx?.opts.conversationId,
-      })
-    },
+    [],
+    hookOpts,
   )
+  if (preHook.blocked) {
+    return { error: preHook.message ?? 'Blocked by user hook' }
+  }
+
+  const effectiveInput = applyUpdatedInputUnknown(input, preHook)
+  let result: unknown
+  let hasError = false
+  let errorMessage: string | undefined
+
+  try {
+    result = await runLoggedToolExecute(
+      {
+        toolName,
+        source: 'mcp',
+        conversationId: runCtx?.opts.conversationId,
+        agentId: runCtx?.opts.agentId,
+        stepId: runCtx?.stepId,
+      },
+      effectiveInput,
+      async () => {
+        const server = getConversationStore().getMcpServer(userId, serverId)
+        if (!server) {
+          throw new Error(
+            STEP_ERRORS.MCP_SERVER_NOT_FOUND.replace('{serverId}', serverId),
+          )
+        }
+        if (!server.enabled) {
+          throw new Error(
+            STEP_ERRORS.MCP_SERVER_DISABLED.replace('{serverId}', serverId),
+          )
+        }
+        return getMcpServerManager().callTool(server, toolName, effectiveInput, {
+          userId,
+          conversationId: runCtx?.opts.conversationId,
+        })
+      },
+    )
+  } catch (err) {
+    hasError = true
+    errorMessage = err instanceof Error ? err.message : String(err)
+    throw err
+  } finally {
+    const postHook = await runUserHooks(
+      {
+        event: 'PostMcpToolUse',
+        conversationId: runCtx?.opts.conversationId,
+        agentId: runCtx?.opts.agentId,
+        toolName,
+        toolInput: effectiveInput,
+        workspacePath: resolveSandboxGlobalsBindings(runCtx).workspacePath,
+        toolResult: result,
+        hasError,
+        errorMessage,
+      },
+      [],
+      hookOpts,
+    )
+    if (!hasError && result !== undefined) {
+      result = applyAdditionalContextToToolResult(
+        result,
+        postHook.hookSpecificOutput?.additionalContext,
+      )
+    }
+  }
+
+  return result
 }
 
 export function filterToolsByAvailableSet(
@@ -506,6 +597,9 @@ export type CreateAgentParams = {
   experimental_toolApprovalSecret?: string
   /** When false, skip injecting HMAC secret (tests). Default true. */
   enableToolApprovalSigning?: boolean
+  userId?: string
+  conversationId?: string
+  workspacePath?: string | null
 }
 
 /** Builds an {@link Agent} for tool-loop pipeline steps. */
@@ -526,6 +620,9 @@ export function createAgent(params: CreateAgentParams): Agent {
     toolApproval,
     experimental_toolApprovalSecret,
     enableToolApprovalSigning = true,
+    userId,
+    conversationId,
+    workspacePath,
   } = params
   const effectiveToolChoice = resolveAgentToolChoice(toolChoice, provider, modelId)
   const reasoningFields = provider
@@ -534,7 +631,13 @@ export function createAgent(params: CreateAgentParams): Agent {
         providerOptions: resolveAiSdkProviderOptions(providerOptions),
       }
   const resolvedToolApproval =
-    toolApproval !== undefined ? toolApproval : buildCatchAllToolApproval()
+    toolApproval !== undefined
+      ? toolApproval
+      : buildCatchAllToolApproval({
+          hookContext: userId
+            ? { userId, conversationId, workspacePath }
+            : undefined,
+        })
   const approvalSecret =
     experimental_toolApprovalSecret ??
     (enableToolApprovalSigning ? getToolApprovalSecret() : undefined)

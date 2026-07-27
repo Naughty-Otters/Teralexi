@@ -19,6 +19,7 @@ const TERALEXI_APP_DIRS = [
   'accounts',
   'skills',
   'toolSet',
+  'extensions',
   'workflows',
   'rules',
   'stress-runs',
@@ -138,6 +139,13 @@ export function getTeralexiSkillsDir(): string {
 /** User overrides for shared tools (`~/.teralexi/toolSet`). */
 export function getTeralexiToolSetDir(): string {
   const dir = join(getTeralexiHome(), 'toolSet')
+  ensureDir(dir)
+  return dir
+}
+
+/** User-installed extensions (`~/.teralexi/extensions`). Same id wins over bundled. */
+export function getTeralexiExtensionsDir(): string {
+  const dir = join(getTeralexiHome(), 'extensions')
   ensureDir(dir)
   return dir
 }

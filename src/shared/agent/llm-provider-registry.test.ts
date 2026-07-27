@@ -10,6 +10,8 @@ import {
   emptyOpenAiCompatibleCredentials,
   isOpenAiCompatibleProvider,
   isProviderType,
+  isKnownProviderId,
+  isExtensionScopedProviderId,
   llmProviderCategory,
   llmProviderSettingsLabel,
   normalizeProviderBaseUrl,
@@ -67,6 +69,10 @@ describe('llm-provider-registry', () => {
   it('detects provider types and openai-compatible providers', () => {
     expect(isProviderType('zhipu')).toBe(true)
     expect(isProviderType('unknown')).toBe(false)
+    expect(isExtensionScopedProviderId('my-ext:custom')).toBe(true)
+    expect(isExtensionScopedProviderId('openai')).toBe(false)
+    expect(isKnownProviderId('openai')).toBe(true)
+    expect(isKnownProviderId('my-ext:custom')).toBe(true)
     expect(isOpenAiCompatibleProvider('moonshot')).toBe(true)
     expect(isOpenAiCompatibleProvider('zhipu')).toBe(false)
   })

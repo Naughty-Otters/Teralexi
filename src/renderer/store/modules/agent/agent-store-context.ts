@@ -6,6 +6,7 @@ import type {
   Agent,
   Conversation,
   ConversationSandboxRun,
+  ExtensionSummary,
   McpServerDefinition,
   McpToolDefinition,
   Message,
@@ -44,6 +45,7 @@ export type AgentStoreContext = {
   mcpServers: Ref<McpServerDefinition[]>
   mcpToolsByServer: Ref<Record<string, McpToolDefinition[]>>
   mcpToolsLoadErrorByServer: Ref<Record<string, string>>
+  extensions: Ref<ExtensionSummary[]>
   conversationSandboxRuns: Ref<Record<string, ConversationSandboxRun[]>>
   sandboxSelectedRunIdByConversation: Ref<Record<string, string>>
   chatBoxDisplayMode: Ref<ChatBoxDisplayMode>

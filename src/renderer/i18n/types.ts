@@ -53,6 +53,7 @@ export type AppLabels = {
       chat: string
       toolset: string
       mcp: string
+      extensions: string
       developer: string
       about: string
     }

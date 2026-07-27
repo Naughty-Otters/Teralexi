@@ -5,6 +5,9 @@
  * "always allow"). Catch-all covers dynamic/MCP tools that may not carry the flag.
  */
 
+import { runUserHooks } from '@main/agent/hooks/user-hooks'
+import { mapPermissionDecision } from '@main/agent/hooks/hook-result-applier'
+
 export type ToolApprovalStatus =
   | 'user-approval'
   | 'approved'
@@ -20,6 +23,14 @@ export type ToolApprovalToolCall = {
   toolName?: string
   dynamic?: boolean
   needsApproval?: unknown
+  input?: unknown
+}
+
+export type ToolApprovalHookContext = {
+  userId?: string
+  conversationId?: string
+  agentId?: string
+  workspacePath?: string | null
 }
 
 /**
@@ -34,10 +45,11 @@ export type ToolApprovalToolCall = {
 export function buildCatchAllToolApproval(params?: {
   /** Tool names that must never auto-run (extra deny/require list). */
   alwaysRequireApproval?: ReadonlySet<string> | readonly string[]
+  hookContext?: ToolApprovalHookContext
 }): (args: {
   toolCall: ToolApprovalToolCall
   tools?: Record<string, { needsApproval?: unknown }>
-}) => ToolApprovalDecision {
+}) => ToolApprovalDecision | Promise<ToolApprovalDecision> {
   const always = new Set(
     Array.isArray(params?.alwaysRequireApproval)
       ? params.alwaysRequireApproval
@@ -45,8 +57,33 @@ export function buildCatchAllToolApproval(params?: {
         ? [...params.alwaysRequireApproval]
         : [],
   )
+  const hookContext = params?.hookContext
 
-  return ({ toolCall, tools }) => {
+  return async ({ toolCall, tools }) => {
+    if (hookContext?.userId) {
+      const hookResult = await runUserHooks(
+        {
+          event: 'onApprovalRequired',
+          conversationId: hookContext.conversationId,
+          agentId: hookContext.agentId,
+          workspacePath: hookContext.workspacePath,
+          toolName: toolCall.toolName,
+          toolInput: toolCall.input ?? toolCall,
+        },
+        [],
+        {
+          userId: hookContext.userId,
+          workspacePath: hookContext.workspacePath ?? undefined,
+        },
+      )
+      const mapped = mapPermissionDecision(
+        hookResult.hookSpecificOutput?.permissionDecision,
+      )
+      if (mapped === 'approved') return 'approved'
+      if (mapped === 'denied' || hookResult.blocked) return 'denied'
+      if (mapped === 'user-approval') return 'user-approval'
+    }
+
     const name = toolCall.toolName?.trim() ?? ''
     if (name && always.has(name)) return 'user-approval'
 

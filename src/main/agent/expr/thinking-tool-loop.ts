@@ -124,6 +124,9 @@ export async function runThinkingResearchPass(
     provider: exploreChoice.provider,
     modelId: exploreChoice.model,
     providerOptions: exploreChoice.providerOptions,
+    userId: ctx.opts.userId,
+    conversationId: ctx.opts.conversationId,
+    workspacePath: ctx.opts.workspacePathOverride,
   })
 
   const messages: ModelMessage[] = [{ role: 'user', content: userContent }]
