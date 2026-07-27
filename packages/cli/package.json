@@ -36,7 +36,7 @@
     "build": "node ./scripts/build.mjs",
     "dev": "node ./scripts/build.mjs && node ./bin/teralexi",
     "prepack": "npm run build",
-    "test": "node --test dist/**/*.test.js 2>/dev/null || node --test ./src/**/*.test.ts 2>/dev/null || echo 'no cli unit tests yet'"
+    "test": "npm run build && node --test dist/install.test.js"
   },
   "publishConfig": {
     "access": "public"

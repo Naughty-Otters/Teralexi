@@ -133,7 +133,7 @@ function buildInstalledProperties(args: {
   )
 }
 
-/** Normalize an extracted ClawHub skill folder into teralexi layout. */
+/** Normalize an extracted ClawHub / ecosystem skill folder into teralexi layout. */
 export function normalizeClawHubSkillFolder(args: {
   skillFolder: string
   skillId: string
@@ -223,3 +223,6 @@ export function localSkillIdFromSlug(slug: string): string {
     .replace(/^-|-$/g, '')
   return normalized || 'clawhub-skill'
 }
+
+/** Alias for ecosystem / GitHub installs (same as ClawHub normalize). */
+export const normalizeInstalledSkillFolder = normalizeClawHubSkillFolder

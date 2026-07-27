@@ -14,6 +14,7 @@ const out = join(dist, 'cli.js')
 
 copyFileSync(src, out)
 copyFileSync(join(root, 'src', 'install.js'), join(dist, 'install.js'))
+copyFileSync(join(root, 'src', 'install.test.js'), join(dist, 'install.test.js'))
 if (platform() !== 'win32') {
   try {
     chmodSync(out, 0o755)
