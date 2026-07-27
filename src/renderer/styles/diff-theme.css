@@ -1,0 +1,31 @@
+/**
+ * Shared add/remove colors for diff stats (+N / −N) and unified-diff lines.
+ * Tuned so light and dark both read clearly against conversation surfaces.
+ */
+
+html {
+  --diff-add: #1a7f37;
+  --diff-del: #cf222e;
+  --diff-add-bg: color-mix(in srgb, var(--diff-add) 14%, transparent);
+  --diff-del-bg: color-mix(in srgb, var(--diff-del) 12%, transparent);
+  --diff-add-border: var(--diff-add);
+  --diff-del-border: var(--diff-del);
+  --diff-surface-bg: color-mix(in srgb, var(--ui-text) 2.5%, var(--ui-bg));
+  --diff-gutter-bg: color-mix(in srgb, var(--ui-text) 4%, var(--ui-bg));
+  --diff-gutter-width: 2.5em;
+  --diff-accent-width: 3px;
+  --diff-line-pad-x: 12px;
+  --diff-hunk-bg: color-mix(in srgb, var(--ui-text) 5%, transparent);
+}
+
+html.dark {
+  --diff-add: #3fb950;
+  --diff-del: #f85149;
+  --diff-add-bg: color-mix(in srgb, var(--diff-add) 16%, transparent);
+  --diff-del-bg: color-mix(in srgb, var(--diff-del) 14%, transparent);
+  --diff-add-border: var(--diff-add);
+  --diff-del-border: var(--diff-del);
+  --diff-surface-bg: color-mix(in srgb, #000 22%, var(--ui-bg));
+  --diff-gutter-bg: color-mix(in srgb, #000 30%, var(--ui-bg));
+  --diff-hunk-bg: color-mix(in srgb, var(--ui-text) 6%, transparent);
+}

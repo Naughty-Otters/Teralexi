@@ -34,7 +34,7 @@ import {
 import './shiki-shared.css'
 
 /** Matches `.shiki-diff__line` min-height / line-height used in brief cards. */
-const BRIEF_LINE_HEIGHT_EM = 1.35
+const BRIEF_LINE_HEIGHT_EM = 1.4
 
 const props = withDefaults(
   defineProps<{
@@ -91,9 +91,10 @@ const briefMinHeightStyle = computed(() => {
 
 .shiki-diff__more {
   margin: 0;
-  padding: 2px 12px 4px;
+  padding: 6px var(--diff-line-pad-x) 8px calc(var(--diff-accent-width) + var(--diff-gutter-width) + 10px);
   font-size: var(--app-font-size-sm);
   line-height: 1;
   color: var(--ui-text-muted);
+  background: var(--diff-surface-bg);
 }
 </style>

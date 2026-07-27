@@ -126,109 +126,115 @@
       v-if="chatControls.visible && chatControls.showChatActions"
       class="window-title__actions"
     >
-      <div class="window-title__conversation-menu">
-        <AppIconTooltip text="Switch conversation in this pane">
+      <div
+        class="window-title__session-group"
+        role="group"
+        aria-label="Session controls"
+      >
+        <div class="window-title__conversation-menu">
+          <AppIconTooltip text="Switch conversation in this pane">
+            <button
+              ref="conversationMenuBtnRef"
+              type="button"
+              class="cp-icon-btn window-title__btn"
+              :class="{ 'cp-icon-btn--on': conversationMenuOpen }"
+              aria-label="Switch conversation in this pane"
+              aria-haspopup="menu"
+              :aria-expanded="conversationMenuOpen"
+              :disabled="chatControls.conversationOptions.length === 0"
+              @click.stop="toggleConversationMenu"
+            >
+              <UIcon class="cp-icon-btn__glyph" name="i-lucide-history" />
+            </button>
+          </AppIconTooltip>
+          <div
+            v-if="conversationMenuOpen"
+            ref="conversationMenuEl"
+            class="window-title__conversation-dropdown"
+            role="menu"
+            aria-label="Conversations for this pane"
+          >
+            <button
+              v-for="option in chatControls.conversationOptions"
+              :key="option.id"
+              type="button"
+              class="window-title__conversation-item"
+              :class="{
+                'window-title__conversation-item--active':
+                  option.id === chatControls.conversationId,
+              }"
+              role="menuitemradio"
+              :aria-checked="option.id === chatControls.conversationId"
+              @click="onPickConversation(option.id)"
+            >
+              <span class="window-title__conversation-item-label">{{
+                option.label
+              }}</span>
+              <UIcon
+                v-if="option.id === chatControls.conversationId"
+                name="i-lucide-check"
+                class="window-title__conversation-item-check"
+              />
+            </button>
+          </div>
+        </div>
+        <AppIconTooltip text="Split pane right">
           <button
-            ref="conversationMenuBtnRef"
             type="button"
             class="cp-icon-btn window-title__btn"
-            :class="{ 'cp-icon-btn--on': conversationMenuOpen }"
-            aria-label="Switch conversation in this pane"
-            aria-haspopup="menu"
-            :aria-expanded="conversationMenuOpen"
-            :disabled="chatControls.conversationOptions.length === 0"
-            @click.stop="toggleConversationMenu"
+            aria-label="Split pane right"
+            :disabled="!chatControls.canSplitPane"
+            @click="chatControls.onSplitRight?.()"
           >
-            <UIcon class="cp-icon-btn__glyph" name="i-lucide-history" />
+            <UIcon class="cp-icon-btn__glyph" name="i-lucide-columns-2" />
           </button>
         </AppIconTooltip>
-        <div
-          v-if="conversationMenuOpen"
-          ref="conversationMenuEl"
-          class="window-title__conversation-dropdown"
-          role="menu"
-          aria-label="Conversations for this pane"
+        <AppIconTooltip text="Split pane down">
+          <button
+            type="button"
+            class="cp-icon-btn window-title__btn"
+            aria-label="Split pane down"
+            :disabled="!chatControls.canSplitPane"
+            @click="chatControls.onSplitDown?.()"
+          >
+            <UIcon class="cp-icon-btn__glyph" name="i-lucide-rows-2" />
+          </button>
+        </AppIconTooltip>
+        <AppIconTooltip text="Close pane">
+          <button
+            type="button"
+            class="cp-icon-btn window-title__btn"
+            aria-label="Close pane"
+            :disabled="!chatControls.canClosePane"
+            @click="chatControls.onClosePane?.()"
+          >
+            <UIcon class="cp-icon-btn__glyph" name="i-lucide-x" />
+          </button>
+        </AppIconTooltip>
+        <AppIconTooltip text="New session with same agent and workspace">
+          <button
+            type="button"
+            class="cp-icon-btn window-title__btn window-title__btn--duplicate-session"
+            aria-label="New session with same agent and workspace"
+            @click="chatControls.onNewSession?.()"
+          >
+            <UIcon class="cp-icon-btn__glyph" name="i-lucide-copy-plus" />
+          </button>
+        </AppIconTooltip>
+        <AppIconTooltip
+          :text="chatControls.isBusy ? 'Stop generation' : 'Nothing to stop'"
         >
           <button
-            v-for="option in chatControls.conversationOptions"
-            :key="option.id"
             type="button"
-            class="window-title__conversation-item"
-            :class="{
-              'window-title__conversation-item--active':
-                option.id === chatControls.conversationId,
-            }"
-            role="menuitemradio"
-            :aria-checked="option.id === chatControls.conversationId"
-            @click="onPickConversation(option.id)"
+            class="cp-icon-btn window-title__btn"
+            aria-label="Stop generation"
+            :disabled="!chatControls.isBusy"
+            @click="chatControls.onStop?.()"
           >
-            <span class="window-title__conversation-item-label">{{
-              option.label
-            }}</span>
-            <UIcon
-              v-if="option.id === chatControls.conversationId"
-              name="i-lucide-check"
-              class="window-title__conversation-item-check"
-            />
+            <UIcon class="cp-icon-btn__glyph" name="i-lucide-square" />
           </button>
-        </div>
+        </AppIconTooltip>
       </div>
-      <AppIconTooltip text="Split pane right">
-        <button
-          type="button"
-          class="cp-icon-btn window-title__btn"
-          aria-label="Split pane right"
-          :disabled="!chatControls.canSplitPane"
-          @click="chatControls.onSplitRight?.()"
-        >
-          <UIcon class="cp-icon-btn__glyph" name="i-lucide-columns-2" />
-        </button>
-      </AppIconTooltip>
-      <AppIconTooltip text="Split pane down">
-        <button
-          type="button"
-          class="cp-icon-btn window-title__btn"
-          aria-label="Split pane down"
-          :disabled="!chatControls.canSplitPane"
-          @click="chatControls.onSplitDown?.()"
-        >
-          <UIcon class="cp-icon-btn__glyph" name="i-lucide-rows-2" />
-        </button>
-      </AppIconTooltip>
-      <AppIconTooltip text="Close pane">
-        <button
-          type="button"
-          class="cp-icon-btn window-title__btn"
-          aria-label="Close pane"
-          :disabled="!chatControls.canClosePane"
-          @click="chatControls.onClosePane?.()"
-        >
-          <UIcon class="cp-icon-btn__glyph" name="i-lucide-x" />
-        </button>
-      </AppIconTooltip>
-      <AppIconTooltip text="New session with same agent and workspace">
-        <button
-          type="button"
-          class="cp-icon-btn window-title__btn window-title__btn--duplicate-session"
-          aria-label="New session with same agent and workspace"
-          @click="chatControls.onNewSession?.()"
-        >
-          <UIcon class="cp-icon-btn__glyph" name="i-lucide-copy-plus" />
-        </button>
-      </AppIconTooltip>
-      <AppIconTooltip
-        :text="chatControls.isBusy ? 'Stop generation' : 'Nothing to stop'"
-      >
-        <button
-          type="button"
-          class="cp-icon-btn window-title__btn"
-          aria-label="Stop generation"
-          :disabled="!chatControls.isBusy"
-          @click="chatControls.onStop?.()"
-        >
-          <UIcon class="cp-icon-btn__glyph" name="i-lucide-square" />
-        </button>
-      </AppIconTooltip>
       <AppIconTooltip
         :text="
           chatControls.showReportPanel ? 'Hide results panel' : 'Show results panel'
@@ -582,7 +588,19 @@ ipcRendererChannel.IsUseSysTitle.invoke().then((res) => {
 .window-title__actions {
   margin-left: auto;
   flex-shrink: 0;
-  gap: 6px;
+  gap: 8px;
+}
+
+.window-title__session-group {
+  -webkit-app-region: no-drag;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  padding: 1px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--ui-text) 10%, transparent);
+  background: color-mix(in srgb, var(--ui-text) 4%, transparent);
 }
 
 .window-title__conversation-menu {
@@ -652,11 +670,16 @@ ipcRendererChannel.IsUseSysTitle.invoke().then((res) => {
 }
 
 .window-title :deep(.window-title__btn) {
-  min-width: 28px;
-  min-height: 28px;
-  padding: 0 7px;
-  border-radius: 8px;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0 6px;
+  border-radius: 7px;
   box-shadow: none;
+}
+
+.window-title__session-group :deep(.window-title__btn) {
+  min-width: 26px;
+  min-height: 24px;
 }
 
 .window-title :deep(.window-title__btn .cp-icon-btn__glyph) {
