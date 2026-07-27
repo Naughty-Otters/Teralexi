@@ -324,9 +324,9 @@ function guessLanguageFromPath(path: string): string {
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  border: 1px solid var(--ui-border);
+  border: 1px solid color-mix(in srgb, var(--ui-border) 70%, transparent);
   border-radius: 8px;
-  background: var(--ui-bg);
+  background: color-mix(in srgb, var(--ui-text) 2%, transparent);
   overflow: hidden;
 }
 
@@ -367,7 +367,7 @@ function guessLanguageFromPath(path: string): string {
   margin: 0;
   padding: 6px 8px;
   border: none;
-  background: var(--ui-bg-elevated);
+  background: color-mix(in srgb, var(--ui-text) 2.5%, transparent);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -375,7 +375,7 @@ function guessLanguageFromPath(path: string): string {
 }
 
 .conv-tool-response__toggle:hover {
-  background: color-mix(in srgb, var(--ui-text) 4%, var(--ui-bg-elevated));
+  background: color-mix(in srgb, var(--ui-text) 5%, transparent);
 }
 
 .conv-tool-response__toggle:focus-visible {
@@ -423,8 +423,8 @@ function guessLanguageFromPath(path: string): string {
 .conv-tool-response__badge {
   padding: 1px 6px;
   border-radius: 999px;
-  border: 1px solid var(--ui-border);
-  background: var(--ui-bg);
+  border: 1px solid color-mix(in srgb, var(--ui-border) 70%, transparent);
+  background: color-mix(in srgb, var(--ui-text) 3%, transparent);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -466,7 +466,7 @@ function guessLanguageFromPath(path: string): string {
 }
 
 .conv-tool-response__body--diff {
-  padding: 6px;
+  padding: 0;
 }
 
 .conv-tool-response__body--diff :deep(.fcs > .fc:last-child) {
@@ -508,13 +508,13 @@ function guessLanguageFromPath(path: string): string {
 }
 
 .conv-tool-response__slot :deep(.shiki-surface) {
-  margin: 0 10px 8px;
+  margin: 0 0 8px;
 }
 
 .conv-tool-response__error {
   padding: 8px 10px;
   border-top: 1px solid var(--ui-border);
   border-left: 3px solid var(--color-error-500, #ef4444);
-  background: color-mix(in srgb, var(--color-error-500, #ef4444) 6%, var(--ui-bg));
+  background: color-mix(in srgb, var(--color-error-500, #ef4444) 5%, transparent);
 }
 </style>

@@ -185,9 +185,9 @@ watch(hasOverflow, (overflow) => {
 
 <style scoped>
 .li-bubble {
-  border: 1px solid var(--ui-border);
+  border: 1px solid color-mix(in srgb, var(--ui-border) 70%, transparent);
   border-radius: 8px;
-  background: var(--ui-bg);
+  background: color-mix(in srgb, var(--ui-text) 2%, transparent);
   padding: 10px 12px;
 }
 .li-bubble__root {

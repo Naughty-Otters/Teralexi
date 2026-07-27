@@ -249,9 +249,9 @@ watch(
   min-width: 0;
   align-self: stretch;
   margin: 8px 0;
-  border: 1px solid var(--ui-border);
+  border: 1px solid color-mix(in srgb, var(--ui-border) 65%, transparent);
   border-radius: 8px;
-  background: var(--ui-bg-elevated, var(--ui-bg));
+  background: color-mix(in srgb, var(--ui-text) 2%, transparent);
   overflow: hidden;
   contain: content;
 }

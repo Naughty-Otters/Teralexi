@@ -335,12 +335,12 @@ const statusText = computed(() => {
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  border: 1px solid var(--ui-border);
-  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--ui-border) 70%, transparent);
+  border-radius: 8px;
   background: color-mix(
     in srgb,
-    var(--color-primary-500, #6366f1) 5%,
-    var(--ui-bg-elevated)
+    var(--color-primary-500, #6366f1) 3%,
+    transparent
   );
   overflow: hidden;
 }

@@ -211,9 +211,9 @@ function copyOutput() {
 
 <style scoped>
 .tr {
-  border: 1px solid var(--ui-border);
+  border: 1px solid color-mix(in srgb, var(--ui-border) 70%, transparent);
   border-radius: 8px;
-  background: var(--ui-bg);
+  background: color-mix(in srgb, var(--ui-text) 2%, transparent);
   max-width: 100%;
   font-size: 13px;
   line-height: 1.45;
@@ -352,7 +352,7 @@ function copyOutput() {
   border-bottom: none;
 }
 .tr__changes :deep(.fcs) {
-  padding: 6px;
+  padding: 0;
 }
 .tr__changes :deep(.fcs > .fc:last-child) {
   margin-bottom: 0;

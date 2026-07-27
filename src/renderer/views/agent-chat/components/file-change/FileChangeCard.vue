@@ -43,7 +43,7 @@
         <span v-if="file.deletions > 0" class="fc__del">−{{ file.deletions }}</span>
       </span>
     </header>
-    <template v-if="contentOpen">
+    <div v-if="contentOpen" class="fc__body">
       <UnifiedDiffView
         v-if="showDiff"
         :diff="file.diff"
@@ -66,7 +66,7 @@
           aria-hidden="true"
         />
       </button>
-    </template>
+    </div>
   </article>
 </template>
 
@@ -169,25 +169,27 @@ function onOpenPath() {
 
 <style scoped>
 .fc {
-  border: 1px solid color-mix(in srgb, var(--ui-text) 14%, var(--ui-border));
-  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--ui-border) 75%, transparent);
+  border-radius: 0;
   overflow: hidden;
-  background: var(--ui-bg);
+  background: color-mix(in srgb, var(--ui-text) 1.5%, transparent);
 }
 
 .fc + .fc {
-  margin-top: 8px;
+  margin-top: 0;
+  border-top: none;
 }
 
 .fc__head {
+  position: relative;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
   min-height: 0;
   padding: 7px 10px 7px 4px;
-  border-bottom: 1px solid color-mix(in srgb, var(--ui-text) 12%, var(--ui-border));
-  background: color-mix(in srgb, var(--ui-text) 5%, var(--ui-bg-elevated, var(--ui-bg)));
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-border) 70%, transparent);
+  background: color-mix(in srgb, var(--ui-text) 3%, transparent);
 }
 
 .fc--collapsed .fc__head {
@@ -211,7 +213,8 @@ function onOpenPath() {
   cursor: pointer;
 }
 
-.fc__fold:hover {
+.fc__fold:hover,
+.fc__fold:focus-visible {
   opacity: 1;
   background: color-mix(in srgb, var(--ui-text) 10%, transparent);
 }
@@ -309,18 +312,42 @@ function onOpenPath() {
   min-height: 1.4em;
 }
 
+.fc__body {
+  position: relative;
+}
+
 .fc__expand {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
+  height: 28px;
   margin: 0;
-  padding: 5px 10px;
+  padding: 0;
   border: none;
-  border-top: 1px solid color-mix(in srgb, var(--ui-text) 12%, var(--ui-border));
-  background: color-mix(in srgb, var(--ui-text) 3.5%, transparent);
+  border-radius: 0;
   color: var(--ui-text-muted);
   cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--diff-surface-bg, var(--ui-bg)) 92%, transparent) 35%,
+    transparent
+  );
+  transition: opacity 0.12s ease, color 0.12s ease;
+}
+
+.fc:hover .fc__expand,
+.fc:focus-within .fc__expand,
+.fc__expand:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .fc__expand-icon {
@@ -328,8 +355,8 @@ function onOpenPath() {
   height: 16px;
 }
 
-.fc__expand:hover {
+.fc__expand:hover,
+.fc__expand:focus-visible {
   color: var(--ui-text);
-  background: color-mix(in srgb, var(--ui-text) 6%, transparent);
 }
 </style>

@@ -2803,11 +2803,11 @@ function onPaneActivate(event?: MouseEvent) {
   color: var(--ui-text);
 }
 .msg-row--user {
-  background: var(--ui-bg-elevated);
-  border: 1px solid var(--ui-border);
+  background: color-mix(in srgb, var(--ui-text) 3.5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ui-border) 70%, transparent);
 }
 .msg-row--assistant {
-  background: var(--ui-bg-elevated);
+  background: transparent;
 }
 
 /* Conversation mode: grey background per step bubble, not the whole assistant row. */

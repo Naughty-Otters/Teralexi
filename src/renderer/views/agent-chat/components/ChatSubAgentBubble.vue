@@ -350,15 +350,15 @@ export default {
 <style scoped>
 
 .sub-agent-bubble {
-  border: 1px solid color-mix(in srgb, var(--ui-primary) 22%, var(--ui-border));
+  border: 1px solid color-mix(in srgb, var(--ui-primary) 14%, var(--ui-border));
   border-radius: 8px;
-  background: color-mix(in srgb, var(--ui-primary) 5%, transparent);
-  padding: 8px 10px;
+  background: color-mix(in srgb, var(--ui-primary) 3%, transparent);
+  padding: 8px 0;
   margin-top: 6px;
 }
 
 .sub-agent-bubble--depth-2 {
-  margin-left: 10px;
+  margin-left: 0;
   border-left: 2px solid color-mix(in srgb, var(--ui-border) 80%, transparent);
 }
 
@@ -367,6 +367,7 @@ export default {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  padding: 0 10px;
 }
 
 .sub-agent-bubble__title {
@@ -472,10 +473,10 @@ export default {
 
 .sub-agent-bubble__section {
   position: relative;
-  border-radius: 6px;
-  border: 1px solid var(--ui-border);
-  background: var(--ui-bg-elevated);
-  padding: 6px 34px 6px 8px;
+  border-radius: 0;
+  border: 1px solid color-mix(in srgb, var(--ui-border) 70%, transparent);
+  background: color-mix(in srgb, var(--ui-text) 2%, transparent);
+  padding: 6px 34px 6px 10px;
 }
 
 .sub-agent-bubble__section-header {
@@ -504,8 +505,8 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding-left: 8px;
-  border-left: 2px solid color-mix(in srgb, var(--ui-border) 80%, transparent);
+  padding-left: 0;
+  border-left: none;
 }
 
 .sub-agent-bubble__worktree {

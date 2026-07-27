@@ -1001,10 +1001,10 @@ function bubblePresentation(
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--ui-border);
-  background: var(--ui-bg-elevated);
+  padding: 8px 0;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--ui-border) 65%, transparent);
+  background: color-mix(in srgb, var(--ui-text) 2.5%, transparent);
   box-shadow: none;
   transition:
     background-color 0.22s ease,
@@ -1015,39 +1015,39 @@ function bubblePresentation(
 .conversation-bubble--thinking {
   border-color: color-mix(
     in srgb,
-    var(--color-primary-500, #6366f1) 32%,
+    var(--color-primary-500, #6366f1) 18%,
     var(--ui-border)
   );
   background: color-mix(
     in srgb,
-    var(--color-primary-500, #6366f1) 4%,
-    var(--ui-bg-elevated)
+    var(--color-primary-500, #6366f1) 3%,
+    transparent
   );
 }
 
 .conversation-bubble--planning {
   border-color: color-mix(
     in srgb,
-    var(--color-info-500, #0ea5e9) 32%,
+    var(--color-info-500, #0ea5e9) 18%,
     var(--ui-border)
   );
   background: color-mix(
     in srgb,
-    var(--color-info-500, #0ea5e9) 4%,
-    var(--ui-bg-elevated)
+    var(--color-info-500, #0ea5e9) 3%,
+    transparent
   );
 }
 
 .conversation-bubble--execution {
   border-color: color-mix(
     in srgb,
-    var(--color-warning-500, #f59e0b) 32%,
+    var(--color-warning-500, #f59e0b) 18%,
     var(--ui-border)
   );
   background: color-mix(
     in srgb,
-    var(--color-warning-500, #f59e0b) 4%,
-    var(--ui-bg-elevated)
+    var(--color-warning-500, #f59e0b) 3%,
+    transparent
   );
 }
 
@@ -1055,39 +1055,39 @@ function bubblePresentation(
 .conversation-bubble--report {
   border-color: color-mix(
     in srgb,
-    var(--color-success-500, #22c55e) 28%,
+    var(--color-success-500, #22c55e) 16%,
     var(--ui-border)
   );
   background: color-mix(
     in srgb,
-    var(--color-success-500, #22c55e) 4%,
-    var(--ui-bg-elevated)
+    var(--color-success-500, #22c55e) 3%,
+    transparent
   );
 }
 
 .conversation-bubble--artifact {
   border-color: color-mix(
     in srgb,
-    var(--color-primary-500, #6366f1) 26%,
+    var(--color-primary-500, #6366f1) 14%,
     var(--ui-border)
   );
   background: color-mix(
     in srgb,
-    var(--color-primary-500, #6366f1) 4%,
-    var(--ui-bg-elevated)
+    var(--color-primary-500, #6366f1) 3%,
+    transparent
   );
 }
 
 .conversation-bubble--error {
   border-color: color-mix(
     in srgb,
-    var(--color-error-500, #ef4444) 40%,
+    var(--color-error-500, #ef4444) 28%,
     var(--ui-border)
   );
   background: color-mix(
     in srgb,
-    var(--color-error-500, #ef4444) 8%,
-    var(--ui-bg-elevated)
+    var(--color-error-500, #ef4444) 5%,
+    transparent
   );
 }
 
@@ -1113,7 +1113,7 @@ function bubblePresentation(
 }
 
 .conversation-bubble__file-list {
-  margin: 4px 0 0;
+  margin: 4px 10px 0;
   padding: 0;
   list-style: none;
   display: flex;
@@ -1128,11 +1128,11 @@ function bubblePresentation(
 }
 
 .conversation-bubble__file-changes {
-  margin: 8px -8px -6px;
-  width: calc(100% + 16px);
+  margin: 6px 0 0;
+  width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  padding: 0 4px 4px;
+  padding: 0;
 }
 
 .conversation-bubble__file-changes :deep(.fcs > .fc:last-child) {
@@ -1144,16 +1144,15 @@ function bubblePresentation(
   align-items: center;
   gap: 6px;
   width: 100%;
-  padding: 6px 8px;
-  border: 1px solid var(--ui-border);
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--ui-border) 70%, transparent);
   border-radius: 6px;
-  background: var(--ui-bg);
+  background: color-mix(in srgb, var(--ui-text) 2%, transparent);
   font: inherit;
   font-size: 13px;
   color: var(--ui-text);
   text-align: left;
   cursor: pointer;
-  padding-left: 6px;
 }
 
 .conversation-bubble__file-item:hover {
@@ -1200,7 +1199,7 @@ function bubblePresentation(
 }
 
 .conversation-bubble__file-hint {
-  margin: 6px 0 0;
+  margin: 6px 10px 0;
   font-size: 12px;
   color: var(--ui-text-muted);
 }
@@ -1218,6 +1217,7 @@ function bubblePresentation(
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+  padding: 0 10px;
   margin-bottom: 6px;
 }
 
@@ -1253,10 +1253,10 @@ function bubblePresentation(
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 10px 12px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--ui-border);
-  background: var(--ui-bg-elevated);
+  padding: 8px 10px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--ui-border) 65%, transparent);
+  background: color-mix(in srgb, var(--ui-text) 2.5%, transparent);
 }
 
 .conversation-fallback-bubble .structured-debug-fallback {
@@ -1335,8 +1335,8 @@ function bubblePresentation(
 .conversation-bubble__badge {
   padding: 1px 7px;
   border-radius: 999px;
-  border: 1px solid var(--ui-border);
-  background: var(--ui-bg);
+  border: 1px solid color-mix(in srgb, var(--ui-border) 70%, transparent);
+  background: color-mix(in srgb, var(--ui-text) 3%, transparent);
   color: var(--ui-text-muted);
   font-size: 10px;
   font-weight: 700;
@@ -1366,6 +1366,14 @@ function bubblePresentation(
   font-size: 14px;
   line-height: 1.5;
   color: var(--ui-text);
+  padding: 0 10px;
+}
+
+.conversation-bubble__body:has(.conv-tool-response),
+.conversation-bubble__body:has(.fcs),
+.conversation-bubble__body:has(.tr) {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* Compact: fixed-height viewport; JS keeps scroll pinned to latest lines. */
@@ -1404,7 +1412,7 @@ function bubblePresentation(
   max-width: 100%;
   min-width: 0;
   margin: 0;
-  padding: 0 10px 10px;
+  padding: 0 0 10px;
   white-space: pre-wrap;
   overflow-wrap: break-word;
   word-break: break-word;
@@ -1456,6 +1464,7 @@ function bubblePresentation(
 .conversation-bubble__preview {
   margin-top: 4px;
   margin-bottom: 2px;
+  padding: 0 10px;
 }
 
 .conversation-bubble__body--empty {
@@ -1470,8 +1479,10 @@ function bubblePresentation(
 
 .conversation-bubble__outputs {
   margin-top: 10px;
+  margin-left: 10px;
+  margin-right: 10px;
   padding-top: 10px;
-  border-top: 1px solid var(--ui-border);
+  border-top: 1px solid color-mix(in srgb, var(--ui-border) 70%, transparent);
 }
 
 .conversation-bubble__body :deep(p) {
