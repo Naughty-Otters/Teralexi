@@ -247,6 +247,10 @@ export class ConversationStore {
     return this.conversations.list(agentId)
   }
 
+  listRecentConversations(limit = 200): StoredConversation[] {
+    return this.conversations.listRecent(limit)
+  }
+
   getConversation(conversationId: string): StoredConversation | null {
     return this.conversations.get(conversationId)
   }

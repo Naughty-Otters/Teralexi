@@ -506,27 +506,35 @@ async function loadToolSetToolsUncached(): Promise<SkillTool[]> {
   const userToolSetDir = resolveUserToolSetDirectory()
   const userDirExists = existsSync(userToolSetDir)
   if (userDirExists) {
-    const userTools = await loadToolSetToolsFromDirectory(userToolSetDir)
-    sources.push({
-      dir: userToolSetDir,
-      count: userTools.length,
-      exists: true,
-    })
-
-    if (userTools.length > 0) {
-      log.info('Loaded user toolSet tools from directory', {
-        toolSetDir: userToolSetDir,
+    try {
+      const userTools = await loadToolSetToolsFromDirectory(userToolSetDir)
+      sources.push({
+        dir: userToolSetDir,
         count: userTools.length,
-        sample: userTools.slice(0, 10).map((t) => t.name),
+        exists: true,
       })
-    } else {
-      log.warn('User toolSet directory exists but produced no tools', {
-        toolSetDir: userToolSetDir,
-      })
-    }
 
-    for (const tool of userTools) {
-      merged.set(tool.name, tool)
+      if (userTools.length > 0) {
+        log.info('Loaded user toolSet tools from directory', {
+          toolSetDir: userToolSetDir,
+          count: userTools.length,
+          sample: userTools.slice(0, 10).map((t) => t.name),
+        })
+      } else {
+        log.warn('User toolSet directory exists but produced no tools', {
+          toolSetDir: userToolSetDir,
+        })
+      }
+
+      for (const tool of userTools) {
+        merged.set(tool.name, tool)
+      }
+    } catch (err) {
+      log.warn('Failed to load user toolSet; continuing with bundled tools', {
+        toolSetDir: userToolSetDir,
+        err,
+      })
+      sources.push({ dir: userToolSetDir, count: 0, exists: true })
     }
   } else {
     sources.push({ dir: userToolSetDir, count: 0, exists: false })

@@ -61,8 +61,9 @@ vi.mock('./skill-path', () => ({
   resolveProjectSkillsDirectory: vi.fn(() => '/project/skills'),
 }))
 
-import { existsSync, readdirSync, readFileSync } from 'fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync } from 'fs'
 import { parseSkillMarkdown } from './skill-markdown'
+import { resolveProjectSkillsDirectory } from './skill-path'
 import { loadSkills, loadSkillsFromDirectory } from './skills-directory-loader'
 import { SKILL_FILES } from './constants'
 
@@ -104,6 +105,16 @@ describe('loadSkillsFromDirectory', () => {
     vi.mocked(existsSync).mockReturnValue(false)
     const skills = await loadSkillsFromDirectory('/skills')
     expect(skills).toEqual([])
+  })
+
+  it('returns empty when skills directory cannot be created', async () => {
+    vi.mocked(existsSync).mockReturnValue(false)
+    vi.mocked(mkdirSync).mockImplementation(() => {
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+    })
+    await expect(loadSkillsFromDirectory('/.teralexi/skills')).resolves.toEqual(
+      [],
+    )
   })
 
   it('loads valid skill folders', async () => {
@@ -162,6 +173,20 @@ describe('loadSkills', () => {
     })
     const skills = await loadSkills()
     expect(skills).toHaveLength(2)
+    expect(skills.map((s) => s.id).sort()).toEqual(['default', 'user-skill'])
+  })
+
+  it('still loads bundled and user skills when project root is unavailable', async () => {
+    vi.mocked(resolveProjectSkillsDirectory).mockReturnValue(null)
+    vi.mocked(existsSync).mockReturnValue(true)
+    vi.mocked(readdirSync).mockReturnValue(['user-skill'])
+    vi.mocked(readFileSync).mockImplementation((p) => {
+      if (String(p).endsWith(SKILL_FILES.SKILL_MD)) {
+        return '## Instructions\nDo work'
+      }
+      return ''
+    })
+    const skills = await loadSkills()
     expect(skills.map((s) => s.id).sort()).toEqual(['default', 'user-skill'])
   })
 })

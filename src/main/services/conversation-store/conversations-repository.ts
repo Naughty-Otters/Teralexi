@@ -33,6 +33,37 @@ export class ConversationsRepository {
     }))
   }
 
+  /** Recent conversations across all agents (used when skill catalog is empty/partial). */
+  listRecent(limit = 200): StoredConversation[] {
+    const safeLimit = Math.max(1, Math.min(Math.floor(limit), 1000))
+    const rows = this.db
+      .prepare(
+        `SELECT c.id, c.agent_id, c.title, c.created_at, c.updated_at,
+                s.workspace_path
+         FROM conversations c
+         LEFT JOIN conversation_settings s ON s.conversation_id = c.id
+         ORDER BY c.updated_at DESC
+         LIMIT ?`,
+      )
+      .all(safeLimit) as Array<{
+      id: string
+      agent_id: string
+      title: string
+      created_at: string
+      updated_at: string
+      workspace_path: string | null
+    }>
+
+    return rows.map((r) => ({
+      id: r.id,
+      agentId: r.agent_id,
+      title: r.title,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      workspacePath: r.workspace_path?.trim() || null,
+    }))
+  }
+
   get(conversationId: string): StoredConversation | null {
     const row = this.db
       .prepare(

@@ -24,9 +24,11 @@ import {
   getHostToolOs,
   isLoadableSkillFolder,
   isReservedSkillDirName,
+  isUsableProjectWorkspaceRoot,
   resolveBundledSkillsDirectory,
   mergePropertiesRaw,
   parsePropertiesKeyValues,
+  resolveProjectSkillsDirectory,
   resolvePropertiesRaw,
   resolveSkillsSourceRoots,
   resolveSkillFolder,
@@ -126,6 +128,24 @@ describe('skill-path', () => {
       join('/ws', '.teralexi', 'skills'),
       resolveUserSkillsDirectory(),
     ])
+  })
+
+  it('skips project skills when workspace/cwd is filesystem root', () => {
+    expect(isUsableProjectWorkspaceRoot('/')).toBe(false)
+    expect(resolveProjectSkillsDirectory('/')).toBeNull()
+    expect(resolveSkillsSourceRoots('/')).toEqual([
+      resolveBundledSkillsDirectory(),
+      resolveUserSkillsDirectory(),
+    ])
+
+    const prev = process.cwd()
+    try {
+      process.chdir('/')
+      expect(resolveProjectSkillsDirectory()).toBeNull()
+      expect(resolveSkillsSourceRoots()).not.toContain('/.teralexi/skills')
+    } finally {
+      process.chdir(prev)
+    }
   })
 
   it('resolveToolSetSourceRoots lists bundled then user toolSet dirs', () => {

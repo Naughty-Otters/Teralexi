@@ -420,6 +420,20 @@ export class IpcChannelMainClass {
     }>
   > = null!
   /**
+   * List recent conversations across all agents (boot recovery when skills fail to load).
+   */
+  ListRecentConversations: IpcMainEventListener<
+    { limit?: number } | void,
+    Array<{
+      id: string
+      agentId: string
+      title: string
+      createdAt: string
+      updatedAt: string
+      workspacePath?: string | null
+    }>
+  > = null!
+  /**
    * Create a new conversation record
    */
   CreateConversation: IpcMainEventListener<

@@ -1,7 +1,13 @@
 import { getConversationStore } from '@main/services/conversation-store'
 import type { ExtensionManifest } from '@teralexi/skill-sdk'
 import { listExtensions, type ExtensionSource } from './extensions-directory-loader'
-import { listPendingHookReviews } from './extension-host'
+import {
+  ensureExtensionHostInitialized,
+  peekPendingHookReviews,
+} from './extension-host'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('skills.extensions-with-settings')
 
 export type { ExtensionSource }
 
@@ -19,19 +25,30 @@ export type ExtensionSummary = {
 /**
  * Disk-discovered extension manifests (`listExtensions()`) merged with the
  * per-user enable/disable override stored in `extension_settings`.
+ *
+ * Intentionally does **not** await the extension host rebuild (esbuild of
+ * actions modules). Pending review counts come from cache when available;
+ * otherwise a background host init is kicked off so a later refresh sees them.
  */
 export async function listExtensionsForUser(
   userId: string,
   workspacePath?: string,
 ): Promise<ExtensionSummary[]> {
   const store = getConversationStore()
-  const pending = await listPendingHookReviews(userId, workspacePath)
   const pendingByExtension = new Map<string, number>()
-  for (const review of pending) {
-    pendingByExtension.set(
-      review.extensionId,
-      (pendingByExtension.get(review.extensionId) ?? 0) + 1,
-    )
+
+  const cachedPending = peekPendingHookReviews(userId, workspacePath)
+  if (cachedPending) {
+    for (const review of cachedPending) {
+      pendingByExtension.set(
+        review.extensionId,
+        (pendingByExtension.get(review.extensionId) ?? 0) + 1,
+      )
+    }
+  } else {
+    void ensureExtensionHostInitialized(userId, workspacePath).catch((err) => {
+      log.warn('Background extension host init failed after list', { err })
+    })
   }
 
   return listExtensions(workspacePath).map((ext) => ({

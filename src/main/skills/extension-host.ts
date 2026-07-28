@@ -289,7 +289,17 @@ async function buildHostCache(
   const extensionRoots = new Map<string, string>()
 
   const collectedPerExtension = await Promise.all(
-    extensions.map((ext) => collectExtensionBindings(ext, userId, disabledIds)),
+    extensions.map(async (ext) => {
+      try {
+        return await collectExtensionBindings(ext, userId, disabledIds)
+      } catch (err) {
+        log.warn('Failed to collect extension bindings; skipping extension', {
+          extensionId: ext.id,
+          err,
+        })
+        return { bindings: [] as RunnableHookBinding[], pending: [] as PendingHookReview[] }
+      }
+    }),
   )
   for (const ext of extensions) {
     extensionRoots.set(ext.id, ext.dir)
@@ -337,7 +347,11 @@ export async function reloadExtensionHost(
   hostCache = null
   hostCacheBuild = null
   hostCacheBuildKey = null
-  await ensureExtensionHostInitialized(userId, workspacePath)
+  try {
+    await ensureExtensionHostInitialized(userId, workspacePath)
+  } catch (err) {
+    log.warn('Extension host reload failed', { userId, workspacePath, err })
+  }
 }
 
 async function ensureHostCache(
@@ -389,6 +403,24 @@ export async function listPendingHookReviews(
 ): Promise<PendingHookReview[]> {
   const cache = await ensureHostCache(userId, workspacePath)
   return cache.pendingTrust
+}
+
+/**
+ * Returns pending reviews from an already-built host cache only.
+ * Does not trigger actions/esbuild loading — safe for Settings list UI.
+ */
+export function peekPendingHookReviews(
+  userId: string,
+  workspacePath?: string,
+): PendingHookReview[] | null {
+  if (
+    hostCache &&
+    hostCache.userId === userId &&
+    hostCache.workspacePath === workspacePath
+  ) {
+    return hostCache.pendingTrust
+  }
+  return null
 }
 
 export function registerPendingHookTrust(

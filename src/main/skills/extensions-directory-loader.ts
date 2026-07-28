@@ -67,9 +67,10 @@ export function loadExtensionsFromDirectory(extensionsDir: string): LoadedExtens
  * User extensions overwrite project and bundled; project overwrites bundled.
  */
 export function listExtensions(workspacePath?: string): LoadedExtension[] {
+  const projectDir = resolveProjectExtensionsDirectory(workspacePath)
   const roots: Array<{ dir: string; source: ExtensionSource }> = [
     { dir: resolveBundledExtensionsDirectory(), source: 'bundled' },
-    { dir: resolveProjectExtensionsDirectory(workspacePath), source: 'project' },
+    ...(projectDir ? [{ dir: projectDir, source: 'project' as const }] : []),
     { dir: resolveUserExtensionsDirectory(), source: 'user' },
   ]
 

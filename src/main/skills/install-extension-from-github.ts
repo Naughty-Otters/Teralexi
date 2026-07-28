@@ -138,7 +138,8 @@ export async function installExtensionFromGithub(args: {
     }
 
     const destRoot = args.workspacePath?.trim()
-      ? resolveProjectExtensionsDirectory(args.workspacePath)
+      ? resolveProjectExtensionsDirectory(args.workspacePath) ??
+        resolveUserExtensionsDirectory()
       : resolveUserExtensionsDirectory()
     const dest = join(destRoot, extensionId)
     await cp(extensionRoot, dest, { recursive: true, force: true })

@@ -1453,6 +1453,9 @@ async function openConversation(conversationId: string, agentId: string) {
 }
 
 async function startNewSession() {
+  if (agentStore.agents.length === 0) {
+    await agentStore.loadSkillsFromDisk()
+  }
   const conv = await agentStore.createNewConversation(undefined, { mode: 'fresh' })
   if (!conv) return
   const { useConversationLayoutStore } = await import(

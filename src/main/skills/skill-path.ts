@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import {
   getTeralexiExtensionsDir,
   getTeralexiSkillsDir,
@@ -23,10 +23,23 @@ const RESERVED_SKILL_DIR_NAMES = new Set(SKILLS_RESERVED_DIR_NAMES)
 export type SkillsSources = {
   /** Shipped defaults (repo or app bundle). */
   bundled: string
-  /** Project overrides under `<workspace>/.teralexi/skills`. */
-  project: string
+  /** Project overrides under `<workspace>/.teralexi/skills`. Null when no usable workspace. */
+  project: string | null
   /** User overrides under `~/.teralexi/skills`. */
   user: string
+}
+
+/**
+ * Packaged macOS apps launched from Finder often have `process.cwd() === '/'`.
+ * Using that as a project root yields `/.teralexi/skills` and mkdir fails LoadSkills.
+ */
+export function isUsableProjectWorkspaceRoot(dir: string | undefined | null): boolean {
+  if (!dir?.trim()) return false
+  const resolved = resolve(dir.trim())
+  if (resolved === '/' || /^[A-Za-z]:[\\/]?$/.test(resolved)) return false
+  // Never treat the app bundle itself as a user project workspace.
+  if (/\.app\/Contents(\/|$)/i.test(resolved.replace(/\\/g, '/'))) return false
+  return true
 }
 
 export function getHostToolOs(): SkillToolOs {
@@ -85,9 +98,13 @@ export function resolveUserSkillsDirectory(): string {
 }
 
 /** Project-scoped skills: `<workspace>/.teralexi/skills` (npx skills project scope). */
-export function resolveProjectSkillsDirectory(workspacePath?: string): string {
-  const base = workspacePath?.trim() || process.cwd()
-  return join(base, '.teralexi', 'skills')
+export function resolveProjectSkillsDirectory(
+  workspacePath?: string,
+): string | null {
+  const explicit = workspacePath?.trim()
+  const base = explicit || process.cwd()
+  if (!isUsableProjectWorkspaceRoot(base)) return null
+  return join(resolve(base), '.teralexi', 'skills')
 }
 
 export function resolveSkillsSources(workspacePath?: string): SkillsSources {
@@ -103,7 +120,7 @@ export function resolveSkillsSources(workspacePath?: string): SkillsSources {
  */
 export function resolveSkillsSourceRoots(workspacePath?: string): string[] {
   const { bundled, project, user } = resolveSkillsSources(workspacePath)
-  return [bundled, project, user]
+  return project ? [bundled, project, user] : [bundled, user]
 }
 
 /** User overrides: `~/.teralexi/toolSet`. */
@@ -151,17 +168,22 @@ export function resolveUserExtensionsDirectory(): string {
 
 /** Extension roots in merge order: bundled first, user last (user overwrites bundled). */
 export function resolveExtensionsSourceRoots(workspacePath?: string): string[] {
+  const project = resolveProjectExtensionsDirectory(workspacePath)
   return [
     resolveBundledExtensionsDirectory(),
-    resolveProjectExtensionsDirectory(workspacePath),
+    ...(project ? [project] : []),
     resolveUserExtensionsDirectory(),
   ]
 }
 
 /** Project-scoped extensions: `<workspace>/.teralexi/extensions`. */
-export function resolveProjectExtensionsDirectory(workspacePath?: string): string {
-  const base = workspacePath?.trim() || process.cwd()
-  return join(base, '.teralexi', 'extensions')
+export function resolveProjectExtensionsDirectory(
+  workspacePath?: string,
+): string | null {
+  const explicit = workspacePath?.trim()
+  const base = explicit || process.cwd()
+  if (!isUsableProjectWorkspaceRoot(base)) return null
+  return join(resolve(base), '.teralexi', 'extensions')
 }
 
 /** True when the user has a disk folder that overrides a shipped bundled skill. */
@@ -182,7 +204,7 @@ export function resolveSkillCompilationSource(
 ): 'user' | 'project' | 'bundled' | null {
   const { bundled, project, user } = resolveSkillsSources(workspacePath)
   if (isLoadableSkillFolder(user, skillId)) return 'user'
-  if (isLoadableSkillFolder(project, skillId)) return 'project'
+  if (project && isLoadableSkillFolder(project, skillId)) return 'project'
   if (isLoadableSkillFolder(bundled, skillId)) return 'bundled'
   if (isEffectiveBundledSkill(skillId)) return 'bundled'
   return null
@@ -195,7 +217,7 @@ export function resolveSkillFolder(
 ): string | null {
   const { bundled, project, user } = resolveSkillsSources(workspacePath)
   if (isLoadableSkillFolder(user, skillId)) return join(user, skillId)
-  if (isLoadableSkillFolder(project, skillId)) return join(project, skillId)
+  if (project && isLoadableSkillFolder(project, skillId)) return join(project, skillId)
   if (isLoadableSkillFolder(bundled, skillId)) return join(bundled, skillId)
   return null
 }

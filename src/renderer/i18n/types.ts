@@ -166,6 +166,8 @@ export type AppLabels = {
     copyBubbleContentSuccess: string
     copyBubbleContentFailed: string
     printBubbleContent: string
+    emptyState: string
+    startNewConversation: string
     skillSetupTitle: string
     skillSetupIntro: string
     skillSetupSave: string

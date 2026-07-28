@@ -68,7 +68,12 @@ export async function loadSkillsFromDirectory(
   options?: { globalTools?: SkillTool[] },
 ): Promise<SkillDefinition[]> {
   if (!existsSync(skillsDir)) {
-    mkdirSync(skillsDir, { recursive: true })
+    try {
+      mkdirSync(skillsDir, { recursive: true })
+    } catch (err) {
+      log.warn('Failed to create skills directory', { skillsDir, err })
+      return []
+    }
     return []
   }
 
@@ -179,11 +184,13 @@ export async function loadSkills(options?: {
   }
 
   const projectSkillsDir = resolveProjectSkillsDirectory(options?.workspacePath)
-  const projectSkills = await loadSkillsFromDirectory(projectSkillsDir, {
-    globalTools,
-  })
-  for (const skill of projectSkills) {
-    byId.set(skill.id, skill)
+  if (projectSkillsDir) {
+    const projectSkills = await loadSkillsFromDirectory(projectSkillsDir, {
+      globalTools,
+    })
+    for (const skill of projectSkills) {
+      byId.set(skill.id, skill)
+    }
   }
 
   const userSkillsDir = resolveUserSkillsDirectory()

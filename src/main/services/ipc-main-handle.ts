@@ -1015,6 +1015,15 @@ export class IpcMainHandleClass implements IIpcMainHandle {
     return getConversationStore().listConversations(args.agentId)
   }
 
+  ListRecentConversations: (
+    _event: Electron.IpcMainInvokeEvent,
+    args?: { limit?: number },
+  ) => ReturnType<
+    ReturnType<typeof getConversationStore>['listRecentConversations']
+  > = (_event, args) => {
+    return getConversationStore().listRecentConversations(args?.limit ?? 200)
+  }
+
   CreateConversation: (
     _event: Electron.IpcMainInvokeEvent,
     args: { id: string; agentId: string; title: string; createdAt: string },
@@ -1305,8 +1314,12 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       args.enabled,
     )
     clearUserHooksCache()
-    // Await reload so ListExtension* IPCs after toggle see fresh contributions.
-    await reloadExtensionHost(args.userId, args.workspacePath)
+    try {
+      await reloadExtensionHost(args.userId, args.workspacePath)
+    } catch (err) {
+      // Persist enable state even if actions/esbuild reload fails in packaged builds.
+      console.warn('[SetExtensionEnabled] extension host reload failed', err)
+    }
   }
 
   ListPendingHookReviews: (
@@ -1332,8 +1345,11 @@ export class IpcMainHandleClass implements IIpcMainHandle {
       args.contentHash,
       args.status,
     )
-    // Await reload so LLM/Channels lists refresh after approve/reject.
-    await reloadExtensionHost(args.userId, args.workspacePath)
+    try {
+      await reloadExtensionHost(args.userId, args.workspacePath)
+    } catch (err) {
+      console.warn('[SetHookTrustStatus] extension host reload failed', err)
+    }
   }
 
   ListExtensionChannels: (

@@ -29,6 +29,7 @@ const defaultInvokeHandlers: Record<
   LoadSkills: async () => [],
   ListAgentConfigurations: async () => [],
   ListConversations: async () => [],
+  ListRecentConversations: async () => [],
   GetConversationMessagesPage: async () => ({
     messages: [],
     hasMore: false,
