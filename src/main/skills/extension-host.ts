@@ -25,6 +25,7 @@ import {
 import {
   collectContributionsFromModule,
   collectHooksFromModule,
+  findExtensionActionsIndexFile,
   loadExtensionActionsModule,
   loadExtensionHookExport,
 } from './skill-module-loader'
@@ -227,41 +228,41 @@ async function collectExtensionBindings(
     }
   }
 
-  const actionsModule = await loadExtensionActionsModule(ext.dir)
-  if (actionsModule) {
-    const hooks = collectHooksFromModule(actionsModule)
-    const contributions = collectContributionsFromModule(actionsModule)
-    const content = JSON.stringify({
-      hooks: Object.keys(hooks).sort(),
-      channels: Object.keys(contributions.channels ?? {}).sort(),
-      llmProviders: Object.keys(contributions.llmProviders ?? {}).sort(),
-      uiPanels: Object.keys(contributions.uiPanels ?? {}).sort(),
-    })
-    const contentHash = computeContentHash(`${ext.id}:module:${content}`)
+  const actionsIndexPath = findExtensionActionsIndexFile(ext.dir)
+  if (actionsIndexPath) {
+    // Hash the raw file the module will be loaded from, not its exports —
+    // this must be computed (and checked) *before* the module is required,
+    // since requiring it executes its top-level code. A hash over export
+    // names alone would let a malicious rewrite that keeps the same names
+    // silently inherit prior trust.
+    const rawSource = readFileSync(actionsIndexPath, 'utf-8')
+    const contentHash = computeContentHash(`${ext.id}:module:${rawSource}`)
     const sourcePath = 'actions/index.ts'
     const trustKey = computeHookTrustKey(ext.id, sourcePath, contentHash)
     const status = trustRepo.getStatus(userId, trustKey, contentHash)
     if (status === 'trusted') {
-      bindings.push(
-        ...normalizeModuleHooks(hooks, 'extension-module', ext.id, trustKey),
-      )
-      registerExtensionContributions({
-        extensionId: ext.id,
-        extensionDir: ext.dir,
-        ...contributions,
-      })
-    } else if (
-      Object.keys(hooks).length > 0 ||
-      Object.keys(contributions.channels ?? {}).length > 0 ||
-      Object.keys(contributions.llmProviders ?? {}).length > 0 ||
-      Object.keys(contributions.uiPanels ?? {}).length > 0
-    ) {
+      const actionsModule = await loadExtensionActionsModule(ext.dir)
+      if (actionsModule) {
+        const hooks = collectHooksFromModule(actionsModule)
+        const contributions = collectContributionsFromModule(actionsModule)
+        bindings.push(
+          ...normalizeModuleHooks(hooks, 'extension-module', ext.id, trustKey),
+        )
+        registerExtensionContributions({
+          extensionId: ext.id,
+          extensionDir: ext.dir,
+          ...contributions,
+        })
+      }
+    } else {
+      // Cannot list the declared hooks/contributions without executing the
+      // module, so surface a generic pending review instead of introspecting.
       pending.push({
         extensionId: ext.id,
         trustKey,
         contentHash,
         sourcePath,
-        events: Object.keys(hooks),
+        events: [],
         status,
       })
     }

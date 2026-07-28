@@ -13,6 +13,7 @@ const {
   listDisabledExtensionIdsMock,
   getTrustStatusMock,
   setTrustStatusMock,
+  findExtensionActionsIndexFileMock,
   loadExtensionActionsModuleMock,
   collectHooksFromModuleMock,
   collectContributionsFromModuleMock,
@@ -23,6 +24,7 @@ const {
   listDisabledExtensionIdsMock: vi.fn(() => new Set<string>()),
   getTrustStatusMock: vi.fn(() => 'trusted' as const),
   setTrustStatusMock: vi.fn(),
+  findExtensionActionsIndexFileMock: vi.fn((_dir: string) => undefined as string | undefined),
   loadExtensionActionsModuleMock: vi.fn(async () => undefined),
   collectHooksFromModuleMock: vi.fn(() => ({})),
   collectContributionsFromModuleMock: vi.fn(() => ({})),
@@ -48,6 +50,7 @@ vi.mock('./skill-path', async (importOriginal) => {
 })
 
 vi.mock('./skill-module-loader', () => ({
+  findExtensionActionsIndexFile: findExtensionActionsIndexFileMock,
   loadExtensionActionsModule: loadExtensionActionsModuleMock,
   collectHooksFromModule: collectHooksFromModuleMock,
   collectContributionsFromModule: collectContributionsFromModuleMock,
@@ -99,6 +102,15 @@ async function writeExtension(
   return dir
 }
 
+/** Writes a real (unused-by-mocks) actions/index.ts so the raw-content trust hash has a real file to read. */
+async function writeActionsIndexFile(extensionDir: string, content = '// test\n'): Promise<string> {
+  const actionsDir = join(extensionDir, 'actions')
+  await mkdir(actionsDir, { recursive: true })
+  const indexPath = join(actionsDir, 'index.ts')
+  await writeFile(indexPath, content)
+  return indexPath
+}
+
 describe('extension-host', () => {
   beforeEach(async () => {
     clearExtensionHostCache()
@@ -110,6 +122,7 @@ describe('extension-host', () => {
     listDisabledExtensionIdsMock.mockReset().mockReturnValue(new Set())
     getTrustStatusMock.mockReset().mockReturnValue('trusted')
     setTrustStatusMock.mockReset()
+    findExtensionActionsIndexFileMock.mockReset().mockReturnValue(undefined)
     loadExtensionActionsModuleMock.mockReset().mockResolvedValue(undefined)
     collectHooksFromModuleMock.mockReset().mockReturnValue({})
     collectContributionsFromModuleMock.mockReset().mockReturnValue({})
@@ -227,7 +240,9 @@ describe('extension-host', () => {
         settings: { label: 'Settings', component: './Settings.vue' },
       },
     })
-    await writeExtension(bundledDir, 'demo-channel', { id: 'demo-channel', version: '1.0.0' })
+    const dir = await writeExtension(bundledDir, 'demo-channel', { id: 'demo-channel', version: '1.0.0' })
+    const actionsIndexPath = await writeActionsIndexFile(dir)
+    findExtensionActionsIndexFileMock.mockReturnValueOnce(actionsIndexPath)
 
     await ensureExtensionHostInitialized('default')
     expect(await listExtensionChannels('default')).toEqual([
@@ -251,7 +266,9 @@ describe('extension-host', () => {
       channels: { log: { sendToTarget: vi.fn() } },
     })
     getTrustStatusMock.mockReturnValue('pending')
-    await writeExtension(bundledDir, 'demo-channel', { id: 'demo-channel', version: '1.0.0' })
+    const dir = await writeExtension(bundledDir, 'demo-channel', { id: 'demo-channel', version: '1.0.0' })
+    const actionsIndexPath = await writeActionsIndexFile(dir)
+    findExtensionActionsIndexFileMock.mockReturnValueOnce(actionsIndexPath)
 
     await initExtensionHost('default')
     expect(await getExtensionHookBindings('default')).toEqual([])
