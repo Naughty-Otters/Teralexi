@@ -181,8 +181,9 @@ describe('teralexi-home', () => {
       app: { getPath: vi.fn(() => '/Users/electron-user') },
     }))
     const mod = await loadTeralexiHome()
+    // resolve() maps POSIX absolute paths onto the host drive on Windows.
     expect(mod.getTeralexiHome()).toBe(
-      join('/Users/electron-user', '.teralexi'),
+      join(resolve('/Users/electron-user'), '.teralexi'),
     )
     expect(createRequireMock).toHaveBeenCalled()
   })
@@ -201,7 +202,7 @@ describe('teralexi-home', () => {
     const mod = await loadTeralexiHome()
     const home = mod.initializeTeralexiHome({ getPath })
 
-    expect(home).toBe(join('/Users/from-electron', '.teralexi'))
+    expect(home).toBe(join(resolve('/Users/from-electron'), '.teralexi'))
     expect(home).not.toBe('/.teralexi')
     expect(getPath).toHaveBeenCalledWith('home')
 
@@ -237,12 +238,13 @@ describe('teralexi-home', () => {
     const prevTeralexi = process.env.TERALEXI_HOME
     delete process.env.HOME
     process.env.TERALEXI_HOME = '/Users/from-env/.teralexi'
+    const expectedHome = resolve('/Users/from-env/.teralexi')
 
     const mod = await loadTeralexiHome()
     const home = mod.initializeTeralexiHome(null)
-    expect(home).toBe('/Users/from-env/.teralexi')
-    expect(process.env.TERALEXI_HOME).toBe('/Users/from-env/.teralexi')
-    expect(process.env.HOME).toBe('/Users/from-env')
+    expect(home).toBe(expectedHome)
+    expect(process.env.TERALEXI_HOME).toBe(expectedHome)
+    expect(process.env.HOME).toBe(resolve('/Users/from-env'))
 
     if (prevHome === undefined) delete process.env.HOME
     else process.env.HOME = prevHome

@@ -183,7 +183,7 @@ describe('extension-host', () => {
     await initExtensionHost('default')
     const bindings = await getExtensionHookBindings('default')
     expect(bindings[0]).toMatchObject({
-      command: join(dir, 'scripts/check.sh'),
+      command: join(dir, 'scripts', 'check.sh'),
     })
   })
 

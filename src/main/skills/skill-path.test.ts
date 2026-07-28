@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { mockTeralexiDir, pathsEqual } from '@test-paths'
 
 vi.mock('fs', () => ({
@@ -125,7 +125,8 @@ describe('skill-path', () => {
     const roots = resolveSkillsSourceRoots('/ws')
     expect(roots).toEqual([
       resolveBundledSkillsDirectory(),
-      join('/ws', '.teralexi', 'skills'),
+      // resolve() maps POSIX absolute paths onto the host drive on Windows.
+      join(resolve('/ws'), '.teralexi', 'skills'),
       resolveUserSkillsDirectory(),
     ])
   })

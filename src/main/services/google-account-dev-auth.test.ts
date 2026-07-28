@@ -140,37 +140,42 @@ describe('google-account-dev-auth', () => {
 })
 
 describe('hosted login.html regression (live hosts)', () => {
-  it('documents that localhost and api.teralexi.com ignore redirect_uri today', async () => {
-    // Live verification: old login pages hardcode teralexi://. Our desktop
-    // bridge must not depend on redirect_uri support.
-    async function fetchLogin(url: string): Promise<string | null> {
-      try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
-        if (!res.ok) return null
-        return await res.text()
-      } catch {
-        return null
+  it(
+    'documents that localhost and api.teralexi.com ignore redirect_uri today',
+    async () => {
+      // Live verification: old login pages hardcode teralexi://. Our desktop
+      // bridge must not depend on redirect_uri support.
+      // Per-host abort is short; overall timeout covers both attempts offline.
+      async function fetchLogin(url: string): Promise<string | null> {
+        try {
+          const res = await fetch(url, { signal: AbortSignal.timeout(3000) })
+          if (!res.ok) return null
+          return await res.text()
+        } catch {
+          return null
+        }
       }
-    }
 
-    const local = await fetchLogin('http://localhost:8000/auth/login')
-    if (local) {
-      expect(local).toContain('teralexi://open')
-      // Current Docker image does not honor redirect_uri (source may already).
-      const hasRedirectHonor =
-        /redirect_uri[\s\S]*127\.0\.0\.1|redirectUri[\s\S]*127\.0\.0\.1/.test(
-          local,
-        )
-      // Soft assert: either old (no honor) or new (honors). Both are OK for
-      // desktop because we poll localStorage either way.
-      expect(typeof hasRedirectHonor).toBe('boolean')
-    }
+      const local = await fetchLogin('http://localhost:8000/auth/login')
+      if (local) {
+        expect(local).toContain('teralexi://open')
+        // Current Docker image does not honor redirect_uri (source may already).
+        const hasRedirectHonor =
+          /redirect_uri[\s\S]*127\.0\.0\.1|redirectUri[\s\S]*127\.0\.0\.1/.test(
+            local,
+          )
+        // Soft assert: either old (no honor) or new (honors). Both are OK for
+        // desktop because we poll localStorage either way.
+        expect(typeof hasRedirectHonor).toBe('boolean')
+      }
 
-    const api = await fetchLogin('https://api.teralexi.com/auth/login')
-    if (api) {
-      expect(api).toContain('teralexi://open')
-    }
-  })
+      const api = await fetchLogin('https://api.teralexi.com/auth/login')
+      if (api) {
+        expect(api).toContain('teralexi://open')
+      }
+    },
+    15_000,
+  )
 })
 
 describe('bridge rewrite against old login.html snippet', () => {

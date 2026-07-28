@@ -115,8 +115,20 @@ function hostCacheKey(userId: string, workspacePath?: string): string {
   return `${userId}::${workspacePath ?? ''}`
 }
 
+/**
+ * Expand `${EXTENSION_ROOT}/rel/path` with host separators. Trailing args
+ * (whitespace-delimited) are preserved so command strings stay runnable.
+ */
 function substituteExtensionRoot(value: string, extensionDir: string): string {
-  return value.split(EXTENSION_ROOT_PLACEHOLDER).join(extensionDir)
+  if (!value.includes(EXTENSION_ROOT_PLACEHOLDER)) return value
+  return value.replace(
+    /\$\{EXTENSION_ROOT\}((?:[/\\][^\s"'`;|&]+)*)/g,
+    (_match, relWithSeps: string) => {
+      if (!relWithSeps) return extensionDir
+      const segments = relWithSeps.split(/[/\\]+/).filter(Boolean)
+      return join(extensionDir, ...segments)
+    },
+  )
 }
 
 function readJsonFile(path: string): unknown {
