@@ -59,10 +59,17 @@ export function parseGithubSource(source) {
   const trimmed = String(source || '').trim()
   if (!trimmed) return null
 
-  if (!trimmed.includes('://') && !trimmed.includes('github.com')) {
-    if (existsSync(trimmed)) {
-      return { kind: 'local', path: trimmed, defaultId: basename(trimmed) }
-    }
+  // Prefer an existing local path when this is not an http(s) URL.
+  let isHttpUrl = false
+  try {
+    const parsedUrl = new URL(trimmed)
+    isHttpUrl =
+      parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:'
+  } catch {
+    isHttpUrl = false
+  }
+  if (!isHttpUrl && existsSync(trimmed)) {
+    return { kind: 'local', path: trimmed, defaultId: basename(trimmed) }
   }
 
   const treeMatch = trimmed.match(
