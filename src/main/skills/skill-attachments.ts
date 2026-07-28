@@ -12,6 +12,7 @@ import {
 } from './bundled-skills-manifest'
 import {
   isLoadableSkillFolder,
+  hasSkillInstructionMarker,
   resolveSkillsSources,
   resolveUserSkillsDirectory,
   userOverridesBundledSkill,
@@ -19,7 +20,7 @@ import {
 
 export type { SkillAttachmentCategory } from './skill-attachment-dirs'
 
-export type SkillAttachmentSource = 'bundled' | 'user'
+export type SkillAttachmentSource = 'bundled' | 'project' | 'user'
 
 export type SkillAttachment = {
   category: SkillAttachmentCategory
@@ -103,7 +104,7 @@ function listDiskSkillAttachments(
   source: SkillAttachmentSource,
   dir: string,
 ): SkillAttachment[] {
-  if (!existsSync(join(dir, SKILL_FILES.SKILL_MD))) return []
+  if (!hasSkillInstructionMarker(dir)) return []
 
   const attachmentDirs = resolveSkillAttachmentDirs(dir)
   const out: SkillAttachment[] = []
@@ -162,7 +163,15 @@ export function listSkillAttachments(skillId: string): SkillAttachment[] {
     }
   }
 
-  const { user } = resolveSkillsSources()
+  const { project, user } = resolveSkillsSources()
+  if (project) {
+    for (const attachment of listDiskSkillAttachments(
+      'project',
+      join(project, id),
+    )) {
+      merged.set(attachment.relativePath, attachment)
+    }
+  }
   for (const attachment of listDiskSkillAttachments('user', join(user, id))) {
     merged.set(attachment.relativePath, attachment)
   }

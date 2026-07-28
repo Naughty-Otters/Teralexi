@@ -15,12 +15,6 @@ import { useMenu } from '@main/hooks/menu-hook'
 import { useMainDefaultIpc } from './services/ipc-main'
 import { createTray } from './services/tray-manager'
 import InitWindow from './services/window-manager'
-import { getWhatsAppChannelManager } from './channels/whatsapp/manager'
-import { getTelegramChannelManager } from './channels/telegram/manager'
-import { getDiscordChannelManager } from './channels/discord/manager'
-import { getWeChatChannelManager } from './channels/wechat/manager'
-import { getSlackChannelManager } from './channels/slack/manager'
-import { getSchedulerManager } from './services/scheduler-manager'
 import { registerMainProcessSupportHandlers } from './services/support-event-store'
 import { refreshAuthAndEntitlement, startEntitlementPolling } from './services/entitlement-session'
 import { loadStoredAccount } from './services/google-account-oauth'
@@ -130,18 +124,10 @@ export async function startMainApp(options: {
   if (isTeralexiTestMode()) {
     setSystemPropValue('settings.onboarding.completed', 'true')
     log.info('Test mode: seeded onboarding completion flag')
-  }
-
-  if (!isTeralexiTestMode()) {
-    void getWhatsAppChannelManager().ensureStarted()
-    void getTelegramChannelManager().ensureStarted()
-    void getDiscordChannelManager().ensureStarted()
-    void getWeChatChannelManager().ensureStarted()
-    void getSlackChannelManager().ensureStarted()
-    getSchedulerManager().ensureStarted()
-    log.info('Background channel and scheduler services requested')
   } else {
-    log.info('Test mode: skipped external channel and scheduler auto-start')
+    log.info(
+      'Channel managers, scheduler, and extension host load lazily on first use',
+    )
   }
 
   if (process.env.NODE_ENV === 'development') {

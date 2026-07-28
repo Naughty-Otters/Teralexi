@@ -1,7 +1,10 @@
 <template>
-  <div class="mcp-layout">
-    <!-- Left sidebar -->
-    <aside class="mcp-sidebar">
+  <SettingsSplitLayout
+    storage-key="teralexi.settings.mcpSidebarWidth"
+    :default-width="180"
+    sidebar-class="mcp-sidebar"
+  >
+    <template #sidebar>
       <button
         type="button"
         class="mcp-tab mcp-tab--add"
@@ -65,7 +68,7 @@
           {{ runtimeBadgeShortLabel(server) }}
         </span>
       </button>
-    </aside>
+    </template>
 
     <!-- Right pane: add form -->
     <section v-if="draft && selectedId === '__new__'" class="mcp-content mcp-section">
@@ -498,7 +501,7 @@
     <section v-else class="mcp-content mcp-empty">
       <span>{{ p.mcp.empty }}</span>
     </section>
-  </div>
+  </SettingsSplitLayout>
 </template>
 
 <script setup lang="ts">
@@ -515,6 +518,7 @@ import {
   type McpRuntimeKind,
 } from '@shared/mcp/mcp-runtime-requirements'
 import { openExternalUrl } from '@renderer/lib/open-external-url'
+import SettingsSplitLayout from './SettingsSplitLayout.vue'
 import type {
   McpRegistryServerDraft,
   McpRegistryServerSummary,
@@ -993,29 +997,7 @@ async function deleteSelected() {
 <style scoped>
 @import './sp-shared.css';
 
-/* ── Two-pane layout ── */
-.mcp-layout {
-  display: flex;
-  align-items: stretch;
-  gap: 0;
-  height: 100%;
-  min-height: 0;
-  border: 1px solid var(--ui-border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.mcp-sidebar {
-  width: 160px;
-  flex-shrink: 0;
-  border-right: 1px solid var(--ui-border);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 6px;
-  overflow-y: auto;
-}
-
+/* ── Two-pane layout (chrome from SettingsSplitLayout) ── */
 .mcp-sidebar-empty {
   font-size: 11px;
   color: var(--ui-text-muted);

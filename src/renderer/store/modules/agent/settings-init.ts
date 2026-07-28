@@ -59,9 +59,11 @@ export function createSettingsInitActions(
   const {
     selectConversation,
     loadConversationList,
+    loadRecentConversationsAcrossAgents,
     mostRecentConversation,
     findConversationMeta,
     readPersistedConversationId,
+    createNewConversation,
   } = conversation
   const { loadSkillsFromDisk } = deps
 
@@ -295,7 +297,13 @@ export function createSettingsInitActions(
 
     isLoadingInitialConversations.value = true
     try {
+      if (agents.value.length === 0) {
+        log.warn('No agents before loading conversations; retrying LoadSkills')
+        await loadSkillsFromDisk()
+      }
+
       await loadAllConversationLists()
+      await loadRecentConversationsAcrossAgents()
 
       const existingIds = new Set<string>()
       for (const convs of Object.values(conversationList.value)) {
@@ -326,6 +334,15 @@ export function createSettingsInitActions(
           if (recent) {
             layoutStore.ensureLayout(recent.id)
             await selectConversation(recent.id)
+          } else {
+            // Fresh install or empty catalog: open a blank session so chat is usable.
+            const created = await createNewConversation(undefined, {
+              mode: 'fresh',
+            })
+            if (created) {
+              layoutStore.openConversation(created.id)
+              await selectConversation(created.id)
+            }
           }
         }
       } else if (focusedConversationId.value) {

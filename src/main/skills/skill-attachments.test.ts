@@ -9,8 +9,21 @@ let userRoot = ''
 vi.mock('./skill-path', () => ({
   resolveSkillsSources: vi.fn(() => ({
     bundled: bundledRoot,
+    project: '',
     user: userRoot,
   })),
+  isLoadableSkillFolder: vi.fn((skillsDir: string, skillId: string) => {
+    const { existsSync } = require('fs')
+    const { join } = require('path')
+    return existsSync(join(skillsDir, skillId, 'skill.md'))
+  }),
+  hasSkillInstructionMarker: vi.fn((dir: string) => {
+    const { existsSync } = require('fs')
+    const { join } = require('path')
+    return existsSync(join(dir, 'skill.md'))
+  }),
+  resolveUserSkillsDirectory: vi.fn(() => userRoot),
+  userOverridesBundledSkill: vi.fn(() => false),
 }))
 
 import {

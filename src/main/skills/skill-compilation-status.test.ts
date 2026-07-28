@@ -21,8 +21,11 @@ vi.mock('./skill-path', () => ({
   resolveSkillCompilationSource: () => 'bundled',
   resolveSkillFolder: () => '/skills/alpha',
   resolvePropertiesRaw: () => 'name: Alpha',
+  resolvePropertiesRawFromContent: () => 'name: Alpha',
   extractYamlFrontmatterBlock: () => null,
   stripYamlFrontmatter: (md: string) => md,
+  findSkillMarkdownPath: (folder: string) => `${folder}/skill.md`,
+  isEffectiveBundledSkill: () => true,
 }))
 
 vi.mock('./skill-compiler', () => ({

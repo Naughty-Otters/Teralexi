@@ -211,6 +211,32 @@ export type SettingsPanelLabels = {
       signInWithGitHub: string
     }
   }
+  extensions: {
+    noExtensions: string
+    bundled: string
+    installed: string
+    enableExtension: string
+    disableExtension: string
+    version: string
+    source: string
+    activationEvents: string
+    hooks: string
+    contributedHooks: string
+    permissions: string
+    empty: string
+    project: string
+    reviewRequired: string
+    approveHooks: string
+    rejectHooks: string
+    pendingHooks: string
+    contributedProviders: string
+    contributedChannels: string
+    contributedPanels: string
+    trustRequiredHint: string
+    contributionsInactive: string
+    active: string
+    inactive: string
+  }
   mcp: {
     addServer: string
     noServers: string

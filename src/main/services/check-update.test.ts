@@ -231,6 +231,25 @@ describe('check-update', () => {
     })
   })
 
+  it('treats transient network errors as not-available instead of hard errors', async () => {
+    vi.mocked(checkForUpdates).mockRejectedValueOnce(
+      new Error('net::ERR_CONNECTION_CLOSED'),
+    )
+    const mainWindow = {
+      webContents: {},
+      isDestroyed: () => false,
+    } as Electron.BrowserWindow
+    const updater = new AppUpdateManager()
+    await updater.checkUpdate(mainWindow)
+    expect(webContentSend.updateMsg).toHaveBeenCalledWith(
+      mainWindow.webContents,
+      expect.objectContaining({
+        phase: 'not-available',
+        error: expect.stringContaining('unreachable'),
+      }),
+    )
+  })
+
   it('downloads updates and can quit to install', async () => {
     const mainWindow = {
       webContents: {},

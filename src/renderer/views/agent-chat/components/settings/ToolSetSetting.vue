@@ -1,7 +1,10 @@
 <template>
-  <div class="ts-layout">
-    <!-- Left sidebar: tool list -->
-    <aside class="ts-sidebar">
+  <SettingsSplitLayout
+    storage-key="teralexi.settings.toolsetSidebarWidth"
+    :default-width="200"
+    sidebar-class="ts-sidebar"
+  >
+    <template #sidebar>
       <div v-if="loading" class="ts-sidebar-empty">{{ t.common.loading }}</div>
       <div v-else class="ts-filter-wrap">
         <label class="ts-filter-label" for="tool-tag-filter">{{ p.fields.tag }}</label>
@@ -40,7 +43,7 @@
         </span>
         <span v-if="tool.needsApproval" class="ts-tab-badge">{{ p.toolset.approvalBadge }}</span>
       </button>
-    </aside>
+    </template>
 
     <!-- Right pane: tool detail -->
     <section v-if="selectedTool" class="ts-content ts-section">
@@ -100,12 +103,13 @@
     <section v-else class="ts-content ts-empty">
       <span>{{ p.toolset.empty }}</span>
     </section>
-  </div>
+  </SettingsSplitLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from '@renderer/composables/useI18n'
+import SettingsSplitLayout from './SettingsSplitLayout.vue'
 
 const { t } = useI18n()
 const p = computed(() => t.value.settings.panels)
@@ -182,29 +186,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ── Two-pane layout ── */
-.ts-layout {
-  display: flex;
-  align-items: flex-start;
-  gap: 0;
-  height: 100%;
-  min-height: 0;
-  border: 1px solid var(--ui-border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.ts-sidebar {
-  width: 200px;
-  flex-shrink: 0;
-  border-right: 1px solid var(--ui-border);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 6px;
-  overflow-y: auto;
-}
-
+/* ── Two-pane layout (chrome from SettingsSplitLayout) ── */
 .ts-filter-wrap {
   display: flex;
   flex-direction: column;

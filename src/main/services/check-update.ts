@@ -20,6 +20,30 @@ const PERIODIC_CHECK_MS = 6 * 60 * 60 * 1000
 const UPDATER_CACHE_DIR_NAME = 'teralexi-updater'
 const DEV_APP_UPDATE_CONFIG_FILENAME = 'dev-app-update.yml'
 
+const TRANSIENT_UPDATE_NETWORK_RE =
+  /ERR_CONNECTION_CLOSED|ERR_CONNECTION_REFUSED|ERR_NAME_NOT_RESOLVED|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ENETUNREACH|EAI_AGAIN|network/i
+
+function isTransientUpdateNetworkError(message: string): boolean {
+  return TRANSIENT_UPDATE_NETWORK_RE.test(message)
+}
+
+function formatUpdateErrorMessage(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err)
+  if (message.includes('sha512 checksum mismatch')) {
+    return 'Update file failed integrity check.'
+  }
+  return message || 'Update check failed.'
+}
+
+function logUpdateFailure(err: unknown, context: string): void {
+  const message = formatUpdateErrorMessage(err)
+  if (isTransientUpdateNetworkError(message)) {
+    log.warn(`${context} (update feed unreachable)`, { message })
+    return
+  }
+  log.error(context, { err })
+}
+
 let managerInstance: AppUpdateManager | null = null
 let periodicTimer: ReturnType<typeof setInterval> | null = null
 
@@ -115,11 +139,14 @@ export class AppUpdateManager {
     this.listenersRegistered = true
 
     autoUpdater.on('error', (err) => {
-      log.error('Update error', { err })
-      const message =
-        err.message.includes('sha512 checksum mismatch')
-          ? 'Update file failed integrity check.'
-          : err.message || 'Update check failed.'
+      const message = formatUpdateErrorMessage(err)
+      logUpdateFailure(err, 'Update error')
+      if (isTransientUpdateNetworkError(message)) {
+        this.send(this.mainWindow, 'not-available', {
+          error: 'Update server is unreachable. You can try again later.',
+        })
+        return
+      }
       this.send(this.mainWindow, 'error', { error: message })
     })
 
@@ -205,10 +232,15 @@ export class AppUpdateManager {
         })
       }
     } catch (err) {
-      log.error('Update check failed', { err })
-      this.send(mainWindow, 'error', {
-        error: err instanceof Error ? err.message : 'Update check failed.',
-      })
+      const message = formatUpdateErrorMessage(err)
+      logUpdateFailure(err, 'Update check failed')
+      if (isTransientUpdateNetworkError(message)) {
+        this.send(mainWindow, 'not-available', {
+          error: 'Update server is unreachable. You can try again later.',
+        })
+        return
+      }
+      this.send(mainWindow, 'error', { error: message })
     }
   }
 

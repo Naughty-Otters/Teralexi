@@ -1,0 +1,9 @@
+{
+  "id": "secret-guard",
+  "version": "1.0.0",
+  "permissions": {
+    "filesystem": "workspace",
+    "shell": false,
+    "network": false
+  }
+}

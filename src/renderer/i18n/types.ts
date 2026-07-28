@@ -53,6 +53,7 @@ export type AppLabels = {
       chat: string
       toolset: string
       mcp: string
+      extensions: string
       developer: string
       about: string
     }
@@ -165,6 +166,8 @@ export type AppLabels = {
     copyBubbleContentSuccess: string
     copyBubbleContentFailed: string
     printBubbleContent: string
+    emptyState: string
+    startNewConversation: string
     skillSetupTitle: string
     skillSetupIntro: string
     skillSetupSave: string

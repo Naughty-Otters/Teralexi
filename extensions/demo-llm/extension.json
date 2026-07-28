@@ -1,0 +1,7 @@
+{
+  "id": "demo-llm",
+  "version": "1.0.0",
+  "permissions": {
+    "network": true
+  }
+}

@@ -57,8 +57,13 @@
         <EditorSetting />
       </div>
       <section v-else-if="settingsTab === 'llm'" class="sp-llm-section sp-panel-view">
-        <div class="sp-llm-layout">
-          <aside class="sp-llm-sidebar" aria-label="LLM providers">
+        <SettingsSplitLayout
+          storage-key="teralexi.settings.llmSidebarWidth"
+          :default-width="200"
+          sidebar-class="sp-llm-sidebar"
+          aria-label="Resize LLM provider list"
+        >
+          <template #sidebar>
             <template
               v-for="entry in llmSidebarEntries"
               :key="entry.kind === 'header' ? entry.id : entry.id"
@@ -77,10 +82,15 @@
                 :class="{ 'sp-llm-item--active': llmVendorTab === entry.id }"
                 @click="switchLlmVendor(entry.id)"
               >
+                <span
+                  v-if="entry.fromExtension"
+                  class="sp-llm-item-dot sp-llm-item-dot--on"
+                  aria-hidden="true"
+                />
                 {{ entry.label }}
               </button>
             </template>
-          </aside>
+          </template>
 
           <div class="sp-llm-content">
             <OllamaSetting v-if="llmVendorTab === 'ollama'" class="sp-panel-view" />
@@ -117,10 +127,19 @@
               :provider="llmVendorTab"
               class="sp-panel-view"
             />
+            <ExtensionLlmProviderSetting
+              v-else-if="selectedExtensionLlmProvider"
+              :provider="selectedExtensionLlmProvider"
+              class="sp-panel-view"
+            />
           </div>
-        </div>
+        </SettingsSplitLayout>
       </section>
       <McpSetting v-else-if="settingsTab === 'mcp'" class="sp-panel-view" />
+      <ExtensionsSetting
+        v-else-if="settingsTab === 'extensions'"
+        class="sp-panel-view"
+      />
       <ToolSetSetting
         v-else-if="settingsTab === 'toolset'"
         class="sp-panel-view"
@@ -159,6 +178,11 @@
             :class="{ 'sp-tab--active': channelTab === ch.id }"
             @click="channelTab = ch.id"
           >
+            <span
+              v-if="ch.fromExtension"
+              class="sp-channel-dot sp-channel-dot--on"
+              aria-hidden="true"
+            />
             {{ ch.label }}
           </button>
         </div>
@@ -167,6 +191,11 @@
         <DiscordSetting v-else-if="channelTab === 'discord'" class="sp-panel-view" />
         <WeChatSetting v-else-if="channelTab === 'wechat'" class="sp-panel-view" />
         <SlackSetting v-else-if="channelTab === 'slack'" class="sp-panel-view" />
+        <ExtensionChannelSetting
+          v-else-if="selectedExtensionChannel"
+          :channel="selectedExtensionChannel"
+          class="sp-panel-view"
+        />
       </div>
       <AccountsSetting
         v-else-if="settingsTab === 'accounts'"
@@ -203,9 +232,15 @@ import { useGoogleAccount } from '@renderer/composables/useGoogleAccount'
 import { useAgentStore } from '@store/agent'
 import {
   isOpenAiCompatibleProvider,
+  isProviderType,
   LLM_PROVIDER_LABELS,
   type ProviderType,
 } from '@shared/agent/llm-provider-registry'
+import type {
+  ExtensionChannelSummary,
+  ExtensionLlmProviderSummary,
+} from '@shared/agent/extension-contributions'
+import { DEFAULT_USER_ID } from '@store/agent/config'
 import {
   LOCAL_LLM_PROVIDER_IDS,
   VENDOR_LLM_PROVIDER_IDS,
@@ -226,9 +261,15 @@ import DeepSeekSetting from './settings/DeepSeekSetting.vue'
 import XaiSetting from './settings/XaiSetting.vue'
 import ZhipuSetting from './settings/ZhipuSetting.vue'
 import OpenAiCompatibleProviderSetting from './settings/OpenAiCompatibleProviderSetting.vue'
+import ExtensionLlmProviderSetting from './settings/ExtensionLlmProviderSetting.vue'
+import ExtensionChannelSetting from './settings/ExtensionChannelSetting.vue'
+import SettingsSplitLayout from './settings/SettingsSplitLayout.vue'
 
 const McpSetting = defineAsyncComponent(
   () => import('./settings/McpSetting.vue'),
+)
+const ExtensionsSetting = defineAsyncComponent(
+  () => import('./settings/ExtensionsSetting.vue'),
 )
 const ToolSetSetting = defineAsyncComponent(
   () => import('./settings/ToolSetSetting.vue'),
@@ -289,6 +330,7 @@ type SettingsTab =
   | 'general'
   | 'llm'
   | 'mcp'
+  | 'extensions'
   | 'toolset'
   | 'skills'
   | 'agents'
@@ -300,13 +342,15 @@ type SettingsTab =
   | 'developer'
   | 'about'
 const settingsTab = ref<SettingsTab>('general')
-const llmVendorTab = ref<ProviderType>('ollama')
+const llmVendorTab = ref<string>('ollama')
+const extensionLlmProviders = ref<ExtensionLlmProviderSummary[]>([])
+const extensionChannels = ref<ExtensionChannelSummary[]>([])
 
-type LlmProviderGroupId = 'local' | 'vendor' | 'wholesale'
+type LlmProviderGroupId = 'local' | 'vendor' | 'wholesale' | 'extension'
 
 type LlmSidebarEntry =
   | { kind: 'header'; id: string; category: LlmProviderGroupId; label: string }
-  | { kind: 'provider'; id: ProviderType; label: string }
+  | { kind: 'provider'; id: string; label: string; fromExtension?: boolean }
 
 const llmSidebarEntries = computed((): LlmSidebarEntry[] => {
   const groups = [
@@ -343,8 +387,30 @@ const llmSidebarEntries = computed((): LlmSidebarEntry[] => {
       })
     }
   }
+
+  if (extensionLlmProviders.value.length > 0) {
+    entries.push({
+      kind: 'header',
+      id: 'header-extension',
+      category: 'extension',
+      label: 'Extensions',
+    })
+    for (const provider of extensionLlmProviders.value) {
+      entries.push({
+        kind: 'provider',
+        id: provider.registryId,
+        label: provider.label,
+        fromExtension: true,
+      })
+    }
+  }
+
   return entries
 })
+
+const selectedExtensionLlmProvider = computed(() =>
+  extensionLlmProviders.value.find((p) => p.registryId === llmVendorTab.value),
+)
 
 const llmProviderIds = computed(() =>
   llmSidebarEntries.value
@@ -352,17 +418,39 @@ const llmProviderIds = computed(() =>
     .map((entry) => entry.id),
 )
 
-type ChannelTab = 'whatsapp' | 'telegram' | 'discord' | 'wechat' | 'slack'
-const channelTab = ref<ChannelTab>('whatsapp')
+type BuiltinChannelTab = 'whatsapp' | 'telegram' | 'discord' | 'wechat' | 'slack'
+const channelTab = ref<string>('whatsapp')
 type SkillTab = 'clawhub' | 'installed'
 const skillTab = ref<SkillTab>('installed')
-const channelTabs = computed(() => [
-  { id: 'whatsapp' as ChannelTab, label: t.value.settings.channels.whatsapp },
-  { id: 'telegram' as ChannelTab, label: t.value.settings.channels.telegram },
-  { id: 'discord' as ChannelTab, label: t.value.settings.channels.discord },
-  { id: 'wechat' as ChannelTab, label: t.value.settings.channels.wechat },
-  { id: 'slack' as ChannelTab, label: t.value.settings.channels.slack },
-])
+const channelTabs = computed(() => {
+  const builtIn = [
+    { id: 'whatsapp' as BuiltinChannelTab, label: t.value.settings.channels.whatsapp, fromExtension: false },
+    { id: 'telegram' as BuiltinChannelTab, label: t.value.settings.channels.telegram, fromExtension: false },
+    { id: 'discord' as BuiltinChannelTab, label: t.value.settings.channels.discord, fromExtension: false },
+    { id: 'wechat' as BuiltinChannelTab, label: t.value.settings.channels.wechat, fromExtension: false },
+    { id: 'slack' as BuiltinChannelTab, label: t.value.settings.channels.slack, fromExtension: false },
+  ]
+  const fromExtensions = extensionChannels.value.map((ch) => ({
+    id: ch.registryId,
+    label: `${ch.extensionId} / ${ch.channelId}`,
+    fromExtension: true,
+  }))
+  return [...builtIn, ...fromExtensions]
+})
+
+const selectedExtensionChannel = computed(() =>
+  extensionChannels.value.find((ch) => ch.registryId === channelTab.value),
+)
+
+function isBuiltinChannelTab(id: string): id is BuiltinChannelTab {
+  return (
+    id === 'whatsapp' ||
+    id === 'telegram' ||
+    id === 'discord' ||
+    id === 'wechat' ||
+    id === 'slack'
+  )
+}
 
 const skillTabs = computed(() => [
   { id: 'installed' as SkillTab, label: t.value.settings.skillTabs.installed },
@@ -381,6 +469,7 @@ const tabs = computed(() => [
   { id: 'chat' as SettingsTab, label: t.value.settings.tabs.chat, requiresSignIn: false },
   { id: 'toolset' as SettingsTab, label: t.value.settings.tabs.toolset, requiresSignIn: false },
   { id: 'mcp' as SettingsTab, label: t.value.settings.tabs.mcp, requiresSignIn: false },
+  { id: 'extensions' as SettingsTab, label: t.value.settings.tabs.extensions, requiresSignIn: false },
   { id: 'developer' as SettingsTab, label: t.value.settings.tabs.developer, requiresSignIn: false },
   { id: 'about' as SettingsTab, label: t.value.settings.tabs.about, requiresSignIn: false },
 ])
@@ -397,24 +486,68 @@ function openLocalLlmSettings() {
   agentStore.fetchModelsForProvider('ollama')
 }
 
+async function refreshExtensionContributions(): Promise<void> {
+  const args = { userId: DEFAULT_USER_ID }
+  const llmChannel = window.ipcRendererChannel?.ListExtensionLlmProviders
+  const channelsChannel = window.ipcRendererChannel?.ListExtensionChannels
+  if (llmChannel?.invoke) {
+    const list = (await llmChannel.invoke(args)) as ExtensionLlmProviderSummary[] | undefined
+    extensionLlmProviders.value = Array.isArray(list) ? list : []
+  } else {
+    extensionLlmProviders.value = []
+  }
+  if (channelsChannel?.invoke) {
+    const list = (await channelsChannel.invoke(args)) as ExtensionChannelSummary[] | undefined
+    extensionChannels.value = Array.isArray(list) ? list : []
+  } else {
+    extensionChannels.value = []
+  }
+}
+
+async function preloadBuiltinChannels(): Promise<void> {
+  const channel = window.ipcRendererChannel?.EnsureBuiltinChannelManagersStarted
+  if (channel?.invoke) {
+    await channel.invoke()
+  }
+}
+
 function switchTab(tab: SettingsTab) {
   settingsTab.value = tab
+  if (tab === 'llm' || tab === 'channels' || tab === 'extensions') {
+    void refreshExtensionContributions()
+  }
+  if (tab === 'channels') {
+    void preloadBuiltinChannels()
+  }
   if (tab === 'llm') {
     const vendor = llmVendorTab.value
     const allowed = llmProviderIds.value.includes(vendor)
     if (!allowed) {
       llmVendorTab.value = llmProviderIds.value[0] ?? 'ollama'
     }
-    agentStore.fetchModelsForProvider(llmVendorTab.value)
+    if (isProviderType(llmVendorTab.value)) {
+      agentStore.fetchModelsForProvider(llmVendorTab.value)
+    }
   }
 }
 
-function switchLlmVendor(tab: ProviderType) {
+function switchLlmVendor(tab: string) {
   llmVendorTab.value = tab
-  agentStore.fetchModelsForProvider(tab)
+  if (isProviderType(tab)) {
+    agentStore.fetchModelsForProvider(tab)
+  }
+}
+
+function onExtensionContributionsChanged(): void {
+  void refreshExtensionContributions()
 }
 
 onMounted(() => {
+  void refreshExtensionContributions()
+  window.addEventListener(
+    'teralexi:extension-contributions-changed',
+    onExtensionContributionsChanged,
+  )
   registerSettingsTabHandler((tab) => {
     if (tab === 'about' || tab === 'llm') {
       switchTab(tab as SettingsTab)
@@ -429,6 +562,10 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener(
+    'teralexi:extension-contributions-changed',
+    onExtensionContributionsChanged,
+  )
   registerSettingsTabHandler(null)
 })
 </script>
@@ -571,26 +708,7 @@ onUnmounted(() => {
   min-height: 0;
 }
 
-.sp-llm-layout {
-  display: flex;
-  align-items: stretch;
-  gap: 0;
-  flex: 1;
-  min-height: 0;
-  border: 1px solid var(--ui-border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.sp-llm-sidebar {
-  width: 188px;
-  flex-shrink: 0;
-  border-right: 1px solid var(--ui-border);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 6px;
-  overflow-y: auto;
+:deep(.sp-llm-sidebar) {
   background: var(--ui-bg-elevated);
 }
 
@@ -638,6 +756,11 @@ onUnmounted(() => {
   --sp-llm-group-text: var(--color-secondary-700, #6d28d9);
 }
 
+.sp-llm-group-header--extension {
+  --sp-llm-group-accent: var(--color-warning-500, #f59e0b);
+  --sp-llm-group-text: var(--color-warning-700, #b45309);
+}
+
 :global(html.dark .sp-llm-group-header--local) {
   --sp-llm-group-text: var(--color-success-300, #86efac);
 }
@@ -650,9 +773,14 @@ onUnmounted(() => {
   --sp-llm-group-text: var(--color-secondary-300, #c4b5fd);
 }
 
+:global(html.dark .sp-llm-group-header--extension) {
+  --sp-llm-group-text: var(--color-warning-300, #fcd34d);
+}
+
 .sp-llm-item {
   display: flex;
   align-items: center;
+  gap: 6px;
   width: 100%;
   padding: 7px 10px;
   border: none;
@@ -667,6 +795,30 @@ onUnmounted(() => {
   transition:
     background 0.12s,
     color 0.12s;
+}
+
+.sp-llm-item-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sp-llm-item-dot--on {
+  background: var(--color-success-500, #22c55e);
+}
+
+.sp-channel-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.sp-channel-dot--on {
+  background: var(--color-success-500, #22c55e);
 }
 
 .sp-llm-item:hover {

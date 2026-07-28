@@ -27,11 +27,19 @@ export const projectRulesInjector: AgentInjector = {
       : null
     return (
       projectRulesCache.getOrCompute(
-        [pathMtimeKey(userRulesDir), pathMtimeKey(workspaceRulesDir)],
+        [
+          pathMtimeKey(userRulesDir),
+          pathMtimeKey(workspaceRulesDir),
+          pathMtimeKey(workspacePath ? join(workspacePath, 'AGENTS.md') : null),
+          pathMtimeKey(workspacePath ? join(workspacePath, 'CLAUDE.md') : null),
+          pathMtimeKey(workspacePath ? join(workspacePath, 'AGENT.md') : null),
+          pathMtimeKey(workspacePath ? join(workspacePath, 'CODEX.md') : null),
+        ],
         () => {
           const rules = loadProjectRules({
             userRulesDir,
             workspaceRulesDir,
+            workspaceRoot: workspacePath,
           })
           return formatProjectRulesBlock(rules) || ''
         },

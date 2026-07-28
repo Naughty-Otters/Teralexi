@@ -420,6 +420,20 @@ export class IpcChannelMainClass {
     }>
   > = null!
   /**
+   * List recent conversations across all agents (boot recovery when skills fail to load).
+   */
+  ListRecentConversations: IpcMainEventListener<
+    { limit?: number } | void,
+    Array<{
+      id: string
+      agentId: string
+      title: string
+      createdAt: string
+      updatedAt: string
+      workspacePath?: string | null
+    }>
+  > = null!
+  /**
    * Create a new conversation record
    */
   CreateConversation: IpcMainEventListener<
@@ -677,6 +691,68 @@ export class IpcChannelMainClass {
    */
   DeleteMcpServer: IpcMainEventListener<{ userId: string; serverId: string }> =
     null
+  /**
+   * List discovered extensions (bundled + user-installed) merged with the
+   * per-user enable/disable override
+   */
+  ListExtensions: IpcMainEventListener<
+    { userId: string; workspacePath?: string },
+    import('@main/skills/extensions-with-settings').ExtensionSummary[]
+  > = null!
+  /**
+   * Enable or disable an extension for the current user
+   */
+  SetExtensionEnabled: IpcMainEventListener<{
+    userId: string
+    extensionId: string
+    enabled: boolean
+    workspacePath?: string
+  }> = null!
+  /**
+   * List extension hook sources awaiting trust review
+   */
+  ListPendingHookReviews: IpcMainEventListener<
+    { userId: string; workspacePath?: string },
+    import('@main/skills/extension-host').PendingHookReview[]
+  > = null!
+  /**
+   * Approve or reject a pending extension hook source
+   */
+  SetHookTrustStatus: IpcMainEventListener<{
+    userId: string
+    trustKey: string
+    contentHash: string
+    status: 'trusted' | 'rejected'
+    workspacePath?: string
+  }> = null!
+  /**
+   * Lazy-start built-in channel managers (WhatsApp, Telegram, …) before Settings → Channels.
+   */
+  EnsureBuiltinChannelManagersStarted: IpcMainEventListener<
+    void,
+    { ok: true }
+  > = null!
+  /**
+   * List extension-contributed channels (from trusted actions modules).
+   */
+  ListExtensionChannels: IpcMainEventListener<
+    { userId: string; workspacePath?: string },
+    import('@shared/agent/extension-contributions').ExtensionChannelSummary[]
+  > = null!
+  /**
+   * List extension-contributed settings UI panels (from trusted actions modules).
+   */
+  ListExtensionUiPanels: IpcMainEventListener<
+    { userId: string; workspacePath?: string },
+    import('@shared/agent/extension-contributions').ExtensionUiPanelSummary[]
+  > = null!
+  /**
+   * List extension-contributed LLM providers (from trusted actions modules).
+   */
+  ListExtensionLlmProviders: IpcMainEventListener<
+    { userId: string; workspacePath?: string },
+    import('@shared/agent/extension-contributions').ExtensionLlmProviderSummary[]
+  > = null!
   /**
    * Discover tools exposed by a specific MCP server
    */

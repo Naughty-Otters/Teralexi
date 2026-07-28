@@ -9,6 +9,7 @@ import { verifyMainBundle } from './verify-main-bundle'
 import { verifyBundledToolSetCatalog } from './verify-bundled-toolset'
 import { verifyBundledTeralexiRules } from './verify-bundled-teralexi-rules'
 import { generateBundledSkillsManifest } from './generate-bundled-skills'
+import { generateBundledExtensionsManifest } from './generate-bundled-extensions'
 import { errorLog, doneLog } from './log'
 import { applyBuildEnvFromArgv, getArgv } from './utils'
 
@@ -50,6 +51,7 @@ async function unionBuild() {
         task: async () => {
           try {
             generateBundledSkillsManifest()
+            generateBundledExtensionsManifest()
             verifyBundledTeralexiRules()
             const bootstrapBuild = await rollup(bootstrapOpt)
             await bootstrapBuild.write(bootstrapOpt.output as OutputOptions)

@@ -1,7 +1,10 @@
 <template>
-  <div class="acp-layout">
-    <!-- Left sidebar: agent list -->
-    <aside class="acp-sidebar">
+  <SettingsSplitLayout
+    storage-key="teralexi.settings.agentsSidebarWidth"
+    :default-width="180"
+    sidebar-class="acp-sidebar"
+  >
+    <template #sidebar>
       <button
         class="acp-tab acp-tab--add"
         :class="{ 'acp-tab--active': selectedId === '__new__' }"
@@ -41,7 +44,7 @@
           </span>
         </button>
       </template>
-    </aside>
+    </template>
 
     <!-- Right pane: add form -->
     <section v-if="selectedId === '__new__'" class="acp-content sp-section">
@@ -122,7 +125,7 @@
     <section v-else class="acp-content acp-empty">
       <span>Select an agent to configure it, or add a new one.</span>
     </section>
-  </div>
+  </SettingsSplitLayout>
 </template>
 
 <script setup lang="ts">
@@ -132,6 +135,7 @@ import { useAgentStore } from '@store/agent'
 import type { ProviderType, Agent } from '@store/agent'
 import { DEFAULT_TOOL_LOOP_MAX_ITERATIONS, DEFAULT_TODO_MAX_RETRIES } from '@shared/agent/tool-loop'
 import { isWorkflowPanelAgentId } from '@shared/skills/workflow-panel-skills'
+import SettingsSplitLayout from './SettingsSplitLayout.vue'
 import {
   agentPickerRowLabel,
   buildAgentPickerEntries,
@@ -397,28 +401,6 @@ function submitAddAgent() {
 @import './sp-shared.css';
 
 /* ── Two-pane layout ── */
-.acp-layout {
-  display: flex;
-  align-items: flex-start;
-  gap: 0;
-  height: 100%;
-  min-height: 0;
-  border: 1px solid var(--ui-border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.acp-sidebar {
-  width: 160px;
-  flex-shrink: 0;
-  border-right: 1px solid var(--ui-border);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 6px;
-  overflow-y: auto;
-}
-
 .acp-tab-badge {
   flex-shrink: 0;
   padding: 1px 5px;

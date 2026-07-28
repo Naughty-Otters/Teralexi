@@ -54,6 +54,7 @@ export const lang: AppLocaleBundle = {
       chat: '聊天',
       toolset: 'ToolSet',
       mcp: 'MCP',
+      extensions: '扩展',
       developer: '开发者',
       about: '关于',
     },
@@ -173,6 +174,8 @@ export const lang: AppLocaleBundle = {
     copyBubbleContentSuccess: '已复制到剪贴板',
     copyBubbleContentFailed: '无法复制内容',
     printBubbleContent: '打印内容',
+    emptyState: '选择或新建一个会话',
+    startNewConversation: '新建会话',
     skillSetupTitle: '配置 {skillName}',
     skillSetupIntro:
       '此技能需要先保存本地配置才能开始聊天。设置会写入 ~/.teralexi/config/config.properties，不会加入对话记录。',

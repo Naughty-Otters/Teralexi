@@ -2,17 +2,25 @@
 /**
  * Teralexi CLI — headless companion to the desktop app.
  *
- * Phase 1: install/distribution surface (version, help, doctor, open).
- * Agent `run` is wired next once the Electron agent core is extractable.
+ * Phase 1: install/distribution surface (version, help, doctor, open,
+ * skill/extension install). Agent `run` lands once the Electron agent core
+ * is extractable.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir, platform, arch, release } from 'node:os'
 import { join } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
+import {
+  ensureHomeDirs,
+  installExtension,
+  installSkill,
+  listInstalled,
+  removeInstalled,
+} from './install.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -34,7 +42,6 @@ function readPackageVersion() {
 }
 
 const VERSION = readPackageVersion()
-const APP = 'teralexi'
 const HOME = join(homedir(), '.teralexi')
 
 function printHelp() {
@@ -46,15 +53,35 @@ Usage:
 Commands:
   doctor              Check local install (~/.teralexi, Node, desktop)
   open                Launch the Teralexi desktop app if installed
+  skill install <src> Install a skill (GitHub owner/repo, URL, or path)
+  skill list          List installed skills
+  skill remove <id>   Remove an installed skill
+  extension install <src>
+  extension list
+  extension remove <id>
   run <prompt>        Run a headless agent turn (coming soon)
   version             Print version
   help                Show this help
 
-Global options:
-  -h, --help          Show help
-  -v, --version       Print version
+Skill / extension options:
+  -p, --project       Install under ./.teralexi/ instead of ~/.teralexi/
+  --id <id>           Override destination folder id
 
-Install:
+Sources:
+  owner/repo
+  https://github.com/owner/repo
+  https://github.com/owner/repo/tree/main/skills/my-skill
+  ./path/to/skill-or-extension
+
+Ecosystem skill markers accepted:
+  skill.md, SKILL.md, skills.md, AGENT.md, AGENTS.md
+
+Examples:
+  npx teralexi-ai skill install vercel-labs/agent-skills
+  npx teralexi-ai skill install owner/repo --id my-skill -p
+  npx teralexi-ai extension install ./extensions/my-guard
+
+Install CLI:
   curl -fsSL https://www.teralexi.com/install | bash
   npm i -g teralexi-ai@latest
 
@@ -64,14 +91,7 @@ Desktop app:
 }
 
 function ensureHome() {
-  for (const dir of [
-    HOME,
-    join(HOME, 'config'),
-    join(HOME, 'skills'),
-    join(HOME, 'workspace'),
-  ]) {
-    mkdirSync(dir, { recursive: true })
-  }
+  ensureHomeDirs()
 }
 
 const DESKTOP_BUNDLE_ID = 'app.teralexi.desktop'
@@ -219,6 +239,112 @@ Or: https://www.teralexi.com/`)
   return 2
 }
 
+function parseFlags(args) {
+  const out = { project: false, id: undefined, rest: [] }
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i]
+    if (a === '-p' || a === '--project') out.project = true
+    else if (a === '--id') out.id = args[++i]
+    else out.rest.push(a)
+  }
+  return out
+}
+
+function cmdSkill(args) {
+  const sub = args[0]
+  const flags = parseFlags(args.slice(1))
+  if (sub === 'install') {
+    const source = flags.rest[0]
+    if (!source) {
+      console.error('Usage: teralexi skill install <source> [--id <id>] [-p]')
+      return 1
+    }
+    const result = installSkill(source, { id: flags.id, project: flags.project })
+    if (!result.ok) {
+      console.error(result.error)
+      return 1
+    }
+    console.log(`Installed skill "${result.id}" → ${result.path}`)
+    return 0
+  }
+  if (sub === 'list' || sub === 'ls') {
+    const ids = listInstalled('skills', flags.project)
+    if (ids.length === 0) {
+      console.log('(no skills installed)')
+      return 0
+    }
+    console.log(ids.join('\n'))
+    return 0
+  }
+  if (sub === 'remove' || sub === 'rm' || sub === 'uninstall') {
+    const id = flags.rest[0]
+    if (!id) {
+      console.error('Usage: teralexi skill remove <id> [-p]')
+      return 1
+    }
+    const result = removeInstalled('skills', id, flags.project)
+    if (!result.ok) {
+      console.error(result.error)
+      return 1
+    }
+    console.log(`Removed skill "${result.id}"`)
+    return 0
+  }
+  console.error(`Unknown skill command: ${sub || '(missing)'}`)
+  console.error('Usage: teralexi skill <install|list|remove> …')
+  return 1
+}
+
+function cmdExtension(args) {
+  const sub = args[0]
+  const flags = parseFlags(args.slice(1))
+  if (sub === 'install') {
+    const source = flags.rest[0]
+    if (!source) {
+      console.error(
+        'Usage: teralexi extension install <source> [--id <id>] [-p]',
+      )
+      return 1
+    }
+    const result = installExtension(source, {
+      id: flags.id,
+      project: flags.project,
+    })
+    if (!result.ok) {
+      console.error(result.error)
+      return 1
+    }
+    console.log(`Installed extension "${result.id}" → ${result.path}`)
+    return 0
+  }
+  if (sub === 'list' || sub === 'ls') {
+    const ids = listInstalled('extensions', flags.project)
+    if (ids.length === 0) {
+      console.log('(no extensions installed)')
+      return 0
+    }
+    console.log(ids.join('\n'))
+    return 0
+  }
+  if (sub === 'remove' || sub === 'rm' || sub === 'uninstall') {
+    const id = flags.rest[0]
+    if (!id) {
+      console.error('Usage: teralexi extension remove <id> [-p]')
+      return 1
+    }
+    const result = removeInstalled('extensions', id, flags.project)
+    if (!result.ok) {
+      console.error(result.error)
+      return 1
+    }
+    console.log(`Removed extension "${result.id}"`)
+    return 0
+  }
+  console.error(`Unknown extension command: ${sub || '(missing)'}`)
+  console.error('Usage: teralexi extension <install|list|remove> …')
+  return 1
+}
+
 function main(argv) {
   const args = argv.slice(2)
   const cmd = args[0]
@@ -239,6 +365,10 @@ function main(argv) {
   if (cmd === 'doctor') return cmdDoctor()
   if (cmd === 'open') return cmdOpen()
   if (cmd === 'run') return cmdRun(args.slice(1))
+  if (cmd === 'skill' || cmd === 'skills') return cmdSkill(args.slice(1))
+  if (cmd === 'extension' || cmd === 'extensions' || cmd === 'ext') {
+    return cmdExtension(args.slice(1))
+  }
 
   console.error(`Unknown command: ${cmd}`)
   printHelp()

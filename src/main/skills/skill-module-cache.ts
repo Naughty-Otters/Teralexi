@@ -13,6 +13,7 @@ import {
   resolveAppRoot,
   toOnDiskAppPath,
 } from '@main/config/app-paths'
+import { getTeralexiSkillModuleCacheDir } from '@config/teralexi-home'
 import { createLogger } from '@main/logger'
 import { SKILL_MODULE } from './constants'
 
@@ -40,7 +41,8 @@ export function skillModuleCacheDir(): string {
   const override = process.env.TERALEXI_SKILL_MODULE_CACHE_DIR?.trim()
   if (override) return override
   if (isPackagedApp()) {
-    return join(resolveAppRoot(), SKILL_MODULE.PACKAGED_CACHE_DIR)
+    // Never write into the signed app bundle — use ~/.teralexi instead.
+    return getTeralexiSkillModuleCacheDir()
   }
   return join(process.cwd(), SKILL_MODULE.CACHE_DIR)
 }

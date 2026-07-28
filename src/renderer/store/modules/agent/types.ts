@@ -114,6 +114,24 @@ export interface McpToolDefinition {
   inputSchema?: unknown
 }
 
+export type ExtensionSource = 'bundled' | 'project' | 'user'
+
+export interface ExtensionSummary {
+  id: string
+  version: string
+  permissions?: {
+    network?: boolean
+    filesystem?: 'none' | 'workspace' | 'full'
+    shell?: boolean
+    credentials?: string[]
+  }
+  activationEvents?: string[]
+  hookEvents: string[]
+  enabled: boolean
+  source: ExtensionSource
+  pendingHookReviews: number
+}
+
 export type RuntimeToolMeta =
   | (AgentSkillToolMeta & {
       inputSchema?: unknown

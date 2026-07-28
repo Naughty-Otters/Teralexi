@@ -9,11 +9,24 @@ export type ProjectRule = {
 
 const RULE_FILE_RE = /\.(?:md|mdc)$/i
 
+/** Workspace-root always-on instruction files (Codex / Claude Code / Cursor / …). */
+export const WORKSPACE_AGENT_RULE_FILES = [
+  'AGENTS.md',
+  'AGENT.md',
+  'agents.md',
+  'agent.md',
+  'CLAUDE.md',
+  'claude.md',
+  'CODEX.md',
+  'codex.md',
+] as const
+
 function readRuleFile(filePath: string, label: string): ProjectRule | null {
   try {
     const content = readFileSync(filePath, 'utf-8').trim()
     if (!content) return null
-    const name = filePath.split(/[/\\]/).pop()?.replace(/\.(md|mdc)$/i, '') ?? label
+    const name =
+      filePath.split(/[/\\]/).pop()?.replace(/\.(md|mdc)$/i, '') ?? label
     return { name, content, source: label }
   } catch {
     return null
@@ -43,9 +56,34 @@ function loadRulesFromDirectory(
   return rules
 }
 
+/**
+ * Load always-on agent instruction files from a workspace root
+ * (AGENTS.md / AGENT.md / CLAUDE.md / CODEX.md).
+ */
+export function loadWorkspaceAgentRuleFiles(
+  workspaceRoot?: string | null,
+): ProjectRule[] {
+  const root = workspaceRoot?.trim()
+  if (!root || !existsSync(root)) return []
+
+  const rules: ProjectRule[] = []
+  const seenLower = new Set<string>()
+  for (const name of WORKSPACE_AGENT_RULE_FILES) {
+    const lower = name.toLowerCase()
+    if (seenLower.has(lower)) continue
+    const path = join(root, name)
+    if (!existsSync(path)) continue
+    seenLower.add(lower)
+    const rule = readRuleFile(path, `workspace/${name}`)
+    if (rule) rules.push(rule)
+  }
+  return rules
+}
+
 export function loadProjectRules(options: {
   userRulesDir?: string | null
   workspaceRulesDir?: string | null
+  workspaceRoot?: string | null
 }): ProjectRule[] {
   const user = loadRulesFromDirectory(
     options.userRulesDir?.trim() ?? '',
@@ -55,7 +93,8 @@ export function loadProjectRules(options: {
     options.workspaceRulesDir?.trim() ?? '',
     '.teralexi/rules',
   )
-  return [...user, ...workspace]
+  const agentFiles = loadWorkspaceAgentRuleFiles(options.workspaceRoot)
+  return [...user, ...workspace, ...agentFiles]
 }
 
 export function formatProjectRulesBlock(rules: readonly ProjectRule[]): string {

@@ -265,6 +265,9 @@ export async function runStandaloneAgent(parentCtx: AgentStepContext): Promise<v
       provider: attemptChoice.provider,
       modelId: attemptChoice.model,
       providerOptions: attemptChoice.providerOptions,
+      userId: parentCtx.opts.userId,
+      conversationId: parentCtx.opts.conversationId,
+      workspacePath: parentCtx.opts.workspacePathOverride,
     })
 
     const attemptUserContent = appendStandaloneRetryToUserContent(

@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "${EXTENSION_ROOT}/scripts/block-secret-paths.sh"
+      }
+    ]
+  }
+}

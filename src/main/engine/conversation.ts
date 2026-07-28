@@ -30,6 +30,11 @@ import { ProviderContext } from '@main/agent/providers/context'
 import { clearPlanExecutionCompleted } from '@main/agent/coding/plan-mode-session-reminders'
 import { isPlanModeActive } from '@main/agent/coding/plan-mode-state'
 import { runUserHooks } from '@main/agent/hooks/user-hooks'
+import { applyAdditionalContextToSystemPrompt } from '@main/agent/hooks/hook-result-applier'
+import {
+  appendConversationHookContext,
+  consumeConversationHookContext,
+} from '@main/skills/extension-host'
 import { getWorkspacePath } from '@main/agent/workspace/conversation-workspace'
 import { clearFollowUpMeta } from '@main/agent/follow-up'
 import { resolveSandboxRootForConversation } from '@main/agent/sandbox'
@@ -371,21 +376,30 @@ async function executeAgentForConversation(
   }
 
   try {
-    await runUserHooks({
-      event: 'onSessionStart',
+    const sessionHook = await runUserHooks(
+      {
+        event: 'onSessionStart',
+        conversationId,
+        agentId,
+        workspacePath,
+      },
+      [],
+      { userId, workspacePath: workspacePath ?? undefined },
+    )
+    appendConversationHookContext(
       conversationId,
-      agentId,
-      workspacePath,
-    })
+      sessionHook.hookSpecificOutput?.additionalContext,
+    )
   } catch {
     // Hooks are optional; do not block agent runs when misconfigured.
   }
 
   const conversationHooks =
     getConversationStore().getConversationHooks(conversationId).hooks
-  const userMessage =
+  let userMessage =
     resolveTurnUserContent({ uiMessages, pendingUserMessage }) ?? undefined
 
+  const hookOpts = { userId, workspacePath: workspacePath ?? undefined }
   const preHookResult = await runUserHooks(
     {
       event: 'preHook',
@@ -396,6 +410,7 @@ async function executeAgentForConversation(
       userMessage,
     },
     conversationHooks,
+    hookOpts,
   )
   if (preHookResult.blocked) {
     return {
@@ -403,6 +418,10 @@ async function executeAgentForConversation(
       hasError: true,
       errorMessage: preHookResult.message ?? 'Blocked by conversation pre-hook',
     }
+  }
+  const updatedUserMessage = preHookResult.hookSpecificOutput?.updatedInput?.userMessage
+  if (typeof updatedUserMessage === 'string' && updatedUserMessage.trim()) {
+    userMessage = updatedUserMessage
   }
 
   // New turn: drop prior chips and re-enable catalog writes for this run.
@@ -493,7 +512,10 @@ async function executeAgentForConversation(
         provider: runLlm.provider,
         model: runLlm.model,
         stageLlm: runLlm.stageLlm,
-        systemPrompt: agent.systemPrompt,
+        systemPrompt: applyAdditionalContextToSystemPrompt(agent.systemPrompt, [
+          ...consumeConversationHookContext(conversationId),
+          preHookResult.hookSpecificOutput?.additionalContext,
+        ]),
         responseLanguage: resolveResponseLanguageForAgent(agent.responseLanguage),
         abortSignal: abortController.signal,
         messages: history,
@@ -557,6 +579,7 @@ async function executeAgentForConversation(
               finalContent: '',
             },
             conversationHooks,
+            hookOpts,
           )
         } catch {
           // post-hooks are best-effort
@@ -683,6 +706,7 @@ async function executeAgentForConversation(
           finalContent,
         },
         conversationHooks,
+        hookOpts,
       )
     } catch {
       // post-hooks are best-effort

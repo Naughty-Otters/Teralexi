@@ -28,7 +28,9 @@ import {
   extractYamlFrontmatterBlock,
   stripYamlFrontmatter,
   isEffectiveBundledSkill,
+  findSkillMarkdownPath,
 } from './skill-path'
+import { SKILL_INSTRUCTION_MARKERS } from './skill-ecosystem'
 import {
   bundledSkillFolder,
   getBundledSkillSource,
@@ -129,7 +131,10 @@ export function computeSkillSourceFingerprint(skillId: string): string {
   }
 
   const parts: string[] = []
-  const markerFiles = [SKILL_FILES.SKILL_MD, SKILL_FILES.PROPERTIES_MD]
+  const markerFiles = [
+    ...SKILL_INSTRUCTION_MARKERS,
+    SKILL_FILES.PROPERTIES_MD,
+  ]
 
   for (const name of markerFiles) {
     const path = join(folder, name)
@@ -170,7 +175,12 @@ export function gatherSkillCompileInput(
   let propertiesRaw: string
 
   if (folder) {
-    skillMd = readFileSync(join(folder, SKILL_FILES.SKILL_MD), 'utf-8')
+    const skillMdPath = findSkillMarkdownPath(folder)
+    if (!skillMdPath) {
+      log.warn('skill compile gather: skill marker missing', { skillId, folder })
+      return null
+    }
+    skillMd = readFileSync(skillMdPath, 'utf-8')
     propertiesRaw = resolvePropertiesRaw(skillId, folder, skillMd)
   } else if (isEffectiveBundledSkill(skillId)) {
     const bundled = getBundledSkillSource(skillId)

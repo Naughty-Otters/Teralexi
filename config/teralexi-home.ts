@@ -1,10 +1,12 @@
 import { createRequire } from 'module'
 import { mkdirSync } from 'fs'
 import { homedir } from 'os'
-import { dirname, join, resolve } from 'path'
+import { dirname, isAbsolute, join, resolve } from 'path'
 import { CONFIG_PROPERTIES_FILENAME } from './system-prop-keys'
 
 export const TERALEXI_HOME_DIRNAME = '.teralexi'
+/** Cross-bundle path sync: bootstrap and main-app are separate Rollup outputs. */
+export const TERALEXI_HOME_ENV = 'TERALEXI_HOME'
 export const TERALEXI_DB_FILENAME = 'teralexi.db'
 export const TERALEXI_MEMORY_VECTORS_DB_FILENAME = 'memory-vectors.db'
 
@@ -18,7 +20,9 @@ const TERALEXI_APP_DIRS = [
   'channels',
   'accounts',
   'skills',
+  'skill-module-cache',
   'toolSet',
+  'extensions',
   'workflows',
   'rules',
   'stress-runs',
@@ -39,18 +43,98 @@ const TERALEXI_DB_DIRNAME = 'db'
 let initialized = false
 let teralexiHomePath: string | null = null
 
-function resolveTeralexiHomePath(): string {
-  return join(homedir(), TERALEXI_HOME_DIRNAME)
+type ElectronAppLike = {
+  getPath: (name: string) => string
+}
+
+/**
+ * Packaged macOS apps launched from Finder often have cwd `/`.
+ * If `os.homedir()` / `$HOME` is empty, `resolve(join('', '.teralexi'))`
+ * becomes `/.teralexi` and mkdir fails with ENOENT.
+ */
+function isUsableUserHome(candidate: string | undefined | null): candidate is string {
+  if (!candidate) return false
+  const trimmed = candidate.trim()
+  if (!trimmed) return false
+  if (!isAbsolute(trimmed)) return false
+  const resolved = resolve(trimmed)
+  if (resolved === '/' || /^[A-Za-z]:[\\/]?$/.test(resolved)) return false
+  return true
+}
+
+function isUsableTeralexiHome(candidate: string | undefined | null): candidate is string {
+  if (!candidate) return false
+  const trimmed = candidate.trim()
+  if (!trimmed || !isAbsolute(trimmed)) return false
+  const resolved = resolve(trimmed)
+  const parent = dirname(resolved)
+  if (parent === '/' || /^[A-Za-z]:[\\/]?$/.test(parent)) return false
+  return (
+    resolved === join(parent, TERALEXI_HOME_DIRNAME) ||
+    resolved.endsWith(`/${TERALEXI_HOME_DIRNAME}`) ||
+    resolved.endsWith(`\\${TERALEXI_HOME_DIRNAME}`)
+  )
+}
+
+function resolveUserHome(app?: ElectronAppLike | null): string {
+  const candidates: Array<string | undefined | null> = []
+
+  if (app) {
+    try {
+      candidates.push(app.getPath('home'))
+    } catch {
+      // app.getPath may throw before ready in some Electron builds
+    }
+  }
+
+  candidates.push(
+    (() => {
+      try {
+        return homedir()
+      } catch {
+        return null
+      }
+    })(),
+    process.env.HOME,
+    process.env.USERPROFILE,
+  )
+
+  for (const candidate of candidates) {
+    if (isUsableUserHome(candidate)) {
+      return resolve(candidate.trim())
+    }
+  }
+
+  throw new Error(
+    'Unable to resolve a writable user home directory for ~/.teralexi (HOME/homedir empty or /)',
+  )
+}
+
+function resolveTeralexiHomePath(app?: ElectronAppLike | null): string {
+  const fromEnv = process.env[TERALEXI_HOME_ENV]
+  if (isUsableTeralexiHome(fromEnv)) {
+    return resolve(fromEnv.trim())
+  }
+  return join(resolveUserHome(app ?? getElectronApp()), TERALEXI_HOME_DIRNAME)
+}
+
+/** Publish resolved paths so the separately-bundled main-app process sees them. */
+function publishHomeEnv(teralexiHome: string): void {
+  process.env[TERALEXI_HOME_ENV] = teralexiHome
+  const userHome = dirname(teralexiHome)
+  if (!isUsableUserHome(process.env.HOME)) {
+    process.env.HOME = userHome
+  }
+  if (process.platform === 'win32' && !isUsableUserHome(process.env.USERPROFILE)) {
+    process.env.USERPROFILE = userHome
+  }
 }
 
 export function getTeralexiHome(): string {
-  if (!teralexiHomePath) {
-    teralexiHomePath = resolveTeralexiHomePath()
-  }
-  if (!initialized) {
+  if (!initialized || !teralexiHomePath) {
     initializeTeralexiHome(getElectronApp())
   }
-  return teralexiHomePath
+  return teralexiHomePath!
 }
 
 export function getTeralexiConfigDir(): string {
@@ -138,6 +222,20 @@ export function getTeralexiSkillsDir(): string {
 /** User overrides for shared tools (`~/.teralexi/toolSet`). */
 export function getTeralexiToolSetDir(): string {
   const dir = join(getTeralexiHome(), 'toolSet')
+  ensureDir(dir)
+  return dir
+}
+
+/** User-installed extensions (`~/.teralexi/extensions`). Same id wins over bundled. */
+export function getTeralexiExtensionsDir(): string {
+  const dir = join(getTeralexiHome(), 'extensions')
+  ensureDir(dir)
+  return dir
+}
+
+/** Writable esbuild output for skill/extension actions when the app is packaged. */
+export function getTeralexiSkillModuleCacheDir(): string {
+  const dir = join(getTeralexiHome(), 'skill-module-cache')
   ensureDir(dir)
   return dir
 }
@@ -274,10 +372,6 @@ export function resolveAgentPersonaSnapshotPath(agentId: string): string {
   )
 }
 
-type ElectronAppLike = {
-  getPath: (name: string) => string
-}
-
 function getElectronApp(): ElectronAppLike | null {
   try {
     const require = createRequire(import.meta.url)
@@ -305,14 +399,19 @@ export function ensureParentDirForFile(filePath: string): void {
  * Electron `userData` stays at the default OS location for Chromium internals.
  */
 export function initializeTeralexiHome(app?: ElectronAppLike | null): string {
-  const home = resolve(resolveTeralexiHomePath())
+  if (initialized && teralexiHomePath) {
+    return teralexiHomePath
+  }
 
-  if (initialized) {
-    return teralexiHomePath ?? home
+  const home = resolve(resolveTeralexiHomePath(app ?? getElectronApp()))
+  // Never mkdir under filesystem root (e.g. `/.teralexi` when HOME is empty).
+  if (dirname(home) === '/' || /^[A-Za-z]:[\\/]?$/.test(dirname(home))) {
+    throw new Error(`Refusing invalid Teralexi home path: ${home}`)
   }
 
   teralexiHomePath = home
   initialized = true
+  publishHomeEnv(home)
 
   ensureDir(home)
   for (const dir of TERALEXI_APP_DIRS) {
@@ -333,16 +432,17 @@ export function isTeralexiHomeInitialized(): boolean {
 
 /** Default Electron userData path for a given app name. */
 export function guessDefaultElectronUserData(appName = 'teralexi'): string {
+  const userHome = resolveUserHome(getElectronApp())
   const platform = process.platform
   if (platform === 'darwin') {
-    return join(homedir(), 'Library', 'Application Support', appName)
+    return join(userHome, 'Library', 'Application Support', appName)
   }
   if (platform === 'win32') {
-    const appData = process.env.APPDATA ?? join(homedir(), 'AppData', 'Roaming')
+    const appData = process.env.APPDATA ?? join(userHome, 'AppData', 'Roaming')
     return join(appData, appName)
   }
   return join(
-    process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config'),
+    process.env.XDG_CONFIG_HOME ?? join(userHome, '.config'),
     appName,
   )
 }

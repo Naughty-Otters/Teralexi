@@ -1,14 +1,16 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { createLogger } from '@main/logger'
-import { SKILL_FILES, SKILL_LOADER_LOG } from './constants'
+import { SKILL_LOADER_LOG } from './constants'
 import type { SkillDefinition } from './skill-models'
 import type { SkillTool } from './types'
 import {
   extractYamlFrontmatterBlock,
+  findSkillMarkdownPath,
   isLoadableSkillFolder,
   normalizeSkillFileText,
   resolvePropertiesRaw,
+  resolveProjectSkillsDirectory,
   resolveUserSkillsDirectory,
   stripYamlFrontmatter,
 } from './skill-path'
@@ -66,7 +68,12 @@ export async function loadSkillsFromDirectory(
   options?: { globalTools?: SkillTool[] },
 ): Promise<SkillDefinition[]> {
   if (!existsSync(skillsDir)) {
-    mkdirSync(skillsDir, { recursive: true })
+    try {
+      mkdirSync(skillsDir, { recursive: true })
+    } catch (err) {
+      log.warn('Failed to create skills directory', { skillsDir, err })
+      return []
+    }
     return []
   }
 
@@ -86,7 +93,8 @@ export async function loadSkillsFromDirectory(
     if (!isLoadableSkillFolder(skillsDir, entry)) continue
 
     const skillFolder = join(skillsDir, entry)
-    const skillFile = join(skillFolder, SKILL_FILES.SKILL_MD)
+    const skillFile = findSkillMarkdownPath(skillFolder)
+    if (!skillFile) continue
 
     try {
       let skillRaw = normalizeSkillFileText(readFileSync(skillFile, 'utf-8'))
@@ -163,14 +171,26 @@ export async function loadSkillsFromDirectory(
 }
 
 /**
- * Loads skills from statically bundled defaults and `~/.teralexi/skills`, merged by id.
- * User skills overwrite bundled skills with the same folder name.
+ * Loads skills from statically bundled defaults, project `.teralexi/skills`,
+ * and `~/.teralexi/skills`, merged by id (later sources overwrite earlier).
  */
-export async function loadSkills(): Promise<SkillDefinition[]> {
+export async function loadSkills(options?: {
+  workspacePath?: string
+}): Promise<SkillDefinition[]> {
   const globalTools = await loadToolSetTools()
   const byId = new Map<string, SkillDefinition>()
   for (const skill of await buildBundledSkillDefinitions(globalTools)) {
     byId.set(skill.id, skill)
+  }
+
+  const projectSkillsDir = resolveProjectSkillsDirectory(options?.workspacePath)
+  if (projectSkillsDir) {
+    const projectSkills = await loadSkillsFromDirectory(projectSkillsDir, {
+      globalTools,
+    })
+    for (const skill of projectSkills) {
+      byId.set(skill.id, skill)
+    }
   }
 
   const userSkillsDir = resolveUserSkillsDirectory()
@@ -187,7 +207,7 @@ export async function loadSkills(): Promise<SkillDefinition[]> {
   }
 
   log.info(SKILL_LOADER_LOG.LOADED, {
-    sources: ['bundled:main.js', userSkillsDir],
+    sources: ['bundled:main.js', projectSkillsDir, userSkillsDir],
     count: merged.length,
     skillIds: merged.map((s) => s.id),
   })

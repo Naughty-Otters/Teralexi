@@ -1,19 +1,45 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
-import { join } from 'path'
-import { getTeralexiSkillsDir, getTeralexiToolSetDir } from '@config/teralexi-home'
+import { join, resolve } from 'path'
+import {
+  getTeralexiExtensionsDir,
+  getTeralexiSkillsDir,
+  getTeralexiToolSetDir,
+} from '@config/teralexi-home'
 import { joinAppResourcePath } from '@main/config/app-paths'
 import { getBundledSkillIds, isBundledSkillId } from './bundled-skills-manifest'
 import type { SkillToolOs } from './types'
-import { SKILL_FILES, SKILLS_RESERVED_DIR_NAMES } from './constants'
+import { EXTENSION_FILES, SKILL_FILES, SKILLS_RESERVED_DIR_NAMES } from './constants'
 import { buildDefaultPropertiesYaml } from './llm-constants'
+import {
+  canonicalizeSkillProperties,
+  canonicalizeSkillPropertyKey,
+  findSkillMarkdownPath,
+  hasSkillInstructionMarker,
+  normalizeAllowedToolsList,
+} from './skill-ecosystem'
 
 const RESERVED_SKILL_DIR_NAMES = new Set(SKILLS_RESERVED_DIR_NAMES)
 
 export type SkillsSources = {
   /** Shipped defaults (repo or app bundle). */
   bundled: string
+  /** Project overrides under `<workspace>/.teralexi/skills`. Null when no usable workspace. */
+  project: string | null
   /** User overrides under `~/.teralexi/skills`. */
   user: string
+}
+
+/**
+ * Packaged macOS apps launched from Finder often have `process.cwd() === '/'`.
+ * Using that as a project root yields `/.teralexi/skills` and mkdir fails LoadSkills.
+ */
+export function isUsableProjectWorkspaceRoot(dir: string | undefined | null): boolean {
+  if (!dir?.trim()) return false
+  const resolved = resolve(dir.trim())
+  if (resolved === '/' || /^[A-Za-z]:[\\/]?$/.test(resolved)) return false
+  // Never treat the app bundle itself as a user project workspace.
+  if (/\.app\/Contents(\/|$)/i.test(resolved.replace(/\\/g, '/'))) return false
+  return true
 }
 
 export function getHostToolOs(): SkillToolOs {
@@ -42,7 +68,7 @@ export function isLoadableSkillFolder(
   } catch {
     return false
   }
-  return existsSync(join(skillFolder, SKILL_FILES.SKILL_MD))
+  return hasSkillInstructionMarker(skillFolder)
 }
 
 function listLoadableSkillIds(skillsDir: string): string[] {
@@ -71,19 +97,30 @@ export function resolveUserSkillsDirectory(): string {
   return getTeralexiSkillsDir()
 }
 
-export function resolveSkillsSources(): SkillsSources {
+/** Project-scoped skills: `<workspace>/.teralexi/skills` (npx skills project scope). */
+export function resolveProjectSkillsDirectory(
+  workspacePath?: string,
+): string | null {
+  const explicit = workspacePath?.trim()
+  const base = explicit || process.cwd()
+  if (!isUsableProjectWorkspaceRoot(base)) return null
+  return join(resolve(base), '.teralexi', 'skills')
+}
+
+export function resolveSkillsSources(workspacePath?: string): SkillsSources {
   return {
     bundled: resolveBundledSkillsDirectory(),
+    project: resolveProjectSkillsDirectory(workspacePath),
     user: resolveUserSkillsDirectory(),
   }
 }
 
 /**
- * Skills roots in merge order: bundled first, user last (user overwrites bundled).
+ * Skills roots in merge order: bundled → project → user (later overwrites earlier).
  */
-export function resolveSkillsSourceRoots(): string[] {
-  const { bundled, user } = resolveSkillsSources()
-  return [bundled, user]
+export function resolveSkillsSourceRoots(workspacePath?: string): string[] {
+  const { bundled, project, user } = resolveSkillsSources(workspacePath)
+  return project ? [bundled, project, user] : [bundled, user]
 }
 
 /** User overrides: `~/.teralexi/toolSet`. */
@@ -97,6 +134,56 @@ export function resolveUserToolSetDirectory(): string {
  */
 export function resolveToolSetSourceRoots(): string[] {
   return [resolveBundledToolSetDirectory(), resolveUserToolSetDirectory()]
+}
+
+/**
+ * An extension folder is loadable when it has an `extension.json` manifest —
+ * the same "marker file decides the folder is loadable" rule `skill.md` plays
+ * for skills. A skill-only folder with no `extension.json` is just a skill,
+ * not additionally scanned as an extension.
+ */
+export function isLoadableExtensionFolder(
+  extensionsDir: string,
+  entry: string,
+): boolean {
+  if (isReservedSkillDirName(entry)) return false
+  const extensionFolder = join(extensionsDir, entry)
+  try {
+    if (!statSync(extensionFolder).isDirectory()) return false
+  } catch {
+    return false
+  }
+  return existsSync(join(extensionFolder, EXTENSION_FILES.MANIFEST_JSON))
+}
+
+/** Shipped defaults: `<repo>/extensions` or `<app>/extensions` when packaged. */
+export function resolveBundledExtensionsDirectory(): string {
+  return joinAppResourcePath('extensions')
+}
+
+/** `~/.teralexi/extensions` — user-installed extensions; wins on id conflicts. */
+export function resolveUserExtensionsDirectory(): string {
+  return getTeralexiExtensionsDir()
+}
+
+/** Extension roots in merge order: bundled first, user last (user overwrites bundled). */
+export function resolveExtensionsSourceRoots(workspacePath?: string): string[] {
+  const project = resolveProjectExtensionsDirectory(workspacePath)
+  return [
+    resolveBundledExtensionsDirectory(),
+    ...(project ? [project] : []),
+    resolveUserExtensionsDirectory(),
+  ]
+}
+
+/** Project-scoped extensions: `<workspace>/.teralexi/extensions`. */
+export function resolveProjectExtensionsDirectory(
+  workspacePath?: string,
+): string | null {
+  const explicit = workspacePath?.trim()
+  const base = explicit || process.cwd()
+  if (!isUsableProjectWorkspaceRoot(base)) return null
+  return join(resolve(base), '.teralexi', 'extensions')
 }
 
 /** True when the user has a disk folder that overrides a shipped bundled skill. */
@@ -113,21 +200,25 @@ export function isEffectiveBundledSkill(skillId: string): boolean {
 /** Which skills tree owns the effective folder for this id. */
 export function resolveSkillCompilationSource(
   skillId: string,
-): 'user' | 'bundled' | null {
-  const { bundled, user } = resolveSkillsSources()
+  workspacePath?: string,
+): 'user' | 'project' | 'bundled' | null {
+  const { bundled, project, user } = resolveSkillsSources(workspacePath)
   if (isLoadableSkillFolder(user, skillId)) return 'user'
+  if (project && isLoadableSkillFolder(project, skillId)) return 'project'
   if (isLoadableSkillFolder(bundled, skillId)) return 'bundled'
   if (isEffectiveBundledSkill(skillId)) return 'bundled'
   return null
 }
 
-/** User skill folder if present, otherwise bundled. */
-export function resolveSkillFolder(skillId: string): string | null {
-  const { bundled, user } = resolveSkillsSources()
-  const userFolder = join(user, skillId)
-  if (isLoadableSkillFolder(user, skillId)) return userFolder
-  const bundledFolder = join(bundled, skillId)
-  if (isLoadableSkillFolder(bundled, skillId)) return bundledFolder
+/** User skill folder if present, otherwise project, otherwise bundled. */
+export function resolveSkillFolder(
+  skillId: string,
+  workspacePath?: string,
+): string | null {
+  const { bundled, project, user } = resolveSkillsSources(workspacePath)
+  if (isLoadableSkillFolder(user, skillId)) return join(user, skillId)
+  if (project && isLoadableSkillFolder(project, skillId)) return join(project, skillId)
+  if (isLoadableSkillFolder(bundled, skillId)) return join(bundled, skillId)
   return null
 }
 
@@ -171,12 +262,30 @@ export function stripYamlFrontmatter(markdown: string): string {
   return normalizeSkillFileText(markdown).replace(/^---\n[\s\S]*?\n---\n?/, '')
 }
 
-export function parsePropertiesKeyValues(raw: string): Record<string, string> {
+/** Parse `key: value` lines without aliases or defaults. */
+export function parsePropertiesKeyValuesRaw(
+  raw: string,
+): Record<string, string> {
   const out: Record<string, string> = {}
   for (const line of normalizeSkillFileText(raw).split('\n')) {
-    const m = line.match(/^([\w-]+):\s*(.+)$/)
+    const m = line.match(/^([\w.-]+):\s*(.+)$/)
     if (!m) continue
     out[m[1]] = m[2].trim()
+  }
+  return out
+}
+
+export function parsePropertiesKeyValues(raw: string): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [rawKey, rawVal] of Object.entries(
+    parsePropertiesKeyValuesRaw(raw),
+  )) {
+    const key = canonicalizeSkillPropertyKey(rawKey)
+    let val = rawVal
+    if (key === 'allowed_tools') {
+      val = normalizeAllowedToolsList(val)
+    }
+    out[key] = val
   }
   return out
 }
@@ -210,29 +319,43 @@ export function serializePropertiesKeyValues(
 
 /** Merge skill.md YAML frontmatter with properties.md; file values override skill. */
 export function mergePropertiesRaw(baseRaw: string, overrideRaw: string): string {
-  return serializePropertiesKeyValues({
-    ...parsePropertiesKeyValues(baseRaw),
-    ...parsePropertiesKeyValues(overrideRaw),
-  })
+  return serializePropertiesKeyValues(
+    canonicalizeSkillProperties({
+      ...parsePropertiesKeyValuesRaw(baseRaw),
+      ...parsePropertiesKeyValuesRaw(overrideRaw),
+    }),
+  )
 }
 
 export function resolvePropertiesRawFromContent(
   skillId: string,
   skillRaw: string,
   propertiesFromFile: string,
+  opts?: { displayName?: string },
 ): string {
   const frontmatter = extractYamlFrontmatterBlock(skillRaw) ?? ''
-  if (frontmatter.trim() || propertiesFromFile.trim()) {
-    return mergePropertiesRaw(frontmatter, propertiesFromFile)
+  const merged = canonicalizeSkillProperties(
+    {
+      ...parsePropertiesKeyValuesRaw(frontmatter),
+      ...parsePropertiesKeyValuesRaw(propertiesFromFile),
+    },
+    { skillId, displayName: opts?.displayName },
+  )
+
+  if (
+    !frontmatter.trim() &&
+    !propertiesFromFile.trim() &&
+    !opts?.displayName
+  ) {
+    const displayName = skillId
+      .split(/[-_]+/)
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+    return buildDefaultPropertiesYaml(displayName, skillId)
   }
 
-  const displayName = skillId
-    .split(/[-_]+/)
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
-
-  return buildDefaultPropertiesYaml(displayName, skillId)
+  return serializePropertiesKeyValues(merged)
 }
 
 export function resolvePropertiesRaw(
@@ -247,3 +370,6 @@ export function resolvePropertiesRaw(
 
   return resolvePropertiesRawFromContent(skillId, skillRaw, propertiesFromFile)
 }
+
+/** Re-export for callers that only need marker discovery. */
+export { findSkillMarkdownPath, hasSkillInstructionMarker }

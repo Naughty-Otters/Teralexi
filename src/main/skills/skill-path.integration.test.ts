@@ -39,10 +39,11 @@ describe('skill-path integration', () => {
 
   beforeEach(async () => {
     projectRoot = await mkdtemp(join(tmpdir(), 'skill-path-root-'))
-    userSkillsDir = join(projectRoot, '.teralexi', 'skills')
-    userToolSetDir = join(projectRoot, '.teralexi', 'toolSet')
+    userSkillsDir = join(projectRoot, '.user-home', 'skills')
+    userToolSetDir = join(projectRoot, '.user-home', 'toolSet')
     await mkdir(join(projectRoot, 'skills'), { recursive: true })
     await mkdir(join(projectRoot, 'toolSet'), { recursive: true })
+    await mkdir(join(projectRoot, '.teralexi', 'skills'), { recursive: true })
     await mkdir(userSkillsDir, { recursive: true })
     await mkdir(userToolSetDir, { recursive: true })
     cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(projectRoot)
@@ -52,7 +53,7 @@ describe('skill-path integration', () => {
     cwdSpy.mockRestore()
   })
 
-  it('resolveSkillsSources and roots order bundled before user', async () => {
+  it('resolveSkillsSources and roots order bundled, project, then user', async () => {
     const {
       resolveSkillsSources,
       resolveSkillsSourceRoots,
@@ -60,9 +61,11 @@ describe('skill-path integration', () => {
     } = await import('./skill-path')
     const sources = resolveSkillsSources()
     expect(sources.bundled).toBe(join(projectRoot, 'skills'))
+    expect(sources.project).toBe(join(projectRoot, '.teralexi', 'skills'))
     expect(sources.user).toBe(userSkillsDir)
     expect(resolveSkillsSourceRoots()).toEqual([
       join(projectRoot, 'skills'),
+      join(projectRoot, '.teralexi', 'skills'),
       userSkillsDir,
     ])
     expect(resolveToolSetSourceRoots()).toEqual([

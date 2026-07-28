@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { mockTeralexiDir, pathsEqual } from '@test-paths'
 
 vi.mock('fs', () => ({
@@ -24,9 +24,11 @@ import {
   getHostToolOs,
   isLoadableSkillFolder,
   isReservedSkillDirName,
+  isUsableProjectWorkspaceRoot,
   resolveBundledSkillsDirectory,
   mergePropertiesRaw,
   parsePropertiesKeyValues,
+  resolveProjectSkillsDirectory,
   resolvePropertiesRaw,
   resolveSkillsSourceRoots,
   resolveSkillFolder,
@@ -57,11 +59,12 @@ describe('skill-path', () => {
     expect(isReservedSkillDirName('my-skill')).toBe(false)
   })
 
-  it('isLoadableSkillFolder requires directory with skill.md', () => {
+  it('isLoadableSkillFolder requires directory with a skill instruction marker', () => {
     vi.mocked(statSync).mockReturnValue({ isDirectory: () => true } as never)
     vi.mocked(existsSync).mockImplementation((p) =>
-      String(p).endsWith(SKILL_FILES.SKILL_MD),
+      String(p).endsWith('SKILL.md'),
     )
+    vi.mocked(readdirSync).mockReturnValue(['SKILL.md'] as never)
     expect(isLoadableSkillFolder('/skills', 'demo')).toBe(true)
     vi.mocked(statSync).mockImplementation(() => {
       throw new Error('missing')
@@ -118,11 +121,32 @@ describe('skill-path', () => {
     expect(raw).toContain('provider: ollama')
   })
 
-  it('resolveSkillsSourceRoots returns bundled then user', () => {
-    expect(resolveSkillsSourceRoots()).toEqual([
+  it('resolveSkillsSourceRoots returns bundled, project, then user', () => {
+    const roots = resolveSkillsSourceRoots('/ws')
+    expect(roots).toEqual([
+      resolveBundledSkillsDirectory(),
+      // resolve() maps POSIX absolute paths onto the host drive on Windows.
+      join(resolve('/ws'), '.teralexi', 'skills'),
+      resolveUserSkillsDirectory(),
+    ])
+  })
+
+  it('skips project skills when workspace/cwd is filesystem root', () => {
+    expect(isUsableProjectWorkspaceRoot('/')).toBe(false)
+    expect(resolveProjectSkillsDirectory('/')).toBeNull()
+    expect(resolveSkillsSourceRoots('/')).toEqual([
       resolveBundledSkillsDirectory(),
       resolveUserSkillsDirectory(),
     ])
+
+    const prev = process.cwd()
+    try {
+      process.chdir('/')
+      expect(resolveProjectSkillsDirectory()).toBeNull()
+      expect(resolveSkillsSourceRoots()).not.toContain('/.teralexi/skills')
+    } finally {
+      process.chdir(prev)
+    }
   })
 
   it('resolveToolSetSourceRoots lists bundled then user toolSet dirs', () => {

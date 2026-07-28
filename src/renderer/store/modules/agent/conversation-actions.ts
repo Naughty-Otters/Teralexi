@@ -330,6 +330,53 @@ export function createConversationActions(
     )
   }
 
+  function mapStoredConversationRow(c: {
+    id: string
+    agentId: string
+    title: string
+    createdAt: string
+    updatedAt: string
+    workspacePath?: string | null
+  }): Conversation {
+    return {
+      id: c.id,
+      agentId: c.agentId,
+      title: c.title,
+      createdAt: new Date(c.createdAt),
+      updatedAt: new Date(c.updatedAt),
+      type: classifyConversationSessionId(c.id),
+      workspacePath: c.workspacePath?.trim() || null,
+    }
+  }
+
+  /** Merge recent DB conversations so boot works even if skill agents failed to load. */
+  async function loadRecentConversationsAcrossAgents(): Promise<void> {
+    const channel = window.ipcRendererChannel?.ListRecentConversations
+    if (!channel?.invoke) return
+    try {
+      const stored = await channel.invoke({ limit: 200 })
+      if (!Array.isArray(stored) || stored.length === 0) return
+
+      const next: Record<string, Conversation[]> = {
+        ...conversationList.value,
+      }
+      for (const row of stored) {
+        const conv = mapStoredConversationRow(row)
+        const list = next[conv.agentId] ?? []
+        if (list.some((c) => c.id === conv.id)) continue
+        next[conv.agentId] = [...list, conv]
+      }
+      for (const agentId of Object.keys(next)) {
+        next[agentId] = (next[agentId] ?? [])
+          .slice()
+          .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      }
+      conversationList.value = next
+    } catch (err) {
+      log.warn('ListRecentConversations failed', { err })
+    }
+  }
+
   function patchConversationWorkspacePath(
     conversationId: string,
     workspacePath: string | null,
@@ -622,7 +669,7 @@ export function createConversationActions(
       agentId = pickDefaultChatAgentId()
       if (agentId) selectedAgentId.value = agentId
     } else {
-      agentId = selectedAgentId.value
+      agentId = selectedAgentId.value ?? pickDefaultChatAgentId()
     }
 
     const requestedWorkspace = options?.workspacePath?.trim() || null
@@ -630,7 +677,10 @@ export function createConversationActions(
       workspacePathToApply = requestedWorkspace
     }
 
-    if (!agentId) return null
+    if (!agentId) {
+      log.warn('createNewConversation aborted: no chat agent available')
+      return null
+    }
     const now = new Date()
     const conv: Conversation = {
       id: randomShortUuid(),
@@ -846,6 +896,7 @@ export function createConversationActions(
     syncSelectedAgentFromConversation,
     assignAgentToConversation,
     loadConversationList,
+    loadRecentConversationsAcrossAgents,
     loadConversationMessages,
     refreshConversationMessagesTail,
     loadOlderConversationMessages,

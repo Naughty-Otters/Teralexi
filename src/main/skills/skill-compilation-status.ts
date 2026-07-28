@@ -1,8 +1,6 @@
 import { readFileSync } from 'fs'
-import { join } from 'path'
 import { createLogger } from '@main/logger'
 import { getConversationStore } from '@main/services/conversation-store'
-import { SKILL_FILES } from './constants'
 import { computeSkillSourceFingerprint, compileSkill } from './skill-compiler'
 import { formatCompileError, shortFingerprint } from './skill-compiler-log'
 import {
@@ -14,6 +12,7 @@ import {
   extractYamlFrontmatterBlock,
   stripYamlFrontmatter,
   isEffectiveBundledSkill,
+  findSkillMarkdownPath,
 } from './skill-path'
 import { bundledSkillFolder, getBundledSkillSource } from './bundled-skills-manifest'
 import { parseSkillMarkdown } from './skill-markdown'
@@ -53,7 +52,9 @@ function readSkillProperties(skillId: string) {
   const folder = resolveSkillFolder(skillId)
   if (folder) {
     try {
-      let skillMd = readFileSync(join(folder, SKILL_FILES.SKILL_MD), 'utf-8')
+      const skillMdPath = findSkillMarkdownPath(folder)
+      if (!skillMdPath) return null
+      let skillMd = readFileSync(skillMdPath, 'utf-8')
       const propertiesRaw = resolvePropertiesRaw(skillId, folder, skillMd)
       if (extractYamlFrontmatterBlock(skillMd)) {
         skillMd = stripYamlFrontmatter(skillMd)

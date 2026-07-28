@@ -19,6 +19,7 @@ import {
 import type { ProviderCredentials, ProviderType } from '../types'
 import type { ApiKeyBaseUrlProviderId } from '@shared/agent/llm-provider-registry'
 import { createLogger, instrumentInstanceMethods } from '@main/logger'
+import { getExtensionLlmProvider } from './extension-llm-provider-registry'
 
 const log = createLogger('agent.providers.adapters')
 
@@ -242,13 +243,17 @@ export const PROVIDER_ADAPTERS: Record<ProviderType, ProviderAdapter> = {
 }
 
 export function createModelForProvider(
-  provider: ProviderType,
+  provider: string,
   modelId: string,
   creds: ProviderCredentials,
 ): unknown {
-  const adapter = PROVIDER_ADAPTERS[provider]
-  if (!adapter) {
-    throw new Error(`Unknown provider: ${provider}`)
+  const builtin = PROVIDER_ADAPTERS[provider as ProviderType]
+  if (builtin) {
+    return builtin.createModel(modelId, creds)
   }
-  return adapter.createModel(modelId, creds)
+  const extensionProvider = getExtensionLlmProvider(provider)
+  if (extensionProvider) {
+    return extensionProvider.adapter.createModel(modelId, creds)
+  }
+  throw new Error(`Unknown provider: ${provider}`)
 }

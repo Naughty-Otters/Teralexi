@@ -103,10 +103,22 @@ describe('parseCommaSeparatedToolList', () => {
 })
 
 describe('parseSkillMarkdown', () => {
-  it('returns null when required fields missing', () => {
+  it('returns null when name is missing', () => {
     expect(
-      parseSkillMarkdown('id', '/tmp', 'name: only', '# skill'),
+      parseSkillMarkdown('id', '/tmp', 'model: llama\nprovider: ollama', '# skill'),
     ).toBeNull()
+  })
+
+  it('fills model/provider defaults for Agent Skills-style frontmatter', () => {
+    const parsed = parseSkillMarkdown(
+      'id',
+      '/tmp',
+      'name: only\ndescription: eco skill',
+      '# skill',
+    )
+    expect(parsed?.properties.name).toBe('only')
+    expect(parsed?.properties.model).toBeTruthy()
+    expect(parsed?.properties.provider).toBeTruthy()
   })
 
   it('uses full skill body when Instructions section is absent', () => {

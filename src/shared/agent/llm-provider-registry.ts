@@ -292,6 +292,18 @@ export function isProviderType(value: string): value is ProviderType {
   return (LLM_PROVIDER_IDS as readonly string[]).includes(value)
 }
 
+/** Extension-scoped provider ids registered at runtime (`extensionId:providerId`). */
+export function isExtensionScopedProviderId(value: string): boolean {
+  const trimmed = value.trim()
+  if (!trimmed.includes(':')) return false
+  const [extensionId, providerId] = trimmed.split(':', 2)
+  return Boolean(extensionId?.trim() && providerId?.trim())
+}
+
+export function isKnownProviderId(value: string): boolean {
+  return isProviderType(value) || isExtensionScopedProviderId(value)
+}
+
 export function normalizeProviderBaseUrl(
   url: string,
   fallback: string,

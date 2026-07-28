@@ -1,27 +1,43 @@
 import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import type { ConversationHookEntry } from '@shared/agent/conversation-hooks'
 import type {
-  ConversationHookEntry,
-  ConversationHookEvent,
-} from '@shared/agent/conversation-hooks'
+  HookEvent,
+  HookInvocationContext,
+  HookRunResult,
+  HookSpecificOutput,
+  RunnableAgentHookBinding,
+  RunnableCommandHookBinding,
+  RunnableFunctionHookBinding,
+  RunnableHookBinding,
+  RunnablePromptHookBinding,
+} from '@shared/agent/hooks'
+import { BLOCKING_HOOK_EVENTS } from '@shared/agent/hooks'
+import {
+  filterBindingsForEvent,
+  normalizeConversationHooks,
+  normalizeFlatHooksFile,
+} from './hook-binding-normalizer'
+import { mergeHookResults } from './hook-result-applier'
+import { execAgentHook } from './hook-agent-executor'
+import { execPromptHook } from './hook-prompt-executor'
+import { getExtensionHookBindings } from '@main/skills/extension-host'
+import type { ProviderCredentials } from '@main/agent/types'
+import type { HookResult } from '@teralexi/skill-sdk'
+import type { SubAgentParentRun } from '@toolSet/sub-agents/delegation-context'
 
-const execFileAsync = promisify(execFile)
+export type { HookEvent, HookInvocationContext, HookRunResult }
 
-export type UserHookEvent =
-  | 'beforeToolCall'
-  | 'afterToolCall'
-  | 'onSessionStart'
-  | 'onApprovalRequired'
-  | ConversationHookEvent
+/** @deprecated Use {@link HookEvent} */
+export type UserHookEvent = HookEvent
 
+/** @deprecated Legacy flat hook entry shape */
 export type UserHookEntry = {
-  event: UserHookEvent
+  event: HookEvent
   command: string
   args?: string[]
-  /** Optional id when sourced from per-conversation settings. */
   id?: string
   enabled?: boolean
 }
@@ -30,112 +46,226 @@ export type UserHooksConfig = {
   hooks: UserHookEntry[]
 }
 
-export type HookInvocationContext = {
-  event: UserHookEvent
-  conversationId?: string
-  agentId?: string
-  assistantMessageId?: string
-  toolName?: string
-  toolInput?: unknown
-  toolResult?: unknown
-  workspacePath?: string | null
-  /** Plain-text user message for the current turn (pre/post hooks). */
-  userMessage?: string
-  hasError?: boolean
-  errorMessage?: string
-  finalContent?: string
+export type RunUserHooksOptions = {
+  userId?: string
+  workspacePath?: string
+  credentials?: ProviderCredentials
+  defaultProvider?: string
+  defaultModel?: string
+  hookDelegation?: {
+    parentRun?: SubAgentParentRun
+    parentOpts?: Record<string, unknown>
+  }
 }
 
-const HOOK_PATHS = [
-  join(homedir(), '.teralexi', 'hooks.json'),
-  join(process.cwd(), '.teralexi', 'hooks.json'),
-]
+const GLOBAL_HOOKS_PATH = join(homedir(), '.teralexi', 'hooks.json')
 
-/** Events where a failed hook or stderr blocks the action. */
-const BLOCKING_HOOK_EVENTS = new Set<UserHookEvent>([
-  'beforeToolCall',
-  'preHook',
-])
+function projectHooksPath(workspacePath?: string): string {
+  const base = workspacePath?.trim() || process.cwd()
+  return join(base, '.teralexi', 'hooks.json')
+}
 
-let cachedConfig: UserHooksConfig | null | undefined
+let cachedProjectHooksPath: string | undefined
+let cachedProjectHooks: RunnableHookBinding[] | undefined
+let cachedGlobalHooks: RunnableHookBinding[] | undefined
 
 export function clearUserHooksCache(): void {
-  cachedConfig = undefined
+  cachedProjectHooksPath = undefined
+  cachedProjectHooks = undefined
+  cachedGlobalHooks = undefined
 }
 
-export function loadUserHooksConfig(): UserHooksConfig {
-  if (cachedConfig !== undefined) return cachedConfig ?? { hooks: [] }
-  for (const p of HOOK_PATHS) {
-    if (!existsSync(p)) continue
-    try {
-      const parsed = JSON.parse(readFileSync(p, 'utf-8')) as UserHooksConfig
-      cachedConfig = {
-        hooks: Array.isArray(parsed.hooks) ? parsed.hooks : [],
+function readHooksFileBindings(
+  path: string,
+  source: 'global-hooks-json' | 'project-hooks-json',
+): RunnableHookBinding[] {
+  if (!existsSync(path)) return []
+  try {
+    const raw = JSON.parse(readFileSync(path, 'utf-8'))
+    return normalizeFlatHooksFile(raw, source)
+  } catch {
+    return []
+  }
+}
+
+function loadGlobalHookBindings(): RunnableHookBinding[] {
+  if (cachedGlobalHooks) return cachedGlobalHooks
+  cachedGlobalHooks = readHooksFileBindings(GLOBAL_HOOKS_PATH, 'global-hooks-json')
+  return cachedGlobalHooks
+}
+
+function loadProjectHookBindings(workspacePath?: string): RunnableHookBinding[] {
+  const path = projectHooksPath(workspacePath)
+  if (cachedProjectHooks && cachedProjectHooksPath === path) {
+    return cachedProjectHooks
+  }
+  cachedProjectHooksPath = path
+  cachedProjectHooks = readHooksFileBindings(path, 'project-hooks-json')
+  return cachedProjectHooks
+}
+
+async function collectBindingsForEvent(
+  event: HookEvent,
+  extraHooks: ConversationHookEntry[],
+  options?: RunUserHooksOptions,
+): Promise<RunnableHookBinding[]> {
+  const extensionBindings = options?.userId
+    ? filterBindingsForEvent(
+        await getExtensionHookBindings(options.userId, options.workspacePath),
+        event,
+      )
+    : []
+
+  const projectBindings = filterBindingsForEvent(
+    loadProjectHookBindings(options?.workspacePath),
+    event,
+  )
+  const globalBindings = filterBindingsForEvent(loadGlobalHookBindings(), event)
+  const conversationBindings = filterBindingsForEvent(
+    normalizeConversationHooks(extraHooks),
+    event,
+  )
+
+  return [
+    ...extensionBindings,
+    ...projectBindings,
+    ...globalBindings,
+    ...conversationBindings,
+  ]
+}
+
+function execHookCommand(
+  binding: RunnableCommandHookBinding,
+  payload: string,
+): Promise<{ stdout: string; stderr: string; error?: Error }> {
+  const timeout = binding.timeout ?? 30_000
+  return new Promise((resolve) => {
+    const child = execFile(
+      binding.command,
+      [...(binding.args ?? []), payload],
+      { timeout, maxBuffer: 1024 * 1024 },
+      (error, stdout, stderr) => {
+        resolve({ stdout, stderr, error: error ?? undefined })
+      },
+    )
+    child.stdin?.end(payload)
+  })
+}
+
+async function execFunctionHook(
+  binding: RunnableFunctionHookBinding,
+  ctx: HookInvocationContext,
+): Promise<HookRunResult> {
+  try {
+    const result: HookResult = await binding.handler(ctx)
+    if (!result.continue) {
+      return {
+        blocked: BLOCKING_HOOK_EVENTS.has(ctx.event),
+        message: result.stopReason ?? 'Blocked by extension hook',
+        hookSpecificOutput: result.hookSpecificOutput,
       }
-      return cachedConfig
-    } catch {
-      continue
+    }
+    return {
+      blocked: false,
+      ...(result.hookSpecificOutput ? { hookSpecificOutput: result.hookSpecificOutput } : {}),
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return {
+      blocked: BLOCKING_HOOK_EVENTS.has(ctx.event),
+      message: `Hook failed: ${message}`,
     }
   }
-  cachedConfig = { hooks: [] }
-  return cachedConfig
 }
 
-function isEnabled(entry: UserHookEntry | ConversationHookEntry): boolean {
-  return entry.enabled !== false
+function parseHookStdout(stdout: string): HookSpecificOutput | undefined {
+  const trimmed = stdout?.trim()
+  if (!trimmed) return undefined
+  try {
+    const parsed = JSON.parse(trimmed) as { hookSpecificOutput?: HookSpecificOutput }
+    return parsed?.hookSpecificOutput
+  } catch {
+    return undefined
+  }
 }
 
-function toRunnableEntries(
-  entries: Array<UserHookEntry | ConversationHookEntry>,
-  event: UserHookEvent,
-): UserHookEntry[] {
-  return entries
-    .filter((h) => h.event === event && isEnabled(h) && h.command?.trim())
-    .map((h) => ({
-      event: h.event,
-      command: h.command.trim(),
-      args: h.args,
-      id: 'id' in h ? h.id : undefined,
-      enabled: h.enabled,
-    }))
+async function runBinding(
+  binding: RunnableHookBinding,
+  ctx: HookInvocationContext,
+  payload: string,
+  options?: RunUserHooksOptions,
+): Promise<HookRunResult> {
+  if (binding.type === 'function') {
+    return execFunctionHook(binding, ctx)
+  }
+  if (binding.type === 'prompt') {
+    return execPromptHook(binding as RunnablePromptHookBinding, ctx, options)
+  }
+  if (binding.type === 'agent') {
+    return execAgentHook(binding as RunnableAgentHookBinding, ctx, options)
+  }
+  if (binding.type === 'function-ref') {
+    return {
+      blocked: BLOCKING_HOOK_EVENTS.has(ctx.event),
+      message: 'Unresolved function hook binding',
+    }
+  }
+
+  const { stdout, stderr, error } = await execHookCommand(binding, payload)
+  const blocking = BLOCKING_HOOK_EVENTS.has(ctx.event)
+
+  if (error) {
+    return {
+      blocked: blocking,
+      message: blocking ? `Hook blocked: ${error.message}` : undefined,
+    }
+  }
+  if (stderr?.trim() && blocking) {
+    return { blocked: true, message: stderr.trim() }
+  }
+
+  const hookSpecificOutput = parseHookStdout(stdout)
+  return {
+    blocked: false,
+    ...(hookSpecificOutput ? { hookSpecificOutput } : {}),
+  }
 }
 
 /**
- * Run matching hooks for an event.
- *
- * Global config (`hooks.json`) runs first, then optional per-conversation
- * `extraHooks`. `preHook` and `beforeToolCall` can block on stderr or failure.
+ * Run matching hooks for an event in layer order:
+ * extension → project hooks.json → global hooks.json → conversation hooks.
  */
 export async function runUserHooks(
   ctx: HookInvocationContext,
-  extraHooks: Array<UserHookEntry | ConversationHookEntry> = [],
-): Promise<{ blocked: boolean; message?: string }> {
-  const config = loadUserHooksConfig()
-  const entries = [
-    ...toRunnableEntries(config.hooks, ctx.event),
-    ...toRunnableEntries(extraHooks, ctx.event),
-  ]
-  if (entries.length === 0) return { blocked: false }
+  extraHooks: ConversationHookEntry[] = [],
+  options?: RunUserHooksOptions,
+): Promise<HookRunResult> {
+  const bindings = await collectBindingsForEvent(ctx.event, extraHooks, options)
+  if (bindings.length === 0) return { blocked: false }
 
   const payload = JSON.stringify(ctx)
-  const blocking = BLOCKING_HOOK_EVENTS.has(ctx.event)
+  let accumulated: HookRunResult = { blocked: false }
 
-  for (const entry of entries) {
-    try {
-      const { stderr } = await execFileAsync(
-        entry.command,
-        [...(entry.args ?? []), payload],
-        { timeout: 30_000, maxBuffer: 1024 * 1024 },
-      )
-      if (stderr?.trim() && blocking) {
-        return { blocked: true, message: stderr.trim() }
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      if (blocking) {
-        return { blocked: true, message: `Hook blocked: ${msg}` }
-      }
-    }
+  for (const binding of bindings) {
+    const result = await runBinding(binding, ctx, payload, options)
+    if (result.blocked) return result
+    accumulated = mergeHookResults(accumulated, result)
   }
-  return { blocked: false }
+
+  return accumulated
+}
+
+/** @deprecated Use {@link loadGlobalHookBindings} via runUserHooks */
+export function loadUserHooksConfig(): UserHooksConfig {
+  return {
+    hooks: loadGlobalHookBindings()
+      .filter((b): b is RunnableCommandHookBinding => b.type === 'command')
+      .map((b) => ({
+        event: b.event,
+        command: b.command,
+        args: b.args,
+        id: b.id,
+        enabled: b.enabled,
+      })),
+  }
 }

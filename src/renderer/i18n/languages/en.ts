@@ -54,6 +54,7 @@ export const lang: AppLocaleBundle = {
       chat: 'Chat',
       toolset: 'ToolSet',
       mcp: 'MCP',
+      extensions: 'Extensions',
       developer: 'Developer',
       about: 'About',
     },
@@ -180,6 +181,8 @@ export const lang: AppLocaleBundle = {
     copyBubbleContentSuccess: 'Copied to clipboard',
     copyBubbleContentFailed: 'Could not copy content',
     printBubbleContent: 'Print content',
+    emptyState: 'Select or start a conversation',
+    startNewConversation: 'New conversation',
     skillSetupTitle: 'Configure {skillName}',
     skillSetupIntro:
       'This skill needs settings saved to your local config before you can chat. They are stored in ~/.teralexi/config/config.properties and are not added to the conversation.',

@@ -7,6 +7,12 @@ import {
 } from 'fs'
 import { basename, extname, join } from 'path'
 import type { SkillTool } from './types'
+import type { HookHandler } from '@teralexi/skill-sdk'
+import type {
+  ExtensionChannelSender,
+  LlmProviderContribution,
+  UiPanelContribution,
+} from '@teralexi/skill-sdk'
 import { SKILL_FILES, SKILL_MODULE } from './constants'
 import { getBundledToolSetTools } from './bundled-toolset'
 import { getBundledSkillActionTools } from './bundled-skill-actions'
@@ -176,6 +182,84 @@ function collectToolsFromModule(
   }
 
   return tools
+}
+
+function isHookHandler(value: unknown): value is HookHandler {
+  return typeof value === 'function'
+}
+
+export function collectHooksFromModule(
+  loaded: Record<string, unknown>,
+): Partial<Record<string, HookHandler>> {
+  const raw = loaded.hooks
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  const out: Partial<Record<string, HookHandler>> = {}
+  for (const [event, handler] of Object.entries(raw as Record<string, unknown>)) {
+    if (isHookHandler(handler)) out[event] = handler
+  }
+  return out
+}
+
+export type ExtensionModuleContributions = {
+  channels?: Record<string, ExtensionChannelSender>
+  llmProviders?: Record<string, LlmProviderContribution>
+  uiPanels?: Record<string, UiPanelContribution>
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+}
+
+export function collectContributionsFromModule(
+  loaded: Record<string, unknown>,
+): ExtensionModuleContributions {
+  const out: ExtensionModuleContributions = {}
+  if (isRecord(loaded.channels)) {
+    out.channels = loaded.channels as Record<string, ExtensionChannelSender>
+  }
+  if (isRecord(loaded.llmProviders)) {
+    out.llmProviders = loaded.llmProviders as Record<string, LlmProviderContribution>
+  }
+  if (isRecord(loaded.uiPanels)) {
+    out.uiPanels = loaded.uiPanels as Record<string, UiPanelContribution>
+  }
+  return out
+}
+
+/** Resolve a hook handler export from an extension directory. */
+export async function loadExtensionHookExport(
+  extensionDir: string,
+  modulePath: string,
+  exportName: string,
+): Promise<HookHandler | undefined> {
+  const trimmed = modulePath.trim()
+  if (!trimmed || !exportName.trim()) return undefined
+  const resolved = join(extensionDir, trimmed)
+  const loaded = await requireModule(resolved)
+  if (!loaded) return undefined
+  const handler = loaded[exportName]
+  return isHookHandler(handler) ? handler : undefined
+}
+
+/** Loads `actions/index.ts` from an extension directory and returns module exports. */
+export async function loadExtensionActionsModule(
+  extensionDir: string,
+): Promise<Record<string, unknown> | undefined> {
+  const actionsDir = join(extensionDir, SKILL_FILES.ACTIONS_DIR)
+  if (!existsSync(actionsDir)) return undefined
+
+  const indexCandidates = [
+    join(actionsDir, 'index.ts'),
+    join(actionsDir, 'index.js'),
+    join(actionsDir, 'index.mjs'),
+    join(actionsDir, 'index.cjs'),
+  ]
+
+  for (const candidate of indexCandidates) {
+    const loaded = await requireModule(candidate)
+    if (loaded) return loaded
+  }
+  return undefined
 }
 
 function filterByDeclared(
@@ -422,27 +506,35 @@ async function loadToolSetToolsUncached(): Promise<SkillTool[]> {
   const userToolSetDir = resolveUserToolSetDirectory()
   const userDirExists = existsSync(userToolSetDir)
   if (userDirExists) {
-    const userTools = await loadToolSetToolsFromDirectory(userToolSetDir)
-    sources.push({
-      dir: userToolSetDir,
-      count: userTools.length,
-      exists: true,
-    })
-
-    if (userTools.length > 0) {
-      log.info('Loaded user toolSet tools from directory', {
-        toolSetDir: userToolSetDir,
+    try {
+      const userTools = await loadToolSetToolsFromDirectory(userToolSetDir)
+      sources.push({
+        dir: userToolSetDir,
         count: userTools.length,
-        sample: userTools.slice(0, 10).map((t) => t.name),
+        exists: true,
       })
-    } else {
-      log.warn('User toolSet directory exists but produced no tools', {
-        toolSetDir: userToolSetDir,
-      })
-    }
 
-    for (const tool of userTools) {
-      merged.set(tool.name, tool)
+      if (userTools.length > 0) {
+        log.info('Loaded user toolSet tools from directory', {
+          toolSetDir: userToolSetDir,
+          count: userTools.length,
+          sample: userTools.slice(0, 10).map((t) => t.name),
+        })
+      } else {
+        log.warn('User toolSet directory exists but produced no tools', {
+          toolSetDir: userToolSetDir,
+        })
+      }
+
+      for (const tool of userTools) {
+        merged.set(tool.name, tool)
+      }
+    } catch (err) {
+      log.warn('Failed to load user toolSet; continuing with bundled tools', {
+        toolSetDir: userToolSetDir,
+        err,
+      })
+      sources.push({ dir: userToolSetDir, count: 0, exists: true })
     }
   } else {
     sources.push({ dir: userToolSetDir, count: 0, exists: false })

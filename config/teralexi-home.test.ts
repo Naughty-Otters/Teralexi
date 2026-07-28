@@ -29,6 +29,7 @@ describe('teralexi-home', () => {
     vi.mocked(fs.renameSync).mockClear()
     vi.mocked(fs.existsSync).mockReturnValue(false)
     vi.mocked(homedir).mockReturnValue(mockHomedir())
+    delete process.env.TERALEXI_HOME
     createRequireMock.mockImplementation(() => () => {
       throw new Error('electron unavailable')
     })
@@ -68,6 +69,8 @@ describe('teralexi-home', () => {
     expect(mod.getTeralexiSandboxDir()).toContain('sandbox')
     expect(mod.getTeralexiSkillsDir()).toContain('skills')
     expect(mod.getTeralexiToolSetDir()).toContain('toolSet')
+    expect(mod.getTeralexiExtensionsDir()).toContain('extensions')
+    expect(mod.getTeralexiSkillModuleCacheDir()).toContain('skill-module-cache')
     expect(mod.getTeralexiLogsDir()).toContain('logs')
     expect(mod.getTeralexiAgentLogsDir()).toContain('agents')
   })
@@ -175,10 +178,77 @@ describe('teralexi-home', () => {
 
   it('uses electron app when available', async () => {
     createRequireMock.mockImplementation(() => () => ({
-      app: { getPath: vi.fn(() => '/electron') },
+      app: { getPath: vi.fn(() => '/Users/electron-user') },
     }))
     const mod = await loadTeralexiHome()
-    mod.getTeralexiHome()
+    // resolve() maps POSIX absolute paths onto the host drive on Windows.
+    expect(mod.getTeralexiHome()).toBe(
+      join(resolve('/Users/electron-user'), '.teralexi'),
+    )
     expect(createRequireMock).toHaveBeenCalled()
+  })
+
+  it('prefers electron home when os.homedir is empty', async () => {
+    vi.mocked(homedir).mockReturnValue('')
+    const prevHome = process.env.HOME
+    const prevProfile = process.env.USERPROFILE
+    delete process.env.HOME
+    delete process.env.USERPROFILE
+
+    const getPath = vi.fn((name: string) => {
+      if (name === 'home') return '/Users/from-electron'
+      throw new Error(`unexpected path: ${name}`)
+    })
+    const mod = await loadTeralexiHome()
+    const home = mod.initializeTeralexiHome({ getPath })
+
+    expect(home).toBe(join(resolve('/Users/from-electron'), '.teralexi'))
+    expect(home).not.toBe('/.teralexi')
+    expect(getPath).toHaveBeenCalledWith('home')
+
+    if (prevHome === undefined) delete process.env.HOME
+    else process.env.HOME = prevHome
+    if (prevProfile === undefined) delete process.env.USERPROFILE
+    else process.env.USERPROFILE = prevProfile
+  })
+
+  it('rejects root-level home resolution', async () => {
+    vi.mocked(homedir).mockReturnValue('/')
+    const prevHome = process.env.HOME
+    const prevProfile = process.env.USERPROFILE
+    const prevTeralexi = process.env.TERALEXI_HOME
+    process.env.HOME = '/'
+    process.env.USERPROFILE = '/'
+    delete process.env.TERALEXI_HOME
+
+    const mod = await loadTeralexiHome()
+    expect(() => mod.initializeTeralexiHome(null)).toThrow(/Unable to resolve/)
+
+    if (prevHome === undefined) delete process.env.HOME
+    else process.env.HOME = prevHome
+    if (prevProfile === undefined) delete process.env.USERPROFILE
+    else process.env.USERPROFILE = prevProfile
+    if (prevTeralexi === undefined) delete process.env.TERALEXI_HOME
+    else process.env.TERALEXI_HOME = prevTeralexi
+  })
+
+  it('reuses TERALEXI_HOME env across bundles', async () => {
+    vi.mocked(homedir).mockReturnValue('')
+    const prevHome = process.env.HOME
+    const prevTeralexi = process.env.TERALEXI_HOME
+    delete process.env.HOME
+    process.env.TERALEXI_HOME = '/Users/from-env/.teralexi'
+    const expectedHome = resolve('/Users/from-env/.teralexi')
+
+    const mod = await loadTeralexiHome()
+    const home = mod.initializeTeralexiHome(null)
+    expect(home).toBe(expectedHome)
+    expect(process.env.TERALEXI_HOME).toBe(expectedHome)
+    expect(process.env.HOME).toBe(resolve('/Users/from-env'))
+
+    if (prevHome === undefined) delete process.env.HOME
+    else process.env.HOME = prevHome
+    if (prevTeralexi === undefined) delete process.env.TERALEXI_HOME
+    else process.env.TERALEXI_HOME = prevTeralexi
   })
 })

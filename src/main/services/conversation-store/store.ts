@@ -19,6 +19,11 @@ import { ToolResultsRepository } from './tool-results-repository'
 import { ConversationSettingsRepository } from './conversation-settings-repository'
 import { WorkflowsRepository } from './workflows-repository'
 import { MessageAttachmentsRepository } from './message-attachments-repository'
+import { ExtensionSettingsRepository } from './extension-settings-repository'
+import {
+  ExtensionHookTrustRepository,
+  type HookTrustStatus,
+} from './extension-hook-trust-repository'
 import type {
   MessageSearchHit,
   StoredAgentConfiguration,
@@ -64,6 +69,8 @@ export class ConversationStore {
   private readonly conversationSettings: ConversationSettingsRepository
   private readonly workflows: WorkflowsRepository
   private readonly messageAttachments: MessageAttachmentsRepository
+  private readonly extensionSettings: ExtensionSettingsRepository
+  private readonly extensionHookTrust: ExtensionHookTrustRepository
 
   constructor() {
     const dbPath = getTeralexiDbPath()
@@ -87,6 +94,8 @@ export class ConversationStore {
     this.conversationSettings = new ConversationSettingsRepository(this.db)
     this.workflows = new WorkflowsRepository(this.db)
     this.messageAttachments = new MessageAttachmentsRepository(this.db)
+    this.extensionSettings = new ExtensionSettingsRepository(this.db)
+    this.extensionHookTrust = new ExtensionHookTrustRepository(this.db)
 
     this.userProperties.ensureDefaults('default')
     this.mcpServers.ensureReferenceServers(
@@ -236,6 +245,10 @@ export class ConversationStore {
 
   listConversations(agentId: string): StoredConversation[] {
     return this.conversations.list(agentId)
+  }
+
+  listRecentConversations(limit = 200): StoredConversation[] {
+    return this.conversations.listRecent(limit)
   }
 
   getConversation(conversationId: string): StoredConversation | null {
@@ -572,6 +585,45 @@ export class ConversationStore {
   deleteMcpServer(userId: string, serverId: string): void {
     this.mcpServers.delete(userId, serverId)
     appCache.invalidateAllMcpTools()
+  }
+
+  // ── Extensions ───────────────────────────────────────────────────────────
+
+  getExtensionEnabled(userId: string, extensionId: string): boolean {
+    return this.extensionSettings.getEnabled(userId, extensionId)
+  }
+
+  isExtensionEnabledInMap(disabledIds: Set<string>, extensionId: string): boolean {
+    return this.extensionSettings.isEnabledInMap(disabledIds, extensionId)
+  }
+
+  listDisabledExtensionIds(userId: string): Set<string> {
+    return this.extensionSettings.listDisabledIds(userId)
+  }
+
+  getExtensionHookTrustRepository(): ExtensionHookTrustRepository {
+    return this.extensionHookTrust
+  }
+
+  setExtensionHookTrustStatus(
+    userId: string,
+    trustKey: string,
+    contentHash: string,
+    status: HookTrustStatus,
+  ): void {
+    this.extensionHookTrust.setStatus(userId, trustKey, contentHash, status)
+  }
+
+  listPendingHookTrust(userId: string) {
+    return this.extensionHookTrust.listPendingForUser(userId)
+  }
+
+  setExtensionEnabled(
+    userId: string,
+    extensionId: string,
+    enabled: boolean,
+  ): void {
+    this.extensionSettings.setEnabled(userId, extensionId, enabled)
   }
 
   // ── User properties ──────────────────────────────────────────────────────

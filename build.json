@@ -10,7 +10,8 @@
     "**/node_modules/playwright/**",
     "**/node_modules/playwright-core/**",
     "config/**",
-    ".teralexi/**"
+    ".teralexi/**",
+    "extensions/**"
   ],
   "electronLanguages": [
     "en-US"
@@ -47,6 +48,8 @@
     "dist/electron/**/*",
     "config/**/*",
     ".teralexi/**/*",
+    "extensions/**/*",
+    "!extensions/**/*.test.ts",
     "!**/*.{map,tsbuildinfo}",
     "!**/*.test.{ts,tsx,js,jsx,mjs,cjs}",
     "!**/*.integration.test.{ts,tsx,js,jsx,mjs,cjs}",

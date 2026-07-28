@@ -47,7 +47,24 @@
         class="chat-panel__empty"
         role="status"
       >
-        {{ t.common.loading }}
+        <template v-if="agentStore.hasLoadedInitialConversations">
+          <p class="chat-panel__empty-text">{{ t.chat.emptyState }}</p>
+          <button
+            type="button"
+            class="chat-panel__empty-action"
+            :disabled="startingConversation"
+            @click="startEmptyStateConversation"
+          >
+            {{
+              startingConversation
+                ? t.common.loading
+                : t.chat.startNewConversation
+            }}
+          </button>
+        </template>
+        <template v-else>
+          {{ t.common.loading }}
+        </template>
       </div>
 
       <PanelResizeHandle
@@ -430,6 +447,26 @@ async function startNewSessionFromTitleBar() {
   await agentStore.selectConversation(conv.id)
 }
 
+const startingConversation = ref(false)
+
+async function startEmptyStateConversation() {
+  if (startingConversation.value) return
+  startingConversation.value = true
+  try {
+    if (agentStore.agents.length === 0) {
+      await agentStore.loadSkillsFromDisk()
+    }
+    const conv = await agentStore.createNewConversation(undefined, {
+      mode: 'fresh',
+    })
+    if (!conv) return
+    layoutStore.openConversation(conv.id)
+    await agentStore.selectConversation(conv.id)
+  } finally {
+    startingConversation.value = false
+  }
+}
+
 async function splitPane(direction: 'right' | 'down') {
   if (!canSplit.value) return
   const conv = await agentStore.createNewConversation(undefined, {
@@ -551,9 +588,40 @@ onUnmounted(() => {
 .chat-panel__empty {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 12px;
   color: var(--ui-text-muted);
   font-size: 13px;
+  padding: 24px;
+}
+
+.chat-panel__empty-text {
+  margin: 0;
+}
+
+.chat-panel__empty-action {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--ui-border);
+  background: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
+  color: var(--color-primary-700, #4f46e5);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chat-panel__empty-action:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-primary-500) 20%, transparent);
+}
+
+.chat-panel__empty-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+:global(html.dark .chat-panel__empty-action) {
+  color: var(--color-primary-300, #a5b4fc);
 }
 </style>
