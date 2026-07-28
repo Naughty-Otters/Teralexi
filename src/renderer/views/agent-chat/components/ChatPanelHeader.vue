@@ -1,5 +1,7 @@
 <template>
   <div class="chat-header">
+    <div class="chat-header-side chat-header-side--left" aria-hidden="true" />
+
     <div class="chat-header-center">
       <div class="chat-header-center-heading">
         <span
@@ -49,12 +51,17 @@
         <span v-else>{{ activeAgentModel }}</span>
       </p>
     </div>
+
+    <div class="chat-header-side chat-header-side--right">
+      <ViewHeaderActions />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ContextWindowUsage } from '@shared/agent/context-window-usage'
+import ViewHeaderActions from './ViewHeaderActions.vue'
 
 const RING_RADIUS = 10
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
@@ -90,7 +97,8 @@ const contextRingOffset = computed(() => {
 .chat-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 12px;
   flex-shrink: 0;
   min-height: var(--agent-header-min-height, 64px);
   padding: var(--agent-header-padding-y, 10px) var(--agent-header-padding-x, 20px);
@@ -98,7 +106,19 @@ const contextRingOffset = computed(() => {
   border-bottom: 1px solid var(--ui-border);
 }
 
+.chat-header-side {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.chat-header-side--right {
+  justify-content: flex-end;
+}
+
 .chat-header-center {
+  flex: 0 1 auto;
   width: min(520px, 100%);
   min-width: 0;
   display: flex;

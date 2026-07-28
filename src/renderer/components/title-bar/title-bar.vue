@@ -12,9 +12,9 @@
   >
     <div class="window-title__left">
       <AppIconTooltip
-        v-if="chatControls.visible"
+        v-if="shell.visible"
         :text="
-          chatControls.sidebarCollapsed
+          shell.sidebarCollapsed
             ? 'Show conversation list'
             : 'Hide conversation list'
         "
@@ -22,18 +22,18 @@
         <button
           type="button"
           class="cp-icon-btn window-title__btn"
-          :class="{ 'cp-icon-btn--on': !chatControls.sidebarCollapsed }"
+          :class="{ 'cp-icon-btn--on': !shell.sidebarCollapsed }"
           :aria-label="
-            chatControls.sidebarCollapsed
+            shell.sidebarCollapsed
               ? 'Show conversation list'
               : 'Hide conversation list'
           "
-          @click="chatControls.onToggleSidebar?.()"
+          @click="shell.onToggleSidebar?.()"
         >
           <UIcon
             class="cp-icon-btn__glyph"
             :name="
-              chatControls.sidebarCollapsed
+              shell.sidebarCollapsed
                 ? 'i-lucide-panel-left-open'
                 : 'i-lucide-panel-left-close'
             "
@@ -41,18 +41,18 @@
         </button>
       </AppIconTooltip>
 
-      <AppIconTooltip v-if="chatControls.visible" :text="workspaceToggleTitle">
+      <AppIconTooltip v-if="shell.visible" :text="workspaceToggleTitle">
         <button
           type="button"
           class="cp-icon-btn window-title__btn"
-          :class="{ 'cp-icon-btn--on': chatControls.showWorkspacePanel }"
+          :class="{ 'cp-icon-btn--on': shell.showWorkspacePanel }"
           :aria-label="workspaceToggleTitle"
-          @click="chatControls.onToggleWorkspacePanel?.()"
+          @click="shell.onToggleWorkspacePanel?.()"
         >
           <UIcon
             class="cp-icon-btn__glyph"
             :name="
-              chatControls.showWorkspacePanel
+              shell.showWorkspacePanel
                 ? 'i-lucide-messages-square'
                 : 'i-lucide-layout-list'
             "
@@ -75,43 +75,43 @@
 
     <div
       v-if="
-        chatControls.title
-          || chatControls.activeAgentName
-          || chatControls.activeAgentModel
+        shell.title
+          || shell.activeAgentName
+          || shell.activeAgentModel
           || workspaceInlineLabel
       "
       class="window-title__center"
       :title="windowTitleLabel"
     >
-      <span v-if="chatControls.title" class="window-title__title">
-        {{ chatControls.title }}
+      <span v-if="shell.title" class="window-title__title">
+        {{ shell.title }}
       </span>
       <span
-        v-if="chatControls.title && (chatControls.activeAgentName || chatControls.isBusy || chatControls.activeAgentModel)"
+        v-if="shell.title && (shell.activeAgentName || shell.isBusy || shell.activeAgentModel)"
         class="window-title__center-sep"
       >
         ·
       </span>
       <span
-        v-if="chatControls.activeAgentName || chatControls.isBusy || chatControls.activeAgentModel"
+        v-if="shell.activeAgentName || shell.isBusy || shell.activeAgentModel"
         class="window-title__meta"
       >
         <span
           class="window-title__status-dot"
-          :class="{ 'window-title__status-dot--streaming': chatControls.isBusy }"
+          :class="{ 'window-title__status-dot--streaming': shell.isBusy }"
         />
-        <template v-if="chatControls.isBusy">
+        <template v-if="shell.isBusy">
           <span>Generating…</span>
         </template>
         <template v-else>
-          <span v-if="chatControls.activeAgentName">{{ chatControls.activeAgentName }}</span>
+          <span v-if="shell.activeAgentName">{{ shell.activeAgentName }}</span>
           <span
-            v-if="chatControls.activeAgentName && chatControls.activeAgentModel"
+            v-if="shell.activeAgentName && shell.activeAgentModel"
             class="window-title__center-sep"
           >
             ·
           </span>
-          <span v-if="chatControls.activeAgentModel">{{ chatControls.activeAgentModel }}</span>
+          <span v-if="shell.activeAgentModel">{{ shell.activeAgentModel }}</span>
         </template>
       </span>
       <template v-if="workspaceInlineLabel">
@@ -123,138 +123,21 @@
     </div>
 
     <div
-      v-if="chatControls.visible && chatControls.showChatActions"
+      v-if="shell.visible && shell.onToggleReportPanel"
       class="window-title__actions"
     >
-      <div
-        class="window-title__session-group"
-        role="group"
-        aria-label="Session controls"
-      >
-        <div class="window-title__conversation-menu">
-          <AppIconTooltip text="Switch conversation in this pane">
-            <button
-              ref="conversationMenuBtnRef"
-              type="button"
-              class="cp-icon-btn window-title__btn"
-              :class="{ 'cp-icon-btn--on': conversationMenuOpen }"
-              aria-label="Switch conversation in this pane"
-              aria-haspopup="menu"
-              :aria-expanded="conversationMenuOpen"
-              :disabled="chatControls.conversationOptions.length === 0"
-              @click.stop="toggleConversationMenu"
-            >
-              <UIcon class="cp-icon-btn__glyph" name="i-lucide-history" />
-            </button>
-          </AppIconTooltip>
-          <div
-            v-if="conversationMenuOpen"
-            ref="conversationMenuEl"
-            class="window-title__conversation-dropdown"
-            role="menu"
-            aria-label="Conversations for this pane"
-          >
-            <button
-              v-for="option in chatControls.conversationOptions"
-              :key="option.id"
-              type="button"
-              class="window-title__conversation-item"
-              :class="{
-                'window-title__conversation-item--active':
-                  option.id === chatControls.conversationId,
-              }"
-              role="menuitemradio"
-              :aria-checked="option.id === chatControls.conversationId"
-              @click="onPickConversation(option.id)"
-            >
-              <span class="window-title__conversation-item-label">{{
-                option.label
-              }}</span>
-              <UIcon
-                v-if="option.id === chatControls.conversationId"
-                name="i-lucide-check"
-                class="window-title__conversation-item-check"
-              />
-            </button>
-          </div>
-        </div>
-        <AppIconTooltip text="Split pane right">
-          <button
-            type="button"
-            class="cp-icon-btn window-title__btn"
-            aria-label="Split pane right"
-            :disabled="!chatControls.canSplitPane"
-            @click="chatControls.onSplitRight?.()"
-          >
-            <UIcon class="cp-icon-btn__glyph" name="i-lucide-columns-2" />
-          </button>
-        </AppIconTooltip>
-        <AppIconTooltip text="Split pane down">
-          <button
-            type="button"
-            class="cp-icon-btn window-title__btn"
-            aria-label="Split pane down"
-            :disabled="!chatControls.canSplitPane"
-            @click="chatControls.onSplitDown?.()"
-          >
-            <UIcon class="cp-icon-btn__glyph" name="i-lucide-rows-2" />
-          </button>
-        </AppIconTooltip>
-        <AppIconTooltip text="Close pane">
-          <button
-            type="button"
-            class="cp-icon-btn window-title__btn"
-            aria-label="Close pane"
-            :disabled="!chatControls.canClosePane"
-            @click="chatControls.onClosePane?.()"
-          >
-            <UIcon class="cp-icon-btn__glyph" name="i-lucide-x" />
-          </button>
-        </AppIconTooltip>
-        <AppIconTooltip text="New session with same agent and workspace">
-          <button
-            type="button"
-            class="cp-icon-btn window-title__btn window-title__btn--duplicate-session"
-            aria-label="New session with same agent and workspace"
-            @click="chatControls.onNewSession?.()"
-          >
-            <UIcon class="cp-icon-btn__glyph" name="i-lucide-copy-plus" />
-          </button>
-        </AppIconTooltip>
-        <AppIconTooltip
-          :text="chatControls.isBusy ? 'Stop generation' : 'Nothing to stop'"
-        >
-          <button
-            type="button"
-            class="cp-icon-btn window-title__btn"
-            aria-label="Stop generation"
-            :disabled="!chatControls.isBusy"
-            @click="chatControls.onStop?.()"
-          >
-            <UIcon class="cp-icon-btn__glyph" name="i-lucide-square" />
-          </button>
-        </AppIconTooltip>
-      </div>
-      <AppIconTooltip
-        :text="
-          chatControls.showReportPanel ? 'Hide results panel' : 'Show results panel'
-        "
-      >
+      <AppIconTooltip :text="reportToggleTitle">
         <button
           type="button"
           class="cp-icon-btn window-title__btn"
-          :class="{ 'cp-icon-btn--on': chatControls.showReportPanel }"
-          :aria-label="
-            chatControls.showReportPanel
-              ? 'Hide results panel'
-              : 'Show results panel'
-          "
-          @click="chatControls.onToggleReportPanel?.()"
+          :class="{ 'cp-icon-btn--on': shell.showReportPanel }"
+          :aria-label="reportToggleTitle"
+          @click="shell.onToggleReportPanel?.()"
         >
           <UIcon
             class="cp-icon-btn__glyph"
             :name="
-              chatControls.showReportPanel
+              shell.showReportPanel
                 ? 'i-lucide-panel-right-close'
                 : 'i-lucide-panel-right-open'
             "
@@ -266,7 +149,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useTitleBarChatControls } from '@renderer/composables/useTitleBarChatControls'
 import { useAppUpdate } from '@renderer/composables/useAppUpdate'
@@ -280,52 +163,12 @@ const { t } = useI18n()
 const IsUseSysTitle = ref(false)
 const IsWeb = ref(Boolean(__ISWEB__))
 const chatControls = useTitleBarChatControls()
+const { shell } = chatControls
 const { state: appUpdateState } = useAppUpdate()
 const workspaceStore = useWorkspaceStore()
 const { activeWorkspacePath, pendingWorkspacePath } = storeToRefs(workspaceStore)
 const isMac = systemInfo.platform === 'darwin'
 const isWindows = systemInfo.platform === 'win32'
-
-const conversationMenuOpen = ref(false)
-const conversationMenuBtnRef = ref<HTMLElement | null>(null)
-const conversationMenuEl = ref<HTMLElement | null>(null)
-
-function toggleConversationMenu() {
-  conversationMenuOpen.value = !conversationMenuOpen.value
-}
-
-function closeConversationMenu() {
-  conversationMenuOpen.value = false
-}
-
-function onPickConversation(conversationId: string) {
-  closeConversationMenu()
-  chatControls.onSelectConversation?.(conversationId)
-}
-
-function onDocumentPointerDown(event: PointerEvent) {
-  if (!conversationMenuOpen.value) return
-  const target = event.target as Node | null
-  if (!target) return
-  if (conversationMenuBtnRef.value?.contains(target)) return
-  if (conversationMenuEl.value?.contains(target)) return
-  closeConversationMenu()
-}
-
-watch(
-  () => chatControls.showChatActions,
-  (show) => {
-    if (!show) closeConversationMenu()
-  },
-)
-
-onMounted(() => {
-  document.addEventListener('pointerdown', onDocumentPointerDown, true)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('pointerdown', onDocumentPointerDown, true)
-})
 
 const workspacePathDisplay = computed((): string | null => {
   const path =
@@ -340,9 +183,13 @@ const workspaceInlineLabel = computed((): string | null => {
 })
 
 const workspaceToggleTitle = computed(() =>
-  chatControls.showWorkspacePanel
+  shell.showWorkspacePanel
     ? t.value.sidebar.backToConversation
     : t.value.sidebar.openWorkspace,
+)
+
+const reportToggleTitle = computed(() =>
+  shell.showReportPanel ? 'Hide results panel' : 'Show results panel',
 )
 
 const workspaceBarTitle = computed(() => {
@@ -357,12 +204,12 @@ const workspaceBarTitle = computed(() => {
 })
 
 const windowTitleLabel = computed(() => {
-  const meta = chatControls.isBusy
+  const meta = shell.isBusy
     ? 'Generating…'
-    : [chatControls.activeAgentName, chatControls.activeAgentModel].filter(Boolean).join(' · ')
+    : [shell.activeAgentName, shell.activeAgentModel].filter(Boolean).join(' · ')
   const workspace = workspacePathDisplay.value ?? 'sandbox only'
 
-  return [chatControls.title, meta, workspace].filter(Boolean).join(' · ')
+  return [shell.title, meta, workspace].filter(Boolean).join(' · ')
 })
 
 const updateHighlight = computed(() => {
@@ -449,6 +296,12 @@ ipcRendererChannel.IsUseSysTitle.invoke().then((res) => {
 }
 
 .window-title__left {
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.window-title__actions {
+  margin-left: auto;
   flex-shrink: 0;
   gap: 8px;
 }
@@ -585,84 +438,6 @@ ipcRendererChannel.IsUseSysTitle.invoke().then((res) => {
   animation: title-bar-pulse 1.2s infinite;
 }
 
-.window-title__actions {
-  margin-left: auto;
-  flex-shrink: 0;
-  gap: 8px;
-}
-
-.window-title__session-group {
-  -webkit-app-region: no-drag;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  height: 28px;
-  padding: 1px;
-  border-radius: 9px;
-  border: 1px solid color-mix(in srgb, var(--ui-text) 10%, transparent);
-  background: color-mix(in srgb, var(--ui-text) 4%, transparent);
-}
-
-.window-title__conversation-menu {
-  position: relative;
-  -webkit-app-region: no-drag;
-}
-
-.window-title__conversation-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 40;
-  min-width: 220px;
-  max-width: min(360px, 70vw);
-  max-height: min(360px, 50vh);
-  overflow: auto;
-  padding: 6px;
-  border-radius: 10px;
-  border: 1px solid var(--ui-border);
-  background: var(--ui-bg-elevated, var(--ui-bg));
-  box-shadow: 0 10px 28px color-mix(in srgb, #000 18%, transparent);
-}
-
-.window-title__conversation-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ui-text);
-  text-align: left;
-  padding: 8px 10px;
-  cursor: pointer;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.window-title__conversation-item:hover {
-  background: color-mix(in srgb, var(--ui-text) 8%, transparent);
-}
-
-.window-title__conversation-item--active {
-  background: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
-}
-
-.window-title__conversation-item-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.window-title__conversation-item-check {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  color: var(--color-primary-500);
-}
-
 .window-title__btn {
   -webkit-app-region: no-drag;
   position: relative;
@@ -675,11 +450,6 @@ ipcRendererChannel.IsUseSysTitle.invoke().then((res) => {
   padding: 0 6px;
   border-radius: 7px;
   box-shadow: none;
-}
-
-.window-title__session-group :deep(.window-title__btn) {
-  min-width: 26px;
-  min-height: 24px;
 }
 
 .window-title :deep(.window-title__btn .cp-icon-btn__glyph) {
@@ -695,14 +465,6 @@ ipcRendererChannel.IsUseSysTitle.invoke().then((res) => {
   box-shadow:
     0 0 0 2px var(--ui-bg, #fff),
     0 0 0 4px color-mix(in srgb, var(--color-primary-500) 24%, transparent);
-}
-
-.window-title :deep(.window-title__btn--duplicate-session) {
-  color: var(--color-primary-600, var(--color-primary-500, #6366f1));
-}
-
-.window-title :deep(.window-title__btn--duplicate-session:hover:not(:disabled)) {
-  background: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
 }
 
 .window-title--mac {
