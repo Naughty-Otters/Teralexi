@@ -62,11 +62,7 @@
           v-else-if="rightPanelView === 'workflows'"
           @close="rightPanelView = 'chat'"
         />
-        <ChatPanel
-          v-else-if="chatPanelMounted"
-          :sidebar-collapsed="sidebarCollapsed"
-          @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed"
-        />
+        <ChatPanel v-else-if="chatPanelMounted" />
         <div
           v-else
           class="right-panel-boot-loading"
@@ -104,8 +100,9 @@ import { useConversationLayoutStore } from '@store/conversation-layout'
 import { isBoundSessionId } from '@shared/conversation/session-id'
 import { useHorizontalPanelResize } from '@renderer/composables/useHorizontalPanelResize'
 import {
+  clearTitleBarViewActions,
   resetTitleBarChatControls,
-  setTitleBarChatControls,
+  setTitleBarShellControls,
 } from '@renderer/composables/useTitleBarChatControls'
 import PanelResizeHandle from '@renderer/components/PanelResizeHandle.vue'
 import TeralexiLogo from './components/teralexiLogo.vue'
@@ -290,17 +287,15 @@ watchEffect(() => {
   const workspacePanelOpen = conversationId
     ? workspacePanelOpenByConversation.value[conversationId] === true
     : false
-  const shell = {
-    visible: true,
-    sidebarCollapsed: sidebarCollapsed.value,
-    onToggleSidebar: toggleSidebarFromTitleBar,
-    showChatActions: isChatView,
-    showWorkspacePanel: workspacePanelOpen,
-    onToggleWorkspacePanel: toggleWorkspaceFromTitleBar,
-  }
 
   if (isChatView) {
-    setTitleBarChatControls(shell)
+    setTitleBarShellControls({
+      visible: true,
+      sidebarCollapsed: sidebarCollapsed.value,
+      onToggleSidebar: toggleSidebarFromTitleBar,
+      showWorkspacePanel: workspacePanelOpen,
+      onToggleWorkspacePanel: toggleWorkspaceFromTitleBar,
+    })
     return
   }
 
@@ -314,24 +309,19 @@ watchEffect(() => {
     workflows: t.value.sidebar.workflows,
   }
 
-  setTitleBarChatControls({
-    ...shell,
+  clearTitleBarViewActions()
+  setTitleBarShellControls({
+    visible: true,
+    sidebarCollapsed: sidebarCollapsed.value,
+    onToggleSidebar: toggleSidebarFromTitleBar,
+    showWorkspacePanel: workspacePanelOpen,
+    onToggleWorkspacePanel: toggleWorkspaceFromTitleBar,
     title: panelTitles[rightPanelView.value],
     activeAgentName: '',
     activeAgentModel: '',
-    showReportPanel: false,
     isBusy: false,
-    canSplitPane: false,
-    canClosePane: false,
-    conversationId: null,
-    conversationOptions: [],
+    showReportPanel: false,
     onToggleReportPanel: null,
-    onStop: null,
-    onNewSession: null,
-    onSplitRight: null,
-    onSplitDown: null,
-    onClosePane: null,
-    onSelectConversation: null,
   })
 })
 

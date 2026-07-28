@@ -110,7 +110,12 @@ import { storeToRefs } from 'pinia'
 import { useAgentStore, type Conversation } from '@store/agent'
 import { useWorkspaceNavigationStore } from '@store/workspace-navigation'
 import { useConversationLayoutStore } from '@store/conversation-layout'
-import { setTitleBarChatControls } from '@renderer/composables/useTitleBarChatControls'
+import {
+  clearTitleBarViewActions,
+  setTitleBarShellControls,
+  setTitleBarViewActions,
+  type TitleBarViewAction,
+} from '@renderer/composables/useTitleBarChatControls'
 import {
   LAYOUT_PREF_KEYS,
   useLayoutPreference,
@@ -138,9 +143,6 @@ import { buildPaneConversationOptions } from '../paneConversationOptions'
 
 const ReportPanel = defineAsyncComponent(() => import('./ReportPanel.vue'))
 const WorkspacePanel = defineAsyncComponent(() => import('./WorkspacePanel.vue'))
-
-const props = defineProps<{ sidebarCollapsed: boolean }>()
-const emit = defineEmits<{ 'toggle-sidebar': [] }>()
 
 const { t } = useI18n()
 const agentStore = useAgentStore()
@@ -419,10 +421,6 @@ watch(
   },
 )
 
-function toggleSidebar() {
-  emit('toggle-sidebar')
-}
-
 function toggleReportPanel() {
   showReportPanel.value = !showReportPanel.value
 }
@@ -503,37 +501,86 @@ async function onSelectPaneConversation(conversationId: string) {
 }
 
 watchEffect(() => {
-  setTitleBarChatControls({
-    visible: true,
+  setTitleBarShellControls({
     title: headerTitle.value,
     activeAgentName: activeAgentName.value,
     activeAgentModel: activeAgentModel.value,
-    sidebarCollapsed: props.sidebarCollapsed,
-    showChatActions: true,
-    showWorkspacePanel: showWorkspaceSplitPanel.value,
-    showReportPanel: showReportPanel.value,
     isBusy: isBusy.value,
-    canSplitPane: canSplit.value,
-    canClosePane: canCloseFocused.value,
-    conversationId: agentStore.currentConversationId,
-    conversationOptions: paneConversationOptions.value,
-    onToggleSidebar: toggleSidebar,
+    showReportPanel: showReportPanel.value,
     onToggleReportPanel: toggleReportPanel,
-    onStop,
-    onNewSession: startNewSessionFromTitleBar,
-    onSplitRight: () => {
-      void splitPane('right')
-    },
-    onSplitDown: () => {
-      void splitPane('down')
-    },
-    onClosePane: () => {
-      void closeFocusedPane()
-    },
-    onSelectConversation: (conversationId: string) => {
-      void onSelectPaneConversation(conversationId)
-    },
   })
+
+  const actions: TitleBarViewAction[] = [
+    {
+      id: 'switch-conversation',
+      kind: 'menu',
+      icon: 'i-lucide-history',
+      tooltip: 'Switch conversation in this pane',
+      ariaLabel: 'Switch conversation in this pane',
+      disabled: paneConversationOptions.value.length === 0,
+      group: 'session',
+      options: paneConversationOptions.value,
+      selectedId: agentStore.currentConversationId,
+      onSelect: (conversationId: string) => {
+        void onSelectPaneConversation(conversationId)
+      },
+    },
+    {
+      id: 'split-right',
+      icon: 'i-lucide-columns-2',
+      tooltip: 'Split pane right',
+      ariaLabel: 'Split pane right',
+      disabled: !canSplit.value,
+      group: 'session',
+      onClick: () => {
+        void splitPane('right')
+      },
+    },
+    {
+      id: 'split-down',
+      icon: 'i-lucide-rows-2',
+      tooltip: 'Split pane down',
+      ariaLabel: 'Split pane down',
+      disabled: !canSplit.value,
+      group: 'session',
+      onClick: () => {
+        void splitPane('down')
+      },
+    },
+    {
+      id: 'close-pane',
+      icon: 'i-lucide-x',
+      tooltip: 'Close pane',
+      ariaLabel: 'Close pane',
+      disabled: !canCloseFocused.value,
+      group: 'session',
+      onClick: () => {
+        void closeFocusedPane()
+      },
+    },
+    {
+      id: 'new-session',
+      icon: 'i-lucide-copy-plus',
+      tooltip: 'New session with same agent and workspace',
+      ariaLabel: 'New session with same agent and workspace',
+      accent: true,
+      group: 'session',
+      onClick: () => {
+        void startNewSessionFromTitleBar()
+      },
+    },
+    {
+      id: 'stop',
+      icon: 'i-lucide-square',
+      tooltip: isBusy.value ? 'Stop generation' : 'Nothing to stop',
+      ariaLabel: 'Stop generation',
+      disabled: !isBusy.value,
+      group: 'session',
+      onClick: onStop,
+    },
+  ]
+
+  setTitleBarViewActions(actions)
 })
 
 let stopSandboxPreviewRequestWatch: (() => void) | null = null
@@ -553,6 +600,11 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  clearTitleBarViewActions()
+  setTitleBarShellControls({
+    showReportPanel: false,
+    onToggleReportPanel: null,
+  })
   stopSandboxPreviewRequestWatch?.()
   stopSandboxPreviewRequestWatch = null
   if (onSandboxOutput) {
