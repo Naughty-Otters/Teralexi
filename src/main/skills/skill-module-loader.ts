@@ -241,6 +241,26 @@ export async function loadExtensionHookExport(
   return isHookHandler(handler) ? handler : undefined
 }
 
+const ACTIONS_INDEX_FILENAMES = ['index.ts', 'index.js', 'index.mjs', 'index.cjs']
+
+/**
+ * Resolves the on-disk path of an extension's `actions/index.*`, without
+ * loading (and therefore without executing) it. Callers that need to gate
+ * execution behind a trust decision should hash this file's raw contents
+ * before calling {@link loadExtensionActionsModule}.
+ */
+export function findExtensionActionsIndexFile(
+  extensionDir: string,
+): string | undefined {
+  const actionsDir = join(extensionDir, SKILL_FILES.ACTIONS_DIR)
+  if (!existsSync(actionsDir)) return undefined
+  for (const name of ACTIONS_INDEX_FILENAMES) {
+    const candidate = join(actionsDir, name)
+    if (existsSync(candidate)) return candidate
+  }
+  return undefined
+}
+
 /** Loads `actions/index.ts` from an extension directory and returns module exports. */
 export async function loadExtensionActionsModule(
   extensionDir: string,
@@ -248,15 +268,8 @@ export async function loadExtensionActionsModule(
   const actionsDir = join(extensionDir, SKILL_FILES.ACTIONS_DIR)
   if (!existsSync(actionsDir)) return undefined
 
-  const indexCandidates = [
-    join(actionsDir, 'index.ts'),
-    join(actionsDir, 'index.js'),
-    join(actionsDir, 'index.mjs'),
-    join(actionsDir, 'index.cjs'),
-  ]
-
-  for (const candidate of indexCandidates) {
-    const loaded = await requireModule(candidate)
+  for (const name of ACTIONS_INDEX_FILENAMES) {
+    const loaded = await requireModule(join(actionsDir, name))
     if (loaded) return loaded
   }
   return undefined

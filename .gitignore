@@ -45,6 +45,7 @@ next-env.d.ts
 
 dist/
 dist/**
+/main-app.js
 coverage/
 storage/
 skill-module-cache/*
